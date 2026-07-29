@@ -1,0 +1,53 @@
+﻿
+ Γ¢à∩╕Å wrangler 4.63.0 (update available 4.71.0)
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+Resource location: local 
+
+Use --remote if you want to access the remote instance.
+
+≡ƒîÇ Executing on local database kkg-wanayasa-db (b873f582-533c-4907-95f3-4b01f2ca0f23) from .wrangler\state\v3\d1:
+≡ƒîÇ To execute on your remote database, add a --remote flag to your wrangler command.
+≡ƒÜú 1 command executed successfully.
+[
+  {
+    "results": [
+      {
+        "key": "alamat_sekretariat"
+      },
+      {
+        "key": "logo_url"
+      },
+      {
+        "key": "mistral_api_key"
+      },
+      {
+        "key": "nama_ketua"
+      },
+      {
+        "key": "nip_ketua"
+      },
+      {
+        "key": "supabase_bucket"
+      },
+      {
+        "key": "supabase_url"
+      },
+      {
+        "key": "tahun_ajaran"
+      },
+      {
+        "key": "vertex_api_key"
+      },
+      {
+        "key": "vertex_project_id"
+      },
+      {
+        "key": "z_ai_api_key"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  }
+]

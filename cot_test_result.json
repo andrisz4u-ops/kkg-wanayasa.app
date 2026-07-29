@@ -1,0 +1,108 @@
+{
+  "success": true,
+  "data": {
+    "title": "Petualangan Makanan di Tubuh Manusia",
+    "subtitle": "Mengungkap Rahasia Sistem Pencernaan yang Menakjubkan",
+    "slides": [
+      {
+        "layout": "title",
+        "title": "Petualangan Makanan",
+        "content": [
+          "Siapa yang tahu perjalanan makanan setelah masuk ke mulut kita?"
+        ],
+        "leftTitle": "Ciri-ciri",
+        "rightTitle": "Contoh",
+        "instruction": "Ayo diskusikan!",
+        "quote": "Semangat belajar!",
+        "imageQuery": "digestive system adventure",
+        "imageAlt": "Ilustrasi sistem pencernaan manusia",
+        "speakerNotes": "Mulai dengan pertanyaan menantang untuk membangkitkan rasa ingin tahu. Tunjukkan gambar sistem pencernaan yang menarik perhatian."
+      },
+      {
+        "layout": "twoColumn",
+        "title": "Tujuan & Apersepsi",
+        "leftTitle": "Tujuan Pembelajaran",
+        "leftContent": [
+          "Mengidentifikasi organ-organ pencernaan manusia",
+          "Menjelaskan fungsi masing-masing organ pencernaan",
+          "Memahami proses pencernaan makanan secara berurutan"
+        ],
+        "rightTitle": "Apersepsi",
+        "rightContent": [
+          "Pernahkah kalian merasa lapar? Apa yang terjadi ketika kita makan?",
+          "Mengapa kita perlu mengunyah makanan sebelum menelannya?",
+          "Apa yang terjadi jika kita makan terlalu cepat?"
+        ],
+        "instruction": "Ayo diskusikan!",
+        "quote": "Semangat belajar!",
+        "speakerNotes": "Gunakan pertanyaan apersepsi untuk menghubungkan pengalaman sehari-hari siswa dengan materi. Berikan waktu bagi siswa untuk berbagi pengalaman mereka sebelum memulai materi."
+      },
+      {
+        "layout": "content",
+        "title": "Organ Pencernaan Utama",
+        "content": [
+          "Mulut: Tempat pencernaan pertama dengan bantuan gigi dan enzim ptialin",
+          "Kerongkongan: Saluran penghubung mulut ke lambung dengan gerakan peristaltik",
+          "Lambung: Menghancurkan makanan dengan asam lambung dan enzim pepsin",
+          "Usus Halus: Penyerapan nutrisi utama dengan bantuan vili usus",
+          "Usus Besar: Penyerapan air dan pembentukan feses",
+          "Tahukah Kamu? Usus halus manusia memiliki panjang sekitar 6 meter jika diukur lurus!"
+        ],
+        "leftTitle": "Ciri-ciri",
+        "rightTitle": "Contoh",
+        "instruction": "Ayo diskusikan!",
+        "quote": "Semangat belajar!",
+        "speakerNotes": "Gunakan model atau gambar organ pencernaan untuk membantu visualisasi. Minta siswa menunjuk letak masing-masing organ pada gambar. Berikan contoh makanan yang berbeda dan tanyakan bagaimana masing-masing organ akan memprosesnya."
+      },
+      {
+        "layout": "imageText",
+        "title": "Proses Pencernaan Makanan",
+        "content": [
+          "Pencernaan Mekanik: Pengunyahan makanan oleh gigi dan pencampuran oleh lambung",
+          "Pencernaan Kimiawi: Penguraian makanan oleh enzim di mulut, lambung, dan usus halus",
+          "Penyerapan Nutrisi: Nutrisi diserap oleh vili usus halus ke dalam aliran darah",
+          "Pembuangan Sisa: Sisa makanan yang tidak tercerna dibuang melalui usus besar",
+          "Tahukah Kamu? Proses pencernaan makanan dari mulut hingga menjadi feses memakan waktu sekitar 24-72 jam!"
+        ],
+        "leftTitle": "Ciri-ciri",
+        "rightTitle": "Contoh",
+        "instruction": "Ayo diskusikan!",
+        "quote": "Semangat belajar!",
+        "imageQuery": "digestion process illustration",
+        "imageAlt": "Abstract art depicting crying figures holding red shapes",
+        "speakerNotes": "Gunakan diagram alur proses pencernaan. Lakukan aktivitas simulasi dengan memberikan gambar makanan dan minta siswa mengurutkan proses pencernaan. Berikan pertanyaan tantangan seperti 'Apa yang terjadi jika salah satu organ tidak berfungsi?'",
+        "image": {
+          "source": "unsplash",
+          "url": "https://images.unsplash.com/photo-1743267216954-7d5d6fbe9c5c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NzkwNTd8MHwxfHNlYXJjaHwxfHxkaWdlc3Rpb24lMjBwcm9jZXNzJTIwaWxsdXN0cmF0aW9ufGVufDF8MHx8fDE3NzE1OTkwMjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "alt": "Abstract art depicting crying figures holding red shapes",
+          "query": "digestion process illustration",
+          "creditName": "Europeana",
+          "creditUrl": "https://unsplash.com/@europeana?utm_source=kkg_slide_generator&utm_medium=referral",
+          "unsplashId": "sH-ZE_nkbK4"
+        }
+      },
+      {
+        "layout": "summary",
+        "title": "Rangkuman & Pesan",
+        "content": [
+          "Sistem pencernaan adalah proses kompleks yang melibatkan banyak organ",
+          "Setiap organ memiliki peran penting dalam memproses makanan",
+          "Pencernaan melibatkan proses mekanik dan kimiawi",
+          "Menjaga kesehatan sistem pencernaan sangat penting untuk kesehatan tubuh secara keseluruhan",
+          "Pesan: 'Makanlah makanan sehat dan kunyah dengan baik untuk membantu sistem pencernaanmu bekerja optimal!'"
+        ],
+        "leftTitle": "Ciri-ciri",
+        "rightTitle": "Contoh",
+        "instruction": "Ayo diskusikan!",
+        "quote": "Semangat belajar!",
+        "speakerNotes": "Ulangi poin-poin penting dan berikan kesempatan bagi siswa untuk bertanya. Akhiri dengan pesan motivasi tentang pentingnya menjaga kesehatan sistem pencernaan. Berikan tugas sederhana untuk mengamati kebiasaan makan mereka selama seminggu."
+      }
+    ],
+    "meta": {
+      "slideCount": 5,
+      "minImageCount": 1,
+      "attachedImages": 1,
+      "imagePolicy": "minimum_30_percent"
+    }
+  }
+}

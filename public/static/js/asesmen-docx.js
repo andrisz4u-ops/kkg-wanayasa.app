@@ -1,0 +1,535 @@
+/**
+ * asesmen-docx.js
+ * Generator file .docx ASLI untuk Asesmen Soal
+ * Menggunakan docx@7.x (window.docx) yang di-load via CDN
+ *
+ * SOLUSI AKSARA SUNDA:
+ *  - Fungsi splitBySundanese() memisahkan teks Latin vs Aksara Sunda
+ *  - Setiap segmen mendapat TextRun dengan font berbeda:
+ *      Latin      → Times New Roman
+ *      Aksara Sunda → Noto Sans Sundanese
+ *  - Ini adalah satu-satunya cara yang pasti bekerja di Word
+ */
+
+const FONT_LATIN  = 'Times New Roman';
+const FONT_SUNDA  = 'Noto Sans Sundanese';
+
+/** Konversi point ke twip (1pt = 20 twip) */
+const PT = (n) => n * 20;
+/** Konversi cm ke twip (1cm = 567.0 twip) */
+const CM = (n) => Math.round(n * 567);
+
+// ============================================================
+// HELPER: split teks menjadi segmen {text, isSunda}
+// ============================================================
+function splitBySundanese(text) {
+  if (!text) return [{ text: '', isSunda: false }];
+  const segments = [];
+  let last = 0;
+  const re = /[\u1B80-\u1BBF\u1CC0-\u1CCF]+/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      segments.push({ text: text.slice(last, m.index), isSunda: false });
+    }
+    segments.push({ text: m[0], isSunda: true });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) segments.push({ text: text.slice(last), isSunda: false });
+  return segments.length ? segments : [{ text, isSunda: false }];
+}
+
+// ============================================================
+// HELPER: buat array TextRun[] dari teks (mixed font otomatis)
+// ============================================================
+function makeRuns(text, opts = {}) {
+  const { bold = false, italics = false, size = 22, underline } = opts;
+  return splitBySundanese(String(text || '')).map(seg =>
+    new window.docx.TextRun({
+      text: seg.text,
+      bold,
+      italics,
+      size,
+      underline,
+      font: seg.isSunda ? FONT_SUNDA : FONT_LATIN,
+    })
+  );
+}
+
+// ============================================================
+// HELPER: buat Paragraph dengan teks sederhana
+// ============================================================
+function makePara(text, opts = {}) {
+  const {
+    bold = false, italics = false, size = 22, underline,
+    align = window.docx.AlignmentType.LEFT,
+    spaceBefore = 0, spaceAfter = 0,
+    indent = {},
+  } = opts;
+  return new window.docx.Paragraph({
+    alignment: align,
+    spacing: { before: PT(spaceBefore), after: PT(spaceAfter) },
+    indent,
+    children: makeRuns(text, { bold, italics, size, underline }),
+  });
+}
+
+// ============================================================
+// HELPER: buat Paragraph dari children array
+// ============================================================
+function makeParaRaw(children, opts = {}) {
+  const {
+    align = window.docx.AlignmentType.LEFT,
+    spaceBefore = 0, spaceAfter = 0,
+    indent = {},
+  } = opts;
+  return new window.docx.Paragraph({
+    alignment: align,
+    spacing: { before: PT(spaceBefore), after: PT(spaceAfter) },
+    indent,
+    children: Array.isArray(children) ? children : [children],
+  });
+}
+
+// ============================================================
+// HELPER: border none (untuk layout table)
+// ============================================================
+const NO_BORDER = { style: window.docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+const NO_BORDERS = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideH: NO_BORDER, insideV: NO_BORDER };
+const LINE_BORDER = { style: window.docx.BorderStyle.SINGLE, size: 6, color: '000000' };
+const LINE_BORDERS = { top: LINE_BORDER, bottom: LINE_BORDER, left: LINE_BORDER, right: LINE_BORDER, insideH: LINE_BORDER, insideV: LINE_BORDER };
+
+// ============================================================
+// HELPER: buat TableCell
+// ============================================================
+function makeCell(content, opts = {}) {
+  const { width, borders = false, shading, vAlign } = opts;
+  const bv = borders ? LINE_BORDER : NO_BORDER;
+  const bAll = { top: bv, bottom: bv, left: bv, right: bv };
+  const cellOpts = {
+    children: Array.isArray(content) ? content : [content],
+    borders: bAll,
+    verticalAlign: vAlign || window.docx.VerticalAlign.TOP,
+    margins: { top: PT(3), bottom: PT(3), left: PT(5), right: PT(5) }
+  };
+  if (width) cellOpts.width = width;
+  if (shading) cellOpts.shading = shading;
+  return new window.docx.TableCell(cellOpts);
+}
+
+// ============================================================
+// HELPER: layout tabel opsi PG
+// ============================================================
+function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
+  const o = opsi || {};
+  const s = 20; // size 20 half-point = 10pt
+
+  const optionPara = (key) => makeParaRaw([
+    new window.docx.TextRun({ text: `${key}. `, size: s, font: FONT_LATIN }),
+    ...makeRuns(o[key] || '-', { size: s }),
+  ], { spaceAfter: 0 });
+
+  const indentObj = indentTwip ? { size: indentTwip, type: window.docx.WidthType.DXA } : undefined;
+
+  if (colLayout === 4) {
+    return new window.docx.Table({
+      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      borders: NO_BORDERS,
+      indent: indentObj,
+      rows: [new window.docx.TableRow({ children: ['A','B','C','D'].map(k =>
+        makeCell(optionPara(k), { width: { size: 25, type: window.docx.WidthType.PERCENTAGE } })
+      )})],
+    });
+  } else if (colLayout === 2) {
+    return new window.docx.Table({
+      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      borders: NO_BORDERS,
+      indent: indentObj,
+      rows: [
+        new window.docx.TableRow({ children: [
+          makeCell(optionPara('A'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
+          makeCell(optionPara('C'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
+        ]}),
+        new window.docx.TableRow({ children: [
+          makeCell(optionPara('B'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
+          makeCell(optionPara('D'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
+        ]}),
+      ],
+    });
+    return new window.docx.Table({
+      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      borders: NO_BORDERS,
+      indent: indentObj,
+      rows: ['A','B','C','D'].map(k => new window.docx.TableRow({ children: [
+        makeCell(optionPara(k), { width: { size: 100, type: window.docx.WidthType.PERCENTAGE } }),
+      ]})),
+    });
+  }
+}
+
+// ============================================================
+// HELPER: Convert URL to Base64/Buffer 
+// ============================================================
+async function fetchSafeImageBuffer(url) {
+  try {
+    // Paksa ukuran kecil dan format jpg murni agar tidak berat/error di docx.js
+    const safeUrl = new URL(url);
+    safeUrl.searchParams.set('w', '400');
+    safeUrl.searchParams.set('h', '300');
+    safeUrl.searchParams.set('fit', 'crop');
+    safeUrl.searchParams.set('fm', 'jpg');
+    safeUrl.searchParams.set('cs', 'tinysrgb'); // strip profile/EXIF
+    
+    const resp = await fetch(safeUrl.toString());
+    if (!resp.ok) throw new Error('Fetch not ok');
+    return await resp.arrayBuffer();
+  } catch (e) {
+    throw e;
+  }
+}
+
+// ============================================================
+// FUNGSI UTAMA: generateAsesmenDocx
+// ============================================================
+export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
+  if (!window.docx) throw new Error('Library docx belum dimuat. Silakan refresh halaman.');
+
+  const {
+    Document, Paragraph, TextRun, Table, TableRow, TableCell,
+    AlignmentType, WidthType, BorderStyle, VerticalAlign,
+    PageBreak, ImageRun, Packer,
+  } = window.docx;
+
+  const children = [];
+
+  // ── KOP SURAT ──────────────────────────────────────────────
+  if (kopSuratUrl) {
+    try {
+      const resp = await fetch(kopSuratUrl);
+      if (!resp.ok) throw new Error('fetch failed');
+      const buf  = await resp.arrayBuffer();
+      const type = kopSuratUrl.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      children.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: PT(6) },
+        children: [new ImageRun({ data: buf, transformation: { width: 580, height: 95 }, type })],
+      }));
+    } catch {
+      // fallback teks
+      children.push(makePara(formData.namaSekolah || 'SOAL ASESMEN', {
+        bold: true, size: 28, align: AlignmentType.CENTER, spaceAfter: 4,
+      }));
+    }
+  }
+
+  // ── JUDUL ──────────────────────────────────────────────────
+  const judulMap = { STS: 'SUMATIF TENGAH SEMESTER', SAS: 'SUMATIF AKHIR SEMESTER', ASAT: 'ASESMEN SUMATIF AKHIR TAHUN' };
+  const judul = judulMap[formData.jenisUjian] || (formData.jenisUjian || 'PENILAIAN').toUpperCase();
+  children.push(makePara(judul, { bold: true, size: 24, align: AlignmentType.CENTER, spaceBefore: 4, spaceAfter: 2 }));
+  children.push(makePara('TAHUN PELAJARAN 2026/2027', { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 8 }));
+
+  // ── TABEL IDENTITAS ────────────────────────────────────────
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: LINE_BORDERS,
+    rows: [
+      new TableRow({ children: [
+        makeCell(makePara('Mata Pelajaran', { size: 20 }), { borders: true, width: { size: 15, type: WidthType.PERCENTAGE } }),
+        makeCell(makeParaRaw([new TextRun({ text: ': ', size: 20, font: FONT_LATIN }), ...makeRuns(formData.mataPelajaran || '', { size: 20 })]), { borders: true, width: { size: 30, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara('Nama Siswa', { size: 20 }), { borders: true, width: { size: 15, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara(': .....................................................', { size: 20 }), { borders: true, width: { size: 40, type: WidthType.PERCENTAGE } }),
+      ]}),
+      new TableRow({ children: [
+        makeCell(makePara('Kelas / Smt', { size: 20 }), { borders: true }),
+        makeCell(makePara(`: ${formData.jenjangKelas || ''} / ${formData.semester || ''}`, { size: 20 }), { borders: true }),
+        makeCell(makePara('Hari / Tgl', { size: 20 }), { borders: true }),
+        makeCell(makePara(': .................. / .....................', { size: 20 }), { borders: true }),
+      ]}),
+    ],
+  }));
+  children.push(makePara('', { spaceAfter: 8 }));
+
+  // ── I. PILIHAN GANDA ───────────────────────────────────────
+  if (data.pg && data.pg.length > 0) {
+    children.push(makePara('I. PILIHAN GANDA', { bold: true, size: 22, spaceBefore: 6, spaceAfter: 4 }));
+    children.push(makePara('Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!',
+      { italics: true, size: 19, spaceAfter: 6 }));
+
+    for (const q of data.pg) {
+      const opts = q.opsi || {};
+      const vals = Object.values(opts);
+      const allShort = vals.every(v => (v || '').length < 20);
+      const anyLong  = vals.some(v  => (v || '').length > 55);
+      const colLayout = allShort ? 4 : anyLong ? 1 : 2;
+
+      // Nomor soal + teks (hanging indent)
+      const INDENT_LEFT    = CM(0.6);
+      const HANGING        = CM(0.6);
+      const soalLines = String(q.soal || '').split('\n');
+      soalLines.forEach((line, li) => {
+        const isFirst = li === 0;
+        children.push(makeParaRaw([
+          isFirst
+            ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })
+            : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
+          ...makeRuns(line, { size: 22 }),
+        ], {
+          align: AlignmentType.JUSTIFIED,
+          spaceBefore: isFirst ? 6 : 0,
+          spaceAfter: 0,
+          indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT },
+        }));
+      });
+
+      if (q.gambar && q.gambar.url) {
+        try {
+          const buf = await fetchSafeImageBuffer(q.gambar.url);
+          
+          const cell1 = new window.docx.TableCell({
+             children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
+             borders: NO_BORDERS,
+             width: { size: 5, type: window.docx.WidthType.PERCENTAGE },
+             margins: { top: 0, bottom: 0, left: 0, right: 0 },
+             verticalAlign: window.docx.VerticalAlign.TOP
+          });
+
+          const cell2 = new window.docx.TableCell({
+             children: [
+                new Paragraph({
+                   alignment: AlignmentType.LEFT,
+                   spacing: { before: PT(4) },
+                   children: [new ImageRun({ data: buf, transformation: { width: 160, height: 120 }, type: 'jpeg' })]
+                })
+             ],
+             borders: NO_BORDERS,
+             width: { size: 25, type: window.docx.WidthType.PERCENTAGE },
+             margins: { top: 0, bottom: 0, left: 0, right: CM(0.2) },
+             verticalAlign: window.docx.VerticalAlign.TOP
+          });
+
+          const cell3Children = [];
+          const soalLines = String(q.soal || '').split('\n');
+          soalLines.forEach((line, li) => {
+             cell3Children.push(makeParaRaw([
+                new TextRun({ text: line, size: 22, font: FONT_LATIN })
+             ], { align: AlignmentType.JUSTIFIED, spaceBefore: 0, spaceAfter: 0 }));
+          });
+          
+          cell3Children.push(makeOpsiTable(opts, colLayout, 0));
+          cell3Children.push(makePara('', { spaceAfter: 0 }));
+
+          const cell3 = new window.docx.TableCell({
+             children: cell3Children,
+             borders: NO_BORDERS,
+             width: { size: 70, type: window.docx.WidthType.PERCENTAGE },
+             margins: { top: 0, bottom: 0, left: CM(0.2), right: 0 },
+             verticalAlign: window.docx.VerticalAlign.TOP
+          });
+
+          children.push(new window.docx.Table({
+             width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+             borders: NO_BORDERS,
+             rows: [new window.docx.TableRow({ children: [cell1, cell2, cell3] })]
+          }));
+          children.push(makePara('', { spaceAfter: 8 }));
+          
+        } catch (e) {
+          console.error("Gagal load gambar PG docx", e);
+          const INDENT_LEFT = CM(0.6);
+          const soalLines = String(q.soal || '').split('\n');
+          soalLines.forEach((line, li) => {
+            const isFirst = li === 0;
+            children.push(makeParaRaw([
+              isFirst ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }) : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
+              ...makeRuns(line, { size: 22 }),
+            ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
+          });
+          children.push(makeOpsiTable(opts, colLayout, INDENT_LEFT));
+        }
+      } else {
+        const soalLines = String(q.soal || '').split('\n');
+        soalLines.forEach((line, li) => {
+          const isFirst = li === 0;
+          children.push(makeParaRaw([
+            isFirst ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }) : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
+            ...makeRuns(line, { size: 22 }),
+          ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
+        });
+        children.push(makeOpsiTable(opts, colLayout, INDENT_LEFT));
+      }
+    }
+  }
+
+  // ── II. ISIAN ──────────────────────────────────────────────
+  if (data.isian && data.isian.data && data.isian.data.length > 0) {
+    const isianType = data.isian.type || 'Standard';
+    const isianTitles = {
+      Standard:    ['II. ISIAN SINGKAT', 'Isilah titik-titik di bawah ini dengan jawaban yang tepat!'],
+      Crossword:   ['II. TEKA-TEKI SILANG', 'Isilah jawaban teka-teki silang berikut!'],
+      Menjodohkan: ['II. MENJODOHKAN', 'Pasangkanlah pernyataan berikut dengan jawaban yang tepat!'],
+    };
+    const [isianTitle, isianDesc] = isianTitles[isianType] || isianTitles.Standard;
+
+    children.push(makePara(isianTitle, { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
+    children.push(makePara(isianDesc, { italics: true, size: 19, spaceAfter: 6 }));
+
+    if (isianType === 'Menjodohkan') {
+      const rightCol = [...data.isian.data].map(q => q.kunci).sort(() => Math.random() - 0.5);
+      data.isian.data.forEach((q, i) => {
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: NO_BORDERS,
+          rows: [new TableRow({ children: [
+            makeCell(makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(q.soal, { size: 22 })]), { width: { size: 42, type: WidthType.PERCENTAGE } }),
+            makeCell(makePara('..................', { size: 22, align: AlignmentType.CENTER }), { width: { size: 16, type: WidthType.PERCENTAGE } }),
+            makeCell(makeParaRaw([new TextRun({ text: `${String.fromCharCode(65+i)}. `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(rightCol[i] || '', { size: 22 })]), { width: { size: 42, type: WidthType.PERCENTAGE } }),
+          ]})],
+        }));
+        children.push(makePara('', { spaceAfter: 2 }));
+      });
+    } else {
+      for (const q of data.isian.data) {
+        children.push(makeParaRaw([
+          new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }),
+          ...makeRuns(q.soal, { size: 22 }),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 10, indent: { left: CM(0.5) } }));
+      }
+    }
+  }
+
+  // ── III. URAIAN ────────────────────────────────────────────
+  if (data.uraian && data.uraian.length > 0) {
+    children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
+    children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
+    for (const q of data.uraian) {
+      children.push(makeParaRaw([
+        new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }),
+        ...makeRuns(q.soal, { size: 22 }),
+      ], { align: AlignmentType.JUSTIFIED, spaceAfter: 20, indent: { left: CM(0.5) } }));
+    }
+  }
+
+  // ── LEMBAR PENGESAHAN ──────────────────────────────────────
+  children.push(makePara('', { spaceBefore: 30 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: NO_BORDERS,
+    rows: [new TableRow({ children: [
+      makeCell([
+        makePara('Mengetahui,', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Kepala Sekolah', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 60 }),
+        makeParaRaw(makeRuns(formData.namaKepalaSekolah || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipKepalaSekolah || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+      makeCell([
+        makePara('\u00a0', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Guru Pengampu', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 60 }),
+        makeParaRaw(makeRuns(formData.namaGuru || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipGuru || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+    ]})],
+  }));
+
+  // ── PAGE BREAK ─────────────────────────────────────────────
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // ── KUNCI JAWABAN ──────────────────────────────────────────
+  children.push(makePara('KUNCI JAWABAN & PEDOMAN PENSKORAN', { bold: true, size: 24, align: AlignmentType.CENTER, spaceAfter: 2 }));
+  children.push(makePara(`${formData.mataPelajaran || ''} \u2014 ${formData.jenjangKelas || ''} / ${formData.semester || ''}`,
+    { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 10 }));
+
+  if (data.pg && data.pg.length > 0) {
+    children.push(makePara('I. KUNCI PILIHAN GANDA', { bold: true, size: 22, spaceAfter: 4 }));
+    const rows5 = Math.ceil(data.pg.length / 5);
+    const pgCols = Array.from({ length: 5 }, (_, c) =>
+      Array.from({ length: rows5 }, (_, r) => data.pg[r * 5 + c]).filter(Boolean)
+    );
+    children.push(new Table({
+      width: { size: 60, type: WidthType.PERCENTAGE },
+      borders: NO_BORDERS,
+      rows: [new TableRow({ children: pgCols.map(col =>
+        makeCell(col.map(q => makeParaRaw([
+          new TextRun({ text: `${q.no}.  `, bold: true, size: 20, font: FONT_LATIN }),
+          new TextRun({ text: q.kunci, size: 20, font: FONT_LATIN }),
+        ])))
+      )})],
+    }));
+    children.push(makePara('', { spaceAfter: 6 }));
+  }
+
+  if (data.isian && data.isian.data && data.isian.data.length > 0) {
+    children.push(makePara('II. KUNCI ISIAN', { bold: true, size: 22, spaceAfter: 4 }));
+    children.push(new Table({
+      width: { size: 70, type: WidthType.PERCENTAGE },
+      borders: LINE_BORDERS,
+      rows: [
+        new TableRow({ tableHeader: true, children: [
+          makeCell(makePara('No', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 15, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Kunci Jawaban', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' } }),
+        ]}),
+        ...data.isian.data.map(q => new TableRow({ children: [
+          makeCell(makePara(String(q.no), { size: 20, align: AlignmentType.CENTER }), { borders: true }),
+          makeCell(makeParaRaw(makeRuns(q.kunci, { size: 20 })), { borders: true }),
+        ]})),
+      ],
+    }));
+    children.push(makePara('', { spaceAfter: 6 }));
+  }
+
+  if (data.uraian && data.uraian.length > 0) {
+    children.push(makePara('III. PEDOMAN PENSKORAN URAIAN', { bold: true, size: 22, spaceAfter: 4 }));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: LINE_BORDERS,
+      rows: [
+        new TableRow({ tableHeader: true, children: [
+          makeCell(makePara('No', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 5, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Kriteria Jawaban', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 75, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Skor Maks', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 20, type: WidthType.PERCENTAGE } }),
+        ]}),
+        ...data.uraian.map(q => new TableRow({ children: [
+          makeCell(makePara(String(q.no), { size: 20, align: AlignmentType.CENTER }), { borders: true }),
+          makeCell([
+            makeParaRaw([new TextRun({ text: 'Jawaban: ', bold: true, size: 20, font: FONT_LATIN }), ...makeRuns(q.kunci, { size: 20 })]),
+            makePara(''),
+            makePara('Rubrik:', { bold: true, size: 20 }),
+            ...(q.rubrik_skor ? Object.entries(q.rubrik_skor).map(([k, v]) =>
+              makeParaRaw([new TextRun({ text: `\u2013 ${k}: `, size: 19, font: FONT_LATIN }), ...makeRuns(String(v), { size: 19 })])
+            ) : [makePara('\u2013', { size: 19 })]),
+          ], { borders: true }),
+          makeCell(makePara('TBD', { size: 20, bold: true, align: AlignmentType.CENTER }), { borders: true }),
+        ]})),
+      ],
+    }));
+  }
+
+  // ── BUILD DOCUMENT ─────────────────────────────────────────
+  const doc = new Document({
+    creator: 'KKG Gugus 3 Wanayasa',
+    description: `Asesmen ${formData.mataPelajaran || ''} ${formData.jenjangKelas || ''}`,
+    styles: {
+      default: {
+        document: {
+          run: { font: FONT_LATIN, size: 22 },
+        },
+      },
+    },
+    sections: [{
+      properties: {
+        page: {
+          margin: {
+            top:    CM(1.27),
+            bottom: CM(1.27),
+            left:   CM(1.27),
+            right:  CM(1.27),
+          },
+        },
+      },
+      children,
+    }],
+  });
+
+  return Packer.toBlob(doc);
+}

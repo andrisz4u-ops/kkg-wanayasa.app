@@ -1,0 +1,26 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "kkg-wanayasa",
+    "compatibility_date": "2024-09-23",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "pages_build_output_dir": "./dist",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "kkg-wanayasa-db",
+            "database_id": "b873f582-533c-4907-95f3-4b01f2ca0f23"
+        }
+    ],
+    "r2_buckets": [
+        {
+            "binding": "STORAGE",
+            "bucket_name": "kkg-wanayasa-storage"
+        }
+    ],
+    "vars": {
+        "SUPABASE_URL": "https://mytonopqqqxlwywqbadt.supabase.co",
+        "SUPABASE_BUCKET": "materi-kkg"
+    }
+}

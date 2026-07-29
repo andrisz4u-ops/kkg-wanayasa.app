@@ -1,0 +1,53 @@
+{
+  "name": "kkg-gugus3-wanayasa",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "build": "npm run build:css && vite build",
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --watch",
+    "preview": "wrangler pages dev dist",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name kkg-wanayasa",
+    "dev:sandbox": "wrangler pages dev dist --d1=kkg-production --local --ip 0.0.0.0 --port 8788",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:migrate:local": "wrangler d1 migrations apply kkg-wanayasa-db --local",
+    "db:seed": "wrangler d1 execute kkg-wanayasa-db --local --file=./seed.sql",
+    "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.986.0",
+    "@google/generative-ai": "^0.24.1",
+    "@hono/vite-cloudflare-pages": "^0.4.3",
+    "@mistralai/mistralai": "^1.14.0",
+    "@sentry/cloudflare": "^10.39.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "cheerio": "^1.2.0",
+    "docx": "^9.5.1",
+    "file-saver": "^2.0.5",
+    "groq-sdk": "^0.37.0",
+    "hono": "^4.7.5",
+    "mammoth": "^1.11.0",
+    "qrcode": "^1.5.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260207.0",
+    "@hono/vite-build": "^1.2.0",
+    "@hono/vite-dev-server": "^0.18.2",
+    "@types/qrcode": "^1.5.6",
+    "@vitest/coverage-v8": "^4.0.18",
+    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.2.1",
+    "happy-dom": "^20.5.0",
+    "playwright": "^1.58.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "vite": "^6.3.5",
+    "vitest": "^4.0.18",
+    "wrangler": "^4.4.0"
+  }
+}

@@ -1,0 +1,350 @@
+import { Hono } from 'hono';
+import { getCurrentUser, getCookie } from '../lib/auth';
+import { callAI, buildProkerPrompt } from '../lib/mistral';
+import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
+import { successResponse, Errors, validateRequired, ErrorCodes } from '../lib/response';
+import type { GenerateProkerRequest, KegiatanProker } from '../types';
+
+type Bindings = {
+  DB: D1Database;
+  MISTRAL_API_KEY?: string;
+  Z_AI_API_KEY?: string;
+  GEMINI_API_KEY?: string;
+  GROQ_API_KEY?: string;
+  VERTEX_API_KEY?: string;
+};
+
+const proker = new Hono<{ Bindings: Bindings }>();
+
+// Generate program kerja (AI endpoint - strict rate limit)
+proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  try {
+    const body = await c.req.json() as GenerateProkerRequest;
+
+    // Validate required fields
+    const validation = validateRequired(body, ['tahun_ajaran', 'visi', 'misi']);
+    if (!validation.valid) {
+      return Errors.validation(c, `Field berikut harus diisi: ${validation.missing.join(', ')}`);
+    }
+
+    const { tahun_ajaran, visi, misi, kegiatan, analisis_kebutuhan, model = 'vertex' } = body as any;
+    const providerMap: Record<string, string> = { mistral: 'mistral', z_ai: 'z_ai', gemini: 'gemini', groq: 'groq', vertex: 'vertex' };
+    const provider = providerMap[model] || 'vertex';
+
+    // Validate kegiatan array
+    if (!kegiatan || !Array.isArray(kegiatan) || kegiatan.length === 0) {
+      return Errors.validation(c, 'Minimal satu kegiatan harus diisi');
+    }
+
+    // Get settings including organization details
+    const settingsResult = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'groq_api_key', 'vertex_api_key')"
+    ).all();
+
+    const settings: any = {};
+    settingsResult.results?.forEach((row: any) => {
+      settings[row.key] = row.value;
+    });
+
+    const keyMap: Record<string, { dbKey: string; envKey: string }> = {
+      mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
+      z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
+      gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
+      groq: { dbKey: 'groq_api_key', envKey: 'GROQ_API_KEY' },
+      vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
+    };
+    const keyConfig = keyMap[provider] || keyMap.vertex;
+    const apiKey = settings[keyConfig.dbKey] || (c.env as any)[keyConfig.envKey];
+
+    if (!apiKey) {
+      const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', groq: 'Groq', vertex: 'Vertex AI' };
+      return Errors.configError(c, `API Key ${providerNames[provider] || provider} belum dikonfigurasi. Hubungi admin untuk mengatur API Key.`);
+    }
+
+    // Get list of schools from database to prevent AI hallucination
+    const sekolahResult = await c.env.DB.prepare(
+      "SELECT nama FROM sekolah ORDER BY is_sekretariat DESC, nama ASC"
+    ).all();
+    const sekolahList = sekolahResult.results?.map((s: any) => s.nama) || [];
+
+    // Format kegiatan for prompt
+    const kegiatanFormatted = kegiatan.map((k: KegiatanProker, i: number) =>
+      `${i + 1}. ${k.nama_kegiatan || '-'} | Waktu: ${k.waktu_pelaksanaan || '-'} | PJ: ${k.penanggung_jawab || '-'} | Anggaran: ${k.anggaran || '-'} | Indikator: ${k.indikator || '-'} | Sumber Dana: ${k.sumber_dana || '-'}`
+    ).join('\n');
+
+    // Build prompt and call AI
+    const prompt = buildProkerPrompt({
+      tahun_ajaran,
+      visi,
+      misi,
+      kegiatan: kegiatanFormatted,
+      analisis_kebutuhan,
+      sekolah_list: sekolahList,
+      settings: settings // Pass comprehensive settings
+    });
+
+    let isiDokumen: string;
+    try {
+      isiDokumen = await callAI(provider as any, apiKey, prompt);
+    } catch (aiError: any) {
+      console.error('AI Generation error:', aiError);
+      return c.json({
+        success: false,
+        error: {
+          code: ErrorCodes.AI_ERROR,
+          message: 'Gagal menghasilkan program kerja. Silakan coba lagi.',
+          details: aiError.message
+        }
+      }, 500);
+    }
+
+    // Save to database
+    const result = await c.env.DB.prepare(`
+      INSERT INTO program_kerja 
+      (user_id, tahun_ajaran, visi, misi, kegiatan, analisis_kebutuhan, isi_dokumen, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'final')
+    `).bind(
+      user.id,
+      tahun_ajaran,
+      visi,
+      misi,
+      JSON.stringify(kegiatan),
+      analisis_kebutuhan || null,
+      isiDokumen
+    ).run();
+
+    return successResponse(c, {
+      id: result.meta.last_row_id,
+      tahun_ajaran,
+      isi_dokumen: isiDokumen,
+      created_at: new Date().toISOString()
+    }, 'Program kerja berhasil dibuat', 201);
+
+  } catch (e: any) {
+    console.error('Generate proker error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Get proker history
+proker.get('/history', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  try {
+    const results = await c.env.DB.prepare(`
+      SELECT id, tahun_ajaran, status, created_at 
+      FROM program_kerja 
+      WHERE user_id = ? 
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).bind(user.id).all();
+
+    return successResponse(c, results.results);
+  } catch (e: any) {
+    console.error('Get proker history error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Get proker detail
+proker.get('/:id', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    if (!id || isNaN(Number(id))) {
+      return Errors.validation(c, 'ID program kerja tidak valid');
+    }
+
+    const result: any = await c.env.DB.prepare(`
+      SELECT * FROM program_kerja 
+      WHERE id = ? AND user_id = ?
+    `).bind(id, user.id).first();
+
+    if (!result) {
+      return Errors.notFound(c, 'Program kerja');
+    }
+
+    // Parse JSON fields
+    if (result.kegiatan) {
+      try {
+        result.kegiatan = JSON.parse(result.kegiatan);
+      } catch { }
+    }
+
+    return successResponse(c, result);
+  } catch (e: any) {
+    console.error('Get proker detail error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Delete proker
+proker.delete('/:id', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  if (user.role !== 'admin' && user.role !== 'operator') {
+    return Errors.forbidden(c);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    if (!id || isNaN(Number(id))) {
+      return Errors.validation(c, 'ID program kerja tidak valid');
+    }
+
+    const existing: any = await c.env.DB.prepare(
+      'SELECT id FROM program_kerja WHERE id = ? AND user_id = ?'
+    ).bind(id, user.id).first();
+
+    if (!existing) {
+      return Errors.notFound(c, 'Program kerja');
+    }
+
+    await c.env.DB.prepare(
+      'DELETE FROM program_kerja WHERE id = ? AND user_id = ?'
+    ).bind(id, user.id).run();
+
+    return successResponse(c, null, 'Program kerja berhasil dihapus');
+  } catch (e: any) {
+    console.error('Delete proker error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Download proker as DOCX
+proker.get('/:id/download', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  if (user.role !== 'admin' && user.role !== 'operator') {
+    return Errors.forbidden(c);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    if (!id || isNaN(Number(id))) {
+      return Errors.validation(c, 'ID program kerja tidak valid');
+    }
+
+    const result: any = await c.env.DB.prepare(`
+      SELECT * FROM program_kerja 
+      WHERE id = ? AND user_id = ?
+    `).bind(id, user.id).first();
+
+    if (!result) {
+      return Errors.notFound(c, 'Program kerja');
+    }
+
+    // Get KKG settings
+    const settingsResult = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('nama_ketua', 'nip_ketua', 'alamat_sekretariat', 'kop_surat_url', 'nama_organisasi', 'tahun_ajaran')"
+    ).all();
+
+    const settings: any = {};
+    settingsResult.results?.forEach((row: any) => {
+      settings[row.key] = row.value;
+    });
+
+    // Parse kegiatan JSON
+    let kegiatan = [];
+    if (result.kegiatan) {
+      try {
+        kegiatan = JSON.parse(result.kegiatan);
+      } catch { }
+    }
+
+    // Import and generate DOCX
+    const { generateProkerBuffer } = await import('../lib/docx-generator');
+
+    const buffer = await generateProkerBuffer({
+      tahun_ajaran: result.tahun_ajaran,
+      visi: result.visi,
+      misi: result.misi,
+      kegiatan: kegiatan,
+      analisis_kebutuhan: result.analisis_kebutuhan,
+      isi_dokumen: result.isi_dokumen,
+      created_at: result.created_at
+    }, settings);
+
+    // Generate filename
+    const filename = `Program_Kerja_KKG_${result.tahun_ajaran.replace(/\//g, '-')}.docx`;
+
+    // Return as downloadable file
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+  } catch (e: any) {
+    console.error('Download proker error:', e, e.stack);
+    return c.json({
+      success: false,
+      error: {
+        code: 'DOCX_GENERATION_ERROR',
+        message: `Gagal membuat dokumen DOCX: ${e.message}`,
+      }
+    }, 500);
+  }
+});
+
+// Update proker content
+proker.put('/:id/content', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) return Errors.unauthorized(c);
+  if (user.role !== 'admin' && user.role !== 'operator') return Errors.forbidden(c);
+
+  try {
+    const id = c.req.param('id');
+    const { isi_dokumen } = await c.req.json() as { isi_dokumen: string };
+
+    if (!isi_dokumen) return Errors.validation(c, 'Isi dokumen tidak boleh kosong');
+
+    const result = await c.env.DB.prepare(
+      'UPDATE program_kerja SET isi_dokumen = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
+    ).bind(isi_dokumen, id, user.id).run();
+
+    if (result.meta.changes === 0) return Errors.notFound(c, 'Program kerja');
+
+    return successResponse(c, null, 'Konten berhasil diperbarui');
+  } catch (e: any) {
+    console.error('Update proker content error:', e);
+    return Errors.internal(c);
+  }
+});
+
+export default proker;

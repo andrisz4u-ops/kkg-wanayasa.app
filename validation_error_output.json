@@ -1,0 +1,13 @@
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Output AI tidak sesuai schema presentasi",
+    "details": [
+      {
+        "field": "slides.2.title",
+        "message": "Invalid input: expected string, received undefined"
+      }
+    ]
+  }
+}

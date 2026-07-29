@@ -1,0 +1,43 @@
+export const cpData: Record<string, Record<string, string>> = {
+  "Pendidikan Pancasila": {
+    "Fase A": "Murid mengenal bendera negara, lagu kebangsaan, simbol, dan sila-sila Pancasila, serta menerapkannya di lingkungan keluarga. Mematuhi aturan keluarga, mengenal semboyan Bhinneka Tunggal Ika, menghargai identitas (jenis kelamin, hobi, agama), serta mengenal karakteristik lingkungan tempat tinggal dan sekolah.",
+    "Fase B": "Mengidentifikasi makna sila Pancasila, mengenal perumus Pancasila, dan bangga menggunakan bahasa Indonesia. Melaksanakan aturan di sekolah dan lingkungan, mengenal hak dan kewajiban, menghargai keberagaman budaya/agama, dan mengidentifikasi wilayah tempat tinggal dari tingkat RT hingga kecamatan.",
+    "Fase C": "Memahami kronologi lahirnya Pancasila, meneladani perumus Pancasila, dan menghubungkan sila-sila sebagai kesatuan utuh. Mengimplementasikan hak, kewajiban, dan norma sebagai warga negara, mengenal Pembukaan UUD 1945, serta mempraktikkan musyawarah. Menyajikan sikap menghormati keberagaman dan mengenal wilayah kabupaten/kota serta provinsi sebagai wujud bela negara."
+  },
+  "Bahasa Indonesia": {
+    "Fase A": "Mampu menyimak teks aural tentang diri, keluarga, dan lingkungan; membaca kata-kata sederhana dengan fasih; menjawab dan menanggapi komentar secara santun; menceritakan kembali isi teks; serta menulis permulaan dan teks sederhana.",
+    "Fase B": "Memahami ide pokok dari teks lisan dan cetak; membaca kata-kata baru dengan fasih; menyajikan pendapat dengan gestur dan volume yang sesuai; menanggapi diskusi; dan mampu menulis teks sederhana dengan kalimat beragam serta menggunakan kosakata baru bermakna denotatif.",
+    "Fase C": "Menganalisis informasi dari teks aural, visual, dan audiovisual; membaca kata dengan pola kombinasi huruf; mempresentasikan gagasan dengan efektif dan santun; menyampaikan perasaan lewat teks sastra secara indah; serta menulis teks dengan kalimat kompleks dan kosakata konotatif secara kreatif."
+  },
+  "Matematika": {
+    "Fase A": "Memahami bilangan cacah sampai 100, pecahan setengah dan seperempat, dan melakukan penjumlahan/pengurangan benda konkret. Memahami makna simbol \"=\" dalam kalimat aljabar dan mengenali pola bukan bilangan; mengukur panjang, berat, dan waktu dengan satuan tidak baku; mengenal bangun datar dan ruang, serta menyajikan piktogram.",
+    "Fase B": "Memahami bilangan cacah sampai 10.000, pecahan pembilang satu/penyebut sama, desimal, dan persen, serta melakukan operasi dasar hitung. Menemukan nilai yang belum diketahui dalam penjumlahan/pengurangan, mengukur dengan satuan baku (cm, m, g, kg), mendeskripsikan ciri bangun datar, dan menyajikan data dengan diagram batang (skala satu satuan).",
+    "Fase C": "Memahami bilangan cacah sampai 1.000.000, operasi pecahan dan desimal, serta masalah KPK dan FPB. Mengenali pola perkalian/pembagian dan bernalar secara proporsional; menghitung keliling/luas segi banyak dan volume gabungan, mengukur sudut, menentukan koordinat peta berpetak, serta menentukan probabilitas/peluang suatu kejadian acak."
+  },
+  "Ilmu Pengetahuan Alam dan Sosial (IPAS)": {
+    "Fase B": "Memahami fungsi pancaindra, siklus hidup, perubahan wujud zat, bentuk energi/gaya, interaksi sosial di sekitar, letak geografis tempat tinggal (kabupaten/kota/provinsi), ragam bentang alam, sejarah lokal, serta nilai mata uang. Menerapkan keterampilan proses: mengamati, memprediksi, menyelidiki, dan mengomunikasikan hasil.",
+    "Fase C": "Memahami sistem organ tubuh, hubungan komponen ekosistem, gelombang bunyi/cahaya, sistem tata surya, dan pemanfaatan energi alternatif. Menjelaskan letak geografis Indonesia, sejarah pahlawan nasional, keragaman budaya, kegiatan ekonomi masyarakat, serta mampu menyusun argumen ilmiah atas hasil penyelidikan yang dilakukan."
+  },
+  "Bahasa Inggris": {
+    "Fase B": "Mampu memahami dan merespons teks lisan, tulisan pendek, atau multimodal secara sederhana tentang topik kehidupan sehari-hari (verbal maupun non-verbal), serta mampu mengomunikasikan gagasan pada tingkatan kalimat pendek.",
+    "Fase C": "Memahami alur informasi, gagasan utama, dan informasi rinci dari beragam teks lisan, tulisan, and multimodal tentang topik sehari-hari. Murid mampu mengomunikasikan ide serta pengalamannya secara tertulis maupun lisan dengan struktur dan kalimat yang sederhana sesuai konteks."
+  },
+  "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)": {
+    "Fase A": "Mempraktikkan gerak fundamental dalam situasi berbeda, menaati aturan (fair play), berpartisipasi aktif dalam olahraga, mengenali makanan sehat, dan memahami cara mencari bantuan orang dewasa pada situasi berisiko.",
+    "Fase B": "Menghaluskan keterampilan gerak, menyesuaikan strategi gerak sederhana, berpartisipasi positif dalam tim, mengenali risiko gaya hidup, serta mempraktikkan penanganan cedera ringan sesuai prinsip pertolongan pertama.",
+    "Fase C": "Menyesuaikan dan mentransfer keterampilan gerak secara lebih kompleks, merancang modifikasi peraturan untuk fair play, memahami hubungan gaya hidup/perilaku sedenter dengan kesehatan, serta mempraktikkan penanganan cedera tingkat sedang."
+  },
+  "Pendidikan Agama dan Budi Pekerti": {
+    "Fase A": "Berfokus pada pengenalan identitas diri sebagai ciptaan Tuhan, pengenalan rukun/konsep ketuhanan, praktik dasar ibadah/sembahyang, memahami kebiasaan di keluarga, dan menerapkan perilaku baik (budi pekerti) seperti sopan santun terhadap orang tua, keluarga, serta kepedulian pada alam lingkungan.",
+    "Fase B": "Memperdalam sifat-sifat Tuhan/konsep keagamaan dan mengenal tokoh-tokoh iman/nabi/rasul dari kitab suci. Murid juga belajar tentang hakikat manusia yang hidup bersama dengan umat berbeda agama dan mengembangkan karakter tanggung jawab, disiplin diri, hingga etika pergaulan.",
+    "Fase C": "Memahami nilai-nilai lanjut (seperti iman akan hari akhir, hukum sebab akibat, sejarah perkembangan agama di Indonesia/dunia). Penekanannya juga pada perilaku sosial seperti menumbuhkan toleransi bermasyarakat majemuk, keadilan, musyawarah mufakat, hingga kewajiban amal (zakat/dana paramita/dkk)."
+  },
+  "Seni dan Budaya": {
+    "Fase A": "Mengenal unsur-unsur dasar seperti rupa, nada, irama, gerak, ruang, dan suara tubuh. Anak mampu mencoba mencipta karya, meniru gerakan secara sederhana, merespon melalui tubuh dan suara, serta menunjukkan minat dalam berkesenian.",
+    "Fase B": "Mampu mengidentifikasi pola irama, unsur desain/rupa pada lingkungan sekitar, teknik dasar akting, serta ragam gerak level tari. Murid mulai mampu mengevaluasi karya/praktik secara sederhana dan bekerja sama secara kooperatif dalam meragakan karya (misalnya kelompok tari atau peran lakon).",
+    "Fase C": "Menyajikan karya seni yang lebih utuh; bernyanyi dan menggunakan instrumen ritmis/melodis, menciptakan karya seni rupa berdasarkan gagasan imajinatif/kearifan lokal, merangkai koreografi tari tradisi/kreasi, dan melakukan improvisasi peran serta pemahaman karakter teater. Murid juga dilatih menanggapi dan merefleksikan nilai-nilai yang ada pada sebuah karya."
+  },
+  "Koding KA": {
+    "Fase C": "Koding dan Kecerdasan Artifisial (Fase C) Terdapat mata pelajaran baru yaitu Koding dan Kecerdasan Artifisial yang Capaian Pembelajarannya secara spesifik mulai diberikan untuk Fase C (Kelas 5 dan 6 SD/MI). Pada akhir Fase C, murid ditargetkan memiliki kemampuan berpikir komputasional, literasi digital, hingga pemanfaatan dan pengembangan kecerdasan artifisial dasar (seperti menggunakan perangkat KA sederhana dengan kritis)"
+  }
+};

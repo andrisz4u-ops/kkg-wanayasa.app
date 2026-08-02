@@ -94,9 +94,9 @@ kisi.post('/generate', async (c) => {
                 }
                 4. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
                 5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.
-                ${isPG ? '' : `6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis HOTS (C5/C6) yang menuntut siswa: (a) menganalisis situasi/data, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`}
+                ${isPG ? '' : `6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis HOTS (C5/C6) yang menuntut murid: (a) menganalisis situasi/data, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`}
                 ${isPG ? `6. GAMBAR (WAJIB): Anda HARUS membuat TEPAT 2 soal yang memakai gambar. Untuk 2 soal tersebut, isilah field "gambar_keyword" dengan 1-2 kata kunci objek spesifik dalam Bahasa Inggris (contoh: "water cycle", "food chain", "fraction diagram"). Untuk soal lainnya, isikan "gambar_keyword" dengan string kosong.` : ''}
-                ${isPG ? '7.' : '6.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat siswa. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
+                ${isPG ? '7.' : '6.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
                 ${getKelasAdaptation(jenjangKelas)}
 
                 III. FORMAT OUTPUT JSON (berikan JSON valid saja, tanpa teks lain):

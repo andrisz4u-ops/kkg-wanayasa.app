@@ -81,7 +81,7 @@ const slideLayouts = [
   { id: 'process', name: 'Proses', icon: 'fa-arrow-right', description: 'Langkah-langkah berurutan' },
   { id: 'comparison', name: 'Perbandingan', icon: 'fa-balance-scale', description: 'Perbandingan dua hal' },
   { id: 'summary', name: 'Rangkuman', icon: 'fa-clipboard-list', description: 'Poin-poin kunci akhir' },
-  { id: 'activity', name: 'Aktivitas', icon: 'fa-tasks', description: 'Instruksi aktivitas siswa' },
+  { id: 'activity', name: 'Aktivitas', icon: 'fa-tasks', description: 'Instruksi aktivitas murid' },
   { id: 'question', name: 'Pertanyaan', icon: 'fa-question-circle', description: 'Pertanyaan diskusi atau kuis' },
   { id: 'thankyou', name: 'Penutup', icon: 'fa-hand-paper', description: 'Slide terima kasih' }
 ];
@@ -346,7 +346,7 @@ function renderGalleryView() {
               <div class="flex justify-between items-start mb-1">
                 <h3 class="font-semibold text-gray-900 dark:text-white">Vibrant Creative</h3>
               </div>
-              <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">Warna warni untuk siswa SD / TK</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">Warna warni untuk murid SD / TK</p>
             </div>
           </div>
 

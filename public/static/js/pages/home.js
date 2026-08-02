@@ -36,7 +36,7 @@ export async function renderHome() {
       id: 'kisi',
       icon: 'fa-clipboard-check',
       title: 'Asesmen Digital',
-      desc: 'Kelola ujian dan penilaian siswa secara efisien dengan sistem otomatis.',
+      desc: 'Kelola ujian dan penilaian murid secara efisien dengan sistem otomatis.',
       style: 'white',
     },
     {

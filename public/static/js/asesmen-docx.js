@@ -236,7 +236,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       new TableRow({ children: [
         makeCell(makePara('Mata Pelajaran', { size: 20 }), { borders: true, width: { size: 15, type: WidthType.PERCENTAGE } }),
         makeCell(makeParaRaw([new TextRun({ text: ': ', size: 20, font: FONT_LATIN }), ...makeRuns(formData.mataPelajaran || '', { size: 20 })]), { borders: true, width: { size: 30, type: WidthType.PERCENTAGE } }),
-        makeCell(makePara('Nama Siswa', { size: 20 }), { borders: true, width: { size: 15, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara('Nama Murid', { size: 20 }), { borders: true, width: { size: 15, type: WidthType.PERCENTAGE } }),
         makeCell(makePara(': .....................................................', { size: 20 }), { borders: true, width: { size: 40, type: WidthType.PERCENTAGE } }),
       ]}),
       new TableRow({ children: [

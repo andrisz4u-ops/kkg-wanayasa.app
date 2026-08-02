@@ -425,7 +425,7 @@ BAB III ANALISIS KONDISI DAN SWOT
 ---
 
 A. Analisis Kondisi Saat Ini
-Tulis 2-3 paragraf naratif yang menganalisis secara objektif kondisi pendidikan guru, siswa, dan sarana prasarana di Gugus 3 saat ini. Gunakan data Visi dan Misi sebagai acuan standar ideal.
+Tulis 2-3 paragraf naratif yang menganalisis secara objektif kondisi pendidikan guru, murid, dan sarana prasarana di Gugus 3 saat ini. Gunakan data Visi dan Misi sebagai acuan standar ideal.
 
 B. Analisis SWOT
 Lakukan analisis SWOT mendalam berdasarkan Visi Misi dan kondisi umum pendidikan.
@@ -660,11 +660,11 @@ Susun laporan dalam 4 BAB utama. Gunakan Bahasa Indonesia baku yang formal dan e
 
 BAB I: PENDAHULUAN
 A. Latar Belakang
-   Jelaskan urgensi kegiatan ini dalam konteks peningkatan kompetensi guru (Pedagogik/Profesional)${input.tema ? ` khususnya terkait tema "${input.tema}"` : ''} dan relevansinya dengan kebutuhan siswa atau kondisi pendidikan terkini (misal: Kurikulum Merdeka). Hindari pembukaan yang terlalu umum/klise.
+   Jelaskan urgensi kegiatan ini dalam konteks peningkatan kompetensi guru (Pedagogik/Profesional)${input.tema ? ` khususnya terkait tema "${input.tema}"` : ''} dan relevansinya dengan kebutuhan murid atau kondisi pendidikan terkini (misal: Kurikulum Merdeka). Hindari pembukaan yang terlalu umum/klise.
 B. Tujuan
    Sebutkan minimal 3 tujuan spesifik menggunakan kata kerja operasional (contoh: meningkatkan, menyusun, memahami).
 C. Manfaat
-   Jelaskan manfaat praktis bagi Guru (peserta), Sekolah, dan Siswa secara konkret.
+   Jelaskan manfaat praktis bagi Guru (peserta), Sekolah, dan Murid secara konkret.
 
 BAB II: PELAKSANAAN KEGIATAN
 A. Waktu dan Tempat

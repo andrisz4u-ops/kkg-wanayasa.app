@@ -135,7 +135,7 @@ rpp.post('/generate', async (c) => {
       Jumlah Pertemuan: ${jumlahPertemuan}
 
       BAGIAN 1: IDENTIFIKASI (WAJIB NARATIF PANJANG)
-      - Analisis kesiapan belajar siswa: Tulis minimal 150 kata yang menggambarkan level kognitif siswa saat ini, miskonsepsi yang mungkin terjadi, dan prasyarat pengetahuan.
+      - Analisis kesiapan belajar murid: Tulis minimal 150 kata yang menggambarkan level kognitif murid saat ini, miskonsepsi yang mungkin terjadi, dan prasyarat pengetahuan.
       - Karakteristik gaya belajar: Tulis minimal 100 kata tentang sebaran gaya belajar (visual/auditori/kinestetik) dan implikasinya di kelas ini.
       - Kebutuhan khusus: Jelaskan kebutuhan emosional atau dukungan khusus yang relevan dengan topik ${topik}.
 
@@ -154,24 +154,24 @@ rpp.post('/generate', async (c) => {
 
       1. PENDAHULUAN (Minimal 100 kata)
          - Sapaan, doa, absensi, ice breaking (sebutkan nama ice breaking-nya).
-         - Apersepsi: Pertanyaan pemantik apa yang diajukan guru? Bagaimana respon siswa?
+         - Apersepsi: Pertanyaan pemantik apa yang diajukan guru? Bagaimana respon murid?
          - Penyampaian tujuan dan manfaat pembelajaran.
 
       2. MINDFUL (BERKESADARAN) - Minimal 150 kata
-         - Narasi bagaimana guru mengajak siswa hadir utuh (mindfulness practice).
+         - Narasi bagaimana guru mengajak murid hadir utuh (mindfulness practice).
          - Kegiatan observasi atau stimulasi awal.
          - Tuliskan DIALOG atau instruksi verbal guru secara spesifik.
 
       3. MEANINGFUL (BERMAKNA) - Minimal 200 kata
-         - Ini adalah inti materi. Bagaimana siswa mengonstruksi pemahaman?
+         - Ini adalah inti materi. Bagaimana murid mengonstruksi pemahaman?
          - Aktivitas kolaborasi, diskusi, atau eksperimen.
          - Jelaskan "aha moment" yang diharapkan terjadi.
-         - Kaitkan materi dengan kehidupan nyata siswa secara konkret.
+         - Kaitkan materi dengan kehidupan nyata murid secara konkret.
 
       4. JOYFUL (MENGGEMBIRAKAN) - Minimal 150 kata
          - Aktivitas perayaan pemahaman (presentasi menarik, game, kuis interaktif).
          - Refleksi yang menyenangkan.
-         - Apresiasi guru terhadap kinerja siswa.
+         - Apresiasi guru terhadap kinerja murid.
 
       5. PENUTUP (Minimal 100 kata)
          - Kesimpulan bersama.
@@ -182,7 +182,7 @@ rpp.post('/generate', async (c) => {
       ATURAN KERAS (STRICT RULES):
       1. FORMAT STEP-BY-STEP: WAJIB memecah narasi menjadi poin-poin daftar kegiatan yang diawali simbol "- ". JANGAN menulis dalam satu paragraf blok besar.
       2. KUALITAS PER POIN: Setiap poin strip harus MENDETAIL (minimal 2-3 kalimat per poin). Jangan buat poin pendek. Contoh benar:
-         "- Guru memulai sesi dengan menyapa siswa secara antusias, mengecek kehadiran, lalu mengajak siswa melakukan ice breaking 'Tebak Gaya' untuk mencairkan suasana."
+         "- Guru memulai sesi dengan menyapa murid secara antusias, mengecek kehadiran, lalu mengajak murid melakukan ice breaking 'Tebak Gaya' untuk mencairkan suasana."
          (Ini list, tapi isinya naratif panjang).
       3. KONSISTENSI: Pertemuan ke-2 sampai ke-${jumlahPertemuan} HARUS sama detailnya.
       4. ANTI-DUPLIKASI (CRITICAL): JANGAN PERNAH mengulang aktivitas atau pertanyaan yang sama di fase berbeda. Contoh: Jika pertanyaan pemantik sudah ada di Pendahuluan, JANGAN TULIS LAGI di Mindful. Setiap fase harus unik dan progressive.
@@ -195,12 +195,18 @@ rpp.post('/generate', async (c) => {
         "identifikasi": {
           "kesiapan": "Analisis kesiapan...",
           "karakteristik": "Karakteristik gaya belajar...",
-          "kebutuhan": "Kebutuhan utama siswa..."
+          "kebutuhan": "Kebutuhan utama murid..."
         },
         "desain": {
           "capaian": "Capaian Pembelajaran...",
           "metode_relevan": "Daftar metode...",
-          "metode_pembelajaran": "Detail metode...",
+          "metode_pembelajaran": {
+            "strategi": "Nama metode pembelajaran",
+            "langkah_langkah": [
+              "Sintak 1: Deskripsi...",
+              "Sintak 2: Deskripsi..."
+            ]
+          },
           "sarana_prasarana": {
             "sumber_belajar": "...",
             "media": "...",
@@ -227,7 +233,7 @@ rpp.post('/generate', async (c) => {
               "identitas_petunjuk": "Langkah-langkah pengerjaan...",
               "tujuan_siswa": "Tujuan dengan bahasa sederhana...",
               "masalah": "Kasus/masalah untuk didiskusikan...",
-              "aktivitas": "Instruksi kerja siswa...",
+              "aktivitas": "Instruksi kerja murid...",
               "hasil_kerja": "Format pengisian jawaban...",
               "penilaian": "Minimal 5 soal latihan (Tuliskan secara naratif berurutan 1-5, jangan menggunakan format JSON di dalam field ini. Berikan pilihan A,B,C,D untuk PG atau soal terbuka untuk Esai)."
             }` : ''}
@@ -240,10 +246,10 @@ rpp.post('/generate', async (c) => {
       }
 
       KHUSUS UNTUK LKPD:
-      - identitas_petunjuk: Tuliskan cara siswa mengerjakan LKPD ini.
+      - identitas_petunjuk: Tuliskan cara murid mengerjakan LKPD ini.
       - tujuan_siswa: Tuliskan tujuan pembelajaran yang ramah anak.
       - masalah: Berikan narasi masalah yang menantang.
-      - aktivitas: Berikan langkah 1, 2, 3 untuk dikerjakan siswa.
+      - aktivitas: Berikan langkah 1, 2, 3 untuk dikerjakan murid.
       - hasil_kerja: Berikan panduan apa yang harus ditulis di lembar jawaban.
       - penilaian: Wajib berikan minimal 5 soal (pilihan ganda atau esai).
     `;

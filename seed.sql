@@ -27,7 +27,7 @@ VALUES
 
 INSERT OR IGNORE INTO forum_replies (id, thread_id, user_id, isi)
 VALUES
-  (1, 1, 3, 'Waalaikumsalam Bu Siti.\n\nSaya sudah mencoba pembelajaran diferensiasi dengan membagi siswa berdasarkan gaya belajar. Hasilnya cukup positif, siswa lebih antusias mengikuti pembelajaran.');
+  (1, 1, 3, 'Waalaikumsalam Bu Siti.\n\nSaya sudah mencoba pembelajaran diferensiasi dengan membagi murid berdasarkan gaya belajar. Hasilnya cukup positif, murid lebih antusias mengikuti pembelajaran.');
 
 INSERT OR IGNORE INTO settings (key, value)
 VALUES

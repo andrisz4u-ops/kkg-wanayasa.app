@@ -451,21 +451,28 @@ export function initRpp() {
     });
   });
 
-  // Pertemuan counter
-  let pertemuan = 1;
   const prtCount = document.getElementById('prt-count');
   const prtInput = form.querySelector('input[name="jumlahPertemuan"]');
-
-  document.getElementById('btn-prt-minus')?.addEventListener('click', () => {
-    pertemuan = Math.max(1, pertemuan - 1);
-    prtCount.textContent = pertemuan + 'P';
-    prtInput.value = pertemuan;
-  });
-  document.getElementById('btn-prt-plus')?.addEventListener('click', () => {
-    pertemuan = Math.min(10, pertemuan + 1);
-    prtCount.textContent = pertemuan + 'P';
-    prtInput.value = pertemuan;
-  });
+  const btnMinus = document.getElementById('btn-prt-minus');
+  const btnPlus = document.getElementById('btn-prt-plus');
+  
+  if (btnMinus) {
+    btnMinus.onclick = () => {
+      let currentVal = parseInt(prtInput.value, 10) || 1;
+      let p = Math.max(1, currentVal - 1);
+      prtCount.textContent = p + 'P';
+      prtInput.value = p;
+    };
+  }
+  
+  if (btnPlus) {
+    btnPlus.onclick = () => {
+      let currentVal = parseInt(prtInput.value, 10) || 1;
+      let p = Math.min(10, currentVal + 1);
+      prtCount.textContent = p + 'P';
+      prtInput.value = p;
+    };
+  }
 
   // LKPD highlight
   const selLKPD = document.getElementById('sel-lkpd');
@@ -685,7 +692,7 @@ function renderResult(data, formData) {
   h += `<div class="section-title">A. IDENTIFIKASI MASALAH</div>`;
   h += `<table class="main-table">
       <tr><td style="width:30%"><b>Kesiapan Belajar</b></td><td>${formatText(id.kesiapan)}</td></tr>
-      <tr><td><b>Karakteristik Siswa</b></td><td>${formatText(id.karakteristik)}</td></tr>
+      <tr><td><b>Karakteristik Murid</b></td><td>${formatText(id.karakteristik)}</td></tr>
       <tr><td><b>Kebutuhan Khusus</b></td><td>${formatText(id.kebutuhan)}</td></tr>
     </table>`;
 
@@ -770,7 +777,7 @@ function renderResult(data, formData) {
       h += `<h4 style="text-decoration:underline; text-align:center; text-transform:uppercase; margin-bottom:20px;">LEMBAR KERJA PESERTA DIDIK (LKPD) - PERTEMUAN ${p.nomor}</h4>`;
       h += `<table class="main-table" style="margin-bottom:15px;">
               <tr>
-                <td style="width:20%; font-weight:bold;">Nama Siswa/Kelompok</td>
+                <td style="width:20%; font-weight:bold;">Nama Murid/Kelompok</td>
                 <td style="width:30%;">: ................................</td>
                 <td style="width:20%; font-weight:bold;">Kelas/Semester</td>
                 <td style="width:30%;">: ${formData.jenjangKelas || '-'} / ${formData.semester || '-'}</td>
@@ -788,7 +795,7 @@ function renderResult(data, formData) {
       h += formatText(p.lkpd.masalah);
       h += `</div>`;
 
-      h += `<h4 style="margin:15px 0 5px 0;">C. Aktivitas Siswa</h4>`;
+      h += `<h4 style="margin:15px 0 5px 0;">C. Aktivitas Murid</h4>`;
       h += `<div style="padding-left:15px; margin-bottom:15px;">`;
       h += formatText(p.lkpd.aktivitas);
       h += `</div>`;

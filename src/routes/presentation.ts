@@ -134,8 +134,8 @@ A. ANALISIS AUDIENS:
 
    Pertanyaan bantu:
    - Apa level kognitif (Taksonomi Bloom) yang sesuai untuk kelas ini?
-   - Konsep inti apa saja yang WAJIB dikuasai siswa setelah pembelajaran ini?
-   - Miskonsepsi umum apa yang mungkin dimiliki siswa tentang topik ini?
+   - Konsep inti apa saja yang WAJIB dikuasai murid setelah pembelajaran ini?
+   - Miskonsepsi umum apa yang mungkin dimiliki murid tentang topik ini?
    - Contoh konkret dari kehidupan sehari-hari apa yang bisa digunakan?
    - Fakta mengejutkan / "Tahukah Kamu?" apa yang relevan dan bisa memancing curiosity?
 
@@ -143,7 +143,7 @@ B. PERENCANAAN ALUR PRESENTASI:
    Total slide yang harus dihasilkan: Tepat ${count} slide.
    Rancang alur sebagai berikut:
    
-   1. **Slide 1 — Cover Materi**: Judul besar yang menggugah rasa ingin tahu + subtitle kontekstual. Layout: 'title'. Harus membuat siswa langsung tertarik.
+   1. **Slide 1 — Cover Materi**: Judul besar yang menggugah rasa ingin tahu + subtitle kontekstual. Layout: 'title'. Harus membuat murid langsung tertarik.
    2. **Slide 2 — Tujuan & Apersepsi**: Gabungkan Tujuan Pembelajaran (apa yang akan dicapai) dan Apersepsi (pertanyaan pemantik / pengalaman sehari-hari). Layout: 'twoColumn' atau 'content'. ISI HARUS PADAT, TIDAK BOLEH KOSONG.
    3. **Slide 3 s/d ${count - 1} — Materi Inti**: Setiap slide membahas satu sub-topik secara mendalam. Setiap slide materi WAJIB berisi:
       - Minimal 4–6 poin konten substantif (bukan kalimat kosong atau terlalu umum)
@@ -153,7 +153,7 @@ B. PERENCANAAN ALUR PRESENTASI:
 
 C. STANDAR KUALITAS KONTEN:
    - Materi harus AKURAT secara ilmiah/akademik
-   - Bahasa Indonesia baku, akademik, namun tetap mudah dipahami siswa
+   - Bahasa Indonesia baku, akademik, namun tetap mudah dipahami murid
    - Setiap poin harus informatif — DILARANG menulis poin generik seperti "Materi ini penting" tanpa penjelasan spesifik
    - Gunakan contoh konkret, angka, atau perbandingan yang memudahkan pemahaman
    - Variasi layout antar slide agar tidak monoton (gunakan: content, twoColumn, imageText, activity, quote)
@@ -176,13 +176,13 @@ Setelah berpikir matang di Langkah 1, LANGSUNG tulis output JSON berikut (tanpa 
          "leftContent": ["Poin kiri 1", "Poin kiri 2"],
          "rightTitle": "Judul Kolom Kanan",
          "rightContent": ["Poin kanan 1", "Poin kanan 2"],
-         "instruction": "Instruksi aktivitas untuk siswa",
+         "instruction": "Instruksi aktivitas untuk murid",
          "time": "Durasi aktivitas",
          "quote": "Kutipan bermakna",
          "author": "Sumber kutipan",
          "imageQuery": "english keyword for unsplash photo search",
          "imageAlt": "Deskripsi gambar edukatif",
-         "speakerNotes": "Panduan penyampaian untuk guru: teknik mengajar, pertanyaan interaktif, contoh tambahan, cara mengecek pemahaman siswa."
+         "speakerNotes": "Panduan penyampaian untuk guru: teknik mengajar, pertanyaan interaktif, contoh tambahan, cara mengecek pemahaman murid."
       }
    ]
 }

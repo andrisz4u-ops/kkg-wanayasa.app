@@ -511,7 +511,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
     await c.env.DB.prepare(`INSERT OR IGNORE INTO forum_threads (id, judul, isi, kategori, user_id, reply_count)
       VALUES (1, 'Sharing Best Practice: Pembelajaran Diferensiasi di SD', 'Saya ingin berbagi pengalaman tentang penerapan pembelajaran diferensiasi di kelas saya. Bagaimana pengalaman rekan-rekan?', 'best-practice', 2, 1)`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO forum_replies (id, thread_id, user_id, isi)
-      VALUES (1, 1, 3, 'Saya sudah mencoba pembelajaran diferensiasi dengan membagi siswa berdasarkan gaya belajar. Hasilnya cukup positif!')`).run();
+      VALUES (1, 1, 3, 'Saya sudah mencoba pembelajaran diferensiasi dengan membagi murid berdasarkan gaya belajar. Hasilnya cukup positif!')`).run();
 
     // Seed sekolah data (9 sekolah anggota KKG Gugus 3 Wanayasa)
     await c.env.DB.prepare(`INSERT OR IGNORE INTO sekolah (id, nama, tipe, is_sekretariat, is_sekolah_penggerak, keterangan)

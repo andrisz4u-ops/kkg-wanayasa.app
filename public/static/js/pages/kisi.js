@@ -567,7 +567,7 @@ function renderResult(data, formData) {
         <tr>
           <td style="width:15%">Mata Pelajaran</td>
           <td style="width:30%">: ${formData.mataPelajaran}</td>
-          <td style="width:15%">Nama Siswa</td>
+          <td style="width:15%">Nama Murid</td>
           <td style="width:40%">: ............................................................</td>
         </tr>
         <tr>

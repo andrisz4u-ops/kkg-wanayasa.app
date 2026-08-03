@@ -138,8 +138,15 @@ export async function renderLaporan() {
                                             <div class="col-span-2">
                                                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Pilih AI Engine</label>
                                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                    <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-400 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group col-span-2 md:col-span-1">
-                                                        <input type="radio" name="ai_model" value="vertex" checked class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                                    <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-orange-400 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors cursor-pointer group col-span-2 md:col-span-1">
+                                                        <input type="radio" name="ai_model" value="bedrock" checked class="w-4 h-4 text-orange-600 focus:ring-orange-500">
+                                                        <div class="flex-1">
+                                                            <p class="text-xs font-bold text-gray-900 dark:text-white">🚀 Claude Sonnet 4.6</p>
+                                                            <p class="text-[9px] text-orange-600 font-bold uppercase tracking-tight">AWS Bedrock · Terbaik</p>
+                                                        </div>
+                                                    </label>
+                                                    <label class="flex items-center gap-3 p-3 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group">
+                                                        <input type="radio" name="ai_model" value="vertex" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
                                                         <div class="flex-1">
                                                             <p class="text-xs font-bold text-gray-900 dark:text-white">⚡ Gemini 3 Flash</p>
                                                             <p class="text-[9px] text-blue-600 font-bold uppercase tracking-tight">Vertex AI · Terbaru</p>
@@ -160,13 +167,6 @@ export async function renderLaporan() {
                                                         </div>
                                                     </label>
                                                     <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group">
-                                                        <input type="radio" name="ai_model" value="groq" class="w-4 h-4 text-orange-600 focus:ring-orange-500">
-                                                        <div class="flex-1">
-                                                            <p class="text-xs font-bold text-gray-900 dark:text-white">Groq LLaMA</p>
-                                                            <p class="text-[9px] text-orange-600 font-bold uppercase tracking-tight">Super Cepat</p>
-                                                        </div>
-                                                    </label>
-                                                    <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group">
                                                         <input type="radio" name="ai_model" value="z_ai" class="w-4 h-4 text-purple-600 focus:ring-purple-500">
                                                         <div class="flex-1">
                                                             <p class="text-xs font-bold text-gray-900 dark:text-white">GLM-4.7 Flash</p>
@@ -174,7 +174,7 @@ export async function renderLaporan() {
                                                         </div>
                                                     </label>
                                                 </div>
-                                                <p class="text-[10px] text-gray-500 mt-2 italic"><i class="fas fa-info-circle mr-1"></i>Vertex AI direkomendasikan (butuh API key berbayar). Gemini 2.0 gratis dan berkualitas tinggi.</p>
+                                                <p class="text-[10px] text-gray-500 mt-2 italic"><i class="fas fa-info-circle mr-1"></i>AWS Bedrock (Claude) direkomendasikan. Gemini 2.0 gratis dan berkualitas tinggi.</p>
                                             </div>
                                             <div>
                                                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tempat</label>

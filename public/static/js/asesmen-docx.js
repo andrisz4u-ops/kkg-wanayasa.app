@@ -122,7 +122,7 @@ function makeCell(content, opts = {}) {
 // ============================================================
 function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   const o = opsi || {};
-  const s = 20; // size 20 half-point = 10pt
+  const s = 22; // size 22 half-point = 11pt
 
   const optionPara = (key) => makeParaRaw([
     new window.docx.TextRun({ text: `${key}. `, size: s, font: FONT_LATIN }),
@@ -156,6 +156,7 @@ function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
         ]}),
       ],
     });
+  } else {
     return new window.docx.Table({
       width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
       borders: NO_BORDERS,
@@ -265,21 +266,6 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       // Nomor soal + teks (hanging indent)
       const INDENT_LEFT    = CM(0.6);
       const HANGING        = CM(0.6);
-      const soalLines = String(q.soal || '').split('\n');
-      soalLines.forEach((line, li) => {
-        const isFirst = li === 0;
-        children.push(makeParaRaw([
-          isFirst
-            ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })
-            : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
-          ...makeRuns(line, { size: 22 }),
-        ], {
-          align: AlignmentType.JUSTIFIED,
-          spaceBefore: isFirst ? 6 : 0,
-          spaceAfter: 0,
-          indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT },
-        }));
-      });
 
       if (q.gambar && q.gambar.url) {
         try {

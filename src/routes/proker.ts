@@ -10,7 +10,8 @@ type Bindings = {
   MISTRAL_API_KEY?: string;
   Z_AI_API_KEY?: string;
   GEMINI_API_KEY?: string;
-  GROQ_API_KEY?: string;
+  BEDROCK_API_KEY?: string;
+  BEDROCK_REGION?: string;
   VERTEX_API_KEY?: string;
 };
 
@@ -35,7 +36,7 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     }
 
     const { tahun_ajaran, visi, misi, kegiatan, analisis_kebutuhan, model = 'vertex' } = body as any;
-    const providerMap: Record<string, string> = { mistral: 'mistral', z_ai: 'z_ai', gemini: 'gemini', groq: 'groq', vertex: 'vertex' };
+    const providerMap: Record<string, string> = { mistral: 'mistral', z_ai: 'z_ai', gemini: 'gemini', bedrock: 'bedrock', vertex: 'vertex' };
     const provider = providerMap[model] || 'vertex';
 
     // Validate kegiatan array
@@ -45,7 +46,7 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 
     // Get settings including organization details
     const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'groq_api_key', 'vertex_api_key')"
+      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
     ).all();
 
     const settings: any = {};
@@ -57,14 +58,14 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
       z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
       gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
-      groq: { dbKey: 'groq_api_key', envKey: 'GROQ_API_KEY' },
+      bedrock: { dbKey: 'bedrock_api_key', envKey: 'BEDROCK_API_KEY' },
       vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
     };
     const keyConfig = keyMap[provider] || keyMap.vertex;
     const apiKey = settings[keyConfig.dbKey] || (c.env as any)[keyConfig.envKey];
 
     if (!apiKey) {
-      const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', groq: 'Groq', vertex: 'Vertex AI' };
+      const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', bedrock: 'AWS Bedrock', vertex: 'Vertex AI' };
       return Errors.configError(c, `API Key ${providerNames[provider] || provider} belum dikonfigurasi. Hubungi admin untuk mengatur API Key.`);
     }
 

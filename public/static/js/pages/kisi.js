@@ -157,9 +157,10 @@ export async function renderKisi() {
 
             <label class="asesmen-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="asesmen-input">
+              <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
               <option value="vertex">⚡ Vertex AI</option>
               <option value="gemini">✨ Gemini 2.0 (Gratis)</option>
-              <option value="mistral" selected>Mistral Medium</option>
+              <option value="mistral">Mistral Medium</option>
               <option value="z_ai">GLM-4.7</option>
             </select>
           </div>
@@ -475,9 +476,9 @@ export function initKisi() {
     setVal('jenjangKelas', 'Kelas 5');
     setVal('semester', 'Ganjil');
 
-    // Reset AI provider ke default (Mistral)
+    // Reset AI provider ke default (AWS Bedrock)
     const providerSelect = form.querySelector('select[name="aiProvider"]');
-    if (providerSelect) providerSelect.value = 'mistral';
+    if (providerSelect) providerSelect.value = 'bedrock';
 
     // Scroll ke atas form
     window.scrollTo({ top: 0, behavior: 'smooth' });

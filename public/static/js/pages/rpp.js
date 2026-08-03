@@ -158,9 +158,10 @@ export async function renderRpp() {
 
             <label class="rpp-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="rpp-input">
+              <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
               <option value="vertex">⚡ Vertex AI</option>
               <option value="gemini">✨ Gemini 2.0 (Gratis)</option>
-              <option value="mistral" selected>Mistral Medium</option>
+              <option value="mistral">Mistral Medium</option>
               <option value="z_ai">GLM-4.7</option>
             </select>
           </div>
@@ -985,7 +986,7 @@ function initLampiranBtn() {
     showLoading('AI sedang menyusun rubrik penilaian...', 'Proses ini membutuhkan 20-40 detik');
     try {
       const fd = new FormData(document.getElementById('rpp-form'));
-      const aiProvider = fd.get('aiProvider') || 'mistral';
+      const aiProvider = fd.get('aiProvider') || 'bedrock';
       const result = await api('/rpp/lampiran', {
         method: 'POST',
         body: { mataPelajaran: currentRppFormData.mataPelajaran, topik: currentRppFormData.topik, jenjangKelas: currentRppFormData.jenjangKelas, aiProvider },

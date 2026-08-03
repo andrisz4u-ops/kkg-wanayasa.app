@@ -21,7 +21,7 @@ kisi.post('/generate', async (c) => {
 
         // Inject all AI keys from admin settings (DB) with fallback from env
         const aiSettings: any = await c.env.DB.prepare(
-            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'groq_api_key', 'vertex_api_key')"
+            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
         ).all();
         const settingsMap: any = {};
         aiSettings.results?.forEach((row: any) => { settingsMap[row.key] = row.value; });
@@ -29,13 +29,13 @@ kisi.post('/generate', async (c) => {
         const mistralKey = settingsMap.mistral_api_key || c.env.MISTRAL_API_KEY || '';
         const zAiKey = settingsMap.z_ai_api_key || c.env.Z_AI_API_KEY || '';
         const geminiKey = settingsMap.gemini_api_key || c.env.GEMINI_API_KEY || '';
-        const groqKey = settingsMap.groq_api_key || c.env.GROQ_API_KEY || '';
+        const bedrockKey = settingsMap.bedrock_api_key || c.env.BEDROCK_API_KEY || '';
         const vertexKey = settingsMap.vertex_api_key || c.env.VERTEX_API_KEY || '';
 
         if (mistralKey) ai.addKey('mistral', mistralKey);
         if (zAiKey) ai.addKey('z_ai', zAiKey);
         if (geminiKey) ai.addKey('gemini', geminiKey);
-        if (groqKey) ai.addKey('groq', groqKey);
+        if (bedrockKey) ai.addKey('bedrock', bedrockKey);
         if (vertexKey) ai.addKey('vertex', vertexKey);
         const totalPG = parseInt(jumlahPG) || 0;
         const totalIsian = parseInt(jumlahIsian) || 0;

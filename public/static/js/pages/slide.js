@@ -117,7 +117,7 @@ export async function renderSlide() {
       strategi: 'Problem Based Learning',
       alokasiWaktu: '2 x 35 Menit',
       slideCount: 10,
-      aiProvider: 'mistral'
+      aiProvider: 'bedrock'
     }
   };
 
@@ -250,6 +250,7 @@ function renderGalleryView() {
             <div class="space-y-2 pt-2">
               <label class="block text-xs text-gray-500">AI Engine</label>
               <select id="sg-input-engine" class="w-full text-sm bg-background-light dark:bg-background-dark border border-gray-300 dark:border-gray-700 rounded-md py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900">
+                <option value="bedrock">🚀 AWS Bedrock (Claude 4.6)</option>
                 <option value="mistral">Mistral Large (Formal)</option>
                 <option value="z_ai">GLM-4.7 Flash (Cepat)</option>
                 <option value="gemini">Gemini 2 (Smart)</option>
@@ -1387,6 +1388,17 @@ function showAISettingsModal() {
           <div class="space-y-3">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Pilih AI Engine</label>
             <div class="grid grid-cols-1 gap-3">
+              <label class="flex items-center gap-4 p-4 rounded-2xl border ${state.config.aiProvider === 'bedrock' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark'} hover:border-primary transition-all cursor-pointer group">
+                <input type="radio" name="sg-modal-engine" value="bedrock" ${state.config.aiProvider === 'bedrock' ? 'checked' : ''} class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-0.5">
+                    <span class="font-bold text-gray-900 dark:text-white">🚀 Claude Sonnet 4.6</span>
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-orange-500">AWS Bedrock · Terbaik</span>
+                  </div>
+                  <p class="text-xs text-gray-500">Model terbaik dari Anthropic via AWS Bedrock. Kualitas premium untuk presentasi.</p>
+                </div>
+              </label>
+
               <label class="flex items-center gap-4 p-4 rounded-2xl border ${state.config.aiProvider === 'vertex' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark'} hover:border-primary transition-all cursor-pointer group">
                 <input type="radio" name="sg-modal-engine" value="vertex" ${state.config.aiProvider === 'vertex' ? 'checked' : ''} class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
                 <div class="flex-1">
@@ -1417,17 +1429,6 @@ function showAISettingsModal() {
                     <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400">Premium</span>
                   </div>
                   <p class="text-xs text-gray-500">Hasil lebih formal, detail, dan berbobot akademis.</p>
-                </div>
-              </label>
-
-              <label class="flex items-center gap-4 p-4 rounded-2xl border ${state.config.aiProvider === 'groq' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark'} hover:border-primary transition-all cursor-pointer group">
-                <input type="radio" name="sg-modal-engine" value="groq" ${state.config.aiProvider === 'groq' ? 'checked' : ''} class="w-5 h-5 text-primary border-gray-300 focus:ring-primary">
-                <div class="flex-1">
-                  <div class="flex items-center justify-between mb-0.5">
-                    <span class="font-bold text-gray-900 dark:text-white">Groq LLaMA 3.3</span>
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-orange-500">Super Cepat</span>
-                  </div>
-                  <p class="text-xs text-gray-500">Proses tercepat menggunakan model LLaMA 70B.</p>
                 </div>
               </label>
 

@@ -7,7 +7,7 @@ import { validate, validateId, generateSuratSchema } from '../lib/validation';
 import { logger } from '../lib/logger';
 import type { SuratUndangan } from '../types';
 
-type Bindings = { DB: D1Database; MISTRAL_API_KEY?: string; Z_AI_API_KEY?: string; GEMINI_API_KEY?: string; GROQ_API_KEY?: string };
+type Bindings = { DB: D1Database; MISTRAL_API_KEY?: string; Z_AI_API_KEY?: string; GEMINI_API_KEY?: string; BEDROCK_API_KEY?: string; BEDROCK_REGION?: string };
 
 const surat = new Hono<{ Bindings: Bindings }>();
 
@@ -91,7 +91,7 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
       z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
       gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
-      groq: { dbKey: 'groq_api_key', envKey: 'GROQ_API_KEY' },
+      bedrock: { dbKey: 'bedrock_api_key', envKey: 'BEDROCK_API_KEY' },
       vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
     };
     const keyConfig = keyMap[model] || keyMap.vertex;

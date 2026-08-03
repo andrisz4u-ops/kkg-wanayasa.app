@@ -165,7 +165,7 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
   try {
     // Get all relevant settings
     const settingsKeys = [
-      'mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'groq_api_key', 'vertex_api_key', 'vertex_project_id', 'nama_ketua', 'tahun_ajaran', 'alamat_sekretariat',
+      'mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key', 'vertex_project_id', 'nama_ketua', 'tahun_ajaran', 'alamat_sekretariat',
       // Supabase settings
       'supabase_url', 'supabase_key', 'supabase_bucket',
       // New KKG Profile fields
@@ -209,9 +209,9 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
         : '****';
     }
 
-    if (settings.groq_api_key) {
-      const key = settings.groq_api_key;
-      settings.groq_api_key = key.length > 8
+    if (settings.bedrock_api_key) {
+      const key = settings.bedrock_api_key;
+      settings.bedrock_api_key = key.length > 8
         ? key.substring(0, 4) + '****' + key.substring(key.length - 4)
         : '****';
     }
@@ -292,8 +292,8 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       updates.push({ key: 'gemini_api_key', value: validatedData.gemini_api_key });
     }
 
-    if (validatedData.groq_api_key && !validatedData.groq_api_key.includes('****')) {
-      updates.push({ key: 'groq_api_key', value: validatedData.groq_api_key });
+    if (validatedData.bedrock_api_key && !validatedData.bedrock_api_key.includes('****')) {
+      updates.push({ key: 'bedrock_api_key', value: validatedData.bedrock_api_key });
     }
 
     if (validatedData.vertex_api_key && !validatedData.vertex_api_key.includes('****')) {

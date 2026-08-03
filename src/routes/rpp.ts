@@ -10,7 +10,8 @@ type Bindings = {
   MISTRAL_API_KEY?: string;
   Z_AI_API_KEY?: string;
   GEMINI_API_KEY?: string;
-  GROQ_API_KEY?: string;
+  BEDROCK_API_KEY?: string;
+  BEDROCK_REGION?: string;
   VERTEX_API_KEY?: string;
 };
 
@@ -31,7 +32,7 @@ rpp.post('/generate', async (c) => {
 
     // Inject keys from admin settings (DB) with fallback from env
     const settingsResult: any = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'groq_api_key', 'vertex_api_key')"
+      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
     ).all();
 
     const settings: any = {};
@@ -42,13 +43,13 @@ rpp.post('/generate', async (c) => {
     const mistralKey = settings.mistral_api_key || c.env.MISTRAL_API_KEY;
     const zAiKey = settings.z_ai_api_key || c.env.Z_AI_API_KEY;
     const geminiKey = settings.gemini_api_key || c.env.GEMINI_API_KEY;
-    const groqKey = settings.groq_api_key || c.env.GROQ_API_KEY;
+    const bedrockKey = settings.bedrock_api_key || c.env.BEDROCK_API_KEY;
     const vertexKey = settings.vertex_api_key || c.env.VERTEX_API_KEY;
 
     if (mistralKey) ai.addKey('mistral', mistralKey);
     if (zAiKey) ai.addKey('z_ai', zAiKey);
     if (geminiKey) ai.addKey('gemini', geminiKey);
-    if (groqKey) ai.addKey('groq', groqKey);
+    if (bedrockKey) ai.addKey('bedrock', bedrockKey);
     if (vertexKey) ai.addKey('vertex', vertexKey);
 
     // Time distribution logic

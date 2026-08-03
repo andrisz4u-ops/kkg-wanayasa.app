@@ -36,13 +36,13 @@ export function renderProker() {
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">AI Model</label>
             <select name="model" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 transition">
+              <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
               <option value="vertex">⚡ Gemini 3 Flash Preview via Vertex AI (Berbayar - Terbaru)</option>
               <option value="gemini">✨ Gemini 2.0 Flash (Gratis)</option>
               <option value="mistral">Mistral Large (Detail & Formal)</option>
-              <option value="groq">Groq LLaMA 3.3 (Cepat)</option>
               <option value="z_ai">GLM-4.7-Flash (Cerdas)</option>
             </select>
-            <p class="text-[10px] text-gray-400 mt-1.5 italic"><i class="fas fa-info-circle mr-1"></i>Vertex AI (Gemini 2.5 Flash) terbaik. Gemini 2.0 gratis. Mistral untuk dokumen sangat formal.</p>
+            <p class="text-[10px] text-gray-400 mt-1.5 italic"><i class="fas fa-info-circle mr-1"></i>AWS Bedrock (Claude) terbaik. Vertex AI terbaru. Gemini 2.0 gratis. Mistral untuk dokumen sangat formal.</p>
           </div>
         </div>
 

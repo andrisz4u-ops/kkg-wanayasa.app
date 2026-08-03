@@ -7,7 +7,7 @@ const GLM_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
 const SYSTEM_PROMPT = `Anda adalah asisten ahli administrasi pendidikan Indonesia yang sangat berpengalaman dalam menyusun dokumen resmi untuk Kelompok Kerja Guru (KKG). Anda memahami format surat dinas pendidikan Indonesia, tata bahasa Indonesia yang baik dan benar, serta pedoman-pedoman dari Kementerian Pendidikan dan Kebudayaan. Selalu gunakan bahasa Indonesia yang formal, sopan, dan profesional. PENTING: Selalu selesaikan dokumen sampai bagian terakhir, jangan berhenti di tengah.`;
 
-export async function callAI(provider: 'mistral' | 'z_ai' | 'gemini' | 'groq' | 'vertex', apiKey: string, prompt: string): Promise<string> {
+export async function callAI(provider: 'mistral' | 'z_ai' | 'gemini' | 'bedrock' | 'vertex', apiKey: string, prompt: string): Promise<string> {
    if (provider === 'vertex') {
       return callVertex(apiKey, prompt);
    }
@@ -17,8 +17,8 @@ export async function callAI(provider: 'mistral' | 'z_ai' | 'gemini' | 'groq' | 
    if (provider === 'gemini') {
       return callGemini(apiKey, prompt);
    }
-   if (provider === 'groq') {
-      return callGroq(apiKey, prompt);
+   if (provider === 'bedrock') {
+      return callBedrock(apiKey, prompt);
    }
    return callMistral(apiKey, prompt);
 }
@@ -89,35 +89,38 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
    }
 }
 
-async function callGroq(apiKey: string, prompt: string): Promise<string> {
+async function callBedrock(apiKey: string, prompt: string): Promise<string> {
    if (!apiKey) {
-      throw new Error('API Key Groq belum dikonfigurasi. Silakan hubungi admin untuk mengatur API Key di halaman Pengaturan.');
+      throw new Error('API Key AWS Bedrock belum dikonfigurasi. Silakan hubungi admin untuk mengatur API Key di halaman Pengaturan.');
    }
 
-   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+   const modelId = 'global.anthropic.claude-sonnet-4-6';
+   const region = 'us-east-1';
+   const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
+
+   const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
-         'Authorization': `Bearer ${apiKey}`,
+         'x-api-key': apiKey,
       },
       body: JSON.stringify({
-         model: 'llama-3.3-70b-versatile',
-         messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: prompt }
-         ],
+         anthropic_version: 'bedrock-2023-05-31',
+         max_tokens: 8192,
          temperature: 0.7,
-         max_tokens: 16384,
+         messages: [
+            { role: 'user', content: SYSTEM_PROMPT + '\n\n' + prompt }
+         ],
       }),
    });
 
    if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Groq API error ${response.status}: ${errorText}`);
+      throw new Error(`AWS Bedrock API error ${response.status}: ${errorText}`);
    }
 
    const data: any = await response.json();
-   return data.choices?.[0]?.message?.content || 'Tidak ada respons dari Groq AI.';
+   return data.content?.[0]?.text || 'Tidak ada respons dari AWS Bedrock.';
 }
 
 export async function callMistral(apiKey: string, prompt: string): Promise<string> {

@@ -1,8 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Groq } from 'groq-sdk';
 import { Mistral } from '@mistralai/mistralai';
 
-export type AIProvider = 'gemini' | 'vertex' | 'groq' | 'mistral' | 'z_ai';
+export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'mistral' | 'z_ai';
 
 interface AIResponse {
     content: string;
@@ -56,7 +55,8 @@ export class AIService {
     private geminiKeys: string[];
     private vertexKeys: string[];
     private vertexProjectId: string;
-    private groqKeys: string[];
+    private bedrockKeys: string[];
+    private bedrockRegion: string;
     private mistralKeys: string[];
     private zAiKeys: string[];
     // Menambahkan variabel untuk URL dan Key rahasia VM GCP
@@ -67,7 +67,8 @@ export class AIService {
         this.geminiKeys = this.extractKeys(env, 'GEMINI_API_KEY');
         this.vertexKeys = this.extractKeys(env, 'VERTEX_API_KEY'); // Masih bisa dipakai tapi kita utamakan VM
         this.vertexProjectId = env['VERTEX_PROJECT_ID'] || '';
-        this.groqKeys = this.extractKeys(env, 'GROQ_API_KEY');
+        this.bedrockKeys = this.extractKeys(env, 'BEDROCK_API_KEY');
+        this.bedrockRegion = env['BEDROCK_REGION'] || 'us-east-1';
         this.mistralKeys = this.extractKeys(env, 'MISTRAL_API_KEY');
         this.zAiKeys = this.extractKeys(env, 'Z_AI_API_KEY');
 
@@ -107,7 +108,7 @@ export class AIService {
         if (!key || key.length === 0) return;
         if (provider === 'gemini' && !this.geminiKeys.includes(key)) this.geminiKeys.push(key);
         if (provider === 'vertex' && !this.vertexKeys.includes(key)) this.vertexKeys.push(key);
-        if (provider === 'groq' && !this.groqKeys.includes(key)) this.groqKeys.push(key);
+        if (provider === 'bedrock' && !this.bedrockKeys.includes(key)) this.bedrockKeys.push(key);
         if (provider === 'mistral' && !this.mistralKeys.includes(key)) this.mistralKeys.push(key);
         if (provider === 'z_ai' && !this.zAiKeys.includes(key)) this.zAiKeys.push(key);
     }
@@ -189,22 +190,22 @@ CRITICAL JSON RULES:
         try {
             if (preferredProvider === 'vertex') return await this.callVertex(prompt, jsonMode);
             if (preferredProvider === 'gemini') return await this.callGemini(prompt, jsonMode);
-            if (preferredProvider === 'groq') return await this.callGroq(prompt, jsonMode);
+            if (preferredProvider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
             if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
             if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
         } catch (e) {
             console.warn(`${preferredProvider} failed, trying failover...`, e);
         }
 
-        // Failover order: vertex → gemini → groq → mistral → z_ai
-        const providers: AIProvider[] = ['vertex', 'gemini', 'groq', 'mistral', 'z_ai'];
+        // Failover order: vertex → bedrock → gemini → mistral → z_ai
+        const providers: AIProvider[] = ['vertex', 'bedrock', 'gemini', 'mistral', 'z_ai'];
         const remaining = providers.filter(p => p !== preferredProvider);
 
         for (const provider of remaining) {
             try {
                 if (provider === 'vertex') return await this.callVertex(prompt, jsonMode);
                 if (provider === 'gemini') return await this.callGemini(prompt, jsonMode);
-                if (provider === 'groq') return await this.callGroq(prompt, jsonMode);
+                if (provider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
                 if (provider === 'mistral') return await this.callMistral(prompt, jsonMode);
                 if (provider === 'z_ai') return await this.callGLM(prompt, jsonMode);
             } catch (e) {
@@ -268,22 +269,53 @@ CRITICAL JSON RULES:
         };
     }
 
-    private async callGroq(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.groqKeys);
-        if (!key) throw new Error('No Groq keys available');
+    // ── AWS Bedrock (Claude Sonnet 5) — via long-term API key ────────────────
+    private async callBedrock(prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const key = this.getRandomKey(this.bedrockKeys);
+        if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
 
-        const groq = new Groq({ apiKey: key });
-        const completion = await groq.chat.completions.create({
-            messages: [{ role: 'user', content: prompt }],
-            model: 'llama-3.3-70b-versatile',
+        // Model ID dari Inference Profile AWS Bedrock
+        const modelId = 'global.anthropic.claude-sonnet-4-6';
+        const region = this.bedrockRegion;
+
+        // Endpoint Bedrock untuk Inference Profile (bedrock-runtime)
+        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
+
+        const requestBody: any = {
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: 8192,
             temperature: 0.7,
-            response_format: jsonMode ? { type: 'json_object' } : undefined
+            messages: [
+                {
+                    role: 'user',
+                    content: jsonMode
+                        ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+                        : prompt
+                }
+            ]
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': key,
+            },
+            body: JSON.stringify(requestBody),
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`AWS Bedrock Error ${response.status}: ${errorText}`);
+        }
+
+        const data: any = await response.json();
+        const content = data?.content?.[0]?.text || '';
+
         return {
-            content: completion.choices[0]?.message?.content || '',
-            provider: 'groq',
-            model: 'llama-3.3-70b-versatile'
+            content,
+            provider: 'bedrock',
+            model: 'claude-sonnet-4.6 (AWS Bedrock)'
         };
     }
 

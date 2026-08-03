@@ -144,17 +144,17 @@ export function renderSurat() {
             <label class="block text-sm font-bold text-[var(--color-text-secondary)] mb-2">AI Model</label>
             <div class="relative">
               <select id="model" name="model" class="w-full px-4 py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] rounded-xl focus:ring-2 focus:ring-primary-500 text-[var(--color-text-primary)] appearance-none transition">
+                <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
                 <option value="vertex">⚡ Gemini 3 Flash Preview via Vertex AI (Berbayar - Terbaru)</option>
                 <option value="gemini">✨ Gemini 2.0 Flash (Gratis)</option>
                 <option value="mistral">Mistral Large (Formal)</option>
-                <option value="groq">Groq LLaMA 3.3 (Cepat)</option>
                 <option value="z_ai">GLM-4.7-Flash</option>
               </select>
               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-text-tertiary)]">
                 <i class="fas fa-robot text-xs"></i>
               </div>
             </div>
-            <p class="text-[10px] text-[var(--color-text-tertiary)] mt-2 italic"><i class="fas fa-info-circle mr-1"></i>Vertex AI (Gemini 2.5 Flash) memberikan kualitas terbaik. Gemini 2.0 gratis namun sedikit lebih lambat.</p>
+            <p class="text-[10px] text-[var(--color-text-tertiary)] mt-2 italic"><i class="fas fa-info-circle mr-1"></i>AWS Bedrock (Claude) memberikan kualitas terbaik. Gemini 2.0 gratis namun sedikit lebih lambat.</p>
           </div>
         </div>
 

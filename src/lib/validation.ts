@@ -88,7 +88,7 @@ export const generateSuratSchema = z.object({
     agenda: z.string().min(1, 'Agenda harus diisi').max(2000),
     peserta: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     penanggung_jawab: z.string().max(100).optional().nullable(),
-    model: z.enum(['mistral', 'z_ai', 'gemini', 'groq', 'vertex']).optional().default('vertex'),
+    model: z.enum(['mistral', 'z_ai', 'gemini', 'bedrock', 'vertex']).optional().default('vertex'),
 });
 
 // ============================================
@@ -156,7 +156,7 @@ export const presentationGenerateSchema = z.object({
     profilSosial: z.string().max(160).optional().nullable(),
     capaianPembelajaran: z.string().max(1000).optional().nullable(),
     slideCount: z.coerce.number().int().min(5).max(20).default(10),
-    aiProvider: z.enum(['mistral', 'gemini', 'groq', 'z_ai', 'vertex']).optional(),
+    aiProvider: z.enum(['mistral', 'gemini', 'bedrock', 'z_ai', 'vertex']).optional(),
     template: z.string().max(80).optional(),
 });
 
@@ -286,7 +286,7 @@ export const updateSettingsSchema = z.object({
     mistral_api_key: z.string().max(200).optional(),
     z_ai_api_key: z.string().max(200).optional(),
     gemini_api_key: z.string().max(200).optional(),
-    groq_api_key: z.string().max(200).optional(),
+    bedrock_api_key: z.string().max(500).optional(),
     vertex_api_key: z.string().max(200).optional(),
     vertex_project_id: z.string().max(100).optional(),
     supabase_url: z.string().max(255).optional(),

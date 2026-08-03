@@ -1,6 +1,7 @@
-import { state } from '../state.js';
-import { api } from '../api.js';
-import { debounce, moduleToast, escapeHtml } from '../utils.js';
+import { state } from '../../state.js';
+import { api } from '../../api.js';
+import { debounce, escapeHtml, formatDate } from '../../utils.js';
+const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 window.loadTemplates = async function () {
   const list = document.getElementById('templates-list');
@@ -60,3 +61,4 @@ window.filterTemplates = function (type) {
 }
 
 // [User Functions] 
+

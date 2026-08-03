@@ -39,6 +39,8 @@ type Bindings = {
   SUPABASE_URL?: string;
   SUPABASE_KEY?: string;
   SUPABASE_BUCKET?: string;
+  UNSPLASH_ACCESS_KEY?: string;
+  UNSPLASH_SECRET_KEY?: string;
 };
 
 type Variables = {

@@ -1,6 +1,8 @@
-import { state } from '../state.js';
-import { api } from '../api.js';
-import { debounce, moduleToast, escapeHtml } from '../utils.js';
+import { state } from '../../state.js';
+import { api } from '../../api.js';
+import { debounce, escapeHtml, skeletonTable } from '../../utils.js';
+const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
+const getTableSpacing = () => window.getTableSpacing?.() || { td: 'px-6 py-4 text-sm', row: 'text-sm' };
 
 // Load Users Data with Server-side Pagination
 window.loadAdminUsers = async function (page = 1) {
@@ -560,3 +562,4 @@ window.resetUserPassword = async function (userId) {
 
 
 // [Sekolah Functions]
+

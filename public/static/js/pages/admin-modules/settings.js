@@ -1,6 +1,7 @@
-import { state } from '../state.js';
-import { api } from '../api.js';
-import { debounce, moduleToast, escapeHtml } from '../utils.js';
+import { state } from '../../state.js';
+import { api } from '../../api.js';
+import { debounce, escapeHtml } from '../../utils.js';
+const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Load Settings Data
 async function loadAdminSettings() {
@@ -182,3 +183,4 @@ window.clearAllCaches = async function () {
 
 // [Dashboard Stats] - Consolidated into loadAdminDashboard
 // window.loadAdminStats removed to avoid redundancy
+

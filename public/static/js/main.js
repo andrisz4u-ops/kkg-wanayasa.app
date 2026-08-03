@@ -89,8 +89,21 @@ window.initDb = async function () {
 
 // Page registry
 // Page registry with Dynamic Imports
+// Tambahkan cache-bust khusus untuk modul yang pernah error agar tidak cache lama
 const PAGE_MODULE_VERSION = window.__APP_VERSION__ || 'dev';
-const loadPageModule = (pageName) => import(`./pages/${pageName}.js?v=${encodeURIComponent(PAGE_MODULE_VERSION)}`);
+const _failedModules = new Set();
+const loadPageModule = async (pageName) => {
+  // Jika modul pernah gagal dimuat, tambahkan timestamp untuk bypass cache browser
+  const bust = _failedModules.has(pageName) ? `&t=${Date.now()}` : '';
+  try {
+    const mod = await import(`./pages/${pageName}.js?v=${encodeURIComponent(PAGE_MODULE_VERSION)}${bust}`);
+    _failedModules.delete(pageName);
+    return mod;
+  } catch (err) {
+    _failedModules.add(pageName);
+    throw err;
+  }
+};
 
 const pages = {
   home: async () => (await loadPageModule('home')).renderHome(),
@@ -306,6 +319,7 @@ async function render() {
 
   } catch (e) {
     console.error('Render error:', e);
+    hideLoading(); // Pastikan loading overlay hilang saat error
     content = `
       <div class="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg-primary)] p-4 text-center animate-fade-in">
         <div class="relative mb-8">

@@ -1,6 +1,7 @@
-import { state } from '../state.js';
-import { api } from '../api.js';
-import { debounce, moduleToast, escapeHtml } from '../utils.js';
+import { state } from '../../state.js';
+import { api } from '../../api.js';
+import { debounce, escapeHtml } from '../../utils.js';
+const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Initialize admin data
 let dashboardRefreshInterval = null;
@@ -37,7 +38,7 @@ function getDateNDaysAgo(days) {
   return d.toISOString().slice(0, 10);
 }
 
-function getTableSpacing() {
+window.getTableSpacing = function getTableSpacing() {
   return adminTableDensity === 'compact'
     ? { td: 'px-4 py-2.5 text-xs', row: 'text-xs' }
     : { td: 'px-6 py-4 text-sm', row: 'text-sm' };
@@ -70,9 +71,6 @@ function syncDashboardControlState() {
   if (slaInput) slaInput.value = String(slaPendingThreshold);
 }
 
-function moduleToast(moduleName, message, type = 'info') {
-  showToast(`[${moduleName}] ${message}`, type);
-}
 
 function openAdminModal(modalId, focusSelector = 'input, select, textarea, button') {
   const modal = document.getElementById(modalId);
@@ -508,4 +506,5 @@ window.handleAdminTabClick = function (tabId) {
     navigate('admin');
   }
 };
+
 

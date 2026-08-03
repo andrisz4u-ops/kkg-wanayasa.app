@@ -393,6 +393,14 @@ export function badge(text, type = 'default') {
 }
 
 /**
+ * Module-level toast notification (used by admin modules)
+ * moduleToast(section, message, type)
+ */
+export function moduleToast(section, message, type = 'info') {
+  showToast(message, type);
+}
+
+/**
  * Get query parameters from URL
  */
 export function getQueryParams() {

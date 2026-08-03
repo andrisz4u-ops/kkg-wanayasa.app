@@ -1,6 +1,7 @@
-import { state } from '../state.js';
-import { api } from '../api.js';
-import { debounce, moduleToast, escapeHtml } from '../utils.js';
+import { state } from '../../state.js';
+import { api } from '../../api.js';
+import { debounce, escapeHtml, formatDate } from '../../utils.js';
+const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Auto-refresh dashboard every 30 seconds
 function startDashboardAutoRefresh() {
@@ -338,3 +339,4 @@ window.initDashboardCharts = async function () {
 }
 
 // ============================================
+

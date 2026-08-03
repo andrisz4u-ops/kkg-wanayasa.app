@@ -344,7 +344,7 @@ CRITICAL JSON RULES:
         };
     }
 
-    // ── AWS Bedrock (Claude Sonnet 5) — via long-term API key ────────────────
+    // ── AWS Bedrock (Claude Sonnet 4.6) — via ABSK Bearer Token ────────────────
     private async callBedrock(prompt: string, jsonMode: boolean): Promise<AIResponse> {
         const key = this.getRandomKey(this.bedrockKeys);
         if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
@@ -355,7 +355,7 @@ CRITICAL JSON RULES:
 
         // Endpoint Bedrock untuk Inference Profile (bedrock-runtime)
         const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
-        console.log(`[AI-BEDROCK] Calling endpoint: ${endpoint} with model: ${modelId}`);
+        console.log(`[AI-BEDROCK] Calling endpoint: ${endpoint}`);
 
         const requestBody: any = {
             anthropic_version: 'bedrock-2023-05-31',
@@ -371,29 +371,44 @@ CRITICAL JSON RULES:
             ]
         };
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': key,
-            },
-            body: JSON.stringify(requestBody),
-        });
+        const bodyStr = JSON.stringify(requestBody);
+        const maxRetries = 3;
 
-        if (!response.ok) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${key}`,
+                },
+                body: bodyStr,
+            });
+
+            if (response.ok) {
+                const data: any = await response.json();
+                const content = data?.content?.[0]?.text || '';
+                console.log(`[AI-BEDROCK] Success on attempt ${attempt}`);
+                return {
+                    content,
+                    provider: 'bedrock',
+                    model: 'claude-sonnet-4.6 (AWS Bedrock)'
+                };
+            }
+
+            // Retry on 429 (rate limit) or 529 (overloaded)
+            if ((response.status === 429 || response.status === 529) && attempt < maxRetries) {
+                const delay = attempt * 3000; // 3s, 6s, 9s
+                console.warn(`[AI-BEDROCK] Got ${response.status}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})...`);
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
+
             const errorText = await response.text();
-            console.error(`[AI-BEDROCK] Error ${response.status}:`, errorText);
+            console.error(`[AI-BEDROCK] Error ${response.status} on attempt ${attempt}:`, errorText);
             throw new Error(`AWS Bedrock Error ${response.status}: ${errorText}`);
         }
 
-        const data: any = await response.json();
-        const content = data?.content?.[0]?.text || '';
-
-        return {
-            content,
-            provider: 'bedrock',
-            model: 'claude-sonnet-4.6 (AWS Bedrock)'
-        };
+        throw new Error('AWS Bedrock: Max retries exceeded');
     }
 
     private async callMistral(prompt: string, jsonMode: boolean): Promise<AIResponse> {

@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Mistral } from '@mistralai/mistralai';
 
-export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'mistral' | 'z_ai';
+export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'anthropic' | 'mistral' | 'z_ai';
 
 interface AIResponse {
     content: string;
@@ -57,6 +57,7 @@ export class AIService {
     private vertexProjectId: string;
     private bedrockKeys: string[];
     private bedrockRegion: string;
+    private anthropicKeys: string[];
     private mistralKeys: string[];
     private zAiKeys: string[];
     // Menambahkan variabel untuk URL dan Key rahasia VM GCP
@@ -69,6 +70,7 @@ export class AIService {
         this.vertexProjectId = env['VERTEX_PROJECT_ID'] || '';
         this.bedrockKeys = this.extractKeys(env, 'BEDROCK_API_KEY');
         this.bedrockRegion = env['BEDROCK_REGION'] || 'us-east-1';
+        this.anthropicKeys = this.extractKeys(env, 'ANTHROPIC_API_KEY');
         this.mistralKeys = this.extractKeys(env, 'MISTRAL_API_KEY');
         this.zAiKeys = this.extractKeys(env, 'Z_AI_API_KEY');
 
@@ -109,6 +111,7 @@ export class AIService {
         if (provider === 'gemini' && !this.geminiKeys.includes(key)) this.geminiKeys.push(key);
         if (provider === 'vertex' && !this.vertexKeys.includes(key)) this.vertexKeys.push(key);
         if (provider === 'bedrock' && !this.bedrockKeys.includes(key)) this.bedrockKeys.push(key);
+        if (provider === 'anthropic' && !this.anthropicKeys.includes(key)) this.anthropicKeys.push(key);
         if (provider === 'mistral' && !this.mistralKeys.includes(key)) this.mistralKeys.push(key);
         if (provider === 'z_ai' && !this.zAiKeys.includes(key)) this.zAiKeys.push(key);
     }
@@ -191,21 +194,36 @@ CRITICAL JSON RULES:
             if (preferredProvider === 'vertex') return await this.callVertex(prompt, jsonMode);
             if (preferredProvider === 'gemini') return await this.callGemini(prompt, jsonMode);
             if (preferredProvider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
+            if (preferredProvider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
             if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
             if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
         } catch (e) {
             console.warn(`${preferredProvider} failed, trying failover...`, e);
+            // Khusus untuk pengguna yang memilih Claude (bedrock), prioritas fallback adalah direct Anthropic
+            if (preferredProvider === 'bedrock' && this.anthropicKeys.length > 0) {
+                try {
+                    return await this.callAnthropic(prompt, jsonMode);
+                } catch (e2) {
+                    console.warn(`Anthropic failover also failed...`, e2);
+                }
+            }
         }
 
-        // Failover order: vertex → bedrock → gemini → mistral → z_ai
-        const providers: AIProvider[] = ['vertex', 'bedrock', 'gemini', 'mistral', 'z_ai'];
-        const remaining = providers.filter(p => p !== preferredProvider);
+        // Failover order: vertex → anthropic → bedrock → gemini → mistral → z_ai
+        const providers: AIProvider[] = ['vertex', 'anthropic', 'bedrock', 'gemini', 'mistral', 'z_ai'];
+        const remaining = providers.filter(p => p !== preferredProvider && p !== 'anthropic' /* already tried above if bedrock */);
+
+        // Jika preferred bukan bedrock, atau sudah coba anthropic tapi gagal, coba sisa provider lain
+        if (preferredProvider !== 'bedrock') {
+            remaining.push('anthropic'); // pastikan masih ada dalam list
+        }
 
         for (const provider of remaining) {
             try {
                 if (provider === 'vertex') return await this.callVertex(prompt, jsonMode);
                 if (provider === 'gemini') return await this.callGemini(prompt, jsonMode);
                 if (provider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
+                if (provider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
                 if (provider === 'mistral') return await this.callMistral(prompt, jsonMode);
                 if (provider === 'z_ai') return await this.callGLM(prompt, jsonMode);
             } catch (e) {
@@ -266,6 +284,50 @@ CRITICAL JSON RULES:
             content: response.text(),
             provider: 'gemini',
             model: 'gemini-2.0-flash'
+        };
+    }
+
+    // ── Direct Anthropic (Claude 3.5 Sonnet) ─────────────────────────────────
+    private async callAnthropic(prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const key = this.getRandomKey(this.anthropicKeys);
+        if (!key) throw new Error('No Anthropic API key available.');
+
+        const requestBody: any = {
+            model: 'claude-3-5-sonnet-20240620',
+            max_tokens: 8192,
+            temperature: 0.7,
+            messages: [
+                {
+                    role: 'user',
+                    content: jsonMode
+                        ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+                        : prompt
+                }
+            ]
+        };
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': key,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic Error ${response.status}: ${errorText}`);
+        }
+
+        const data: any = await response.json();
+        const content = data?.content?.[0]?.text || '';
+
+        return {
+            content,
+            provider: 'anthropic',
+            model: 'claude-3-5-sonnet (Anthropic API)'
         };
     }
 

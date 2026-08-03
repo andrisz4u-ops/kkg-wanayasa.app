@@ -287,13 +287,13 @@ CRITICAL JSON RULES:
         };
     }
 
-    // ── Direct Anthropic (Claude 3.5 Sonnet) ─────────────────────────────────
+    // ── Direct Anthropic (Claude 4.6 Sonnet) ─────────────────────────────────
     private async callAnthropic(prompt: string, jsonMode: boolean): Promise<AIResponse> {
         const key = this.getRandomKey(this.anthropicKeys);
         if (!key) throw new Error('No Anthropic API key available.');
 
         const requestBody: any = {
-            model: 'claude-3-5-sonnet-20240620',
+            model: 'claude-4-6-sonnet-latest',
             max_tokens: 8192,
             temperature: 0.7,
             messages: [
@@ -327,7 +327,7 @@ CRITICAL JSON RULES:
         return {
             content,
             provider: 'anthropic',
-            model: 'claude-3-5-sonnet (Anthropic API)'
+            model: 'claude-4.6-sonnet (Anthropic API)'
         };
     }
 

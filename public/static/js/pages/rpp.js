@@ -509,8 +509,10 @@ export function initRpp() {
       });
 
       if (result.success) {
+        const aiMeta = result.data?._ai_meta;
+        const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
         renderResult(result.data, data);
-        showToast('RPP berhasil digenerate!', 'success');
+        showToast(`RPP berhasil digenerate!${aiInfo}`, 'success');
       } else {
         showToast(result.error?.message || 'Gagal generate RPP', 'error');
       }
@@ -993,9 +995,11 @@ function initLampiranBtn() {
         timeout: 120000
       });
       if (result.success && result.data) {
+        const aiMeta = result.data?._ai_meta;
+        const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
         currentLampiran = result.data;
         renderLampiran(result.data);
-        showToast('Lampiran rubrik & penilaian berhasil dibuat!', 'success');
+        showToast(`Lampiran rubrik & penilaian berhasil dibuat!${aiInfo}`, 'success');
       } else {
         showToast(result.error?.message || 'Gagal membuat lampiran', 'error');
       }

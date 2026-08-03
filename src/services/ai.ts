@@ -137,6 +137,10 @@ CRITICAL JSON RULES:
         let result = await this.generateText(jsonPrompt, preferredProvider, true);
         let content = result.content.trim();
 
+        // Simpan metadata AI yang digunakan
+        const aiMeta = { provider: result.provider, model: result.model };
+        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})`);
+
         // ── Layer 1: Strip markdown code fences (```json ... ``` or ``` ... ```)
         content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
@@ -156,15 +160,23 @@ CRITICAL JSON RULES:
             content = content.substring(firstBrace);
         }
 
+        // Helper to attach AI metadata to parsed result
+        const attachMeta = (parsed: any) => {
+            if (typeof parsed === 'object' && parsed !== null) {
+                parsed._ai_meta = aiMeta;
+            }
+            return parsed;
+        };
+
         // ── Layer 3: Direct parse (fast path)
         try {
-            return JSON.parse(content);
+            return attachMeta(JSON.parse(content));
         } catch (_) { /* continue to repair */ }
 
         // ── Layer 4: Sanitize control characters (but preserve \n \r \t)
         const sanitized = content.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD]/g, '');
         try {
-            return JSON.parse(sanitized);
+            return attachMeta(JSON.parse(sanitized));
         } catch (_) { /* continue */ }
 
         // ── Layer 5: Fix improperly escaped characters in string values
@@ -174,13 +186,13 @@ CRITICAL JSON RULES:
             // Remove trailing commas before ] or }
             .replace(/,\s*([}\]])/g, '$1');
         try {
-            return JSON.parse(fixedEscapes);
+            return attachMeta(JSON.parse(fixedEscapes));
         } catch (_) { /* continue */ }
 
         // ── Layer 6: Attempt to repair truncated JSON by closing open structures
         try {
             const repaired = repairTruncatedJSON(fixedEscapes);
-            return JSON.parse(repaired);
+            return attachMeta(JSON.parse(repaired));
         } catch (_) { /* continue */ }
 
         // ── Layer 7: Last resort - try partial extraction of key fields

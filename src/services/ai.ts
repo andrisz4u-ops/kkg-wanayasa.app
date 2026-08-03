@@ -209,14 +209,14 @@ CRITICAL JSON RULES:
             if (preferredProvider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
             if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
             if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
-        } catch (e) {
-            console.warn(`${preferredProvider} failed, trying failover...`, e);
+        } catch (e: any) {
+            console.error(`[AI-FAILOVER] ${preferredProvider} FAILED:`, e?.message || e);
             // Khusus untuk pengguna yang memilih Claude (bedrock), prioritas fallback adalah direct Anthropic
             if (preferredProvider === 'bedrock' && this.anthropicKeys.length > 0) {
                 try {
                     return await this.callAnthropic(prompt, jsonMode);
-                } catch (e2) {
-                    console.warn(`Anthropic failover also failed...`, e2);
+                } catch (e2: any) {
+                    console.error(`[AI-FAILOVER] Anthropic fallback also FAILED:`, e2?.message || e2);
                 }
             }
         }
@@ -305,7 +305,7 @@ CRITICAL JSON RULES:
         if (!key) throw new Error('No Anthropic API key available.');
 
         const requestBody: any = {
-            model: 'claude-4-6-sonnet-latest',
+            model: 'claude-sonnet-4-6-20250514',
             max_tokens: 8192,
             temperature: 0.7,
             messages: [
@@ -330,6 +330,7 @@ CRITICAL JSON RULES:
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error(`[AI-ANTHROPIC] Error ${response.status}:`, errorText);
             throw new Error(`Anthropic Error ${response.status}: ${errorText}`);
         }
 
@@ -339,7 +340,7 @@ CRITICAL JSON RULES:
         return {
             content,
             provider: 'anthropic',
-            model: 'claude-4.6-sonnet (Anthropic API)'
+            model: 'claude-sonnet-4.6 (Anthropic API)'
         };
     }
 
@@ -354,6 +355,7 @@ CRITICAL JSON RULES:
 
         // Endpoint Bedrock untuk Inference Profile (bedrock-runtime)
         const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
+        console.log(`[AI-BEDROCK] Calling endpoint: ${endpoint} with model: ${modelId}`);
 
         const requestBody: any = {
             anthropic_version: 'bedrock-2023-05-31',
@@ -380,6 +382,7 @@ CRITICAL JSON RULES:
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error(`[AI-BEDROCK] Error ${response.status}:`, errorText);
             throw new Error(`AWS Bedrock Error ${response.status}: ${errorText}`);
         }
 

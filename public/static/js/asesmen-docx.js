@@ -115,14 +115,12 @@ function makeCell(content, opts = {}) {
   if (width) cellOpts.width = width;
   if (shading) cellOpts.shading = shading;
   return new window.docx.TableCell(cellOpts);
-}
-
-// ============================================================
+}// ============================================================
 // HELPER: layout tabel opsi PG
 // ============================================================
 function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   const o = opsi || {};
-  const s = 22; // size 22 half-point = 11pt
+  const s = 22;
 
   const optionPara = (key) => makeParaRaw([
     new window.docx.TextRun({ text: `${key}. `, size: s, font: FONT_LATIN }),
@@ -130,48 +128,35 @@ function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   ], { spaceAfter: 0 });
 
   const indentObj = indentTwip ? { size: indentTwip, type: window.docx.WidthType.DXA } : undefined;
+  
+  // Total usable width in A4 (approx 9000 dxa after margins)
+  const totalWidth = 9000;
+  const colWidth = Math.floor(totalWidth / colLayout);
+  const columnWidths = Array(colLayout).fill(colWidth);
+
+  const tableOpts = {
+    width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+    columnWidths: columnWidths,
+    borders: NO_BORDERS,
+    indent: indentObj,
+  };
 
   if (colLayout === 4) {
-    return new window.docx.Table({
-      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
-      layout: window.docx.TableLayoutType.FIXED,
-      alignment: window.docx.AlignmentType.LEFT,
-      borders: NO_BORDERS,
-      indent: indentObj,
-      rows: [new window.docx.TableRow({ children: ['A','B','C','D'].map(k =>
-        makeCell(optionPara(k), { width: { size: 25, type: window.docx.WidthType.PERCENTAGE } })
-      )})],
-    });
+    tableOpts.rows = [
+      new window.docx.TableRow({ children: ['A','B','C','D'].map(k => makeCell(optionPara(k))) })
+    ];
   } else if (colLayout === 2) {
-    return new window.docx.Table({
-      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
-      layout: window.docx.TableLayoutType.FIXED,
-      alignment: window.docx.AlignmentType.LEFT,
-      borders: NO_BORDERS,
-      indent: indentObj,
-      rows: [
-        new window.docx.TableRow({ children: [
-          makeCell(optionPara('A'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
-          makeCell(optionPara('C'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
-        ]}),
-        new window.docx.TableRow({ children: [
-          makeCell(optionPara('B'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
-          makeCell(optionPara('D'), { width: { size: 50, type: window.docx.WidthType.PERCENTAGE } }),
-        ]}),
-      ],
-    });
+    tableOpts.rows = [
+      new window.docx.TableRow({ children: [ makeCell(optionPara('A')), makeCell(optionPara('C')) ] }),
+      new window.docx.TableRow({ children: [ makeCell(optionPara('B')), makeCell(optionPara('D')) ] }),
+    ];
   } else {
-    return new window.docx.Table({
-      width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
-      layout: window.docx.TableLayoutType.FIXED,
-      alignment: window.docx.AlignmentType.LEFT,
-      borders: NO_BORDERS,
-      indent: indentObj,
-      rows: ['A','B','C','D'].map(k => new window.docx.TableRow({ children: [
-        makeCell(optionPara(k), { width: { size: 100, type: window.docx.WidthType.PERCENTAGE } }),
-      ]})),
-    });
+    tableOpts.rows = ['A','B','C','D'].map(k => 
+      new window.docx.TableRow({ children: [ makeCell(optionPara(k)) ] })
+    );
   }
+
+  return new window.docx.Table(tableOpts);
 }
 
 // ============================================================

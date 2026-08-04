@@ -82,13 +82,16 @@ function makeParaRaw(children, opts = {}) {
     align = window.docx.AlignmentType.LEFT,
     spaceBefore = 0, spaceAfter = 0,
     indent = {},
+    tabStops,
   } = opts;
-  return new window.docx.Paragraph({
+  const paraOpts = {
     alignment: align,
     spacing: { before: PT(spaceBefore), after: PT(spaceAfter) },
     indent,
     children: Array.isArray(children) ? children : [children],
-  });
+  };
+  if (tabStops) paraOpts.tabStops = tabStops;
+  return new window.docx.Paragraph(paraOpts);
 }
 
 // ============================================================
@@ -115,48 +118,76 @@ function makeCell(content, opts = {}) {
   if (width) cellOpts.width = width;
   if (shading) cellOpts.shading = shading;
   return new window.docx.TableCell(cellOpts);
-}// ============================================================
-// HELPER: layout tabel opsi PG
+}
+
 // ============================================================
-function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
+// HELPER: layout opsi PG menggunakan Paragraph + TabStops
+// (BUKAN tabel — menghindari semua masalah nested table di Word)
+// ============================================================
+function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
   const o = opsi || {};
   const s = 22;
-
-  const optionPara = (key) => makeParaRaw([
-    new window.docx.TextRun({ text: `${key}. `, size: s, font: FONT_LATIN }),
-    ...makeRuns(o[key] || '-', { size: s }),
-  ], { spaceAfter: 0 });
-
-  const indentObj = indentTwip ? { size: indentTwip, type: window.docx.WidthType.DXA } : undefined;
-  
-  // Total usable width in A4 (approx 9000 dxa after margins)
-  const totalWidth = 9000;
-  const colWidth = Math.floor(totalWidth / colLayout);
-  const columnWidths = Array(colLayout).fill(colWidth);
-
-  const tableOpts = {
-    width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
-    columnWidths: columnWidths,
-    borders: NO_BORDERS,
-    indent: indentObj,
-  };
+  const indentLeft = indentTwip || 0;
+  const TabStopType = window.docx.TabStopType;
 
   if (colLayout === 4) {
-    tableOpts.rows = [
-      new window.docx.TableRow({ children: ['A','B','C','D'].map(k => makeCell(optionPara(k))) })
-    ];
+    // Semua opsi 1 baris: A. xxx   B. xxx   C. xxx   D. xxx
+    const tab1 = indentLeft + 2400;
+    const tab2 = indentLeft + 4800;
+    const tab3 = indentLeft + 7200;
+    return [makeParaRaw([
+      new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
+      ...makeRuns(o.A || '-', { size: s }),
+      new window.docx.TextRun({ text: `\tB. `, size: s, font: FONT_LATIN }),
+      ...makeRuns(o.B || '-', { size: s }),
+      new window.docx.TextRun({ text: `\tC. `, size: s, font: FONT_LATIN }),
+      ...makeRuns(o.C || '-', { size: s }),
+      new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
+      ...makeRuns(o.D || '-', { size: s }),
+    ], {
+      spaceAfter: 2,
+      indent: { left: indentLeft },
+      tabStops: [
+        { type: TabStopType.LEFT, position: tab1 },
+        { type: TabStopType.LEFT, position: tab2 },
+        { type: TabStopType.LEFT, position: tab3 },
+      ],
+    })];
   } else if (colLayout === 2) {
-    tableOpts.rows = [
-      new window.docx.TableRow({ children: [ makeCell(optionPara('A')), makeCell(optionPara('C')) ] }),
-      new window.docx.TableRow({ children: [ makeCell(optionPara('B')), makeCell(optionPara('D')) ] }),
+    // 2 baris: A + C, lalu B + D
+    const tabMid = indentLeft + 4800;
+    return [
+      makeParaRaw([
+        new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
+        ...makeRuns(o.A || '-', { size: s }),
+        new window.docx.TextRun({ text: `\tC. `, size: s, font: FONT_LATIN }),
+        ...makeRuns(o.C || '-', { size: s }),
+      ], {
+        spaceAfter: 0,
+        indent: { left: indentLeft },
+        tabStops: [{ type: TabStopType.LEFT, position: tabMid }],
+      }),
+      makeParaRaw([
+        new window.docx.TextRun({ text: `B. `, size: s, font: FONT_LATIN }),
+        ...makeRuns(o.B || '-', { size: s }),
+        new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
+        ...makeRuns(o.D || '-', { size: s }),
+      ], {
+        spaceAfter: 2,
+        indent: { left: indentLeft },
+        tabStops: [{ type: TabStopType.LEFT, position: tabMid }],
+      }),
     ];
   } else {
-    tableOpts.rows = ['A','B','C','D'].map(k => 
-      new window.docx.TableRow({ children: [ makeCell(optionPara(k)) ] })
-    );
+    // 1 kolom: setiap opsi baris sendiri
+    return ['A','B','C','D'].map((k, i) => makeParaRaw([
+      new window.docx.TextRun({ text: `${k}. `, size: s, font: FONT_LATIN }),
+      ...makeRuns(o[k] || '-', { size: s }),
+    ], {
+      spaceAfter: i === 3 ? 2 : 0,
+      indent: { left: indentLeft + CM(0.4) },
+    }));
   }
-
-  return new window.docx.Table(tableOpts);
 }
 
 // ============================================================
@@ -250,9 +281,11 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     for (const q of data.pg) {
       const opts = q.opsi || {};
       const vals = Object.values(opts);
-      const allShort = vals.every(v => (v || '').length < 20);
-      const anyLong  = vals.some(v  => (v || '').length > 55);
-      const colLayout = allShort ? 4 : anyLong ? 1 : 2;
+      const allShort = vals.every(v => (v || '').length < 18);
+      const anyLong  = vals.some(v  => (v || '').length > 35);
+      let colLayout = allShort ? 4 : anyLong ? 1 : 2;
+      // Jika ada gambar, paksa 1 kolom karena space terbatas
+      if (q.gambar && q.gambar.url) colLayout = 1;
 
       // Nomor soal + teks (hanging indent)
       const INDENT_LEFT    = CM(0.6);
@@ -292,8 +325,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
              ], { align: AlignmentType.JUSTIFIED, spaceBefore: 0, spaceAfter: 0 }));
           });
           
-          cell3Children.push(makeOpsiTable(opts, colLayout, 0));
-          cell3Children.push(makePara('', { spaceAfter: 0 }));
+          cell3Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
 
           const cell3 = new window.docx.TableCell({
              children: cell3Children,
@@ -321,7 +353,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
               ...makeRuns(line, { size: 22 }),
             ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
           });
-          children.push(makeOpsiTable(opts, colLayout, INDENT_LEFT));
+          children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
         }
       } else {
         const soalLines = String(q.soal || '').split('\n');
@@ -332,7 +364,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
             ...makeRuns(line, { size: 22 }),
           ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
         });
-        children.push(makeOpsiTable(opts, colLayout, INDENT_LEFT));
+        children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
       }
     }
   }
@@ -483,6 +515,16 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
   }
 
   // ── BUILD DOCUMENT ─────────────────────────────────────────
+  const { Header, Footer, PageNumber, TabStopPosition, TabStopType } = window.docx;
+
+  // Jenis ujian untuk header
+  const jenisUjianMap = { STS: 'Sumatif Tengah Semester', SAS: 'Sumatif Akhir Semester', ASAT: 'Asesmen Sumatif Akhir Tahun' };
+  const jenisUjianText = jenisUjianMap[formData.jenisUjian] || (formData.jenisUjian || 'Ulangan Harian');
+  const headerText = `${jenisUjianText} - ${formData.mataPelajaran || ''} - ${formData.jenjangKelas || ''}`;
+
+  // LINE SPACING 1.15 (1.15 × 240 twip = 276 twip)
+  const LINE_SPACING_115 = 276;
+
   const doc = new Document({
     creator: 'KKG Gugus 3 Wanayasa',
     description: `Asesmen ${formData.mataPelajaran || ''} ${formData.jenjangKelas || ''}`,
@@ -490,6 +532,9 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       default: {
         document: {
           run: { font: FONT_LATIN, size: 22 },
+          paragraph: {
+            spacing: { line: LINE_SPACING_115 },
+          },
         },
       },
     },
@@ -503,6 +548,34 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
             right:  CM(1.27),
           },
         },
+      },
+      headers: {
+        default: new Header({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              spacing: { after: PT(4) },
+              children: [
+                new TextRun({ text: headerText, size: 16, italics: true, font: FONT_LATIN, color: '888888' }),
+              ],
+            }),
+          ],
+        }),
+      },
+      footers: {
+        default: new Footer({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text: 'Halaman ', size: 16, font: FONT_LATIN, color: '888888' }),
+                new TextRun({ children: [PageNumber.CURRENT], size: 16, font: FONT_LATIN, color: '888888' }),
+                new TextRun({ text: ' dari ', size: 16, font: FONT_LATIN, color: '888888' }),
+                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, font: FONT_LATIN, color: '888888' }),
+              ],
+            }),
+          ],
+        }),
       },
       children,
     }],

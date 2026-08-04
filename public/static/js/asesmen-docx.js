@@ -134,6 +134,8 @@ function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   if (colLayout === 4) {
     return new window.docx.Table({
       width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      layout: window.docx.TableLayoutType.FIXED,
+      alignment: window.docx.AlignmentType.LEFT,
       borders: NO_BORDERS,
       indent: indentObj,
       rows: [new window.docx.TableRow({ children: ['A','B','C','D'].map(k =>
@@ -143,6 +145,8 @@ function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   } else if (colLayout === 2) {
     return new window.docx.Table({
       width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      layout: window.docx.TableLayoutType.FIXED,
+      alignment: window.docx.AlignmentType.LEFT,
       borders: NO_BORDERS,
       indent: indentObj,
       rows: [
@@ -159,6 +163,8 @@ function makeOpsiTable(opsi, colLayout, indentTwip = 0) {
   } else {
     return new window.docx.Table({
       width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+      layout: window.docx.TableLayoutType.FIXED,
+      alignment: window.docx.AlignmentType.LEFT,
       borders: NO_BORDERS,
       indent: indentObj,
       rows: ['A','B','C','D'].map(k => new window.docx.TableRow({ children: [

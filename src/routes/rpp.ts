@@ -118,9 +118,13 @@ rpp.post('/generate', async (c) => {
       ? profilLulusan.join(', ')
       : (profilLulusan || '');
 
+    const bedrockWarning = aiProvider === 'bedrock' 
+      ? "\n\n      PERINGATAN KRITIS LIMITASI TOKEN:\n      Anda sedang berjalan di sistem Bedrock dengan batas keras 4000 output token. Jika teks terlalu panjang, JSON akan terpotong (rusak)! Untuk mencegah ini:\n      1. WAJIB menggunakan poin-poin sangat singkat (maksimal 5-7 kata per poin).\n      2. JANGAN menulis narasi paragraf panjang.\n      3. Hapus semua kalimat pengantar/penutup basa-basi.\n      4. Jadikan setiap aktivitas sesingkat mungkin tapi tetap jelas."
+      : "";
+
     const prompt = `
       Bertindaklah sebagai ahli kurikulum Deep Learning & Understanding by Design (UbD).
-      Tugas Anda adalah menyusun RPP (Rencana Pelaksanaan Pembelajaran) yang MENDALAM, TERSTRUKTUR, dan SIAP AJAR.
+      Tugas Anda adalah menyusun RPP (Rencana Pelaksanaan Pembelajaran) yang MENDALAM, TERSTRUKTUR, dan SIAP AJAR.${bedrockWarning}
       
       Gunakan bahasa yang jelas, padat, dan tidak bertele-tele. Jangan gunakan kalimat pengisi (filler).
 

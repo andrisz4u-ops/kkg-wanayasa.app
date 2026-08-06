@@ -82,18 +82,18 @@ export class AIService {
         const keys: string[] = [];
 
         // 1. Direct match
-        if (env[prefix]) {
+        if (env[prefix] && typeof env[prefix] === 'string') {
             if (env[prefix].includes(',')) {
                 env[prefix].split(',').forEach((k: string) => keys.push(k.trim()));
             } else {
-                keys.push(env[prefix]);
+                keys.push(env[prefix].trim());
             }
         }
 
         // 2. Numbered suffixes (e.g. GEMINI_API_KEY_1)
         Object.keys(env).forEach(key => {
-            if (key.startsWith(prefix) && key !== prefix) {
-                keys.push(env[key]);
+            if (key.startsWith(prefix) && key !== prefix && typeof env[key] === 'string') {
+                keys.push(env[key].trim());
             }
         });
 

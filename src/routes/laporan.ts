@@ -57,20 +57,25 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
             "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
         ).all();
 
-        const settingsDict: any = {};
-        results.results?.forEach((row: any) => {
-            settingsDict[row.key] = row.value;
+        // Get All Settings
+        const { results: allSettingsRows } = await c.env.DB.prepare(
+            "SELECT key, value FROM settings"
+        ).all();
+        const settings: any = {};
+        allSettingsRows?.forEach((row: any) => {
+            settings[row.key] = row.value;
         });
 
-        const keyMap: Record<string, { dbKey: string; envKey: string }> = {
-            mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
-            z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
-            gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
-            bedrock: { dbKey: 'bedrock_api_key', envKey: 'BEDROCK_API_KEY' },
-            vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
+        const keyMap: Record<string, { envKey: string; dbKey: string }> = {
+            mistral: { envKey: 'MISTRAL_API_KEY', dbKey: 'mistral_api_key' },
+            z_ai: { envKey: 'Z_AI_API_KEY', dbKey: 'z_ai_api_key' },
+            gemini: { envKey: 'GEMINI_API_KEY', dbKey: 'gemini_api_key' },
+            bedrock: { envKey: 'BEDROCK_API_KEY', dbKey: 'bedrock_api_key' },
+            vertex: { envKey: 'VERTEX_API_KEY', dbKey: 'vertex_api_key' },
         };
+
         const keyConfig = keyMap[provider] || keyMap.vertex;
-        const apiKey = settingsDict[keyConfig.dbKey] || (c.env as any)[keyConfig.envKey];
+        const apiKey = (c.env as any)[keyConfig.envKey] || settings[keyConfig.dbKey];
 
         if (!apiKey) {
             const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', bedrock: 'AWS Bedrock', vertex: 'Vertex AI' };

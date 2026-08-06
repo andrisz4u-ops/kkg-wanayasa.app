@@ -120,9 +120,9 @@ rpp.post('/generate', async (c) => {
 
     const prompt = `
       Bertindaklah sebagai ahli kurikulum Deep Learning & Understanding by Design (UbD).
-      Tugas Anda adalah menyusun RPP (Rencana Pelaksanaan Pembelajaran) yang SANGAT MENDALAM, NARATIF, dan REFLEKTIF.
+      Tugas Anda adalah menyusun RPP (Rencana Pelaksanaan Pembelajaran) yang MENDALAM, TERSTRUKTUR, dan SIAP AJAR.
       
-      JANGAN PERNAH membuat ringkasan. Konten harus "siap ajar" dan sangat detail (scripted lesson plan).
+      Gunakan bahasa yang jelas, padat, dan tidak bertele-tele. Jangan gunakan kalimat pengisi (filler).
 
       DATA SEKOLAH:
       Sekolah: ${namaSekolah}
@@ -135,50 +135,46 @@ rpp.post('/generate', async (c) => {
       Alokasi: ${alokasiWaktu}
       Jumlah Pertemuan: ${jumlahPertemuan}
 
-      BAGIAN 1: IDENTIFIKASI (WAJIB NARATIF PANJANG)
-      - Analisis kesiapan belajar murid: Tulis minimal 150 kata yang menggambarkan level kognitif murid saat ini, miskonsepsi yang mungkin terjadi, dan prasyarat pengetahuan.
-      - Karakteristik gaya belajar: Tulis minimal 100 kata tentang sebaran gaya belajar (visual/auditori/kinestetik) dan implikasinya di kelas ini.
+      BAGIAN 1: IDENTIFIKASI
+      - Analisis kesiapan belajar murid: Jelaskan secara spesifik level kognitif murid saat ini, miskonsepsi yang mungkin terjadi, dan prasyarat pengetahuan (maks. 3 kalimat).
+      - Karakteristik gaya belajar: Jelaskan implikasi sebaran gaya belajar (visual/auditori/kinestetik) di kelas ini.
       - Kebutuhan khusus: Jelaskan kebutuhan emosional atau dukungan khusus yang relevan dengan topik ${topik}.
 
       BAGIAN 2: DESAIN PEMBELAJARAN
       - ${userCP}
-      - Deskripsi Strategi: Jelaskan bagaimana ${strategi} akan diterapkan langkah demi langkah.
-      - Profil Lulusan: ${profileDimensions}. Jelaskan bagaimana dimensi ini akan dilatih.
+      - Deskripsi Strategi: Jelaskan secara padat bagaimana ${strategi} akan diterapkan.
+      - Profil Lulusan: ${profileDimensions}. Jelaskan cara melatih dimensi ini dalam 1 kalimat.
       - Diferensiasi:
-        * Visual: Sebutkan media spesifik (gambar/video/diagram) yang akan dipakai.
-        * Auditori: Sebutkan kegiatan diskusi atau penjelasan lisan spesifik.
-        * Kinestetik: Sebutkan aktivitas fisik atau manipulasi benda konkret yang dilakukan.
-      - Tujuan Pembelajaran (TP): Minimal 3 TP per pertemuan (1 LOTS, 2 HOTS). Gunakan Kata Kerja Operasional (KKO) yang terukur.
+        * Visual: Sebutkan media spesifik (gambar/video/diagram).
+        * Auditori: Sebutkan instruksi atau bentuk diskusi lisan spesifik.
+        * Kinestetik: Sebutkan aktivitas fisik spesifik.
+      - Tujuan Pembelajaran (TP): Minimal 3 TP per pertemuan (1 LOTS, 2 HOTS).
 
       BAGIAN 3: SKENARIO PEMBELAJARAN (INTI GENERATED RPP)
-      Ini adalah bagian terpenting. Untuk SETIAP PERTEMUAN, buat skenario naratif yang sangat detail dengan alur:
+      Ini adalah bagian terpenting. Untuk SETIAP PERTEMUAN, buat skenario yang aplikatif dengan alur:
 
-      1. PENDAHULUAN (Minimal 100 kata)
-         - Sapaan, doa, absensi, ice breaking (sebutkan nama ice breaking-nya).
-         - Apersepsi: Pertanyaan pemantik apa yang diajukan guru? Bagaimana respon murid?
-         - Penyampaian tujuan dan manfaat pembelajaran.
+      1. PENDAHULUAN
+         - Sapaan, doa, absensi, ice breaking (sebutkan aktivitas spesifiknya).
+         - Apersepsi: Pertanyaan pemantik dan ekspektasi respon murid.
+         - Penyampaian tujuan.
 
-      2. MINDFUL (BERKESADARAN) - Minimal 150 kata
-         - Narasi bagaimana guru mengajak murid hadir utuh (mindfulness practice).
+      2. MINDFUL (BERKESADARAN)
+         - Tuliskan 1 instruksi verbal spesifik dari guru untuk memusatkan perhatian murid.
          - Kegiatan observasi atau stimulasi awal.
-         - Tuliskan DIALOG atau instruksi verbal guru secara spesifik.
 
-      3. MEANINGFUL (BERMAKNA) - Minimal 200 kata
-         - Ini adalah inti materi. Bagaimana murid mengonstruksi pemahaman?
-         - Aktivitas kolaborasi, diskusi, atau eksperimen.
-         - Jelaskan "aha moment" yang diharapkan terjadi.
-         - Kaitkan materi dengan kehidupan nyata murid secara konkret.
+      3. MEANINGFUL (BERMAKNA)
+         - Ini adalah inti materi. Tuliskan langkah konstruksi pemahaman secara berurutan.
+         - Aktivitas kolaborasi atau eksperimen yang spesifik.
+         - Kaitkan materi dengan dunia nyata murid.
 
-      4. JOYFUL (MENGGEMBIRAKAN) - Minimal 150 kata
-         - Aktivitas perayaan pemahaman (presentasi menarik, game, kuis interaktif).
-         - Refleksi yang menyenangkan.
-         - Apresiasi guru terhadap kinerja murid.
+      4. JOYFUL (MENGGEMBIRAKAN)
+         - Aktivitas perayaan pemahaman (game atau kuis interaktif).
+         - Relevansi: Bagaimana ini membuat murid merasa berhasil/bangga?
 
-      5. PENUTUP (Minimal 100 kata)
-         - Kesimpulan bersama.
-         - Refleksi 1 menit.
-         - Tindak lanjut untuk pertemuan berikutnya.
-         - Doa penutup.
+      5. PENUTUP
+         - Refleksi bersama: 1 pertanyaan penutup dari guru.
+         - Penyampaian tindak lanjut (tugas atau persiapan pertemuan berikutnya).
+         - Doa dan salam.
 
       ATURAN KERAS (STRICT RULES):
       1. FORMAT STEP-BY-STEP: WAJIB memecah narasi menjadi poin-poin daftar kegiatan yang diawali simbol "- ". JANGAN menulis dalam satu paragraf blok besar.

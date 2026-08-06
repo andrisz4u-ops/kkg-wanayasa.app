@@ -60,8 +60,14 @@ export async function renderKisi() {
               <div class="asesmen-col">
                 <label class="asesmen-label">KELAS</label>
                 <select name="jenjangKelas" class="asesmen-input">
-                  <option>Kelas 1</option><option>Kelas 2</option><option>Kelas 3</option>
-                  <option>Kelas 4</option><option selected>Kelas 5</option><option>Kelas 6</option>
+                  ${[1, 2, 3, 4, 5, 6].map(k => `
+                    <option value="Kelas ${k}" ${
+                      (state.user?.mata_pelajaran || '').includes(String(k)) || 
+                      (state.user?.role_label || '').includes(String(k)) ||
+                      (!state.user?.mata_pelajaran?.match(/[1-6]/) && k === 5) 
+                      ? 'selected' : ''
+                    }>Kelas ${k}</option>
+                  `).join('')}
                 </select>
               </div>
               <div class="asesmen-col">
@@ -474,7 +480,15 @@ export function initKisi() {
     setVal('isianType', 'Standard');
     setVal('hotsRatio', '30:40:30');
     setVal('jenisUjian', 'Ulangan Harian');
-    setVal('jenjangKelas', 'Kelas 5');
+    // Hitung default kelas dari profil user
+    let defaultKelas = 'Kelas 5';
+    for (let k = 1; k <= 6; k++) {
+      if ((state.user?.mata_pelajaran || '').includes(String(k)) || (state.user?.role_label || '').includes(String(k))) {
+        defaultKelas = `Kelas ${k}`;
+        break;
+      }
+    }
+    setVal('jenjangKelas', defaultKelas);
     setVal('semester', 'Ganjil');
 
     // Reset AI provider ke default (AWS Bedrock)

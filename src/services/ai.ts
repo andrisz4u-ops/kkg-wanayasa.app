@@ -172,35 +172,39 @@ CRITICAL JSON RULES:
             return parsed;
         };
 
+        let parseErrors: string[] = [];
+
         // ── Layer 3: Direct parse (fast path)
         try {
             return attachMeta(JSON.parse(content));
-        } catch (_) { /* continue to repair */ }
+        } catch (e: any) { parseErrors.push(`L3: ${e.message}`); }
 
         // ── Layer 4: Sanitize control characters (but preserve \n \r \t)
         const sanitized = content.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD]/g, '');
         try {
             return attachMeta(JSON.parse(sanitized));
-        } catch (_) { /* continue */ }
+        } catch (e: any) { parseErrors.push(`L4: ${e.message}`); }
 
         // ── Layer 5: Fix improperly escaped characters in string values
         const fixedEscapes = sanitized
-            // Fix unescaped newlines inside string values
-            .replace(/("(?:[^"\\]|\\.)*")|(\n)/g, (match, str, nl) => str ? str : '\\n')
+            // Fix unescaped newlines strictly INSIDE string values
+            .replace(/("(?:[^"\\]|\\.)*")/g, (match) => match.replace(/\n/g, '\\n'))
             // Remove trailing commas before ] or }
             .replace(/,\s*([}\]])/g, '$1');
         try {
             return attachMeta(JSON.parse(fixedEscapes));
-        } catch (_) { /* continue */ }
+        } catch (e: any) { parseErrors.push(`L5: ${e.message}`); }
 
         // ── Layer 6: Attempt to repair truncated JSON by closing open structures
         try {
             const repaired = repairTruncatedJSON(fixedEscapes);
             return attachMeta(JSON.parse(repaired));
-        } catch (_) { /* continue */ }
+        } catch (e: any) { parseErrors.push(`L6: ${e.message}`); }
 
         // ── Layer 7: Last resort - try partial extraction of key fields
-        console.error('All JSON parse attempts failed. Raw content (first 2000 chars):', content.substring(0, 2000));
+        console.error(`[JSON PARSE FAILED] Errors: ${parseErrors.join(' | ')}`);
+        console.error('Raw content length:', content.length);
+        console.error('Raw content (last 1000 chars):', content.substring(Math.max(0, content.length - 1000)));
         throw new Error('Respons AI tidak dapat diproses sebagai JSON. Coba generate ulang atau ganti provider AI.');
     }
 

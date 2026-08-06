@@ -120,7 +120,7 @@ kisi.post('/generate', async (c) => {
                 const currentCount = Math.min(BATCH_SIZE, totalPG - i);
                 const prompt = buildPrompt('pg', i + 1, currentCount);
                 const result = await ai.generateJSON(prompt, (aiProvider as AIProvider) || 'mistral');
-                if (result?._meta) finalData._meta = result._meta;
+                if (result?._ai_meta) finalData._meta = result._ai_meta;
                 if (result?.pg && Array.isArray(result.pg)) {
                     for (const q of result.pg) {
                         if (q.gambar_keyword && unsplash.isConfigured()) {
@@ -159,7 +159,7 @@ kisi.post('/generate', async (c) => {
             const startNoIsian = totalPG + 1;
             const prompt = buildPrompt('isian', startNoIsian, totalIsian, totalPG);
             const result = await ai.generateJSON(prompt, (aiProvider as AIProvider) || 'mistral');
-            if (result?._meta) finalData._meta = result._meta;
+            if (result?._ai_meta) finalData._meta = result._ai_meta;
 
             if (result?.isian) {
                 finalData.isian = result.isian;

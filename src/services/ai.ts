@@ -371,7 +371,8 @@ CRITICAL JSON RULES:
         };
     }
 
-    // ── AWS Bedrock (Claude Sonnet 4.6) — via ABSK Bearer Token ────────────────
+    // ── AWS Bedrock (Claude Sonnet 4.6) — via Converse API ──────────────────────
+    // Menggunakan Converse API (bukan /invoke) untuk menghindari cap 4096 dari proxy
     private async callBedrock(prompt: string, jsonMode: boolean): Promise<AIResponse> {
         const key = this.getRandomKey(this.bedrockKeys);
         if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
@@ -380,25 +381,27 @@ CRITICAL JSON RULES:
         const modelId = 'global.anthropic.claude-sonnet-4-6';
         const region = this.bedrockRegion;
 
-        // Endpoint Bedrock untuk Inference Profile (bedrock-runtime)
-        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
-        console.log(`[AI-BEDROCK] Calling endpoint: ${endpoint}`);
+        // Gunakan Converse API (/converse) — jalur standar AWS yang lebih konsisten
+        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/converse`;
+        console.log(`[AI-BEDROCK] Calling Converse API endpoint: ${endpoint}`);
+
+        const userContent = jsonMode
+            ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+            : prompt;
 
         const requestBody: any = {
-            anthropic_version: 'bedrock-2023-05-31',
-            max_tokens: 8192,
-            temperature: 0.7,
             messages: [
                 {
                     role: 'user',
-                    content: jsonMode
-                        ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
-                        : prompt
+                    content: [{ text: userContent }]
                 }
-            ]
+            ],
+            inferenceConfig: {
+                maxTokens: 8192,
+                temperature: 0.7
+            }
         };
 
-        const bodyStr = JSON.stringify(requestBody);
         const maxRetries = 3;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -408,17 +411,22 @@ CRITICAL JSON RULES:
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${key}`,
                 },
-                body: bodyStr,
+                body: JSON.stringify(requestBody),
             });
 
             if (response.ok) {
                 const data: any = await response.json();
-                const content = data?.content?.[0]?.text || '';
-                console.log(`[AI-BEDROCK] Success on attempt ${attempt}`);
+                // Converse API response format: output.message.content[0].text
+                const content = data?.output?.message?.content?.[0]?.text || '';
+                const stopReason = data?.stopReason || '';
+                console.log(`[AI-BEDROCK] Success on attempt ${attempt}, stopReason: ${stopReason}`);
+                if (stopReason === 'max_tokens') {
+                    console.warn('[AI-BEDROCK] ⚠️ Response was cut at max_tokens limit!');
+                }
                 return {
                     content,
                     provider: 'bedrock',
-                    model: 'claude-sonnet-4.6 (AWS Bedrock)'
+                    model: 'claude-sonnet-4.6 (AWS Bedrock Converse)'
                 };
             }
 

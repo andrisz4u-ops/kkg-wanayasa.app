@@ -223,6 +223,98 @@ app.get('/api/health/detailed', requireAdminOnly, async (c) => {
   });
 });
 
+// AI Diagnostic Endpoint (Admin Only) — reveals real Bedrock errors
+app.get('/api/ai-diagnostic', requireAdminOnly, async (c) => {
+  const results: any = {};
+
+  // 1. Check which env vars are present (without exposing values)
+  const envKeys = ['BEDROCK_API_KEY', 'BEDROCK_REGION', 'MISTRAL_API_KEY', 'GEMINI_API_KEY', 'VERTEX_API_KEY', 'Z_AI_API_KEY', 'ANTHROPIC_API_KEY', 'AI_BACKEND_KEY'];
+  results.env_vars = {};
+  for (const k of envKeys) {
+    const val = (c.env as any)[k];
+    if (!val) {
+      results.env_vars[k] = '❌ NOT SET';
+    } else if (typeof val !== 'string') {
+      results.env_vars[k] = `⚠️ NOT A STRING (type: ${typeof val})`;
+    } else {
+      results.env_vars[k] = `✅ SET (${val.length} chars, starts: ${val.substring(0, 8)}...)`;
+    }
+  }
+
+  // 2. Check DB settings
+  try {
+    const dbSettings: any = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
+    ).all();
+    results.db_settings = {};
+    for (const row of (dbSettings.results || [])) {
+      const val = row.value;
+      results.db_settings[row.key] = val ? `SET (${val.length} chars, starts: ${String(val).substring(0, 8)}...)` : 'EMPTY';
+    }
+    if (Object.keys(results.db_settings).length === 0) {
+      results.db_settings = 'No AI keys found in DB settings';
+    }
+  } catch (e: any) {
+    results.db_settings = `DB Error: ${e.message}`;
+  }
+
+  // 3. Actually test Bedrock with a tiny call
+  results.bedrock_test = {};
+  const bedrockKey = (c.env as any).BEDROCK_API_KEY;
+  const bedrockRegion = (c.env as any).BEDROCK_REGION;
+  results.bedrock_test.region_raw = bedrockRegion ? `"${bedrockRegion}" (type: ${typeof bedrockRegion}, length: ${String(bedrockRegion).length})` : 'NOT SET (will default to us-east-1)';
+  
+  const effectiveRegion = (typeof bedrockRegion === 'string' && bedrockRegion.trim().length > 0) ? bedrockRegion.trim() : 'us-east-1';
+  results.bedrock_test.effective_region = effectiveRegion;
+
+  if (!bedrockKey) {
+    results.bedrock_test.status = '❌ SKIPPED - No BEDROCK_API_KEY';
+  } else {
+    const modelId = 'global.anthropic.claude-sonnet-4-6';
+    const endpoint = `https://bedrock-runtime.${effectiveRegion}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
+    results.bedrock_test.endpoint = endpoint;
+
+    try {
+      const testBody = JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Say "OK"' }]
+      });
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${String(bedrockKey).trim()}`,
+        },
+        body: testBody,
+      });
+
+      if (response.ok) {
+        const data: any = await response.json();
+        results.bedrock_test.status = '✅ SUCCESS';
+        results.bedrock_test.response_model = data?.model || 'unknown';
+        results.bedrock_test.response_text = data?.content?.[0]?.text || '';
+        results.bedrock_test.usage = data?.usage || {};
+      } else {
+        const errorText = await response.text();
+        results.bedrock_test.status = `❌ FAILED (HTTP ${response.status})`;
+        results.bedrock_test.error = errorText.substring(0, 500);
+        results.bedrock_test.headers = Object.fromEntries(response.headers.entries());
+      }
+    } catch (e: any) {
+      results.bedrock_test.status = `❌ EXCEPTION: ${e.message}`;
+      results.bedrock_test.stack = e.stack?.substring(0, 300);
+    }
+  }
+
+  // 4. Test Mistral (quick check)
+  const mistralKey = (c.env as any).MISTRAL_API_KEY;
+  results.mistral_test = mistralKey ? `✅ Key present (${String(mistralKey).length} chars)` : '❌ NOT SET';
+
+  return successResponse(c, results);
+});
+
 // Fix Notifications Table (Admin Only - Temporary)
 app.get('/api/db-patch/fix-notifications', requireAdminOnly, async (c) => {
   try {

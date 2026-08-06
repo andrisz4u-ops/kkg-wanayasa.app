@@ -138,8 +138,12 @@ CRITICAL JSON RULES:
         let content = result.content.trim();
 
         // Simpan metadata AI yang digunakan
-        const aiMeta = { provider: result.provider, model: result.model };
-        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})`);
+        const aiMeta: any = { provider: result.provider, model: result.model };
+        if ((result as any).failover_from) {
+            aiMeta.failover_from = (result as any).failover_from;
+            aiMeta.failover_errors = (result as any).failover_errors;
+        }
+        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
 
         // ── Layer 1: Strip markdown code fences (```json ... ``` or ``` ... ```)
         content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
@@ -201,6 +205,8 @@ CRITICAL JSON RULES:
     }
 
     async generateText(prompt: string, preferredProvider: AIProvider = 'vertex', jsonMode: boolean = false): Promise<AIResponse> {
+        const failoverLog: string[] = [];
+
         // Try preferred provider first
         try {
             if (preferredProvider === 'vertex') return await this.callVertex(prompt, jsonMode);
@@ -210,13 +216,17 @@ CRITICAL JSON RULES:
             if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
             if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
         } catch (e: any) {
-            console.error(`[AI-FAILOVER] ${preferredProvider} FAILED:`, e?.message || e);
+            const errMsg = e?.message || String(e);
+            console.error(`[AI-FAILOVER] ${preferredProvider} FAILED:`, errMsg);
+            failoverLog.push(`${preferredProvider}: ${errMsg.substring(0, 200)}`);
             // Khusus untuk pengguna yang memilih Claude (bedrock), prioritas fallback adalah direct Anthropic
             if (preferredProvider === 'bedrock' && this.anthropicKeys.length > 0) {
                 try {
                     return await this.callAnthropic(prompt, jsonMode);
                 } catch (e2: any) {
-                    console.error(`[AI-FAILOVER] Anthropic fallback also FAILED:`, e2?.message || e2);
+                    const errMsg2 = e2?.message || String(e2);
+                    console.error(`[AI-FAILOVER] Anthropic fallback also FAILED:`, errMsg2);
+                    failoverLog.push(`anthropic: ${errMsg2.substring(0, 200)}`);
                 }
             }
         }
@@ -232,18 +242,29 @@ CRITICAL JSON RULES:
 
         for (const provider of remaining) {
             try {
-                if (provider === 'vertex') return await this.callVertex(prompt, jsonMode);
-                if (provider === 'gemini') return await this.callGemini(prompt, jsonMode);
-                if (provider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
-                if (provider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
-                if (provider === 'mistral') return await this.callMistral(prompt, jsonMode);
-                if (provider === 'z_ai') return await this.callGLM(prompt, jsonMode);
-            } catch (e) {
-                console.warn(`${provider} failed...`, e);
+                let result: AIResponse | null = null;
+                if (provider === 'vertex') result = await this.callVertex(prompt, jsonMode);
+                else if (provider === 'gemini') result = await this.callGemini(prompt, jsonMode);
+                else if (provider === 'bedrock') result = await this.callBedrock(prompt, jsonMode);
+                else if (provider === 'anthropic') result = await this.callAnthropic(prompt, jsonMode);
+                else if (provider === 'mistral') result = await this.callMistral(prompt, jsonMode);
+                else if (provider === 'z_ai') result = await this.callGLM(prompt, jsonMode);
+
+                if (result) {
+                    // Tag the response with failover info
+                    (result as any).failover_from = preferredProvider;
+                    (result as any).failover_errors = failoverLog;
+                    console.warn(`[AI-FAILOVER] Successfully fell over from ${preferredProvider} → ${provider}`);
+                    return result;
+                }
+            } catch (e: any) {
+                const errMsg = e?.message || String(e);
+                console.warn(`${provider} failed:`, errMsg);
+                failoverLog.push(`${provider}: ${errMsg.substring(0, 200)}`);
             }
         }
 
-        throw new Error('All AI providers failed');
+        throw new Error(`All AI providers failed. Errors: ${failoverLog.join(' | ')}`);
     }
 
     // ── Vertex AI (Gemini 2.5 Flash) — DITERUSKAN KE VM GCP (PROXY) ──────────

@@ -99,7 +99,7 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const setting: any = await c.env.DB.prepare(
       `SELECT value FROM settings WHERE key = ?`
     ).bind(keyConfig.dbKey).first();
-    const apiKey = setting?.value || (c.env as any)[keyConfig.envKey] || '';
+    const apiKey = (c.env as any)[keyConfig.envKey] || setting?.value || '';
 
     // Generate nomor surat
     const currentYear = new Date().getFullYear();

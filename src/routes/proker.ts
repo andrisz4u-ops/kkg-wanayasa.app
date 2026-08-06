@@ -62,7 +62,7 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
     };
     const keyConfig = keyMap[provider] || keyMap.vertex;
-    const apiKey = settings[keyConfig.dbKey] || (c.env as any)[keyConfig.envKey];
+    const apiKey = (c.env as any)[keyConfig.envKey] || settings[keyConfig.dbKey];
 
     if (!apiKey) {
       const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', bedrock: 'AWS Bedrock', vertex: 'Vertex AI' };

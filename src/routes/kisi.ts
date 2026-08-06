@@ -26,11 +26,11 @@ kisi.post('/generate', async (c) => {
         const settingsMap: any = {};
         aiSettings.results?.forEach((row: any) => { settingsMap[row.key] = row.value; });
 
-        const mistralKey = settingsMap.mistral_api_key || c.env.MISTRAL_API_KEY || '';
-        const zAiKey = settingsMap.z_ai_api_key || c.env.Z_AI_API_KEY || '';
-        const geminiKey = settingsMap.gemini_api_key || c.env.GEMINI_API_KEY || '';
-        const bedrockKey = settingsMap.bedrock_api_key || c.env.BEDROCK_API_KEY || '';
-        const vertexKey = settingsMap.vertex_api_key || c.env.VERTEX_API_KEY || '';
+        const mistralKey = c.env.MISTRAL_API_KEY || settingsMap.mistral_api_key || '';
+        const zAiKey = c.env.Z_AI_API_KEY || settingsMap.z_ai_api_key || '';
+        const geminiKey = c.env.GEMINI_API_KEY || settingsMap.gemini_api_key || '';
+        const bedrockKey = c.env.BEDROCK_API_KEY || settingsMap.bedrock_api_key || '';
+        const vertexKey = c.env.VERTEX_API_KEY || settingsMap.vertex_api_key || '';
 
         if (mistralKey) ai.addKey('mistral', mistralKey);
         if (zAiKey) ai.addKey('z_ai', zAiKey);

@@ -338,6 +338,26 @@ rpp.post('/lampiran', async (c) => {
     }
 
     const ai = new AIService(c.env);
+
+    // Inject keys from admin settings (DB) with fallback from env
+    const lampSettings: any = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
+    ).all();
+    const lampSettingsMap: any = {};
+    lampSettings.results?.forEach((row: any) => { lampSettingsMap[row.key] = row.value; });
+
+    const lMistralKey = c.env.MISTRAL_API_KEY || lampSettingsMap.mistral_api_key;
+    const lZAiKey = c.env.Z_AI_API_KEY || lampSettingsMap.z_ai_api_key;
+    const lGeminiKey = c.env.GEMINI_API_KEY || lampSettingsMap.gemini_api_key;
+    const lBedrockKey = c.env.BEDROCK_API_KEY || lampSettingsMap.bedrock_api_key;
+    const lVertexKey = c.env.VERTEX_API_KEY || lampSettingsMap.vertex_api_key;
+
+    if (lMistralKey) ai.addKey('mistral', lMistralKey);
+    if (lZAiKey) ai.addKey('z_ai', lZAiKey);
+    if (lGeminiKey) ai.addKey('gemini', lGeminiKey);
+    if (lBedrockKey) ai.addKey('bedrock', lBedrockKey);
+    if (lVertexKey) ai.addKey('vertex', lVertexKey);
+
     const prompt = `Bertindaklah sebagai Ahli Asesmen Pendidikan Kurikulum Merdeka.
 Berdasarkan RPP tentang mapel ${mataPelajaran}, topik ${topik} untuk kelas ${jenjangKelas || ''}, buatkan LAMPIRAN RUBRIK PENILAIAN yang lengkap.
 

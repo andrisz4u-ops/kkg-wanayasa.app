@@ -435,7 +435,8 @@ export function initKisi() {
 
       if (result.success) {
         renderResult(result.data, data);
-        showToast('Soal berhasil digenerate!', 'success');
+        const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
+        showToast(`Soal berhasil digenerate!${modelInfo}`, 'success');
       } else {
         showToast(result.error?.message || 'Gagal generate', 'error');
       }

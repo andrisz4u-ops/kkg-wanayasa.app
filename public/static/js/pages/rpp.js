@@ -158,7 +158,8 @@ export async function renderRpp() {
 
             <label class="rpp-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="rpp-input">
-              <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
+              <option value="bedrock-deepseek" selected>🚀 AWS Bedrock (DeepSeek 3.2)</option>
+              <option value="bedrock">AWS Bedrock (Claude Sonnet 4.6)</option>
               <option value="vertex">⚡ Vertex AI</option>
               <option value="gemini">✨ Gemini 2.0 (Gratis)</option>
               <option value="mistral">Mistral Medium</option>

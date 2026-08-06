@@ -163,7 +163,8 @@ export async function renderKisi() {
 
             <label class="asesmen-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="asesmen-input">
-              <option value="bedrock">🚀 AWS Bedrock (Claude Sonnet 4.6)</option>
+              <option value="bedrock-deepseek">🚀 AWS Bedrock (DeepSeek 3.2)</option>
+              <option value="bedrock" selected>AWS Bedrock (Claude Sonnet 4.6)</option>
               <option value="vertex">⚡ Vertex AI</option>
               <option value="gemini">✨ Gemini 2.0 (Gratis)</option>
               <option value="mistral">Mistral Medium</option>

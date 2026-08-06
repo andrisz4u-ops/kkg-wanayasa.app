@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Mistral } from '@mistralai/mistralai';
 
-export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'anthropic' | 'mistral' | 'z_ai';
+export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'bedrock-deepseek' | 'anthropic' | 'mistral' | 'z_ai';
 
 interface AIResponse {
     content: string;
@@ -216,6 +216,7 @@ CRITICAL JSON RULES:
             if (preferredProvider === 'vertex') return await this.callVertex(prompt, jsonMode);
             if (preferredProvider === 'gemini') return await this.callGemini(prompt, jsonMode);
             if (preferredProvider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
+            if (preferredProvider === 'bedrock-deepseek') return await this.callBedrockDeepseek(prompt, jsonMode);
             if (preferredProvider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
             if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
             if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
@@ -236,7 +237,7 @@ CRITICAL JSON RULES:
         }
 
         // Failover order: vertex → anthropic → bedrock → gemini → mistral → z_ai
-        const providers: AIProvider[] = ['vertex', 'anthropic', 'bedrock', 'gemini', 'mistral', 'z_ai'];
+        const providers: AIProvider[] = ['vertex', 'anthropic', 'bedrock', 'bedrock-deepseek', 'gemini', 'mistral', 'z_ai'];
         const remaining = providers.filter(p => p !== preferredProvider && p !== 'anthropic' /* already tried above if bedrock */);
 
         // Jika preferred bukan bedrock, atau sudah coba anthropic tapi gagal, coba sisa provider lain
@@ -250,6 +251,7 @@ CRITICAL JSON RULES:
                 if (provider === 'vertex') result = await this.callVertex(prompt, jsonMode);
                 else if (provider === 'gemini') result = await this.callGemini(prompt, jsonMode);
                 else if (provider === 'bedrock') result = await this.callBedrock(prompt, jsonMode);
+                else if (provider === 'bedrock-deepseek') result = await this.callBedrockDeepseek(prompt, jsonMode);
                 else if (provider === 'anthropic') result = await this.callAnthropic(prompt, jsonMode);
                 else if (provider === 'mistral') result = await this.callMistral(prompt, jsonMode);
                 else if (provider === 'z_ai') result = await this.callGLM(prompt, jsonMode);
@@ -434,6 +436,71 @@ CRITICAL JSON RULES:
         }
 
         throw new Error('AWS Bedrock: Max retries exceeded');
+    }
+
+    // ── AWS Bedrock (DeepSeek 3.2) — via Converse API ────────────────
+    private async callBedrockDeepseek(prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const key = this.getRandomKey(this.bedrockKeys);
+        if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
+
+        const modelId = 'deepseek.v3.2'; // Ganti jika ID persisnya berbeda di region Anda
+        const region = this.bedrockRegion;
+
+        // Gunakan Converse API yang menjadi standar AWS Bedrock untuk DeepSeek & Llama
+        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/converse`;
+        console.log(`[AI-BEDROCK-DEEPSEEK] Calling endpoint: ${endpoint}`);
+
+        const requestBody: any = {
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        { text: jsonMode ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.` : prompt }
+                    ]
+                }
+            ],
+            inferenceConfig: {
+                maxTokens: 8192,
+                temperature: 0.7
+            }
+        };
+
+        const maxRetries = 3;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${key}`,
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (response.ok) {
+                const data: any = await response.json();
+                const content = data?.output?.message?.content?.[0]?.text || '';
+                console.log(`[AI-BEDROCK-DEEPSEEK] Success on attempt ${attempt}`);
+                return {
+                    content,
+                    provider: 'bedrock-deepseek',
+                    model: 'deepseek-v3.2 (AWS Bedrock)'
+                };
+            }
+
+            if ((response.status === 429 || response.status === 529) && attempt < maxRetries) {
+                const delay = attempt * 3000;
+                console.warn(`[AI-BEDROCK-DEEPSEEK] Got ${response.status}, retrying in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
+
+            const errorText = await response.text();
+            console.error(`[AI-BEDROCK-DEEPSEEK] Error ${response.status} on attempt ${attempt}:`, errorText);
+            throw new Error(`AWS Bedrock DeepSeek Error ${response.status}: ${errorText}`);
+        }
+
+        throw new Error('AWS Bedrock DeepSeek: Max retries exceeded');
     }
 
     private async callMistral(prompt: string, jsonMode: boolean): Promise<AIResponse> {

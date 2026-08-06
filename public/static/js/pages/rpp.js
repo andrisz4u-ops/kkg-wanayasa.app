@@ -513,6 +513,12 @@ export function initRpp() {
         const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
         renderResult(result.data, data);
         showToast(`RPP berhasil digenerate!${aiInfo}`, 'success');
+        // Log failover details for debugging
+        if (aiMeta?.failover_from) {
+          console.warn('[AI Failover]', aiMeta.failover_from, '→', aiMeta.provider);
+          console.warn('[AI Failover Errors]', aiMeta.failover_errors);
+          showToast(`⚠️ ${aiMeta.failover_from} gagal: ${(aiMeta.failover_errors || []).join(' | ')}`, 'error');
+        }
       } else {
         showToast(result.error?.message || 'Gagal generate RPP', 'error');
       }

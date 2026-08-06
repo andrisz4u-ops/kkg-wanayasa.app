@@ -82,15 +82,6 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
             return Errors.configError(c, `API Key ${providerNames[provider] || provider} belum dikonfigurasi.`);
         }
 
-        // Get All Settings for prompt context
-        const { results: allSettingsRows } = await c.env.DB.prepare(
-            "SELECT key, value FROM settings"
-        ).all();
-        const settings = allSettingsRows.reduce((acc: any, row: any) => {
-            acc[row.key] = row.value;
-            return acc;
-        }, {});
-
         const prompt = buildLaporanPrompt({
             judul_laporan,
             periode,

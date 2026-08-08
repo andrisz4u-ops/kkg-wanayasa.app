@@ -195,6 +195,15 @@ kisi.post('/generate', async (c) => {
                     delete q.gambar;
                     delete q.gambar_keyword;
                 });
+
+                // Renumber uraian to continue from the last isian number
+                // (important for Crossword where isian numbers come from placement)
+                if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
+                    const maxIsianNo = Math.max(...finalData.isian.data.map((q: any) => q.no || 0));
+                    finalData.uraian.forEach((q: any, i: number) => {
+                        q.no = maxIsianNo + 1 + i;
+                    });
+                }
             }
         }
 

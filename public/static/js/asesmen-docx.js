@@ -374,7 +374,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     const isianType = data.isian.type || 'Standard';
     const isianTitles = {
       Standard:    ['II. ISIAN SINGKAT', 'Isilah titik-titik di bawah ini dengan jawaban yang tepat!'],
-      Crossword:   ['II. TEKA-TEKI SILANG', 'Isilah jawaban teka-teki silang berikut!'],
+      Crossword:   ['II. TEKA-TEKI SILANG', 'Isilah jawaban teka-teki silang berikut secara Mendatar atau Menurun sesuai petunjuk!'],
       Menjodohkan: ['II. MENJODOHKAN', 'Pasangkanlah pernyataan berikut dengan jawaban yang tepat!'],
     };
     const [isianTitle, isianDesc] = isianTitles[isianType] || isianTitles.Standard;
@@ -396,6 +396,121 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
         }));
         children.push(makePara('', { spaceAfter: 2 }));
       });
+    } else if (isianType === 'Crossword' && data.isian.crossword && data.isian.crossword.success && data.isian.crossword.grid) {
+      // ── CROSSWORD GRID ──────────────────────────────────────
+      const cw = data.isian.crossword;
+      const CELL_SIZE = CM(0.75); // ~0.75cm per cell
+      const CW_BORDER = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+      const CW_NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
+      const gridRows = [];
+      for (let r = 0; r < cw.grid.length; r++) {
+        const rowCells = [];
+        for (let c = 0; c < cw.grid[r].length; c++) {
+          const char = cw.grid[r][c];
+          const isLetterCell = char !== ' ';
+
+          // Check if this cell has a placement number
+          let cellNum = '';
+          if (isLetterCell) {
+            const p = cw.placements.find(pl => pl.row === r && pl.col === c);
+            if (p && p.number != null) cellNum = String(p.number);
+          }
+
+          if (isLetterCell) {
+            // Bordered cell with optional number label
+            const cellChildren = [];
+            if (cellNum) {
+              cellChildren.push(new Paragraph({
+                spacing: { before: 0, after: 0, line: 180 },
+                children: [new TextRun({ text: cellNum, size: 12, bold: true, font: FONT_LATIN })],
+              }));
+            } else {
+              cellChildren.push(new Paragraph({
+                spacing: { before: 0, after: 0, line: 180 },
+                children: [new TextRun({ text: ' ', size: 12, font: FONT_LATIN })],
+              }));
+            }
+            rowCells.push(new TableCell({
+              children: cellChildren,
+              width: { size: CELL_SIZE, type: WidthType.DXA },
+              borders: { top: CW_BORDER, bottom: CW_BORDER, left: CW_BORDER, right: CW_BORDER },
+              margins: { top: PT(1), bottom: PT(0), left: PT(2), right: PT(1) },
+              verticalAlign: VerticalAlign.TOP,
+            }));
+          } else {
+            // Empty/invisible cell
+            rowCells.push(new TableCell({
+              children: [new Paragraph({
+                spacing: { before: 0, after: 0, line: 180 },
+                children: [new TextRun({ text: '', size: 12, font: FONT_LATIN })],
+              })],
+              width: { size: CELL_SIZE, type: WidthType.DXA },
+              borders: { top: CW_NO_BORDER, bottom: CW_NO_BORDER, left: CW_NO_BORDER, right: CW_NO_BORDER },
+              margins: { top: PT(1), bottom: PT(0), left: PT(2), right: PT(1) },
+            }));
+          }
+        }
+        gridRows.push(new TableRow({
+          children: rowCells,
+          height: { value: CELL_SIZE, rule: window.docx.HeightRule.EXACT },
+        }));
+      }
+
+      // Build column widths array for the grid table
+      const colCount = cw.grid[0] ? cw.grid[0].length : 0;
+      const columnWidths = Array(colCount).fill(CELL_SIZE);
+
+      children.push(new Table({
+        rows: gridRows,
+        width: { size: 0, type: WidthType.AUTO },
+        columnWidths: columnWidths,
+        layout: window.docx.TableLayoutType.FIXED,
+        borders: { top: CW_NO_BORDER, bottom: CW_NO_BORDER, left: CW_NO_BORDER, right: CW_NO_BORDER, insideH: CW_NO_BORDER, insideV: CW_NO_BORDER },
+      }));
+
+      children.push(makePara('', { spaceAfter: 10 }));
+
+      // ── CLUE LISTS: MENDATAR & MENURUN ────────────────────────
+      const mendatar = [];
+      const menurun = [];
+      cw.placements.forEach(p => {
+        const qData = data.isian.data[p.originalIndex];
+        if (qData) {
+          const clueText = qData.soal.replace(/^(Mendatar:|Menurun:)\s*/i, '').trim();
+          if (p.direction === 'H') mendatar.push({ num: p.number, text: clueText });
+          else menurun.push({ num: p.number, text: clueText });
+        }
+      });
+      mendatar.sort((a, b) => a.num - b.num);
+      menurun.sort((a, b) => a.num - b.num);
+
+      // Build clue paragraphs for left (Mendatar) column
+      const mendatarParas = [
+        makePara('MENDATAR', { bold: true, size: 22, underline: { type: window.docx.UnderlineType.SINGLE }, spaceAfter: 4 }),
+        ...mendatar.map(t => makeParaRaw([
+          new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
+          ...makeRuns(t.text, { size: 20 }),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 })),
+      ];
+
+      // Build clue paragraphs for right (Menurun) column
+      const menurunParas = [
+        makePara('MENURUN', { bold: true, size: 22, underline: { type: window.docx.UnderlineType.SINGLE }, spaceAfter: 4 }),
+        ...menurun.map(t => makeParaRaw([
+          new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
+          ...makeRuns(t.text, { size: 20 }),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 })),
+      ];
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: NO_BORDERS,
+        rows: [new TableRow({ children: [
+          makeCell(mendatarParas, { width: { size: 50, type: WidthType.PERCENTAGE } }),
+          makeCell(menurunParas, { width: { size: 50, type: WidthType.PERCENTAGE } }),
+        ]})],
+      }));
     } else {
       for (const q of data.isian.data) {
         children.push(makeParaRaw([

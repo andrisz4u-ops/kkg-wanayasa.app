@@ -584,7 +584,11 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
   }
 
   if (data.isian && data.isian.data && data.isian.data.length > 0) {
-    children.push(makePara('II. KUNCI ISIAN', { bold: true, size: 22, spaceAfter: 4 }));
+    const isianType = data.isian.type || 'Standard';
+    const kunciIsianTitle = isianType === 'Crossword' ? 'II. KUNCI TEKA-TEKI SILANG' : 'II. KUNCI ISIAN';
+    children.push(makePara(kunciIsianTitle, { bold: true, size: 22, spaceAfter: 4 }));
+    // Sort by number for crossword (placement numbers may differ from data order)
+    const sortedIsian = [...data.isian.data].sort((a, b) => (a.no || 0) - (b.no || 0));
     children.push(new Table({
       width: { size: 70, type: WidthType.PERCENTAGE },
       borders: LINE_BORDERS,
@@ -593,7 +597,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           makeCell(makePara('No', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 15, type: WidthType.PERCENTAGE } }),
           makeCell(makePara('Kunci Jawaban', { bold: true, size: 20, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' } }),
         ]}),
-        ...data.isian.data.map(q => new TableRow({ children: [
+        ...sortedIsian.map(q => new TableRow({ children: [
           makeCell(makePara(String(q.no), { size: 20, align: AlignmentType.CENTER }), { borders: true }),
           makeCell(makeParaRaw(makeRuns(q.kunci, { size: 20 })), { borders: true }),
         ]})),

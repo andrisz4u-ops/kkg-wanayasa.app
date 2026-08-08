@@ -178,6 +178,13 @@ kisi.post('/generate', async (c) => {
                     const cw = generateCrossword(words, startNoIsian);
                     if (cw.success) {
                         finalData.isian.crossword = cw;
+                        // Sync isian data numbers with crossword placement numbers
+                        // so the answer key matches the grid numbering
+                        for (const p of cw.placements) {
+                            if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
+                                finalData.isian.data[p.originalIndex].no = p.number;
+                            }
+                        }
                     }
                 }
             }

@@ -818,10 +818,13 @@ function renderResult(data, formData) {
   }
 
   if (data.isian && data.isian.data && data.isian.data.length > 0) {
-    html += `<h4>II. KUNCI JAWABAN ISIAN SINGKAT</h4>`;
+    const kunciIsianType = data.isian.type || formData.isianType || 'Standard';
+    const kunciIsianTitle = kunciIsianType === 'Crossword' ? 'II. KUNCI JAWABAN TEKA-TEKI SILANG' : 'II. KUNCI JAWABAN ISIAN SINGKAT';
+    html += `<h4>${kunciIsianTitle}</h4>`;
     html += `<table class="main-table" style="margin-bottom:15px;">`;
     html += `<tr style="background:#f0f0f0"><th>No</th><th>Kunci Jawaban</th></tr>`;
-    data.isian.data.forEach(q => {
+    const sortedIsianKunci = [...data.isian.data].sort((a, b) => (a.no || 0) - (b.no || 0));
+    sortedIsianKunci.forEach(q => {
       html += `<tr><td style="text-align:center">${q.no}</td><td>${q.kunci}</td></tr>`;
     });
     html += `</table>`;

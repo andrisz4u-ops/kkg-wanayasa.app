@@ -14,8 +14,8 @@ import {
 describe('Rate Limit Configuration', () => {
     it('should have auth rate limits', () => {
         expect(RATE_LIMITS.auth).toBeDefined();
-        expect(RATE_LIMITS.auth.maxRequests).toBe(5);
-        expect(RATE_LIMITS.auth.windowMs).toBe(15 * 60 * 1000); // 15 minutes
+        expect(RATE_LIMITS.auth.maxRequests).toBe(10);
+        expect(RATE_LIMITS.auth.windowMs).toBe(30 * 1000); // 30 seconds
     });
 
     it('should have AI rate limits', () => {

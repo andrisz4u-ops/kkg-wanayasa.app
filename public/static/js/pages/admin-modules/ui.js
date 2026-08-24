@@ -1,48 +1,46 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml } from '../../utils.js';
+import {
+  adminUsersPagination,
+  pendingApprovalState,
+  usersSelectionState,
+  sekolahSelectionState,
+  dashboardRefreshInterval, setDashboardRefreshInterval,
+  dashboardPeriodDays, setDashboardPeriodDays,
+  dashboardTrendPeriod, setDashboardTrendPeriod,
+  dashboardActivityDays, setDashboardActivityDays,
+  adminTableDensity, setAdminTableDensityValue,
+  slaPendingThreshold, setSlaPendingThresholdValue,
+  adminPanelMode, setAdminPanelModeValue,
+  isOperatorMode,
+  openAdminModal,
+  closeAdminModal,
+  getActiveAdminModalId,
+  showUndoActionBar,
+  setBusyButton,
+} from './shared-state.js';
+
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
-// Initialize admin data
-let dashboardRefreshInterval = null;
-let dashboardPeriodDays = 30;
-let dashboardTrendPeriod = 'weekly';
-let dashboardActivityDays = 7;
-let adminTableDensity = localStorage.getItem('admin_table_density') || 'comfortable';
-let slaPendingThreshold = Number(localStorage.getItem('sla_pending_threshold') || 10);
-let adminPanelMode = (state.user?.role === 'operator')
-  ? 'operator'
-  : (localStorage.getItem('admin_panel_mode') === 'operator' ? 'operator' : 'admin');
-const pendingApprovalState = {
-  items: [],
-  selectedIds: new Set(),
-};
-const usersSelectionState = {
-  selectedIds: new Set(),
-};
-const sekolahSelectionState = {
-  selectedIds: new Set(),
-};
-let undoActionState = null;
+// ============================================
+// Approval shortcut flag (ui.js-local)
+// ============================================
 let approvalShortcutBound = false;
-let activeAdminModalId = null;
-let previousFocusedElement = null;
 
-function isOperatorMode() {
-  return state.user?.role === 'operator' || adminPanelMode === 'operator';
-}
-
-function getDateNDaysAgo(days) {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
+// ============================================
+// Table Spacing
+// ============================================
 
 window.getTableSpacing = function getTableSpacing() {
   return adminTableDensity === 'compact'
     ? { td: 'px-4 py-2.5 text-xs', row: 'text-xs' }
     : { td: 'px-6 py-4 text-sm', row: 'text-sm' };
 }
+
+// ============================================
+// Dashboard Control Sync
+// ============================================
 
 function setControlButtonState(activeId, ids) {
   ids.forEach((id) => {
@@ -71,107 +69,32 @@ function syncDashboardControlState() {
   if (slaInput) slaInput.value = String(slaPendingThreshold);
 }
 
+// ============================================
+// Re-export closeAdminModal to window (for inline onclick handlers)
+// ============================================
 
-function openAdminModal(modalId, focusSelector = 'input, select, textarea, button') {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-  previousFocusedElement = document.activeElement;
-  activeAdminModalId = modalId;
-  modal.classList.remove('hidden');
-  const target = modal.querySelector(focusSelector);
-  if (target) setTimeout(() => target.focus(), 0);
-}
+window.closeAdminModal = closeAdminModal;
 
-function closeAdminModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (!modal) return;
-  modal.classList.add('hidden');
-  if (activeAdminModalId === modalId) activeAdminModalId = null;
-  if (previousFocusedElement && typeof previousFocusedElement.focus === 'function') {
-    setTimeout(() => previousFocusedElement.focus(), 0);
-  }
-}
+// ============================================
+// Modal Accessibility (Escape key)
+// ============================================
 
 function initModalAccessibility() {
   if (window.__adminModalA11yBound) return;
   window.__adminModalA11yBound = true;
 
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && activeAdminModalId) {
+    const currentModalId = getActiveAdminModalId();
+    if (event.key === 'Escape' && currentModalId) {
       event.preventDefault();
-      closeAdminModal(activeAdminModalId);
+      closeAdminModal(currentModalId);
     }
   });
 }
 
-window.closeAdminModal = closeAdminModal;
-
-function showUndoActionBar(label, onConfirm, onUndo, timeoutMs = 5000) {
-  if (undoActionState?.timer) {
-    clearTimeout(undoActionState.timer);
-    undoActionState = null;
-  }
-
-  const existing = document.getElementById('admin-undo-bar');
-  if (existing) existing.remove();
-
-  const bar = document.createElement('div');
-  bar.id = 'admin-undo-bar';
-  bar.className = 'fixed bottom-5 right-5 z-[9999] bg-slate-900 text-slate-900 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3';
-  bar.innerHTML = `
-    <i class="fas fa-rotate-left"></i>
-    <span class="text-sm">${escapeHtml(label)}</span>
-    <button id="admin-undo-btn" class="text-xs px-3 py-1.5 rounded-lg bg-white/15 hover:bg-slate-800/60/25">Batalkan</button>
-    <span id="admin-undo-countdown" class="text-xs opacity-80">5</span>
-  `;
-  document.body.appendChild(bar);
-
-  const countdownEl = bar.querySelector('#admin-undo-countdown');
-  let secondsLeft = Math.ceil(timeoutMs / 1000);
-  const interval = setInterval(() => {
-    secondsLeft -= 1;
-    if (countdownEl) countdownEl.textContent = String(Math.max(secondsLeft, 0));
-  }, 1000);
-
-  const cleanup = () => {
-    clearInterval(interval);
-    if (bar.parentElement) bar.remove();
-    undoActionState = null;
-  };
-
-  const timer = setTimeout(async () => {
-    cleanup();
-    await onConfirm();
-  }, timeoutMs);
-
-  undoActionState = { timer, cleanup };
-
-  const undoBtn = bar.querySelector('#admin-undo-btn');
-  if (undoBtn) {
-    undoBtn.addEventListener('click', () => {
-      clearTimeout(timer);
-      cleanup();
-      if (onUndo) onUndo();
-    });
-  }
-}
-
-function setBusyButton(button, isBusy, busyLabel = 'Memproses...') {
-  if (!button) return () => { };
-  const previousHtml = button.innerHTML;
-  const previousDisabled = button.disabled;
-  if (isBusy) {
-    button.disabled = true;
-    button.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>${busyLabel}`;
-  } else {
-    button.disabled = previousDisabled;
-    button.innerHTML = previousHtml;
-  }
-  return () => {
-    button.disabled = previousDisabled;
-    button.innerHTML = previousHtml;
-  };
-}
+// ============================================
+// Approval Keyboard Shortcuts
+// ============================================
 
 function initApprovalShortcuts() {
   if (approvalShortcutBound) return;
@@ -203,6 +126,10 @@ function initApprovalShortcuts() {
   });
 }
 
+// ============================================
+// User Form Validation
+// ============================================
+
 window.validateUserForm = function (mode = 'add') {
   const modalId = mode === 'edit' ? 'edit-user-modal' : 'add-user-modal';
   const modal = document.getElementById(modalId);
@@ -226,6 +153,10 @@ window.validateUserForm = function (mode = 'add') {
     }
   }
 }
+
+// ============================================
+// Reject User Modal
+// ============================================
 
 window.openRejectUserModal = function (userId, userName = '') {
   document.getElementById('reject-user-id').value = userId;
@@ -258,6 +189,10 @@ window.submitRejectUser = async function (e) {
     () => moduleToast('Approval', 'Aksi penolakan dibatalkan', 'info')
   );
 }
+
+// ============================================
+// Reset Password Modal
+// ============================================
 
 window.openResetPasswordModal = function (userId) {
   document.getElementById('reset-password-user-id').value = userId;
@@ -295,15 +230,20 @@ window.submitResetPassword = async function (e) {
   }
 }
 
+// ============================================
+// Admin Panel Mode
+// ============================================
+
 window.setAdminPanelMode = function (mode) {
   if (state.user?.role === 'operator') {
-    adminPanelMode = 'operator';
+    setAdminPanelModeValue('operator');
     localStorage.setItem('admin_panel_mode', 'operator');
     return;
   }
 
-  adminPanelMode = mode === 'operator' ? 'operator' : 'admin';
-  localStorage.setItem('admin_panel_mode', adminPanelMode);
+  const newMode = mode === 'operator' ? 'operator' : 'admin';
+  setAdminPanelModeValue(newMode);
+  localStorage.setItem('admin_panel_mode', newMode);
   navigate('admin');
 }
 
@@ -325,15 +265,20 @@ function applyAdminModeUI() {
   }
 }
 
+// ============================================
+// Table Density
+// ============================================
+
 window.setAdminDensity = function (mode) {
-  adminTableDensity = mode === 'compact' ? 'compact' : 'comfortable';
-  localStorage.setItem('admin_table_density', adminTableDensity);
+  const newDensity = mode === 'compact' ? 'compact' : 'comfortable';
+  setAdminTableDensityValue(newDensity);
+  localStorage.setItem('admin_table_density', newDensity);
 
   const compactBtn = document.getElementById('density-compact-btn');
   const comfortBtn = document.getElementById('density-comfort-btn');
 
   if (compactBtn && comfortBtn) {
-    if (adminTableDensity === 'compact') {
+    if (newDensity === 'compact') {
       compactBtn.classList.add('bg-primary-600', 'text-slate-900');
       compactBtn.classList.remove('bg-slate-50 backdrop-blur-xl', 'text-slate-600');
       comfortBtn.classList.remove('bg-primary-600', 'text-slate-900');
@@ -351,21 +296,25 @@ window.setAdminDensity = function (mode) {
   if (state.currentAdminTab === 'logs') loadAuditLogs();
 }
 
+// ============================================
+// Dashboard Period Controls
+// ============================================
+
 window.setDashboardPeriod = function (days) {
-  dashboardPeriodDays = Number(days) || 30;
-  dashboardTrendPeriod = dashboardPeriodDays <= 14 ? 'weekly' : 'monthly';
+  setDashboardPeriodDays(Number(days) || 30);
+  setDashboardTrendPeriod(dashboardPeriodDays <= 14 ? 'weekly' : 'monthly');
   syncDashboardControlState();
   loadAdminDashboard();
 }
 
 window.setDashboardActivityWindow = function (days) {
-  dashboardActivityDays = Number(days) || 7;
+  setDashboardActivityDays(Number(days) || 7);
   syncDashboardControlState();
   loadDashboardActivity();
 }
 
 window.setDashboardTrendPeriod = function (period) {
-  dashboardTrendPeriod = period === 'monthly' ? 'monthly' : 'weekly';
+  setDashboardTrendPeriod(period === 'monthly' ? 'monthly' : 'weekly');
   syncDashboardControlState();
   initDashboardCharts();
 }
@@ -374,12 +323,17 @@ window.setSlaPendingThreshold = function () {
   const input = document.getElementById('sla-threshold-input');
   if (!input) return;
   const parsed = Number(input.value);
-  slaPendingThreshold = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
-  localStorage.setItem('sla_pending_threshold', String(slaPendingThreshold));
+  const newVal = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
+  setSlaPendingThresholdValue(newVal);
+  localStorage.setItem('sla_pending_threshold', String(newVal));
   syncDashboardControlState();
   loadAdminDashboard(true);
-  moduleToast('SLA', `Ambang pending disetel ke ${slaPendingThreshold}`, 'success');
+  moduleToast('SLA', `Ambang pending disetel ke ${newVal}`, 'success');
 }
+
+// ============================================
+// Init Admin Data
+// ============================================
 
 window.initAdminData = async function () {
   initApprovalShortcuts();
@@ -428,6 +382,9 @@ window.initAdminData = async function () {
   startDashboardAutoRefresh();
 }
 
+// ============================================
+// Tab Switching
+// ============================================
 
 window.switchAdminTab = function (tab) {
   const tabs = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs'];
@@ -506,5 +463,3 @@ window.handleAdminTabClick = function (tabId) {
     navigate('admin');
   }
 };
-
-

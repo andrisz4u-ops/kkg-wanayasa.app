@@ -1,6 +1,15 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml, formatDate } from '../../utils.js';
+import {
+  dashboardRefreshInterval, setDashboardRefreshInterval,
+  dashboardPeriodDays,
+  dashboardTrendPeriod,
+  dashboardActivityDays,
+  slaPendingThreshold,
+  getDateNDaysAgo,
+} from './shared-state.js';
+
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Auto-refresh dashboard every 30 seconds
@@ -13,10 +22,10 @@ function startDashboardAutoRefresh() {
   // Only auto-refresh if dashboard panel is visible
   const dashboardPanel = document.getElementById('panel-dashboard');
   if (dashboardPanel && !dashboardPanel.classList.contains('hidden')) {
-    dashboardRefreshInterval = setInterval(() => {
+    setDashboardRefreshInterval(setInterval(() => {
       // Silently refresh data without showing loading states
       refreshDashboardData();
-    }, 30000); // 30 seconds
+    }, 30000)); // 30 seconds
   }
 }
 
@@ -24,7 +33,7 @@ function startDashboardAutoRefresh() {
 function stopDashboardAutoRefresh() {
   if (dashboardRefreshInterval) {
     clearInterval(dashboardRefreshInterval);
-    dashboardRefreshInterval = null;
+    setDashboardRefreshInterval(null);
   }
 }
 

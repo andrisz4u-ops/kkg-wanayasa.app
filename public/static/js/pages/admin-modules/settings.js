@@ -54,17 +54,6 @@ function updateStatCard(id, val) {
   setMetricValue(id, val);
 }
 
-// Load Users Data
-// State for Users Management with Pagination
-let adminUsersPagination = {
-  users: [],
-  page: 1,
-  limit: 20,
-  total: 0,
-  totalPages: 1,
-  search: '',
-  role: ''
-};
 
 
 window.saveSettings = async function (e) {

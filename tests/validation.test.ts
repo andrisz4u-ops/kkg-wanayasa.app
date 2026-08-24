@@ -18,6 +18,11 @@ import {
     emailSchema,
     passwordSchema,
     dateSchema,
+    presentationOutlineSchema,
+    presentationOutlineResponseSchema,
+    presentationGenerateSchema,
+    presentationPatchSlideSchema,
+    baseSlideSchema,
 } from '../src/lib/validation';
 
 describe('Email Validation', () => {
@@ -348,5 +353,84 @@ describe('Update Role Schema', () => {
     it('should reject invalid roles', () => {
         expect(validate(updateRoleSchema, { role: 'superadmin' }).success).toBe(false);
         expect(validate(updateRoleSchema, { role: 'guest' }).success).toBe(false);
+    });
+});
+
+describe('Presentation Schemas & Layouts', () => {
+    it('should validate presentation outline request', () => {
+        const result = validate(presentationOutlineSchema, {
+            mataPelajaran: 'IPAS',
+            topik: 'Tata Surya',
+            jenjangKelas: 'Kelas 6',
+            semester: '1',
+            alokasiWaktu: '2 x 35 Menit',
+            strategi: 'Problem Based Learning',
+            slideCount: 8,
+        });
+        expect(result.success).toBe(true);
+    });
+
+    it('should validate presentation outline response', () => {
+        const result = validate(presentationOutlineResponseSchema, {
+            title: 'Sistem Tata Surya Kita',
+            subtitle: 'IPAS Kelas 6',
+            outline: [
+                { index: 1, title: 'Cover', layout: 'title', focus: 'Pengenalan' },
+                { index: 2, title: 'Matahari', layout: 'content', focus: 'Pusat Tata Surya' },
+                { index: 3, title: 'Planet Dalam', layout: 'twoColumn', focus: 'Merkurius - Mars' },
+                { index: 4, title: 'Planet Luar', layout: 'twoColumn', focus: 'Yupiter - Neptunus' },
+                { index: 5, title: 'Tahapan Terjadinya Siang Malam', layout: 'timeline', focus: 'Rotasi Bumi' },
+                { index: 6, title: 'Fakta Menarik Planet', layout: 'stats', focus: 'Data & Angka' },
+                { index: 7, title: 'Kuis Pemahaman', layout: 'quiz', focus: 'Evaluasi Pembelajaran' },
+                { index: 8, title: 'Kesimpulan', layout: 'summary', focus: 'Rangkuman Materi' },
+            ]
+        });
+        expect(result.success).toBe(true);
+    });
+
+    it('should validate slide layouts: timeline, stats, quiz', () => {
+        const timelineSlide = validate(baseSlideSchema, {
+            layout: 'timeline',
+            title: 'Tahapan Rotasi Bumi',
+            timeline: [
+                { step: '1', title: 'Matahari Terbit', desc: 'Sisi bumi mulai menerima cahaya' },
+                { step: '2', title: 'Tengah Hari', desc: 'Matahari berada di titik kulminasi' },
+            ]
+        });
+        expect(timelineSlide.success).toBe(true);
+
+        const statsSlide = validate(baseSlideSchema, {
+            layout: 'stats',
+            title: 'Fakta Tata Surya',
+            stats: [
+                { value: '8 Planet', label: 'Mengorbit Matahari' },
+                { value: '71%', label: 'Permukaan Bumi Air' }
+            ]
+        });
+        expect(statsSlide.success).toBe(true);
+
+        const quizSlide = validate(baseSlideSchema, {
+            layout: 'quiz',
+            title: 'Kuis Planet',
+            question: 'Planet apakah yang paling dekat dengan matahari?',
+            quizOptions: ['A. Venus', 'B. Merkurius', 'C. Mars', 'D. Bumi'],
+            quizAnswer: 'B',
+            quizExplanation: 'Merkurius adalah planet terdekat.'
+        });
+        expect(quizSlide.success).toBe(true);
+    });
+
+    it('should validate single slide patch request', () => {
+        const patchResult = validate(presentationPatchSlideSchema, {
+            currentSlide: {
+                layout: 'content',
+                title: 'Materi Bumi',
+                content: ['Bumi berputar pada porosnya', 'Revolusi memakan waktu 365 hari']
+            },
+            instruction: 'Ubah kalimat poin materi agar lebih ringkas',
+            mataPelajaran: 'IPAS',
+            topik: 'Bumi'
+        });
+        expect(patchResult.success).toBe(true);
     });
 });

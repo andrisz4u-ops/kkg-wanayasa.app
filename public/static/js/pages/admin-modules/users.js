@@ -1,6 +1,17 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml, skeletonTable } from '../../utils.js';
+import {
+  adminUsersPagination,
+  pendingApprovalState,
+  usersSelectionState,
+  isOperatorMode,
+  openAdminModal,
+  closeAdminModal,
+  showUndoActionBar,
+  setBusyButton,
+} from './shared-state.js';
+
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 const getTableSpacing = () => window.getTableSpacing?.() || { td: 'px-6 py-4 text-sm', row: 'text-sm' };
 
@@ -28,12 +39,12 @@ window.loadAdminUsers = async function (page = 1) {
     if (role) queryParams.append('role', role);
 
     const res = await api(`/admin/users?${queryParams.toString()}`);
-    adminUsersPagination = {
-      ...res.data.pagination,
+    adminUsersPagination.users = res.data.users;
+    Object.assign(adminUsersPagination, res.data.pagination, {
       users: res.data.users,
       search,
       role
-    };
+    });
     usersSelectionState.selectedIds.clear();
     const checkAllUsers = document.getElementById('users-check-all');
     if (checkAllUsers) checkAllUsers.checked = false;

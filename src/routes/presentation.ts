@@ -2,8 +2,12 @@ import { Hono } from 'hono';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import {
+    presentationOutlineSchema,
+    presentationOutlineResponseSchema,
     presentationGenerateSchema,
     presentationResponseSchema,
+    presentationPatchSlideSchema,
+    baseSlideSchema,
     type PresentationSlide,
     validate,
 } from '../lib/validation';
@@ -64,7 +68,88 @@ function getImageCandidateIndexes(slides: PresentationSlide[]): number[] {
     return [...prioritized, ...fallback];
 }
 
-// Generate Slide Content
+async function getAiService(c: any): Promise<AIService> {
+    const ai = new AIService(c.env);
+    try {
+        const settingsResult: any = await c.env.DB.prepare(
+            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
+        ).all();
+        const settings: any = {};
+        settingsResult.results?.forEach((row: any) => settings[row.key] = row.value);
+
+        const mistralKey = settings.mistral_api_key || c.env.MISTRAL_API_KEY;
+        const zAiKey = settings.z_ai_api_key || c.env.Z_AI_API_KEY;
+        const geminiKey = settings.gemini_api_key || c.env.GEMINI_API_KEY;
+        const bedrockKey = settings.bedrock_api_key || c.env.BEDROCK_API_KEY;
+        const vertexKey = settings.vertex_api_key || c.env.VERTEX_API_KEY;
+
+        if (mistralKey) ai.addKey('mistral', mistralKey);
+        if (zAiKey) ai.addKey('z_ai', zAiKey);
+        if (geminiKey) ai.addKey('gemini', geminiKey);
+        if (bedrockKey) ai.addKey('bedrock', bedrockKey);
+        if (vertexKey) ai.addKey('vertex', vertexKey);
+    } catch (e) {
+        console.warn('Could not load DB settings for AI keys, using env:', e);
+    }
+    return ai;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// 1. OUTLINE PROPOSAL ENDPOINT (Phase 1 Generation)
+// ═════════════════════════════════════════════════════════════════════════
+presentation.post('/outline', async (c) => {
+    try {
+        const rawPayload = await c.req.json();
+        const validatedPayload = validate(presentationOutlineSchema, rawPayload);
+        if (!validatedPayload.success) {
+            return Errors.validation(c, 'Payload proposal outline tidak valid', validatedPayload.errors);
+        }
+
+        const {
+            mataPelajaran,
+            topik,
+            jenjangKelas,
+            semester,
+            alokasiWaktu,
+            strategi,
+            profilSosial,
+            capaianPembelajaran,
+            slideCount,
+            aiProvider,
+        } = validatedPayload.data;
+
+        const ai = await getAiService(c);
+
+        const prompt = `Rancang outline presentasi pembelajaran Kurikulum Merdeka TEPAT ${slideCount} slide.
+MP: ${mataPelajaran} | Topik: ${topik} | Kelas: ${jenjangKelas} Sem ${semester} | Waktu: ${alokasiWaktu} | Strategi: ${strategi}${capaianPembelajaran ? ` | CP: ${capaianPembelajaran}` : ''}${profilSosial ? ` | Profil Pancasila: ${profilSosial}` : ''}
+
+STRUKTUR (${slideCount} slide wajib):
+- Slide 1: layout 'title' (Cover + pemantik)
+- Slide 2: layout 'twoColumn' atau 'content' (Apersepsi / Tujuan)
+- Slide 3-${slideCount - 2}: layout variatif (content/imageText/twoColumn/timeline/stats/comparison/flipcard)
+- Slide ${slideCount - 1}: layout 'quiz' atau 'activity' (Interaktif)
+- Slide ${slideCount}: layout 'summary' atau 'thankyou' (Penutup)
+
+Balas HANYA JSON: {"title":"...","subtitle":"...","outline":[{"index":1,"title":"...","layout":"title|content|twoColumn|imageText|timeline|stats|comparison|quiz|flipcard|activity|quote|summary|thankyou","focus":"...","visualConcept":"..."}]}
+`;
+
+        const result = await ai.generateJSON(prompt, aiProvider || 'gemini');
+        const validatedResult = validate(presentationOutlineResponseSchema, result);
+        if (!validatedResult.success) {
+            console.error('Outline Validation Failed:', JSON.stringify(result, null, 2));
+            return Errors.validation(c, 'Output outline AI tidak valid', validatedResult.errors);
+        }
+
+        return successResponse(c, validatedResult.data);
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Gagal merancang outline presentasi';
+        return Errors.internal(c, message);
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// 2. FULL SLIDE GENERATION (Phase 2 Generation)
+// ═════════════════════════════════════════════════════════════════════════
 presentation.post('/generate', async (c) => {
     try {
         const rawPayload = await c.req.json();
@@ -84,124 +169,57 @@ presentation.post('/generate', async (c) => {
             capaianPembelajaran,
             slideCount,
             aiProvider,
+            customOutline,
         } = validatedPayload.data;
 
         const count = slideCount;
         const minImageCount = getMinImageCount(count);
 
-        const ai = new AIService(c.env);
-        // Inject keys from DB/Env
-        const settingsResult: any = await c.env.DB.prepare(
-            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-        ).all();
-        const settings: any = {};
-        settingsResult.results?.forEach((row: any) => settings[row.key] = row.value);
-
-        const mistralKey = settings.mistral_api_key || c.env.MISTRAL_API_KEY;
-        const zAiKey = settings.z_ai_api_key || c.env.Z_AI_API_KEY;
-        const geminiKey = settings.gemini_api_key || c.env.GEMINI_API_KEY;
-        const bedrockKey = settings.bedrock_api_key || c.env.BEDROCK_API_KEY;
-        const vertexKey = settings.vertex_api_key || c.env.VERTEX_API_KEY;
-
-        if (mistralKey) ai.addKey('mistral', mistralKey);
-        if (zAiKey) ai.addKey('z_ai', zAiKey);
-        if (geminiKey) ai.addKey('gemini', geminiKey);
-        if (bedrockKey) ai.addKey('bedrock', bedrockKey);
-        if (vertexKey) ai.addKey('vertex', vertexKey);
+        const ai = await getAiService(c);
         const unsplash = new UnsplashService(c.env);
+        const hasUnsplash = unsplash.isConfigured();
 
-        if (!unsplash.isConfigured()) {
-            return Errors.configError(c, 'UNSPLASH_ACCESS_KEY belum dikonfigurasi. Slide generator membutuhkan gambar relevan.');
-        }
+        const outlineConstraint = customOutline && customOutline.length > 0
+            ? `
+IKUTI OUTLINE TEPAT YANG SUDAH DISETUJUI GURU BERIKUT:
+${JSON.stringify(customOutline, null, 2)}
+`
+            : `
+RANCANG VARIASI LAYOUT DINAMIS (WAJIB BERVARIASI, JANGAN SEMUA 'content'):
+- Slide 1: 'title' (Cover menarik + subtitle pemantik)
+- Slide 2: 'twoColumn' (Apersepsi & Tujuan Pembelajaran)
+- Slide 3: 'content' atau 'imageText' (Konsep Inti 1)
+- Slide 4: 'timeline' (Tahapan Alur / Kronologi / Proses Pembelajaran)
+- Slide 5: 'stats' (Fakta Kunci, Angka Penting, atau 'Tahukah Kamu?')
+- Slide 6: 'comparison' (Perbandingan Konsep A vs B)
+- Slide 7: 'quiz' atau 'flipcard' (Kuis atau Kartu Konsep Interaktif)
+- Slide 8 (atau terakhir): 'summary' atau 'thankyou' (Rangkuman & Apresiasi)
+`;
 
-        const prompt = `
-Kamu adalah seorang Ahli Kurikulum Pendidikan Indonesia (Kurikulum Merdeka), sekaligus Desainer Presentasi Profesional.
-Tugasmu: merancang presentasi pembelajaran berkualitas tinggi yang edukatif, lengkap, dan menarik secara visual.
+        const prompt = `Kamu adalah Desainer Presentasi Kurikulum Merdeka Indonesia. Buat presentasi pembelajaran bermutu tinggi.
 
-════════════════════════════════════════
-LANGKAH 1: ANALISIS KONTEKS (Berpikir dulu sebelum menulis)
-════════════════════════════════════════
+MATA PELAJARAN: ${mataPelajaran} | TOPIK: ${topik} | KELAS: ${jenjangKelas} SEM ${semester}
+STRATEGI: ${strategi} | WAKTU: ${alokasiWaktu}${capaianPembelajaran ? ` | CP: ${capaianPembelajaran}` : ''}${profilSosial ? ` | PROFIL: ${profilSosial}` : ''}
 
-Sebelum menulis JSON, pikirkan secara mendalam:
+${outlineConstraint}
 
-A. ANALISIS AUDIENS:
-   - Mata Pelajaran: ${mataPelajaran}
-   - Topik: ${topik}
-   - Kelas / Semester: ${jenjangKelas} / ${semester}
-   - Alokasi Waktu: ${alokasiWaktu}
-   - Model Ajar: ${strategi}
-   ${capaianPembelajaran ? `- Capaian Pembelajaran: ${capaianPembelajaran}` : ''}
-   ${profilSosial ? `- Dimensi Profil Pancasila: ${profilSosial}` : ''}
+ATURAN KONTEN (WAJIB DIIKUTI):
+1. TEPAT ${count} slide dalam array "slides"
+2. Setiap poin "content" wajib format "JudulPoin: Penjelasan berbobot" (bukan kalimat hambar)
+3. Layout WAJIB beragam — jangan semua 'content'
+4. layout 'timeline' → isi "timeline": [{"step":"1","title":"...","desc":"..."}] (3-4 steps)
+5. layout 'stats' → isi "stats": [{"value":"71%","label":"...","desc":"..."}] (2-4 stats)
+6. layout 'quiz' → isi "question","quizOptions":["A....","B....","C....","D...."],"quizAnswer","quizExplanation"
+7. layout 'flipcard' → isi "flipcards": [{"front":"Istilah","back":"Penjelasan detail"}] (3-4 kartu)
+8. layout 'twoColumn'/'comparison' → isi "leftTitle","leftContent":[],"rightTitle","rightContent":[]
+9. "speakerNotes" WAJIB ada di setiap slide (catatan praktis guru, 1-2 kalimat)
+10. "imageQuery" dalam bahasa Inggris untuk slide imageText
 
-   Pertanyaan bantu:
-   - Apa level kognitif (Taksonomi Bloom) yang sesuai untuk kelas ini?
-   - Konsep inti apa saja yang WAJIB dikuasai murid setelah pembelajaran ini?
-   - Miskonsepsi umum apa yang mungkin dimiliki murid tentang topik ini?
-   - Contoh konkret dari kehidupan sehari-hari apa yang bisa digunakan?
-   - Fakta mengejutkan / "Tahukah Kamu?" apa yang relevan dan bisa memancing curiosity?
+KEMBALIKAN HANYA JSON VALID:
+{"title":"...","subtitle":"...","slides":[{"layout":"title|content|twoColumn|imageText|timeline|stats|comparison|quiz|flipcard|activity|quote|summary|thankyou","title":"...","subtitle":"...","content":["Poin: Penjelasan..."],"speakerNotes":"...","imageQuery":"..."}]}
+`;
 
-B. PERENCANAAN ALUR PRESENTASI:
-   Total slide yang harus dihasilkan: Tepat ${count} slide.
-   Rancang alur sebagai berikut:
-   
-   1. **Slide 1 — Cover Materi**: Judul besar yang menggugah rasa ingin tahu + subtitle kontekstual. Layout: 'title'. Harus membuat murid langsung tertarik.
-   2. **Slide 2 — Tujuan & Apersepsi**: Gabungkan Tujuan Pembelajaran (apa yang akan dicapai) dan Apersepsi (pertanyaan pemantik / pengalaman sehari-hari). Layout: 'twoColumn' atau 'content'. ISI HARUS PADAT, TIDAK BOLEH KOSONG.
-   3. **Slide 3 s/d ${count - 1} — Materi Inti**: Setiap slide membahas satu sub-topik secara mendalam. Setiap slide materi WAJIB berisi:
-      - Minimal 4–6 poin konten substantif (bukan kalimat kosong atau terlalu umum)
-      - 1 poin "Tahukah Kamu?" atau "Fakta Menarik" yang relevan dan mencengangkan
-      - Speaker notes yang kaya untuk panduan guru (teknik penyampaian, contoh tambahan, pertanyaan interaktif)
-   4. **Slide Terakhir — Rangkuman/Penutup**: Ringkasan poin kunci + pesan motivasi. Layout: 'summary' atau 'thankyou'.
-
-C. STANDAR KUALITAS KONTEN:
-   - Materi harus AKURAT secara ilmiah/akademik
-   - Bahasa Indonesia baku, akademik, namun tetap mudah dipahami murid
-   - Setiap poin harus informatif — DILARANG menulis poin generik seperti "Materi ini penting" tanpa penjelasan spesifik
-   - Gunakan contoh konkret, angka, atau perbandingan yang memudahkan pemahaman
-   - Variasi layout antar slide agar tidak monoton (gunakan: content, twoColumn, imageText, activity, quote)
-
-════════════════════════════════════════
-LANGKAH 2: TULIS OUTPUT JSON
-════════════════════════════════════════
-
-Setelah berpikir matang di Langkah 1, LANGSUNG tulis output JSON berikut (tanpa menuliskan proses berpikirmu):
-
-{
-   "title": "Judul Presentasi yang Menarik",
-   "subtitle": "Subjudul kontekstual",
-   "slides": [
-      {
-         "layout": "title | content | twoColumn | activity | quote | summary | thankyou | imageText",
-         "title": "Judul Slide (Singkat, Maks 8 Kata)",
-         "content": ["Poin substantif 1", "Poin substantif 2", "Poin substantif 3", "Poin substantif 4", "Tahukah Kamu? Fakta menarik..."],
-         "leftTitle": "Judul Kolom Kiri",
-         "leftContent": ["Poin kiri 1", "Poin kiri 2"],
-         "rightTitle": "Judul Kolom Kanan",
-         "rightContent": ["Poin kanan 1", "Poin kanan 2"],
-         "instruction": "Instruksi aktivitas untuk murid",
-         "time": "Durasi aktivitas",
-         "quote": "Kutipan bermakna",
-         "author": "Sumber kutipan",
-         "imageQuery": "english keyword for unsplash photo search",
-         "imageAlt": "Deskripsi gambar edukatif",
-         "speakerNotes": "Panduan penyampaian untuk guru: teknik mengajar, pertanyaan interaktif, contoh tambahan, cara mengecek pemahaman murid."
-      }
-   ]
-}
-
-════════════════════════════════════════
-ATURAN KETAT:
-════════════════════════════════════════
-1. Output HANYA berisi JSON valid. JANGAN tulis teks pengantar, analisis, atau komentar di luar JSON.
-2. Jumlah slide HARUS TEPAT ${count}.
-3. Setiap slide content/imageText/summary WAJIB memiliki minimal 4 item dalam array "content".
-4. Setiap slide materi (slide 3 s/d ${count - 1}) WAJIB menyertakan 1 poin "Tahukah Kamu?" atau "Fakta Menarik" di akhir array content.
-5. Speaker notes harus berisi panduan mengajar yang kaya dan praktis (bukan ringkasan konten slide).
-6. imageQuery WAJIB ditulis dalam bahasa Inggris agar pencarian gambar optimal di Unsplash. Minimal ${minImageCount} slide harus memiliki imageQuery.
-7. Gunakan variasi layout (jangan semua 'content') agar presentasi tidak monoton.
-8. Setiap poin harus informatif dan spesifik — DILARANG menulis poin kosong/generik.
-        `;
-
-        const result = await ai.generateJSON(prompt, aiProvider || 'mistral');
+        const result = await ai.generateJSON(prompt, aiProvider || 'gemini');
         const validatedResult = validate(presentationResponseSchema, result);
         if (!validatedResult.success) {
             console.error('AI Output Validation Failed:', JSON.stringify(result, null, 2));
@@ -209,48 +227,39 @@ ATURAN KETAT:
         }
 
         const presentationData = validatedResult.data;
-        if (presentationData.slides.length !== count) {
-            return Errors.validation(c, `Jumlah slide harus tepat ${count} `, [{
-                field: 'slides',
-                message: `AI menghasilkan ${presentationData.slides.length} slide`,
-            }]);
-        }
-
         const slides: PresentationSlide[] = presentationData.slides.map((slide) => ({
             ...slide,
             speakerNotes: sanitizeSpeakerNotes(slide.speakerNotes),
         }));
 
-        const imageCandidates = getImageCandidateIndexes(slides);
-        const selectedIndexes = imageCandidates.slice(0, Math.min(minImageCount, imageCandidates.length));
+        let attachedImages = 0;
 
-        if (selectedIndexes.length < minImageCount) {
-            return Errors.validation(c, 'Slide non-gambar terlalu sedikit untuk memenuhi kebijakan visual', [{
-                field: 'slides',
-                message: `Minimal ${minImageCount} slide gambar dibutuhkan`,
-            }]);
-        }
+        // Graceful Unsplash integration
+        if (hasUnsplash) {
+            try {
+                const imageCandidates = getImageCandidateIndexes(slides);
+                const selectedIndexes = imageCandidates.slice(0, Math.min(minImageCount, imageCandidates.length));
 
-        for (const index of selectedIndexes) {
-            const slide = slides[index];
-            const query = buildImageQuery(slide, topik, mataPelajaran);
-            const imagePayload = await unsplash.searchImage(query, slide.imageAlt || slide.title);
+                for (const index of selectedIndexes) {
+                    const slide = slides[index];
+                    const query = buildImageQuery(slide, topik, mataPelajaran);
+                    const imagePayload = await unsplash.searchImage(query, slide.imageAlt || slide.title);
 
-            if (!imagePayload) {
-                continue;
+                    if (imagePayload) {
+                        slide.image = imagePayload;
+                        slide.imageQuery = query;
+                        slide.imageAlt = imagePayload.alt;
+                        if (slide.layout === 'content' || slide.layout === 'summary') {
+                            slide.layout = 'imageText';
+                        }
+                        attachedImages++;
+                    }
+                }
+            } catch (imgError) {
+                console.warn('Unsplash image search non-blocking error:', imgError);
             }
-
-            slide.image = imagePayload;
-            slide.imageQuery = query;
-            slide.imageAlt = imagePayload.alt;
-            if (slide.layout === 'content' || slide.layout === 'summary') {
-                slide.layout = 'imageText';
-            }
-        }
-
-        const attachedImages = slides.filter((slide) => slide.image).length;
-        if (attachedImages < minImageCount) {
-            console.warn(`Unsplash returned 0 or too few images(${attachedImages} / ${minImageCount}) for these queries.Proceeding without images to avoid crashing.`);
+        } else {
+            console.info('Unsplash is not configured. Proceeding with vector and theme layouts.');
         }
 
         const finalResult = {
@@ -258,17 +267,103 @@ ATURAN KETAT:
             subtitle: presentationData.subtitle,
             slides,
             meta: {
-                slideCount: count,
+                slideCount: slides.length,
                 minImageCount,
                 attachedImages,
-                imagePolicy: 'minimum_30_percent',
+                imagePolicy: hasUnsplash ? 'minimum_30_percent' : 'vector_fallback',
             },
         };
 
         return successResponse(c, finalResult);
-
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Gagal menghasilkan presentasi';
+        return Errors.internal(c, message);
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// 3. SINGLE SLIDE REVISION / PATCH (AI Patch Agent)
+// ═════════════════════════════════════════════════════════════════════════
+presentation.post('/patch-slide', async (c) => {
+    try {
+        const rawPayload = await c.req.json();
+        const validatedPayload = validate(presentationPatchSlideSchema, rawPayload);
+        if (!validatedPayload.success) {
+            return Errors.validation(c, 'Payload patch slide tidak valid', validatedPayload.errors);
+        }
+
+        const {
+            currentSlide,
+            instruction,
+            mataPelajaran = 'Umum',
+            topik = 'Pembelajaran',
+            jenjangKelas = 'SD',
+            aiProvider,
+        } = validatedPayload.data;
+
+        const ai = await getAiService(c);
+
+        const prompt = `
+Kamu adalah Asisten Editor Presentasi Profesional.
+Tugasmu: Merevisi SATU SLIDE PEMBELAJARAN berikut sesuai instruksi spesifik dari guru.
+
+DATA KONTEKS:
+- Mata Pelajaran: ${mataPelajaran}
+- Topik: ${topik}
+- Jenjang: ${jenjangKelas}
+
+SLIDE SAAT INI:
+${JSON.stringify(currentSlide, null, 2)}
+
+INSTRUKSI REVISI DARI GURU:
+"${instruction}"
+
+ATURAN REVISI:
+1. Perbaiki konten slide dengan tepat sesuai instruksi di atas.
+2. Pertahankan atau ubah layout jika diinstruksikan.
+3. Jaga kepadatan teks: judul maks 8 kata, per poin maks 15 kata.
+4. Perbarui speakerNotes jika ada perubahan materi penting.
+
+OUTPUT HANYA BERUPA JSON VALID UNTUK SATU SLIDE TERSEBUT:
+{
+  "layout": "title | content | twoColumn | imageText | timeline | stats | comparison | quiz | flipcard | activity | quote | summary | thankyou",
+  "title": "Judul Slide",
+  "subtitle": "Subjudul (opsional)",
+  "content": ["Poin 1", "Poin 2", "Poin 3"],
+  "leftTitle": "Kolom Kiri",
+  "leftContent": ["Poin Kiri"],
+  "rightTitle": "Kolom Kanan",
+  "rightContent": ["Poin Kanan"],
+  "timeline": [{ "step": "1", "title": "...", "desc": "..." }],
+  "stats": [{ "value": "...", "label": "..." }],
+  "question": "...",
+  "quizOptions": ["A. ...", "B. ...", "C. ...", "D. ..."],
+  "quizAnswer": "A",
+  "quizExplanation": "...",
+  "flipcards": [{ "front": "Nama Konsep", "back": "Penjelasan detail" }],
+  "instruction": "...",
+  "time": "10 menit",
+  "quote": "...",
+  "author": "...",
+  "speakerNotes": "Catatan guru yang diperbarui"
+}
+`;
+
+        const result = await ai.generateJSON(prompt, aiProvider || 'mistral');
+        const validatedResult = validate(baseSlideSchema, result);
+        if (!validatedResult.success) {
+            return Errors.validation(c, 'Output revisi slide AI tidak sesuai schema', validatedResult.errors);
+        }
+
+        const patchedSlide = {
+            ...currentSlide,
+            ...validatedResult.data,
+            speakerNotes: sanitizeSpeakerNotes(validatedResult.data.speakerNotes || currentSlide.speakerNotes),
+        };
+
+        return successResponse(c, patchedSlide);
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Gagal merevisi slide';
         return Errors.internal(c, message);
     }
 });

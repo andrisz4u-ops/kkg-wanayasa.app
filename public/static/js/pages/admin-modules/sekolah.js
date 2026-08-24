@@ -1,6 +1,14 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml, skeletonTable } from '../../utils.js';
+import {
+  sekolahSelectionState,
+  openAdminModal,
+  closeAdminModal,
+  showUndoActionBar,
+  setBusyButton,
+} from './shared-state.js';
+
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 const getTableSpacing = () => window.getTableSpacing?.() || { td: 'px-6 py-4 text-sm', row: 'text-sm' };
 

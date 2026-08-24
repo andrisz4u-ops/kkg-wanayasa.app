@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import { escapeHtml, showToast, formatDate, formatDateTime, skeletonTable, debounce } from '../utils.js';
 
 
+import './admin-modules/shared-state.js';
 import './admin-modules/ui.js';
 import './admin-modules/dashboard.js';
 import './admin-modules/settings.js';

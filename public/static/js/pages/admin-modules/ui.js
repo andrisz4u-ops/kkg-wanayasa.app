@@ -358,21 +358,22 @@ window.initAdminData = async function () {
     }
   }
 
-  // Force hide all panels except dashboard to prevent content leakage
-  const allPanels = ['panel-profil', 'panel-sekolah', 'panel-templates', 'panel-users', 'panel-logs'];
-  allPanels.forEach(panelId => {
-    const panel = document.getElementById(panelId);
+  // Sync panel visibility with the active tab (don't force-reset if user switched tab)
+  const activeTab = state.currentAdminTab || 'dashboard';
+  const allPanels = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs'];
+  allPanels.forEach(tabName => {
+    const panel = document.getElementById(`panel-${tabName}`);
     if (panel) {
-      panel.classList.add('hidden');
-      panel.style.display = 'none';
+      if (tabName === activeTab) {
+        panel.classList.remove('hidden');
+        panel.style.display = 'block';
+        panel.style.visibility = 'visible';
+      } else {
+        panel.classList.add('hidden');
+        panel.style.display = 'none';
+      }
     }
   });
-  // Show only dashboard initially
-  const dashboardPanel = document.getElementById('panel-dashboard');
-  if (dashboardPanel) {
-    dashboardPanel.classList.remove('hidden');
-    dashboardPanel.style.display = 'block';
-  }
 
   window.setAdminDensity(adminTableDensity);
   syncDashboardControlState();

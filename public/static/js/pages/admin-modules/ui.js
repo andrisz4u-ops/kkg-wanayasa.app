@@ -48,10 +48,10 @@ function setControlButtonState(activeId, ids) {
     if (!el) return;
     if (id === activeId) {
       el.classList.add('bg-primary-600', 'text-slate-900', 'border-primary-600');
-      el.classList.remove('bg-slate-50 backdrop-blur-xl', 'text-slate-600', 'border-slate-200/70');
+      el.classList.remove('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600', 'border-slate-200/70');
     } else {
       el.classList.remove('bg-primary-600', 'text-slate-900', 'border-primary-600');
-      el.classList.add('bg-slate-50 backdrop-blur-xl', 'text-slate-600', 'border-slate-200/70');
+      el.classList.add('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600', 'border-slate-200/70');
     }
   });
 }
@@ -280,20 +280,20 @@ window.setAdminDensity = function (mode) {
   if (compactBtn && comfortBtn) {
     if (newDensity === 'compact') {
       compactBtn.classList.add('bg-primary-600', 'text-slate-900');
-      compactBtn.classList.remove('bg-slate-50 backdrop-blur-xl', 'text-slate-600');
+      compactBtn.classList.remove('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600');
       comfortBtn.classList.remove('bg-primary-600', 'text-slate-900');
-      comfortBtn.classList.add('bg-slate-50 backdrop-blur-xl', 'text-slate-600');
+      comfortBtn.classList.add('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600');
     } else {
       comfortBtn.classList.add('bg-primary-600', 'text-slate-900');
-      comfortBtn.classList.remove('bg-slate-50 backdrop-blur-xl', 'text-slate-600');
+      comfortBtn.classList.remove('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600');
       compactBtn.classList.remove('bg-primary-600', 'text-slate-900');
-      compactBtn.classList.add('bg-slate-50 backdrop-blur-xl', 'text-slate-600');
+      compactBtn.classList.add('bg-slate-50', 'backdrop-blur-xl', 'text-slate-600');
     }
   }
 
-  if (state.currentAdminTab === 'users') loadAdminUsers(adminUsersPagination.page || 1);
-  if (state.currentAdminTab === 'sekolah') loadSekolah();
-  if (state.currentAdminTab === 'logs') loadAuditLogs();
+  if (state.currentAdminTab === 'users' && window.loadAdminUsers) window.loadAdminUsers(adminUsersPagination.page || 1);
+  if (state.currentAdminTab === 'sekolah' && window.loadSekolah) window.loadSekolah();
+  if (state.currentAdminTab === 'logs' && window.loadAuditLogs) window.loadAuditLogs();
 }
 
 // ============================================
@@ -304,19 +304,19 @@ window.setDashboardPeriod = function (days) {
   setDashboardPeriodDays(Number(days) || 30);
   setDashboardTrendPeriod(dashboardPeriodDays <= 14 ? 'weekly' : 'monthly');
   syncDashboardControlState();
-  loadAdminDashboard();
+  if (window.loadAdminDashboard) window.loadAdminDashboard();
 }
 
 window.setDashboardActivityWindow = function (days) {
   setDashboardActivityDays(Number(days) || 7);
   syncDashboardControlState();
-  loadDashboardActivity();
+  if (window.loadDashboardActivity) window.loadDashboardActivity();
 }
 
 window.setDashboardTrendPeriod = function (period) {
   setDashboardTrendPeriod(period === 'monthly' ? 'monthly' : 'weekly');
   syncDashboardControlState();
-  initDashboardCharts();
+  if (window.initDashboardCharts) window.initDashboardCharts();
 }
 
 window.setSlaPendingThreshold = function () {
@@ -327,7 +327,7 @@ window.setSlaPendingThreshold = function () {
   setSlaPendingThresholdValue(newVal);
   localStorage.setItem('sla_pending_threshold', String(newVal));
   syncDashboardControlState();
-  loadAdminDashboard(true);
+  if (window.loadAdminDashboard) window.loadAdminDashboard(true);
   moduleToast('SLA', `Ambang pending disetel ke ${newVal}`, 'success');
 }
 
@@ -341,18 +341,20 @@ window.initAdminData = async function () {
 
   // Sequential loading to avoid rate limiting (429 errors)
   // Load dashboard first
-  try {
-    await loadAdminDashboard();
-  } catch (e) {
-    console.error('Dashboard load error:', e);
+  if (window.loadAdminDashboard) {
+    try {
+      await window.loadAdminDashboard();
+    } catch (e) {
+      console.error('Dashboard load error:', e);
+    }
   }
 
   // Small delay before loading settings
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  if (!isOperatorMode()) {
+  if (!isOperatorMode() && window.loadAdminSettings) {
     try {
-      await loadAdminSettings();
+      await window.loadAdminSettings();
     } catch (e) {
       console.error('Settings load error:', e);
     }
@@ -380,7 +382,9 @@ window.initAdminData = async function () {
   applyAdminModeUI();
 
   // Start auto-refresh if on dashboard tab
-  startDashboardAutoRefresh();
+  if (window.startDashboardAutoRefresh) {
+    window.startDashboardAutoRefresh();
+  }
 }
 
 // ============================================
@@ -403,7 +407,7 @@ window.switchAdminTab = function (tab) {
       state.currentAdminTab = tab;
 
       if (tabBtn) {
-        // Set outer button as active (black background, white text)
+        // Set outer button as active
         tabBtn.className = "w-full text-left px-4 py-3 rounded-2xl flex items-center transition-all duration-300 group relative overflow-hidden bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]";
         // Set inner span icon as active
         const iconSpan = tabBtn.querySelector('span:first-child');
@@ -420,7 +424,7 @@ window.switchAdminTab = function (tab) {
       }
     } else {
       if (tabBtn) {
-        // Set outer button as inactive (transparent background, hover effects)
+        // Set outer button as inactive
         tabBtn.className = "w-full text-left px-4 py-3 rounded-2xl flex items-center transition-all duration-300 group relative overflow-hidden text-slate-600 hover:bg-slate-100/50 backdrop-blur-md hover:text-slate-900";
         // Set inner span icon as inactive
         const iconSpan = tabBtn.querySelector('span:first-child');
@@ -439,17 +443,28 @@ window.switchAdminTab = function (tab) {
 
   // Manage auto-refresh based on active tab
   if (tab === 'dashboard') {
-    startDashboardAutoRefresh();
+    if (window.startDashboardAutoRefresh) window.startDashboardAutoRefresh();
   } else {
-    stopDashboardAutoRefresh();
+    if (window.stopDashboardAutoRefresh) window.stopDashboardAutoRefresh();
   }
 
-  if (tab === 'logs') { loadAuditLogsActions(); loadAuditLogs(); loadAuditStats(); }
-  else if (tab === 'sekolah') loadSekolah();
-  else if (tab === 'templates') loadTemplates();
-  else if (tab === 'users') { loadAdminUsers(); loadPendingApprovals(); }
+  if (tab === 'logs') {
+    if (window.loadAuditLogsActions) window.loadAuditLogsActions();
+    if (window.loadAuditLogs) window.loadAuditLogs();
+    if (window.loadAuditStats) window.loadAuditStats();
+  }
+  else if (tab === 'sekolah') {
+    if (window.loadSekolah) window.loadSekolah();
+  }
+  else if (tab === 'templates') {
+    if (window.loadTemplates) window.loadTemplates();
+  }
+  else if (tab === 'users') {
+    if (window.loadAdminUsers) window.loadAdminUsers();
+    if (window.loadPendingApprovals) window.loadPendingApprovals();
+  }
   else if (tab === 'dashboard') {
-    loadAdminDashboard();
+    if (window.loadAdminDashboard) window.loadAdminDashboard();
   }
 
   applyAdminModeUI();
@@ -458,7 +473,7 @@ window.switchAdminTab = function (tab) {
 // Global handler for sidebar tab clicks
 window.handleAdminTabClick = function (tabId) {
   if (state.currentPage === 'admin') {
-    switchAdminTab(tabId);
+    window.switchAdminTab(tabId);
   } else {
     state.currentAdminTab = tabId;
     navigate('admin');

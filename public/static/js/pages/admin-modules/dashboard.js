@@ -13,7 +13,7 @@ import {
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Auto-refresh dashboard every 30 seconds
-function startDashboardAutoRefresh() {
+window.startDashboardAutoRefresh = function startDashboardAutoRefresh() {
   // Clear any existing interval
   if (dashboardRefreshInterval) {
     clearInterval(dashboardRefreshInterval);
@@ -30,7 +30,7 @@ function startDashboardAutoRefresh() {
 }
 
 // Stop auto-refresh
-function stopDashboardAutoRefresh() {
+window.stopDashboardAutoRefresh = function stopDashboardAutoRefresh() {
   if (dashboardRefreshInterval) {
     clearInterval(dashboardRefreshInterval);
     setDashboardRefreshInterval(null);
@@ -40,9 +40,9 @@ function stopDashboardAutoRefresh() {
 // Silent refresh (no loading indicators)
 async function refreshDashboardData() {
   try {
-    await loadAdminDashboard(true);
+    await window.loadAdminDashboard(true);
     // Update recent activity
-    await loadDashboardActivity();
+    await window.loadDashboardActivity();
   } catch (e) {
     console.error('Silent dashboard refresh failed:', e);
     // Don't show error for auto-refresh
@@ -95,7 +95,7 @@ function updateSlaOverview(stats, approvalStats) {
 }
 
 // Load Dashboard Data - Sequential to avoid rate limiting
-async function loadAdminDashboard(isSilent = false) {
+window.loadAdminDashboard = async function loadAdminDashboard(isSilent = false) {
   try {
     // Load main dashboard data first
     const res = await api(`/admin/dashboard?period=${dashboardPeriodDays}`);
@@ -117,11 +117,11 @@ async function loadAdminDashboard(isSilent = false) {
 
     // Load activity last
     await new Promise(resolve => setTimeout(resolve, 100));
-    await loadDashboardActivity();
+    await window.loadDashboardActivity();
 
     // Initialize charts if panel is visible
     if (!isSilent && !document.getElementById('panel-dashboard').classList.contains('hidden')) {
-      setTimeout(() => initDashboardCharts(), 100);
+      setTimeout(() => window.initDashboardCharts(), 100);
     }
 
   } catch (e) {
@@ -129,7 +129,7 @@ async function loadAdminDashboard(isSilent = false) {
   }
 }
 
-async function loadDashboardActivity() {
+window.loadDashboardActivity = async function loadDashboardActivity() {
   const container = document.getElementById('dashboard-recent-logs');
   if (!container) return;
 

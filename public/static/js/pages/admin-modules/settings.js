@@ -4,7 +4,7 @@ import { debounce, escapeHtml } from '../../utils.js';
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Load Settings Data
-async function loadAdminSettings() {
+window.loadAdminSettings = async function loadAdminSettings() {
   try {
     const res = await api('/admin/settings');
     const s = res.data;

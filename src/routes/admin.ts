@@ -13,7 +13,7 @@ import {
 } from '../lib/audit';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSchema, updateSettingsSchema, listUsersQuerySchema, auditLogsQuerySchema, bulkApproveSchema, cleanupLogsSchema, createAiProviderSchema, updateAiProviderSchema } from '../lib/validation';
-import { AIService } from '../services/ai';
+import { AIService, parseKeyPool } from '../services/ai';
 
 import type { DashboardStats } from '../types';
 
@@ -1102,15 +1102,36 @@ admin.get('/users/approval-stats', async (c) => {
 });
 
 // ============================================
-// AI Provider Management
+// AI Provider Management (with Multi-Key Pooling & Encryption)
 // ============================================
 
 const providerWriteLimit = rateLimitMiddleware({ windowMs: 60 * 1000, maxRequests: 30, keyPrefix: 'admin-ai' });
 
-function maskApiKey(key: string | null | undefined): string {
+function maskApiKey(key: string): string {
   if (!key || key.length === 0) return '';
   if (key.length <= 8) return '****';
   return key.substring(0, 4) + '****' + key.substring(key.length - 4);
+}
+
+function maskApiKeyPool(rawKey: string | null | undefined): { masked: string; key_count: number } {
+  if (!rawKey || rawKey.length === 0) return { masked: '', key_count: 0 };
+  let keys: string[] = [];
+  try {
+    if (rawKey.startsWith('[') && rawKey.endsWith(']')) {
+      const parsed = JSON.parse(rawKey);
+      if (Array.isArray(parsed)) keys = parsed.map(k => String(k).trim()).filter(Boolean);
+    }
+  } catch {}
+  if (keys.length === 0) {
+    keys = rawKey.split(/[\r\n]+/).map(k => k.trim()).filter(Boolean);
+  }
+  if (keys.length === 0) return { masked: '', key_count: 0 };
+
+  const maskedLines = keys.map(k => maskApiKey(k));
+  return {
+    masked: maskedLines.join('\n'),
+    key_count: keys.length
+  };
 }
 
 // GET /admin/ai-providers — List all providers
@@ -1129,9 +1150,11 @@ admin.get('/ai-providers', async (c) => {
           // keep as is
         }
       }
+      const pool = maskApiKeyPool(rawKey);
       return {
         ...row,
-        api_key: maskApiKey(rawKey),
+        api_key: pool.masked,
+        key_count: pool.key_count,
       };
     }));
 
@@ -1142,7 +1165,7 @@ admin.get('/ai-providers', async (c) => {
   }
 });
 
-// POST /admin/ai-providers — Create new provider (with AES-GCM encryption at rest)
+// POST /admin/ai-providers — Create new provider (with Multi-Key Pooling & AES-GCM encryption)
 admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) => {
   try {
     const body = await c.req.json();
@@ -1165,10 +1188,18 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
       return c.json({ success: false, error: { code: 'LIMIT', message: 'Maksimal 20 provider.' } }, 400);
     }
 
-    // Encrypt sensitive API key at rest
+    // Process & serialize key pool
     let storedKey = d.api_key || '';
-    if (storedKey && !isEncrypted(storedKey)) {
-      storedKey = await encrypt(storedKey, c.env);
+    if (storedKey) {
+      const keys = parseKeyPool(storedKey);
+      if (keys.length > 1) {
+        storedKey = JSON.stringify(keys);
+      } else if (keys.length === 1) {
+        storedKey = keys[0];
+      }
+      if (storedKey && !isEncrypted(storedKey)) {
+        storedKey = await encrypt(storedKey, c.env);
+      }
     }
 
     const result = await c.env.DB.prepare(`
@@ -1196,7 +1227,7 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
   }
 });
 
-// PUT /admin/ai-providers/:id — Update provider (with AES-GCM encryption at rest)
+// PUT /admin/ai-providers/:id — Update provider (with Multi-Key Pooling & AES-GCM encryption)
 admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
@@ -1213,12 +1244,54 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
 
     const d = validation.data;
 
-    // Don't overwrite api_key if masked value is sent, otherwise encrypt new key
-    if (d.api_key) {
-      if (d.api_key.includes('****')) {
-        delete d.api_key;
-      } else if (!isEncrypted(d.api_key)) {
-        d.api_key = await encrypt(d.api_key, c.env);
+    // Check if api_key was modified or left masked (Smart Mask Reconciliation)
+    if (d.api_key !== undefined) {
+      const lines = d.api_key.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+
+      // Decrypt existing stored keys to reconcile masked lines
+      let existingRawKey = existing.api_key || '';
+      if (existingRawKey && isEncrypted(existingRawKey)) {
+        try {
+          existingRawKey = await decrypt(existingRawKey, c.env);
+        } catch {}
+      }
+      const existingKeyList = parseKeyPool(existingRawKey);
+
+      if (lines.length === 0) {
+        // User explicitly cleared all keys
+        d.api_key = '';
+      } else {
+        // Reconcile each line: if line contains ****, retain corresponding existing key
+        const reconciledKeys: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.includes('****')) {
+            // Find existing key by matching prefix & suffix, or fallback to index i
+            const prefix = line.substring(0, line.indexOf('****'));
+            const suffix = line.substring(line.indexOf('****') + 4);
+            const matchedKey = existingKeyList.find(k => 
+              (prefix ? k.startsWith(prefix) : true) && (suffix ? k.endsWith(suffix) : true)
+            ) || existingKeyList[i];
+
+            if (matchedKey) {
+              reconciledKeys.push(matchedKey);
+            }
+          } else {
+            // New or modified raw key
+            reconciledKeys.push(line);
+          }
+        }
+
+        // Deduplicate
+        const uniqueKeys = Array.from(new Set(reconciledKeys));
+        const serialized = uniqueKeys.length > 1 ? JSON.stringify(uniqueKeys) : (uniqueKeys[0] || '');
+
+        if (serialized) {
+          d.api_key = await encrypt(serialized, c.env);
+        } else {
+          d.api_key = '';
+        }
       }
     }
 

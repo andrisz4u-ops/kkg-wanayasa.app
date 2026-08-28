@@ -542,9 +542,13 @@ export function initRpp() {
     document.getElementById('rpp-form-view').classList.remove('hidden');
     document.getElementById('rpp-result-view').classList.add('hidden');
     
-    // Clear the form fields
+    // Clear the form fields while preserving active AI Provider
     const formEl = document.getElementById('rpp-form');
+    const prevProvider = formEl?.querySelector('select[name="aiProvider"]')?.value;
     if (formEl) formEl.reset();
+    
+    // Ensure AI Provider select options are immediately restored
+    populateAiModelSelect('select[name="aiProvider"]', prevProvider);
     
     // Reset Dimensi Profil tags (class name: 'active', not 'rpp-tag-active')
     selectedDimensions.clear();

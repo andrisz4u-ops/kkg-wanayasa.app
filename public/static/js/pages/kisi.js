@@ -494,9 +494,11 @@ export function initKisi() {
     setVal('jenjangKelas', defaultKelas);
     setVal('semester', 'Ganjil');
 
-    // Reset AI provider ke default (AWS Bedrock)
+    // Ensure AI provider dropdown is populated and never becomes blank
     const providerSelect = form.querySelector('select[name="aiProvider"]');
-    if (providerSelect) providerSelect.value = 'bedrock';
+    if (providerSelect) {
+      populateAiModelSelect(providerSelect, providerSelect.value);
+    }
 
     // Scroll ke atas form
     window.scrollTo({ top: 0, behavior: 'smooth' });

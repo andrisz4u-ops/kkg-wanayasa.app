@@ -1033,22 +1033,26 @@ export async function renderAdmin() {
             <p class="text-[11px] text-slate-400 mt-1">Untuk OpenAI-compat, sistem otomatis menambahkan <code>/chat/completions</code>.</p>
           </div>
 
-          <!-- Row 4: Model ID & API Key -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="label">Model ID <span class="text-rose-500">*</span></label>
-              <input type="text" id="aip-model" required placeholder="gemini-2.0-flash / gpt-4o" class="input-field font-mono">
+          <!-- Row 4: Model ID -->
+          <div>
+            <label class="label">Model ID <span class="text-rose-500">*</span></label>
+            <input type="text" id="aip-model" required placeholder="gemini-2.0-flash / gpt-4o / mistral-large-latest" class="input-field font-mono">
+          </div>
+
+          <!-- Row 5: API Key (Multi-Key Pool / Load Balancing Support) -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="label mb-0">API Key (Multi-Key Pool / Bulk Paste)</label>
+              <span id="aip-key-count-pill" class="text-[11px] font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 hidden">
+                0 Kunci
+              </span>
             </div>
-            <div>
-              <label class="label">API Key</label>
-              <div class="relative">
-                <input type="password" id="aip-api_key" placeholder="sk-..." class="input-field font-mono pr-10">
-                <button type="button" onclick="const f=document.getElementById('aip-api_key');f.type=f.type==='password'?'text':'password';" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
-                  <i class="fas fa-eye text-xs"></i>
-                </button>
-              </div>
-              <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika menggunakan variabel environment server.</p>
+            <div class="relative">
+              <textarea id="aip-api_key" rows="2" placeholder="sk-...&#10;(Bisa paste 1 key per baris untuk rotasi beban otomatis / Load Balancing)" class="input-field font-mono text-xs pr-8 resize-y"></textarea>
             </div>
+            <p class="text-[11px] text-slate-400 mt-1">
+              💡 <strong>Tips Multi-Key:</strong> Masukkan 1 key per baris. Sistem otomatis melakukan rotasi beban (Round-Robin) dan auto-switch jika 1 key kena limit (429).
+            </p>
           </div>
 
           <!-- Row 5: Max Tokens & Temperature -->

@@ -426,22 +426,34 @@ export function getQueryParams() {
 /**
  * Populate AI Model <select> element dynamically from active providers API
  */
+let cachedActiveAiProviders = null;
+
 export async function populateAiModelSelect(selector, preferredDefault) {
   const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
   if (!el) return;
 
   try {
-    const res = await fetch('/api/ai-providers/active');
-    const json = await res.json();
-    if (!json.success || !json.data || json.data.length === 0) return;
+    if (!cachedActiveAiProviders) {
+      const res = await fetch('/api/ai-providers/active');
+      const json = await res.json();
+      if (json.success && json.data && json.data.length > 0) {
+        cachedActiveAiProviders = json.data;
+      }
+    }
 
-    const providers = json.data;
+    const providers = cachedActiveAiProviders || [];
+    if (providers.length === 0) return;
+
     const currentVal = el.value || preferredDefault;
+    const hasMatch = providers.some(p => p.slug === currentVal);
+    const targetVal = hasMatch ? currentVal : providers[0].slug;
 
-    el.innerHTML = providers.map((p, idx) => {
-      const isSelected = currentVal ? (p.slug === currentVal) : (idx === 0);
+    el.innerHTML = providers.map((p) => {
+      const isSelected = (p.slug === targetVal);
       return `<option value="${escapeHtml(p.slug)}" ${isSelected ? 'selected' : ''}>${escapeHtml(p.name)} (${escapeHtml(p.model)})</option>`;
     }).join('');
+
+    el.value = targetVal;
   } catch (e) {
     console.warn('Failed to load active AI providers, keeping fallback options:', e);
   }

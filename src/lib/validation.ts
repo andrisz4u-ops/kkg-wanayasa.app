@@ -492,7 +492,7 @@ export const createAiProviderSchema = z.object({
     api_type: z.enum(aiProviderApiTypes, { message: 'Tipe API tidak valid' }),
     base_url: z.string().min(1, 'Base URL wajib diisi').max(500, 'URL terlalu panjang'),
     model: z.string().min(1, 'Model wajib diisi').max(200, 'Nama model terlalu panjang'),
-    api_key: z.string().max(1000, 'API key terlalu panjang').optional().default(''),
+    api_key: z.string().max(10000, 'API key terlalu panjang').optional().default(''),
     priority: z.coerce.number().int().min(1).max(999).optional().default(100),
     is_active: z.coerce.number().int().min(0).max(1).optional().default(1),
     max_tokens: z.coerce.number().int().min(1).max(131072).optional().default(8192),

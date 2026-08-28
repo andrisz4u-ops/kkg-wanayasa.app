@@ -12,7 +12,9 @@ export interface DBProvider {
     api_type: 'openai_compat' | 'anthropic' | 'gemini_sdk' | 'bedrock' | 'custom_proxy';
     base_url: string;
     model: string;
-    api_key: string;
+    api_key: string;            // Primary/first key
+    api_keys?: string[];        // Multi-key pool for load-balancing
+    key_count?: number;         // Total active keys in pool
     priority: number;
     is_active: boolean;
     max_tokens: number;
@@ -37,16 +39,57 @@ export interface AIResponse {
     provider: string;   // slug
     model: string;
     usage?: AIUsage;
+    used_key_index?: number;
+    total_keys_in_pool?: number;
 }
 
 export interface CheckResult {
     ok: boolean;
     latency_ms: number;
     error?: string;
+    valid_keys?: number;
+    total_keys?: number;
 }
 
-// Default subrequest timeout in milliseconds (25 seconds)
-const DEFAULT_SUBREQUEST_TIMEOUT_MS = 25000;
+// Default subrequest timeout in milliseconds (120 seconds / 2 menit untuk dokumen besar RPP & Asesmen)
+const DEFAULT_SUBREQUEST_TIMEOUT_MS = 120000;
+
+// Key Rotation & Cooldown State (In-Memory per Worker Instance)
+const keyRotationIndexMap = new Map<string, number>();
+const keyCooldownMap = new Map<string, number>();
+
+// ═══════════════════════════════════════════════════════════════════
+// Key Pool Parser Helper
+// ═══════════════════════════════════════════════════════════════════
+
+export function parseKeyPool(raw: string | null | undefined): string[] {
+    if (!raw || typeof raw !== 'string') return [];
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    let keys: string[] = [];
+
+    // Check if JSON array: ["key1", "key2"]
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+            const arr = JSON.parse(trimmed);
+            if (Array.isArray(arr)) {
+                keys = arr.map(k => String(k).trim()).filter(k => k.length > 0);
+            }
+        } catch {}
+    }
+
+    if (keys.length === 0) {
+        // Split by newlines, carriage returns, or commas
+        keys = trimmed
+            .split(/[\r\n]+/)
+            .map(k => k.trim())
+            .filter(k => k.length > 0);
+    }
+
+    // Automatically deduplicate keys
+    return Array.from(new Set(keys));
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // JSON repair helper
@@ -92,7 +135,8 @@ const SYSTEM_PROMPT = `Anda adalah asisten ahli administrasi pendidikan Indonesi
 
 // ═══════════════════════════════════════════════════════════════════
 // AIService — Enterprise DB-driven multi-provider with auto-failover,
-// circuit breaker, token tracking, and subrequest timeouts
+// key pooling & round-robin load balancing, circuit breaker,
+// token tracking, and subrequest timeouts
 // ═══════════════════════════════════════════════════════════════════
 
 export class AIService {
@@ -106,7 +150,7 @@ export class AIService {
 
     /**
      * Load active providers from D1 database, sorted by priority ASC.
-     * Transparently decrypts at-rest encrypted API keys.
+     * Transparently decrypts at-rest encrypted API keys and parses key pools.
      */
     async loadProviders(db: D1Database): Promise<void> {
         this.db = db;
@@ -128,6 +172,13 @@ export class AIService {
                 }
             }
 
+            // Parse key pool (supports single string, newline-separated list, or JSON array)
+            let keys = parseKeyPool(key);
+            if (keys.length === 0) {
+                const envKey = this.resolveEnvKey({ slug: row.slug, api_type: row.api_type } as any);
+                if (envKey) keys = parseKeyPool(envKey);
+            }
+
             loaded.push({
                 id: row.id,
                 name: row.name,
@@ -135,7 +186,9 @@ export class AIService {
                 api_type: row.api_type,
                 base_url: row.base_url,
                 model: row.model,
-                api_key: key,
+                api_key: keys[0] || '',
+                api_keys: keys,
+                key_count: keys.length,
                 priority: row.priority,
                 is_active: !!row.is_active,
                 max_tokens: row.max_tokens || 8192,
@@ -151,19 +204,12 @@ export class AIService {
         }
 
         this.providers = loaded;
-
-        // Fallback to server env variables if DB provider key is empty
-        for (const p of this.providers) {
-            if (!p.api_key || p.api_key.length === 0) {
-                p.api_key = this.resolveEnvKey(p) || '';
-            }
-        }
     }
 
     /**
      * Try to resolve an API key from environment variables based on the provider.
      */
-    private resolveEnvKey(p: DBProvider): string {
+    private resolveEnvKey(p: { slug: string; api_type: string }): string {
         if (!this.env) return '';
         const slug = p.slug.toLowerCase();
         if (slug.includes('gemini') || slug.includes('vertex')) return this.env.GEMINI_API_KEY || this.env.VERTEX_API_KEY || '';
@@ -183,10 +229,18 @@ export class AIService {
     }
 
     /**
-     * Find a provider by slug.
+     * Find a provider by slug or partial match.
      */
     getProviderBySlug(slug: string): DBProvider | undefined {
-        return this.providers.find(p => p.slug === slug);
+        if (!slug) return undefined;
+        let found = this.providers.find(p => p.slug === slug);
+        if (found) return found;
+
+        found = this.providers.find(p => p.slug.startsWith(slug) || slug.startsWith(p.slug));
+        if (found) return found;
+
+        const lower = slug.toLowerCase();
+        return this.providers.find(p => p.name.toLowerCase().includes(lower) || p.model.toLowerCase().includes(lower));
     }
 
     // ─── generateJSON ─────────────────────────────────────────────
@@ -207,13 +261,15 @@ CRITICAL JSON RULES:
         const aiMeta: any = {
             provider: result.provider,
             model: result.model,
-            usage: result.usage
+            usage: result.usage,
+            used_key_index: result.used_key_index,
+            total_keys_in_pool: result.total_keys_in_pool,
         };
         if ((result as any).failover_from) {
             aiMeta.failover_from = (result as any).failover_from;
             aiMeta.failover_errors = (result as any).failover_errors;
         }
-        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
+        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.total_keys_in_pool > 1 ? ` [Key Pool: #${aiMeta.used_key_index + 1}/${aiMeta.total_keys_in_pool}]` : ''}${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
 
         // ── Layer 1: Strip markdown code fences
         content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
@@ -305,6 +361,30 @@ CRITICAL JSON RULES:
             throw new Error('Tidak ada provider AI aktif yang terdaftar di sistem. Hubungi administrator.');
         }
 
+        // If user specifically requested a chosen provider (e.g. Mistral, Gemini, etc.), lock strictly to it (Intra-Provider Key Pool only)
+        if (preferredSlug) {
+            const specificProvider = this.getProviderBySlug(preferredSlug);
+            if (specificProvider) {
+                try {
+                    const response = await this.callProvider(specificProvider, prompt, jsonMode);
+
+                    // Asynchronously record token usage in background
+                    if (response.usage?.total_tokens && this.db) {
+                        this.recordUsage(specificProvider.id, response.usage.total_tokens).catch(e => {
+                            console.warn('[AI-USAGE] Failed to record usage:', e);
+                        });
+                    }
+
+                    return response;
+                } catch (err: any) {
+                    const errMsg = err?.message || String(err);
+                    console.error(`[AI-LOCKED] Provider "${specificProvider.name}" (${specificProvider.slug}) failed:`, errMsg);
+                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons (kuota API Key habis / timeout / server sibuk). Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
+                }
+            }
+        }
+
+        // If no specific provider was requested, use the prioritized failover chain
         const ordered = this.buildProviderOrder(preferredSlug);
         const failoverLog: string[] = [];
         let previousFailedSlug: string | undefined;
@@ -387,32 +467,99 @@ CRITICAL JSON RULES:
         }
     }
 
-    // ─── Provider Dispatcher ──────────────────────────────────────
+    // ─── Provider Dispatcher (with Key Pooling & Round-Robin Rotation) ─
 
-    private async callProvider(provider: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        if (!provider.api_key && provider.api_type !== 'custom_proxy') {
+    private async callProvider(provider: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+        const keys = (provider.api_keys && provider.api_keys.length > 0)
+            ? provider.api_keys
+            : (provider.api_key ? [provider.api_key] : []);
+
+        if (keys.length === 0 && provider.api_type !== 'custom_proxy') {
             throw new Error(`API key tidak tersedia untuk provider "${provider.name}".`);
         }
 
-        switch (provider.api_type) {
-            case 'openai_compat':
-                return this.callOpenAICompat(provider, prompt, jsonMode);
-            case 'anthropic':
-                return this.callAnthropic(provider, prompt, jsonMode);
-            case 'gemini_sdk':
-                return this.callGeminiSDK(provider, prompt, jsonMode);
-            case 'bedrock':
-                return this.callBedrock(provider, prompt, jsonMode);
-            case 'custom_proxy':
-                return this.callCustomProxy(provider, prompt, jsonMode);
-            default:
-                throw new Error(`Tipe API tidak dikenal: ${provider.api_type}`);
+        if (provider.api_type === 'custom_proxy') {
+            return this.callCustomProxy(provider, prompt, jsonMode, timeoutMs);
         }
+
+        const keyCount = keys.length;
+        let startIndex = keyRotationIndexMap.get(provider.slug);
+        if (startIndex === undefined || startIndex >= keyCount) {
+            // Randomize starting index on initial request / cold start to distribute traffic across multi-region isolates
+            startIndex = Math.floor(Math.random() * keyCount);
+        }
+
+        const now = Date.now();
+        const keyErrors: string[] = [];
+
+        // Try keys in round-robin sequence with fallback to next key on 429/402/401
+        for (let attempt = 0; attempt < keyCount; attempt++) {
+            const currentIndex = (startIndex + attempt) % keyCount;
+            const currentKey = keys[currentIndex];
+            const cooldownKey = `${provider.slug}:${currentIndex}`;
+            const cooldownUntil = keyCooldownMap.get(cooldownKey) || 0;
+
+            // If key is on cooldown, skip it unless it is the only key or all are in cooldown
+            if (keyCount > 1 && cooldownUntil > now && attempt < keyCount - 1) {
+                continue;
+            }
+
+            const pWithKey: DBProvider = {
+                ...provider,
+                api_key: currentKey,
+            };
+
+            try {
+                let res: AIResponse;
+                switch (provider.api_type) {
+                    case 'openai_compat':
+                        res = await this.callOpenAICompat(pWithKey, prompt, jsonMode, timeoutMs);
+                        break;
+                    case 'anthropic':
+                        res = await this.callAnthropic(pWithKey, prompt, jsonMode, timeoutMs);
+                        break;
+                    case 'gemini_sdk':
+                        res = await this.callGeminiSDK(pWithKey, prompt, jsonMode, timeoutMs);
+                        break;
+                    case 'bedrock':
+                        res = await this.callBedrock(pWithKey, prompt, jsonMode, timeoutMs);
+                        break;
+                    default:
+                        throw new Error(`Tipe API tidak dikenal: ${provider.api_type}`);
+                }
+
+                // Success! Update round-robin index to next key for the subsequent request
+                keyRotationIndexMap.set(provider.slug, (currentIndex + 1) % keyCount);
+                keyCooldownMap.delete(cooldownKey);
+
+                res.used_key_index = currentIndex;
+                res.total_keys_in_pool = keyCount;
+                return res;
+            } catch (err: any) {
+                const errMsg = err?.message || String(err);
+                keyErrors.push(`Key #${currentIndex + 1}: ${errMsg.substring(0, 150)}`);
+
+                // Check for rate limits (429), quota limits (402/529), or invalid key (401)
+                const isRotatableError = /429|402|529|rate[_\s-]?limit|quota|unauthorized|401|invalid_api_key/i.test(errMsg);
+
+                if (isRotatableError && keyCount > 1) {
+                    // Place this specific key in 60s cooldown
+                    keyCooldownMap.set(cooldownKey, now + 60000);
+                    console.warn(`[AI-KEY-POOL] ${provider.slug} key #${currentIndex + 1} hit rate limit / error (${errMsg.substring(0, 100)}). Auto-rotating to next key in pool...`);
+                    continue; // Try next key in pool immediately
+                }
+
+                // If not a rotatable error or only 1 key, rethrow to failover to next provider
+                throw err;
+            }
+        }
+
+        throw new Error(`${provider.name} (Semua ${keyCount} key di pool gagal): ${keyErrors.join(' | ')}`);
     }
 
-    // ─── OpenAI Compatible (with Reasoning Model o1/o3 support & timeout) ─
+    // ─── OpenAI Compatible ────────────────────────────────────────
 
-    private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+    private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
 
@@ -424,7 +571,7 @@ CRITICAL JSON RULES:
                     { role: 'system', content: SYSTEM_PROMPT },
                     { role: 'user', content: prompt }
                 ],
-            ...p.extra_body,
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
 
         if (isReasoningModel) {
@@ -441,14 +588,14 @@ CRITICAL JSON RULES:
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${p.api_key}`,
-            ...p.extra_headers,
+            ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
         };
 
         const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
+            signal: AbortSignal.timeout(timeoutMs),
         });
 
         if (!response.ok) {
@@ -468,9 +615,9 @@ CRITICAL JSON RULES:
         return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ─── Anthropic Messages API (with timeout & usage) ────────────
+    // ─── Anthropic Messages API ───────────────────────────────────
 
-    private async callAnthropic(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+    private async callAnthropic(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/v1/messages`;
 
         const userContent = jsonMode
@@ -483,21 +630,21 @@ CRITICAL JSON RULES:
             temperature: p.temperature,
             messages: [{ role: 'user', content: userContent }],
             system: SYSTEM_PROMPT,
-            ...p.extra_body,
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
 
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'x-api-key': p.api_key,
             'anthropic-version': '2023-06-01',
-            ...p.extra_headers,
+            ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
         };
 
         const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
+            signal: AbortSignal.timeout(timeoutMs),
         });
 
         if (!response.ok) {
@@ -519,9 +666,9 @@ CRITICAL JSON RULES:
         return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ─── Google Gemini SDK (with timeout & usage) ─────────────────
+    // ─── Google Gemini SDK ────────────────────────────────────────
 
-    private async callGeminiSDK(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+    private async callGeminiSDK(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const genAI = new GoogleGenerativeAI(p.api_key);
         const model = genAI.getGenerativeModel({
             model: p.model,
@@ -532,10 +679,9 @@ CRITICAL JSON RULES:
             }
         });
 
-        // Enforce timeout on SDK call
         const generatePromise = model.generateContent(SYSTEM_PROMPT + '\n\n' + prompt);
         const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout ${DEFAULT_SUBREQUEST_TIMEOUT_MS}ms exceeded on ${p.name}`)), DEFAULT_SUBREQUEST_TIMEOUT_MS)
+            setTimeout(() => reject(new Error(`Timeout ${timeoutMs}ms exceeded on ${p.name}`)), timeoutMs)
         );
 
         const result = await Promise.race([generatePromise, timeoutPromise]);
@@ -552,9 +698,9 @@ CRITICAL JSON RULES:
         return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ─── AWS Bedrock (InvokeModel with retries, timeout & usage) ──
+    // ─── AWS Bedrock ──────────────────────────────────────────────
 
-    private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+    private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const region = p.extra_body?.region || this.env?.BEDROCK_REGION || 'us-east-1';
         const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke`;
 
@@ -567,7 +713,7 @@ CRITICAL JSON RULES:
             max_tokens: p.max_tokens,
             temperature: p.temperature,
             messages: [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + userContent }],
-            ...p.extra_body,
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
         delete body.region;
 
@@ -578,10 +724,10 @@ CRITICAL JSON RULES:
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${p.api_key}`,
-                    ...p.extra_headers,
+                    ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
                 },
                 body: JSON.stringify(body),
-                signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
+                signal: AbortSignal.timeout(timeoutMs),
             });
 
             if (response.ok) {
@@ -613,9 +759,9 @@ CRITICAL JSON RULES:
         throw new Error(`${p.name}: Max retries exceeded`);
     }
 
-    // ─── Custom Proxy (with timeout) ──────────────────────────────
+    // ─── Custom Proxy ─────────────────────────────────────────────
 
-    private async callCustomProxy(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+    private async callCustomProxy(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const apiKey = p.api_key || this.env?.AI_BACKEND_KEY || 'kkg-2026-rahasia';
 
         const response = await fetch(p.base_url, {
@@ -623,14 +769,14 @@ CRITICAL JSON RULES:
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': apiKey,
-                ...p.extra_headers,
+                ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
             },
             body: JSON.stringify({
                 prompt,
                 json_mode: jsonMode,
-                ...p.extra_body,
+                ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
             }),
-            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
+            signal: AbortSignal.timeout(timeoutMs),
         });
 
         if (!response.ok) {
@@ -649,7 +795,7 @@ CRITICAL JSON RULES:
         return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ─── Check Live ───────────────────────────────────────────────
+    // ─── Check Live (Multi-Key Aware) ─────────────────────────────
 
     async checkLive(db: D1Database, providerId: number): Promise<CheckResult> {
         const row: any = await db.prepare(
@@ -667,6 +813,12 @@ CRITICAL JSON RULES:
             }
         }
 
+        let keys = parseKeyPool(key);
+        if (keys.length === 0) {
+            const envKey = this.resolveEnvKey({ slug: row.slug, api_type: row.api_type } as any);
+            if (envKey) keys = parseKeyPool(envKey);
+        }
+
         const provider: DBProvider = {
             id: row.id,
             name: row.name,
@@ -674,7 +826,9 @@ CRITICAL JSON RULES:
             api_type: row.api_type,
             base_url: row.base_url,
             model: row.model,
-            api_key: key,
+            api_key: keys[0] || '',
+            api_keys: keys,
+            key_count: keys.length,
             priority: row.priority,
             is_active: !!row.is_active,
             max_tokens: row.max_tokens || 8192,
@@ -683,34 +837,90 @@ CRITICAL JSON RULES:
             extra_body: safeParse(row.extra_body),
         };
 
-        if (!provider.api_key) {
-            provider.api_key = this.resolveEnvKey(provider) || '';
+        if (keys.length === 0 && provider.api_type !== 'custom_proxy') {
+            const errMsg = 'API key kosong atau belum diisi.';
+            await db.prepare(
+                `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = -1, last_check_ms = 0, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(errMsg, providerId).run();
+            return { ok: false, latency_ms: 0, error: errMsg, valid_keys: 0, total_keys: 0 };
         }
 
         const start = Date.now();
-        try {
-            await this.callProvider(provider, 'Respond with the single word "OK". Nothing else.', false);
-            const latency = Date.now() - start;
+        let validKeys = 0;
+        const totalKeys = Math.max(keys.length, 1);
+        const errors: string[] = [];
 
+        // If multiple keys in pool, test all keys concurrently in parallel
+        if (keys.length > 1 && provider.api_type !== 'custom_proxy') {
+            const checkPromises = keys.map(async (key, i) => {
+                const singleP: DBProvider = { ...provider, api_key: key };
+                try {
+                    await this.callProvider(singleP, 'Respond with the single word "OK". Nothing else.', false, 15000);
+                    return { ok: true, index: i };
+                } catch (e: any) {
+                    return { ok: false, index: i, error: `Key #${i + 1}: ${e?.message || String(e)}` };
+                }
+            });
+
+            const settled = await Promise.allSettled(checkPromises);
+            for (const item of settled) {
+                if (item.status === 'fulfilled') {
+                    if (item.value.ok) {
+                        validKeys++;
+                    } else if (item.value.error) {
+                        errors.push(item.value.error);
+                    }
+                } else {
+                    errors.push(String(item.reason));
+                }
+            }
+        } else {
+            try {
+                await this.callProvider(provider, 'Respond with the single word "OK". Nothing else.', false, 15000);
+                validKeys = 1;
+            } catch (e: any) {
+                errors.push(e?.message || String(e));
+            }
+        }
+
+        const latency = Date.now() - start;
+        const isAllOk = validKeys === totalKeys;
+        const isAnyOk = validKeys > 0;
+
+        if (isAnyOk) {
+            const errorSummary = errors.length > 0 ? errors.join(' | ').substring(0, 500) : null;
             await db.prepare(
-                `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = 1, last_check_ms = ?, last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-            ).bind(latency, providerId).run();
+                `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = 1, last_check_ms = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(latency, errorSummary, providerId).run();
 
-            return { ok: true, latency_ms: latency };
-        } catch (e: any) {
-            const latency = Date.now() - start;
-            const errMsg = e?.message || String(e);
-
+            return {
+                ok: true,
+                latency_ms: latency,
+                valid_keys: validKeys,
+                total_keys: totalKeys,
+                error: errorSummary || undefined
+            };
+        } else {
+            const errorSummary = errors.join(' | ').substring(0, 500) || 'Gagal merespons';
             await db.prepare(
                 `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = -1, last_check_ms = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-            ).bind(latency, errMsg.substring(0, 500), providerId).run();
+            ).bind(latency, errorSummary, providerId).run();
 
-            return { ok: false, latency_ms: latency, error: errMsg };
+            return {
+                ok: false,
+                latency_ms: latency,
+                valid_keys: 0,
+                total_keys: totalKeys,
+                error: errorSummary
+            };
         }
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════
+
 function safeParse(val: any): Record<string, any> {
     if (!val || val === '{}' || val === '""' || val === 'null') return {};
     if (typeof val === 'object' && val !== null && !Array.isArray(val)) return val;

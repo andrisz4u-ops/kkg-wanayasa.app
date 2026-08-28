@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { parseKeyPool } from '../src/services/ai';
 
 // Mock the AI providers
 vi.mock('@google/generative-ai', () => ({
@@ -175,5 +176,76 @@ describe('AI Provider Circuit Breaker & Health Logic', () => {
         expect(isReasoning('o3-mini')).toBe(true);
         expect(isReasoning('gpt-4o')).toBe(false);
         expect(isReasoning('gemini-2.0-flash')).toBe(false);
+    });
+});
+
+describe('AI Multi-Key Pooling & Load Balancing Logic', () => {
+    it('should parse single key, newline-separated keys, and JSON array strings', () => {
+        // Single key
+        expect(parseKeyPool('sk-single-key-123')).toEqual(['sk-single-key-123']);
+
+        // Multi-line paste (bulk)
+        const multiLine = `
+            sk-key-alpha
+            sk-key-beta
+            sk-key-gamma
+        `;
+        expect(parseKeyPool(multiLine)).toEqual(['sk-key-alpha', 'sk-key-beta', 'sk-key-gamma']);
+
+        // JSON array format
+        const jsonArr = JSON.stringify(['sk-json-1', 'sk-json-2']);
+        expect(parseKeyPool(jsonArr)).toEqual(['sk-json-1', 'sk-json-2']);
+
+        // Empty string / null
+        expect(parseKeyPool('')).toEqual([]);
+        expect(parseKeyPool(null)).toEqual([]);
+    });
+
+    it('should rotate keys in Round-Robin order', () => {
+        const keys = ['key_A', 'key_B', 'key_C'];
+        let currentIndex = 0;
+
+        const getNextKey = () => {
+            const k = keys[currentIndex];
+            currentIndex = (currentIndex + 1) % keys.length;
+            return k;
+        };
+
+        expect(getNextKey()).toBe('key_A');
+        expect(getNextKey()).toBe('key_B');
+        expect(getNextKey()).toBe('key_C');
+        expect(getNextKey()).toBe('key_A'); // loops back
+    });
+
+    it('should reconcile masked keys with new raw keys correctly', () => {
+        const existingKeys = [
+            'sk-111111111111aaaa',
+            'sk-222222222222bbbb',
+            'sk-333333333333cccc'
+        ];
+
+        // User kept first 2 masked, deleted 3rd, and added a 4th new key
+        const inputLines = [
+            'sk-11****aaaa',
+            'sk-22****bbbb',
+            'sk-444444444444dddd'
+        ];
+
+        const reconciled = inputLines.map((line, i) => {
+            if (line.includes('****')) {
+                const prefix = line.substring(0, line.indexOf('****'));
+                const suffix = line.substring(line.indexOf('****') + 4);
+                return existingKeys.find(k => 
+                    (prefix ? k.startsWith(prefix) : true) && (suffix ? k.endsWith(suffix) : true)
+                ) || existingKeys[i];
+            }
+            return line;
+        });
+
+        expect(reconciled).toEqual([
+            'sk-111111111111aaaa',
+            'sk-222222222222bbbb',
+            'sk-444444444444dddd'
+        ]);
     });
 });

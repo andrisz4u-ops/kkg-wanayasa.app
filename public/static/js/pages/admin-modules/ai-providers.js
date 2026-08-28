@@ -82,6 +82,11 @@ function renderProviderCard(p, idx) {
     statusBadge = `<span class="inline-flex items-center text-[10px] text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200" title="${escapeHtml(p.last_error || 'Gagal merespons')}"><span class="w-2 h-2 rounded-full bg-rose-500 mr-1.5"></span>GAGAL (${p.last_check_ms || 0}ms)</span>`;
   }
 
+  const keyCount = p.key_count || (p.api_key && p.api_key.includes('\n') ? p.api_key.split('\n').length : (p.api_key ? 1 : 0));
+  const poolBadge = keyCount > 1
+    ? `<span class="text-[10px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200" title="Auto-Rotasi ${keyCount} Kunci (Load Balancing)"><i class="fas fa-layer-group text-[9px] mr-1 text-violet-500"></i>${keyCount} Keys (Pool)</span>`
+    : '';
+
   return `
     <div class="bg-white/90 backdrop-blur-xl rounded-2xl p-5 border ${p.is_active ? 'border-slate-200/80 shadow-sm' : 'border-slate-200/40 opacity-60'} hover:shadow-md transition-all relative group" id="provider-card-${p.id}">
       <!-- Top header -->
@@ -120,6 +125,7 @@ function renderProviderCard(p, idx) {
         <span class="text-[10px] font-mono bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200/60 truncate max-w-[180px]" title="${escapeHtml(p.model)}">
           <i class="fas fa-cube text-[9px] mr-1 text-slate-400"></i>${escapeHtml(p.model)}
         </span>
+        ${poolBadge}
         <span class="text-[10px] font-mono bg-indigo-50/70 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100/80" title="Total penggunaan token: ${p.total_tokens_used || 0}">
           <i class="fas fa-chart-simple text-[9px] mr-1 text-indigo-400"></i>${p.total_calls || 0}x · ${(p.total_tokens_used || 0) > 1000 ? ((p.total_tokens_used || 0) / 1000).toFixed(1) + 'k' : (p.total_tokens_used || 0)} tok
         </span>
@@ -132,7 +138,7 @@ function renderProviderCard(p, idx) {
           <span class="text-slate-400 select-none">URL:</span> ${escapeHtml(p.base_url)}
         </div>
         <div class="flex items-center justify-between text-[10px] text-slate-500">
-          <span>Key: <code class="bg-white px-1.5 py-0.5 rounded border border-slate-200/50">${escapeHtml(p.api_key || '(dari env / kosong)')}</code></span>
+          <span>Key: <code class="bg-white px-1.5 py-0.5 rounded border border-slate-200/50 ${keyCount > 1 ? 'text-violet-700 font-semibold' : ''}">${keyCount > 1 ? `${keyCount} Kunci (Pool)` : escapeHtml(p.api_key || '(dari env / kosong)')}</code></span>
           <span>Max: ${p.max_tokens || 8192} tok</span>
           <span>Temp: ${p.temperature ?? 0.7}</span>
         </div>
@@ -168,7 +174,11 @@ window.checkAiProviderLive = async function checkAiProviderLive(id) {
     const data = res.data || {};
 
     if (data.ok) {
-      moduleToast('AI Provider', `Provider aktif! Latency: ${data.latency_ms}ms`, 'success');
+      if (data.total_keys && data.total_keys > 1) {
+        moduleToast('AI Provider', `Pool Aktif! ${data.valid_keys}/${data.total_keys} Kunci OK (${data.latency_ms}ms)`, 'success');
+      } else {
+        moduleToast('AI Provider', `Provider aktif! Latency: ${data.latency_ms}ms`, 'success');
+      }
     } else {
       moduleToast('AI Provider', `Gagal merespons: ${data.error || 'Unknown error'}`, 'error');
     }
@@ -181,6 +191,27 @@ window.checkAiProviderLive = async function checkAiProviderLive(id) {
       btn.disabled = false;
       btn.innerHTML = originalHtml;
     }
+  }
+};
+
+window.updateAiKeyCountPill = function updateAiKeyCountPill() {
+  const textarea = document.getElementById('aip-api_key');
+  const pill = document.getElementById('aip-key-count-pill');
+  if (!textarea || !pill) return;
+  const val = textarea.value.trim();
+  if (!val) {
+    pill.classList.add('hidden');
+    return;
+  }
+  const lines = val.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+  const count = lines.length;
+  pill.classList.remove('hidden');
+  if (count > 1) {
+    pill.textContent = `${count} Kunci (Auto-Rotasi)`;
+    pill.className = 'text-[11px] font-mono font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-200';
+  } else {
+    pill.textContent = '1 Kunci';
+    pill.className = 'text-[11px] font-mono font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100';
   }
 };
 
@@ -255,7 +286,14 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
         e.preventDefault();
       }
     });
+
+    const keyTextarea = document.getElementById('aip-api_key');
+    if (keyTextarea) {
+      keyTextarea.addEventListener('input', () => window.updateAiKeyCountPill());
+    }
   }
+
+  window.updateAiKeyCountPill();
 
   if (preset) {
     window.applyAiPreset(preset);
@@ -292,6 +330,23 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
   document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
   document.getElementById('aip-extra_headers').value = JSON.stringify(p.extra_headers || {}, null, 2);
   document.getElementById('aip-extra_body').value = JSON.stringify(p.extra_body || {}, null, 2);
+
+  const form = document.getElementById('ai-provider-form');
+  if (form && !form.dataset.enterBound) {
+    form.dataset.enterBound = 'true';
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+        e.preventDefault();
+      }
+    });
+
+    const keyTextarea = document.getElementById('aip-api_key');
+    if (keyTextarea) {
+      keyTextarea.addEventListener('input', () => window.updateAiKeyCountPill());
+    }
+  }
+
+  window.updateAiKeyCountPill();
 
   openAdminModal('ai-provider-modal', '#aip-name');
 };

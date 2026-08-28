@@ -8,6 +8,7 @@ const processes = [];
 let shuttingDown = false;
 
 function start(name, scriptPath, args = [], required = true) {
+  const prefix = `[${name}]`;
   const child = spawn(process.execPath, [scriptPath, ...args], {
     cwd: root,
     env: process.env,

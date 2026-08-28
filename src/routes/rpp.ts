@@ -5,18 +5,9 @@ import { generateRppBuffer, type RppInputData, type RppContentData } from '../li
 import { cpData } from '../lib/cp-data';
 import { getCookie, getCurrentUser } from '../lib/auth';
 
-type Bindings = {
-  DB: D1Database;
-  MISTRAL_API_KEY?: string;
-  Z_AI_API_KEY?: string;
-  GEMINI_API_KEY?: string;
-  BEDROCK_API_KEY?: string;
-  BEDROCK_REGION?: string;
-  VERTEX_API_KEY?: string;
-  AI_BACKEND_KEY?: string;
-};
+import { type AppBindings } from '../types/env';
 
-const rpp = new Hono<{ Bindings: Bindings }>();
+const rpp = new Hono<{ Bindings: AppBindings }>();
 
 // Generate RPP
 rpp.post('/generate', async (c) => {

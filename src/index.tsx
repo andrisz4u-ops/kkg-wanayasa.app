@@ -29,29 +29,9 @@ import { hashPassword, getCurrentUser, getCookie } from './lib/auth';
 import { initSentry, captureError } from './lib/sentry';
 import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
-import type { R2Bucket } from './lib/upload';
+import type { AppBindings, AppVariables } from './types/env';
 
-type Bindings = {
-  DB: D1Database;
-  STORAGE?: R2Bucket;
-  R2_PUBLIC_URL?: string;
-  SENTRY_DSN?: string;
-  ENVIRONMENT?: string;
-  CF_PAGES_COMMIT_SHA?: string;
-  MISTRAL_API_KEY?: string;
-  Z_AI_API_KEY?: string;
-  SUPABASE_URL?: string;
-  SUPABASE_KEY?: string;
-  SUPABASE_BUCKET?: string;
-  UNSPLASH_ACCESS_KEY?: string;
-  UNSPLASH_SECRET_KEY?: string;
-};
-
-type Variables = {
-  sentry: any;
-};
-
-const app = new Hono<{ Bindings: Bindings, Variables: Variables }>();
+const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
 
 // Initialize Sentry error tracking & logger environment
 app.use('*', async (c, next) => {

@@ -16,12 +16,9 @@ import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSc
 import { AIService, parseKeyPool } from '../services/ai';
 
 import type { DashboardStats } from '../types';
+import type { AppBindings, AppVariables } from '../types/env';
 
-
-type Bindings = { DB: D1Database };
-type Variables = { user: any };
-
-const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+const admin = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
 
 const ADMIN_PANEL_ROLES = ['admin', 'operator'] as const;
 

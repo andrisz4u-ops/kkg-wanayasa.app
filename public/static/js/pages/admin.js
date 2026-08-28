@@ -1033,10 +1033,21 @@ export async function renderAdmin() {
             <p class="text-[11px] text-slate-400 mt-1">Untuk OpenAI-compat, sistem otomatis menambahkan <code>/chat/completions</code>.</p>
           </div>
 
-          <!-- Row 4: Model ID -->
+          <!-- Row 4: Model ID (with Auto-Fetch Models Button & Datalist) -->
           <div>
-            <label class="label">Model ID <span class="text-rose-500">*</span></label>
-            <input type="text" id="aip-model" required placeholder="gemini-2.0-flash / gpt-4o / mistral-large-latest" class="input-field font-mono">
+            <div class="flex items-center justify-between mb-1">
+              <label class="label mb-0">Model ID <span class="text-rose-500">*</span></label>
+              <button type="button" id="btn-fetch-models" onclick="window.fetchAiProviderModels()" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200/60 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer">
+                <i class="fas fa-satellite-dish text-[10px]"></i> <span>Tarik Daftar Model</span>
+              </button>
+            </div>
+            <div class="relative">
+              <input type="text" id="aip-model" list="aip-model-datalist" required placeholder="Ketik atau pilih dari daftar model..." class="input-field font-mono" autocomplete="off">
+              <datalist id="aip-model-datalist"></datalist>
+            </div>
+            <p id="aip-models-feedback" class="text-[11px] text-slate-400 mt-1">
+              💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.
+            </p>
           </div>
 
           <!-- Row 5: API Key (Multi-Key Pool / Load Balancing Support) -->

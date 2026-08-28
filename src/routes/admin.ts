@@ -1390,6 +1390,125 @@ admin.post('/ai-providers/:id/check', requireStrictAdmin, providerWriteLimit, as
   }
 });
 
+// POST /admin/ai-providers/fetch-models — Fetch live model list from provider's endpoint
+admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { base_url, api_type = 'openai_compat', provider_id } = body;
+    let rawApiKey = (body.api_key || '').trim();
+
+    // If masked key is passed (contains ****) and provider_id is provided, load and decrypt existing key from DB
+    if (provider_id && (!rawApiKey || rawApiKey.includes('****'))) {
+      const existing: any = await c.env.DB.prepare('SELECT api_key FROM ai_providers WHERE id = ?').bind(provider_id).first();
+      if (existing?.api_key) {
+        let stored = existing.api_key;
+        if (isEncrypted(stored)) {
+          try {
+            stored = await decrypt(stored, c.env);
+          } catch {}
+        }
+        const keyList = parseKeyPool(stored);
+        if (keyList.length > 0) {
+          rawApiKey = keyList[0];
+        }
+      }
+    } else if (rawApiKey) {
+      const keyList = parseKeyPool(rawApiKey);
+      if (keyList.length > 0) {
+        rawApiKey = keyList[0];
+      }
+    }
+
+    if (!base_url && api_type !== 'gemini_sdk') {
+      return c.json({ success: false, error: { code: 'INVALID_URL', message: 'Base URL tidak boleh kosong' } }, 400);
+    }
+
+    let models: string[] = [];
+
+    if (api_type === 'gemini_sdk' || (base_url && base_url.includes('generativelanguage.googleapis.com'))) {
+      const keyParam = rawApiKey ? `?key=${rawApiKey}` : '';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models${keyParam}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Google Gemini Error ${res.status}: ${txt.substring(0, 300)}`);
+      }
+      const data: any = await res.json();
+      models = (data.models || [])
+        .map((m: any) => (m.name || '').replace(/^models\//, ''))
+        .filter((name: string) => name && !name.includes('embedding') && !name.includes('aqa'));
+    } else if (api_type === 'anthropic' || (base_url && base_url.includes('api.anthropic.com'))) {
+      const url = 'https://api.anthropic.com/v1/models';
+      const res = await fetch(url, {
+        headers: {
+          'x-api-key': rawApiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Anthropic Error ${res.status}: ${txt.substring(0, 300)}`);
+      }
+      const data: any = await res.json();
+      models = (data.data || []).map((m: any) => m.id || m.name).filter(Boolean);
+    } else {
+      // OpenAI Compatible (OpenAI, Mistral, Groq, NVIDIA NIM, OpenRouter, SiliconFlow, Ollama, etc.)
+      let cleanUrl = (base_url || '').trim().replace(/\/+$/, '').replace(/\/chat\/completions\/?$/, '');
+      let modelsUrl = cleanUrl.endsWith('/models') ? cleanUrl : `${cleanUrl}/models`;
+
+      if (!cleanUrl.endsWith('/v1') && !cleanUrl.endsWith('/models') && !cleanUrl.includes('/v1/')) {
+        modelsUrl = `${cleanUrl}/v1/models`;
+      }
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      if (rawApiKey) {
+        headers['Authorization'] = `Bearer ${rawApiKey}`;
+      }
+
+      let res = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000) });
+
+      // Fallback: If /v1/models returned 404, try /models directly
+      if (res.status === 404 && modelsUrl.includes('/v1/models')) {
+        const fallbackUrl = cleanUrl.endsWith('/models') ? cleanUrl : `${cleanUrl}/models`;
+        res = await fetch(fallbackUrl, { headers, signal: AbortSignal.timeout(15000) });
+      }
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Provider Error ${res.status}: ${txt.substring(0, 300)}`);
+      }
+
+      const data: any = await res.json();
+
+      if (Array.isArray(data.data)) {
+        models = data.data.map((m: any) => m.id || m.name).filter(Boolean);
+      } else if (Array.isArray(data.models)) {
+        models = data.models.map((m: any) => m.name || m.id || m.model).filter(Boolean);
+      } else if (Array.isArray(data)) {
+        models = data.map((m: any) => (typeof m === 'string' ? m : m.id || m.name)).filter(Boolean);
+      }
+    }
+
+    // Deduplicate and sort alphabetically
+    const uniqueModels = Array.from(new Set(models)).sort((a, b) => a.localeCompare(b));
+
+    if (uniqueModels.length === 0) {
+      return c.json({ success: false, error: { code: 'NO_MODELS', message: 'Tidak ada model yang ditemukan dari server provider.' } }, 404);
+    }
+
+    return successResponse(c, {
+      count: uniqueModels.length,
+      models: uniqueModels,
+    }, `Berhasil menemukan ${uniqueModels.length} model`);
+  } catch (e: any) {
+    console.error('Fetch AI provider models error:', e);
+    return c.json({ success: false, error: { code: 'FETCH_MODELS_FAILED', message: e.message || 'Gagal mengambil daftar model dari server' } }, 500);
+  }
+});
+
 // PUT /admin/ai-providers/:id/toggle — Toggle active/inactive
 admin.put('/ai-providers/:id/toggle', requireStrictAdmin, providerWriteLimit, async (c) => {
   try {

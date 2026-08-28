@@ -251,6 +251,80 @@ window.deleteAiProvider = function deleteAiProvider(id, name) {
 };
 
 // ============================================
+// Auto-Fetch Models from Provider Endpoint
+// ============================================
+
+window.fetchAiProviderModels = async function fetchAiProviderModels() {
+  const btn = document.getElementById('btn-fetch-models');
+  const baseUrlInput = document.getElementById('aip-base_url');
+  const apiKeyInput = document.getElementById('aip-api_key');
+  const apiTypeInput = document.getElementById('aip-api_type');
+  const providerIdInput = document.getElementById('ai-provider-id');
+  const modelInput = document.getElementById('aip-model');
+  const datalist = document.getElementById('aip-model-datalist');
+  const feedback = document.getElementById('aip-models-feedback');
+
+  const base_url = baseUrlInput ? baseUrlInput.value.trim() : '';
+  const api_key = apiKeyInput ? apiKeyInput.value.trim() : '';
+  const api_type = apiTypeInput ? apiTypeInput.value : 'openai_compat';
+  const provider_id = providerIdInput && providerIdInput.value ? parseInt(providerIdInput.value, 10) : null;
+
+  if (!base_url && api_type !== 'gemini_sdk') {
+    moduleToast('AI Provider', 'Harap isi Base URL terlebih dahulu.', 'warning');
+    if (baseUrlInput) baseUrlInput.focus();
+    return;
+  }
+
+  const restoreBtn = setBusyButton(btn, true, 'Menarik...');
+  if (feedback) {
+    feedback.innerHTML = '<span class="text-indigo-600 font-medium"><i class="fas fa-spinner fa-spin mr-1"></i> Menghubungi server provider untuk mengambil daftar model...</span>';
+  }
+
+  try {
+    const res = await api('/admin/ai-providers/fetch-models', {
+      method: 'POST',
+      body: { base_url, api_key, api_type, provider_id }
+    });
+
+    const data = res.data || {};
+    const models = data.models || [];
+    const count = data.count || models.length;
+
+    if (models.length > 0) {
+      if (datalist) {
+        datalist.innerHTML = models.map(m => `<option value="${escapeHtml(m)}"></option>`).join('');
+      }
+
+      moduleToast('AI Provider', `Berhasil menarik ${count} model aktif!`, 'success');
+      if (feedback) {
+        feedback.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="fas fa-check-circle mr-1"></i> ${count} Model ditemukan! Ketik atau pilih dari autocomplete.</span>`;
+      }
+
+      // If model input is empty, pre-select the first one or open the datalist
+      if (modelInput && !modelInput.value) {
+        modelInput.value = models[0];
+      }
+      if (modelInput) {
+        modelInput.focus();
+      }
+    } else {
+      moduleToast('AI Provider', 'Tidak ada model yang ditemukan dari server.', 'info');
+      if (feedback) {
+        feedback.innerHTML = '<span class="text-amber-600">Tidak ada model yang ditemukan. Anda bisa mengetik ID model secara manual.</span>';
+      }
+    }
+  } catch (err) {
+    const errMsg = err?.message || 'Gagal menarik daftar model.';
+    moduleToast('AI Provider', errMsg, 'error');
+    if (feedback) {
+      feedback.innerHTML = `<span class="text-rose-500 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i> ${escapeHtml(errMsg)}</span>`;
+    }
+  } finally {
+    restoreBtn();
+  }
+};
+
+// ============================================
 // Modal: Add / Edit
 // ============================================
 
@@ -259,6 +333,13 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
   document.getElementById('ai-provider-modal-title').textContent = 'Tambah Provider AI';
   document.getElementById('ai-provider-form').reset();
   document.getElementById('ai-provider-id').value = '';
+
+  const datalist = document.getElementById('aip-model-datalist');
+  if (datalist) datalist.innerHTML = '';
+  const feedback = document.getElementById('aip-models-feedback');
+  if (feedback) {
+    feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';
+  }
 
   // Ensure submit button is cleanly reset
   const submitBtn = document.getElementById('ai-provider-submit-btn');
@@ -347,6 +428,13 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
   }
 
   window.updateAiKeyCountPill();
+
+  const datalist = document.getElementById('aip-model-datalist');
+  if (datalist) datalist.innerHTML = '';
+  const feedback = document.getElementById('aip-models-feedback');
+  if (feedback) {
+    feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';
+  }
 
   openAdminModal('ai-provider-modal', '#aip-name');
 };

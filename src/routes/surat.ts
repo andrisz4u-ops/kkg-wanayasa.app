@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
-import { callAI, buildSuratPrompt } from '../lib/mistral';
+import { AIService } from '../services/ai';
+import { buildSuratPrompt } from '../lib/prompts';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
 import { validate, validateId, generateSuratSchema } from '../lib/validation';
 import { logger } from '../lib/logger';
 import type { SuratUndangan } from '../types';
 
-type Bindings = { DB: D1Database; MISTRAL_API_KEY?: string; Z_AI_API_KEY?: string; GEMINI_API_KEY?: string; BEDROCK_API_KEY?: string; BEDROCK_REGION?: string };
+type Bindings = { DB: D1Database; MISTRAL_API_KEY?: string; Z_AI_API_KEY?: string; GEMINI_API_KEY?: string; BEDROCK_API_KEY?: string; BEDROCK_REGION?: string; AI_BACKEND_KEY?: string };
 
 const surat = new Hono<{ Bindings: Bindings }>();
 
@@ -86,21 +87,6 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       model = 'vertex'
     } = validation.data;
 
-    // Get API key based on selected model
-    const keyMap: Record<string, { dbKey: string; envKey: string }> = {
-      mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
-      z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
-      gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
-      bedrock: { dbKey: 'bedrock_api_key', envKey: 'BEDROCK_API_KEY' },
-      vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
-    };
-    const keyConfig = keyMap[model] || keyMap.vertex;
-
-    const setting: any = await c.env.DB.prepare(
-      `SELECT value FROM settings WHERE key = ?`
-    ).bind(keyConfig.dbKey).first();
-    const apiKey = (c.env as any)[keyConfig.envKey] || setting?.value || '';
-
     // Generate nomor surat
     const currentYear = new Date().getFullYear();
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -122,14 +108,28 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       nomor_surat: nomorSurat,
     });
 
-    // Call AI
+    // Call AI using AIService
     let isiSurat: string;
     try {
-      isiSurat = await callAI(model as any, apiKey, prompt);
+      const ai = new AIService(c.env);
+      await ai.loadProviders(c.env.DB);
+
+      // Support backward-compatible model aliases
+      const slugMap: Record<string, string> = {
+        vertex: 'vertex-proxy',
+        gemini: 'gemini-flash',
+        bedrock: 'bedrock-claude',
+        mistral: 'mistral-large',
+        z_ai: 'glm4-flash'
+      };
+      const preferredSlug = slugMap[model] || model;
+      const aiResponse = await ai.generateText(prompt, preferredSlug);
+      isiSurat = aiResponse.content;
+
       if (!isiSurat || isiSurat.length < 10) {
         throw new Error('AI returned an empty or invalid response');
       }
-      logger.info('AI Response length', { length: isiSurat.length, userId: user.id });
+      logger.info('AI Response length', { length: isiSurat.length, userId: user.id, provider: aiResponse.provider });
       logger.ai('generate_surat', true, Date.now() - startTime, { userId: user.id });
     } catch (aiError: any) {
       logger.ai('generate_surat', false, Date.now() - startTime, {

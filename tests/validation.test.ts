@@ -23,6 +23,8 @@ import {
     presentationGenerateSchema,
     presentationPatchSlideSchema,
     baseSlideSchema,
+    createAiProviderSchema,
+    updateAiProviderSchema,
 } from '../src/lib/validation';
 
 describe('Email Validation', () => {
@@ -432,5 +434,61 @@ describe('Presentation Schemas & Layouts', () => {
             topik: 'Bumi'
         });
         expect(patchResult.success).toBe(true);
+    });
+});
+
+describe('AI Provider Schema Validation', () => {
+    it('should accept valid AI provider creation payload', () => {
+        const validPayload = {
+            name: 'Google Gemini 2.0 Flash',
+            slug: 'gemini-flash',
+            api_type: 'openai_compat',
+            base_url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+            model: 'gemini-2.0-flash',
+            api_key: 'AIzaSyTestKey123',
+            priority: 1,
+            max_tokens: 8192,
+            temperature: 0.7,
+        };
+
+        const result = createAiProviderSchema.safeParse(validPayload);
+        expect(result.success).toBe(true);
+    });
+
+    it('should reject invalid api_type', () => {
+        const invalidPayload = {
+            name: 'Test Provider',
+            slug: 'test-provider',
+            api_type: 'unsupported_type',
+            base_url: 'https://api.test.com',
+            model: 'test-model',
+        };
+
+        const result = createAiProviderSchema.safeParse(invalidPayload);
+        expect(result.success).toBe(false);
+    });
+
+    it('should reject invalid slug with spaces or uppercase', () => {
+        const invalidSlug = {
+            name: 'Test Provider',
+            slug: 'Test Provider Slug',
+            api_type: 'openai_compat',
+            base_url: 'https://api.test.com',
+            model: 'test-model',
+        };
+
+        const result = createAiProviderSchema.safeParse(invalidSlug);
+        expect(result.success).toBe(false);
+    });
+
+    it('should accept valid partial update payload', () => {
+        const updatePayload = {
+            priority: 5,
+            temperature: 0.2,
+            model: 'gpt-4o-mini',
+        };
+
+        const result = updateAiProviderSchema.safeParse(updatePayload);
+        expect(result.success).toBe(true);
     });
 });

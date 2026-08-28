@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
-import { callAI, buildProkerPrompt } from '../lib/mistral';
+import { AIService } from '../services/ai';
+import { buildProkerPrompt } from '../lib/prompts';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, validateRequired, ErrorCodes } from '../lib/response';
 import type { GenerateProkerRequest, KegiatanProker } from '../types';
@@ -13,6 +14,7 @@ type Bindings = {
   BEDROCK_API_KEY?: string;
   BEDROCK_REGION?: string;
   VERTEX_API_KEY?: string;
+  AI_BACKEND_KEY?: string;
 };
 
 const proker = new Hono<{ Bindings: Bindings }>();
@@ -36,8 +38,6 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     }
 
     const { tahun_ajaran, visi, misi, kegiatan, analisis_kebutuhan, model = 'vertex' } = body as any;
-    const providerMap: Record<string, string> = { mistral: 'mistral', z_ai: 'z_ai', gemini: 'gemini', bedrock: 'bedrock', vertex: 'vertex' };
-    const provider = providerMap[model] || 'vertex';
 
     // Validate kegiatan array
     if (!kegiatan || !Array.isArray(kegiatan) || kegiatan.length === 0) {
@@ -46,28 +46,13 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 
     // Get settings including organization details
     const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
+      "SELECT key, value FROM settings"
     ).all();
 
     const settings: any = {};
     settingsResult.results?.forEach((row: any) => {
       settings[row.key] = row.value;
     });
-
-    const keyMap: Record<string, { dbKey: string; envKey: string }> = {
-      mistral: { dbKey: 'mistral_api_key', envKey: 'MISTRAL_API_KEY' },
-      z_ai: { dbKey: 'z_ai_api_key', envKey: 'Z_AI_API_KEY' },
-      gemini: { dbKey: 'gemini_api_key', envKey: 'GEMINI_API_KEY' },
-      bedrock: { dbKey: 'bedrock_api_key', envKey: 'BEDROCK_API_KEY' },
-      vertex: { dbKey: 'vertex_api_key', envKey: 'VERTEX_API_KEY' },
-    };
-    const keyConfig = keyMap[provider] || keyMap.vertex;
-    const apiKey = (c.env as any)[keyConfig.envKey] || settings[keyConfig.dbKey];
-
-    if (!apiKey) {
-      const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', bedrock: 'AWS Bedrock', vertex: 'Vertex AI' };
-      return Errors.configError(c, `API Key ${providerNames[provider] || provider} belum dikonfigurasi. Hubungi admin untuk mengatur API Key.`);
-    }
 
     // Get list of schools from database to prevent AI hallucination
     const sekolahResult = await c.env.DB.prepare(
@@ -93,7 +78,19 @@ proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 
     let isiDokumen: string;
     try {
-      isiDokumen = await callAI(provider as any, apiKey, prompt);
+      const ai = new AIService(c.env);
+      await ai.loadProviders(c.env.DB);
+
+      const slugMap: Record<string, string> = {
+        vertex: 'vertex-proxy',
+        gemini: 'gemini-flash',
+        bedrock: 'bedrock-claude',
+        mistral: 'mistral-large',
+        z_ai: 'glm4-flash'
+      };
+      const preferredSlug = slugMap[model] || model;
+      const aiResponse = await ai.generateText(prompt, preferredSlug);
+      isiDokumen = aiResponse.content;
     } catch (aiError: any) {
       console.error('AI Generation error:', aiError);
       return c.json({

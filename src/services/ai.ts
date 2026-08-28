@@ -1,18 +1,57 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Mistral } from '@mistralai/mistralai';
+import { decrypt, isEncrypted } from '../lib/crypto';
 
-export type AIProvider = 'gemini' | 'vertex' | 'bedrock' | 'bedrock-deepseek' | 'anthropic' | 'mistral' | 'z_ai';
+// ═══════════════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════════════
 
-interface AIResponse {
-    content: string;
-    provider: AIProvider;
+export interface DBProvider {
+    id: number;
+    name: string;
+    slug: string;
+    api_type: 'openai_compat' | 'anthropic' | 'gemini_sdk' | 'bedrock' | 'custom_proxy';
+    base_url: string;
     model: string;
+    api_key: string;
+    priority: number;
+    is_active: boolean;
+    max_tokens: number;
+    temperature: number;
+    extra_headers: Record<string, string>;
+    extra_body: Record<string, any>;
+    last_check_ok?: number;
+    last_check_at?: string;
+    last_check_ms?: number;
+    total_tokens_used?: number;
+    total_calls?: number;
 }
 
-/**
- * Attempts to repair a truncated or slightly malformed JSON string
- * by tracking open delimiters and closing them at the end.
- */
+export interface AIUsage {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+}
+
+export interface AIResponse {
+    content: string;
+    provider: string;   // slug
+    model: string;
+    usage?: AIUsage;
+}
+
+export interface CheckResult {
+    ok: boolean;
+    latency_ms: number;
+    error?: string;
+}
+
+// Default subrequest timeout in milliseconds (25 seconds)
+const DEFAULT_SUBREQUEST_TIMEOUT_MS = 25000;
+
+// ═══════════════════════════════════════════════════════════════════
+// JSON repair helper
+// ═══════════════════════════════════════════════════════════════════
+
 function repairTruncatedJSON(str: string): string {
     const stack: string[] = [];
     let inString = false;
@@ -36,95 +75,123 @@ function repairTruncatedJSON(str: string): string {
         i++;
     }
 
-    // If we were mid-string, close it
     let result = str;
     if (inString) result += '"';
-
-    // Remove trailing comma before closing
     result = result.replace(/,\s*$/, '');
-
-    // Close all open structures
     while (stack.length > 0) {
         result += stack.pop();
     }
-
     return result;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// System prompt shared across text generation
+// ═══════════════════════════════════════════════════════════════════
+
+const SYSTEM_PROMPT = `Anda adalah asisten ahli administrasi pendidikan Indonesia yang sangat berpengalaman dalam menyusun dokumen resmi untuk Kelompok Kerja Guru (KKG). Anda memahami format surat dinas pendidikan Indonesia, tata bahasa Indonesia yang baik dan benar, serta pedoman-pedoman dari Kementerian Pendidikan dan Kebudayaan. Selalu gunakan bahasa Indonesia yang formal, sopan, dan profesional. PENTING: Selalu selesaikan dokumen sampai bagian terakhir, jangan berhenti di tengah.`;
+
+// ═══════════════════════════════════════════════════════════════════
+// AIService — Enterprise DB-driven multi-provider with auto-failover,
+// circuit breaker, token tracking, and subrequest timeouts
+// ═══════════════════════════════════════════════════════════════════
+
 export class AIService {
-    private geminiKeys: string[];
-    private vertexKeys: string[];
-    private vertexProjectId: string;
-    private bedrockKeys: string[];
-    private bedrockRegion: string;
-    private anthropicKeys: string[];
-    private mistralKeys: string[];
-    private zAiKeys: string[];
-    // Menambahkan variabel untuk URL dan Key rahasia VM GCP
-    private vmProxyUrl: string = 'http://34.101.33.242:8000/generate/proxy';
-    private vmProxyKey: string;
+    private providers: DBProvider[] = [];
+    private env: any;
+    private db?: D1Database;
 
-    constructor(env: any) {
-        this.geminiKeys = this.extractKeys(env, 'GEMINI_API_KEY');
-        this.vertexKeys = this.extractKeys(env, 'VERTEX_API_KEY'); // Masih bisa dipakai tapi kita utamakan VM
-        this.vertexProjectId = env['VERTEX_PROJECT_ID'] || '';
-        this.bedrockKeys = this.extractKeys(env, 'BEDROCK_API_KEY');
-        this.bedrockRegion = env['BEDROCK_REGION'] || 'us-east-1';
-        this.anthropicKeys = this.extractKeys(env, 'ANTHROPIC_API_KEY');
-        this.mistralKeys = this.extractKeys(env, 'MISTRAL_API_KEY');
-        this.zAiKeys = this.extractKeys(env, 'Z_AI_API_KEY');
-
-        // Ambil AI_BACKEND_KEY dari .dev.vars / env
-        this.vmProxyKey = env['AI_BACKEND_KEY'] || 'kkg-2026-rahasia';
+    constructor(env?: any) {
+        this.env = env || {};
     }
 
-    private extractKeys(env: any, prefix: string): string[] {
-        const keys: string[] = [];
+    /**
+     * Load active providers from D1 database, sorted by priority ASC.
+     * Transparently decrypts at-rest encrypted API keys.
+     */
+    async loadProviders(db: D1Database): Promise<void> {
+        this.db = db;
+        const result = await db.prepare(
+            `SELECT * FROM ai_providers WHERE is_active = 1 ORDER BY priority ASC`
+        ).all();
 
-        // 1. Direct match
-        if (env[prefix] && typeof env[prefix] === 'string') {
-            if (env[prefix].includes(',')) {
-                env[prefix].split(',').forEach((k: string) => keys.push(k.trim()));
-            } else {
-                keys.push(env[prefix].trim());
+        const loaded: DBProvider[] = [];
+
+        for (const row of (result.results || []) as any[]) {
+            let key = row.api_key || '';
+
+            // Decrypt key if stored with AES-GCM encryption
+            if (key && isEncrypted(key)) {
+                try {
+                    key = await decrypt(key, this.env);
+                } catch (decErr) {
+                    console.warn(`[AI-KEY] Decryption failed for provider ${row.slug}:`, decErr);
+                }
             }
+
+            loaded.push({
+                id: row.id,
+                name: row.name,
+                slug: row.slug,
+                api_type: row.api_type,
+                base_url: row.base_url,
+                model: row.model,
+                api_key: key,
+                priority: row.priority,
+                is_active: !!row.is_active,
+                max_tokens: row.max_tokens || 8192,
+                temperature: row.temperature ?? 0.7,
+                extra_headers: safeParse(row.extra_headers),
+                extra_body: safeParse(row.extra_body),
+                last_check_ok: row.last_check_ok,
+                last_check_at: row.last_check_at,
+                last_check_ms: row.last_check_ms,
+                total_tokens_used: row.total_tokens_used || 0,
+                total_calls: row.total_calls || 0,
+            });
         }
 
-        // 2. Numbered suffixes (e.g. GEMINI_API_KEY_1)
-        Object.keys(env).forEach(key => {
-            if (key.startsWith(prefix) && key !== prefix && typeof env[key] === 'string') {
-                keys.push(env[key].trim());
+        this.providers = loaded;
+
+        // Fallback to server env variables if DB provider key is empty
+        for (const p of this.providers) {
+            if (!p.api_key || p.api_key.length === 0) {
+                p.api_key = this.resolveEnvKey(p) || '';
             }
-        });
-
-        return [...new Set(keys)].filter(k => k && k.length > 0);
-    }
-
-    private getRandomKey(keys: string[]): string {
-        if (keys.length === 0) return '';
-        return keys[Math.floor(Math.random() * keys.length)];
-    }
-
-    // Allow injecting keys from database settings at runtime
-    addKey(provider: AIProvider, key: string) {
-        if (!key || key.length === 0) return;
-        if (provider === 'gemini' && !this.geminiKeys.includes(key)) this.geminiKeys.push(key);
-        if (provider === 'vertex' && !this.vertexKeys.includes(key)) this.vertexKeys.push(key);
-        if (provider === 'bedrock' && !this.bedrockKeys.includes(key)) this.bedrockKeys.push(key);
-        if (provider === 'anthropic' && !this.anthropicKeys.includes(key)) this.anthropicKeys.push(key);
-        if (provider === 'mistral' && !this.mistralKeys.includes(key)) this.mistralKeys.push(key);
-        if (provider === 'z_ai' && !this.zAiKeys.includes(key)) this.zAiKeys.push(key);
-    }
-
-    // Allow injecting Vertex project ID from DB settings
-    setVertexProjectId(projectId: string) {
-        if (projectId && projectId.length > 0) {
-            this.vertexProjectId = projectId;
         }
     }
 
-    async generateJSON(prompt: string, preferredProvider: AIProvider = 'vertex'): Promise<any> {
-        // Wrap the user prompt with strict JSON instructions
+    /**
+     * Try to resolve an API key from environment variables based on the provider.
+     */
+    private resolveEnvKey(p: DBProvider): string {
+        if (!this.env) return '';
+        const slug = p.slug.toLowerCase();
+        if (slug.includes('gemini') || slug.includes('vertex')) return this.env.GEMINI_API_KEY || this.env.VERTEX_API_KEY || '';
+        if (slug.includes('mistral')) return this.env.MISTRAL_API_KEY || '';
+        if (slug.includes('claude') || slug.includes('anthropic')) return this.env.ANTHROPIC_API_KEY || '';
+        if (slug.includes('bedrock')) return this.env.BEDROCK_API_KEY || '';
+        if (slug.includes('glm') || slug.includes('z_ai') || slug.includes('zhipu')) return this.env.Z_AI_API_KEY || '';
+        if (p.api_type === 'custom_proxy') return this.env.AI_BACKEND_KEY || 'kkg-2026-rahasia';
+        return '';
+    }
+
+    /**
+     * Get the list of loaded providers.
+     */
+    getProviders(): DBProvider[] {
+        return this.providers;
+    }
+
+    /**
+     * Find a provider by slug.
+     */
+    getProviderBySlug(slug: string): DBProvider | undefined {
+        return this.providers.find(p => p.slug === slug);
+    }
+
+    // ─── generateJSON ─────────────────────────────────────────────
+
+    async generateJSON(prompt: string, preferredSlug?: string): Promise<any> {
         const jsonPrompt = `${prompt}
 
 CRITICAL JSON RULES:
@@ -134,18 +201,21 @@ CRITICAL JSON RULES:
 4. Every opened { must have a closing }, every [ must have a ]
 5. No trailing commas before } or ]`;
 
-        let result = await this.generateText(jsonPrompt, preferredProvider, true);
+        let result = await this.generateText(jsonPrompt, preferredSlug, true);
         let content = result.content.trim();
 
-        // Simpan metadata AI yang digunakan
-        const aiMeta: any = { provider: result.provider, model: result.model };
+        const aiMeta: any = {
+            provider: result.provider,
+            model: result.model,
+            usage: result.usage
+        };
         if ((result as any).failover_from) {
             aiMeta.failover_from = (result as any).failover_from;
             aiMeta.failover_errors = (result as any).failover_errors;
         }
         console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
 
-        // ── Layer 1: Strip markdown code fences (```json ... ``` or ``` ... ```)
+        // ── Layer 1: Strip markdown code fences
         content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
         // ── Layer 2: Extract between first { and last }
@@ -160,11 +230,9 @@ CRITICAL JSON RULES:
         if (lastBrace !== -1 && lastBrace > firstBrace) {
             content = content.substring(firstBrace, lastBrace + 1);
         } else {
-            // Truncated - take from first brace to end and try to repair
             content = content.substring(firstBrace);
         }
 
-        // Helper to attach AI metadata to parsed result
         const attachMeta = (parsed: any) => {
             if (typeof parsed === 'object' && parsed !== null) {
                 parsed._ai_meta = aiMeta;
@@ -174,390 +242,479 @@ CRITICAL JSON RULES:
 
         let parseErrors: string[] = [];
 
-        // ── Layer 3: Direct parse (fast path)
+        // ── Layer 3: Direct parse
         try {
             return attachMeta(JSON.parse(content));
-        } catch (e: any) { parseErrors.push(`L3: ${e.message}`); }
+        } catch (e: any) {
+            parseErrors.push(`Layer 3 (Direct): ${e.message}`);
+        }
 
-        // ── Layer 4: Sanitize control characters (but preserve \n \r \t)
-        const sanitized = content.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD]/g, '');
+        // ── Layer 4: Fix unescaped newlines/tabs inside string values
         try {
-            return attachMeta(JSON.parse(sanitized));
-        } catch (e: any) { parseErrors.push(`L4: ${e.message}`); }
+            const cleaned = content.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, '\\n');
+            return attachMeta(JSON.parse(cleaned));
+        } catch (e: any) {
+            parseErrors.push(`Layer 4 (Newlines): ${e.message}`);
+        }
 
-        // ── Layer 5: Fix improperly escaped characters in string values
-        const fixedEscapes = sanitized
-            // Fix unescaped newlines strictly INSIDE string values
-            .replace(/("(?:[^"\\]|\\.)*")/g, (match) => match.replace(/\n/g, '\\n'))
-            // Remove trailing commas before ] or }
-            .replace(/,\s*([}\]])/g, '$1');
+        // ── Layer 5: Fix trailing commas
         try {
-            return attachMeta(JSON.parse(fixedEscapes));
-        } catch (e: any) { parseErrors.push(`L5: ${e.message}`); }
+            const trailingFixed = content.replace(/,\s*([}\]])/g, '$1');
+            return attachMeta(JSON.parse(trailingFixed));
+        } catch (e: any) {
+            parseErrors.push(`Layer 5 (Trailing commas): ${e.message}`);
+        }
 
-        // ── Layer 6: Attempt to repair truncated JSON by closing open structures
+        // ── Layer 6: Truncated JSON repair (balance brackets)
         try {
-            const repaired = repairTruncatedJSON(fixedEscapes);
-            return attachMeta(JSON.parse(repaired));
-        } catch (e: any) { parseErrors.push(`L6: ${e.message}`); }
+            const repaired = repairTruncatedJSON(content);
+            const trailingFixed = repaired.replace(/,\s*([}\]])/g, '$1');
+            return attachMeta(JSON.parse(trailingFixed));
+        } catch (e: any) {
+            parseErrors.push(`Layer 6 (Truncated repair): ${e.message}`);
+        }
 
-        // ── Layer 7: Last resort - try partial extraction of key fields
-        console.error(`[JSON PARSE FAILED] Errors: ${parseErrors.join(' | ')}`);
-        console.error('Raw content length:', content.length);
-        console.error('Raw content (last 1000 chars):', content.substring(Math.max(0, content.length - 1000)));
-        throw new Error('Respons AI tidak dapat diproses sebagai JSON. Coba generate ulang atau ganti provider AI.');
+        // ── Layer 7: Aggressive regex JSON repair
+        try {
+            let fixed = content
+                .replace(/,\s*([}\]])/g, '$1')
+                .replace(/([^\\])"/g, '$1\\"')
+                .replace(/^\\"/, '"')
+                .replace(/\\"$/, '"');
+
+            const reFirst = fixed.indexOf('{');
+            const reLast = fixed.lastIndexOf('}');
+            if (reFirst !== -1 && reLast > reFirst) {
+                fixed = fixed.substring(reFirst, reLast + 1);
+            }
+            return attachMeta(JSON.parse(fixed));
+        } catch (e: any) {
+            parseErrors.push(`Layer 7 (Aggressive regex): ${e.message}`);
+        }
+
+        console.error('All 7 JSON parse layers failed.');
+        console.error('Parse errors:', parseErrors);
+        console.error('Raw content preview:', content.substring(0, 1000));
+        throw new Error(`Gagal memproses format JSON dari AI. Silakan coba lagi.`);
     }
 
-    async generateText(prompt: string, preferredProvider: AIProvider = 'vertex', jsonMode: boolean = false): Promise<AIResponse> {
+    // ─── generateText (Auto-Failover with Circuit Breaker) ─────────
+
+    async generateText(prompt: string, preferredSlug?: string, jsonMode = false): Promise<AIResponse> {
+        if (this.providers.length === 0) {
+            throw new Error('Tidak ada provider AI aktif yang terdaftar di sistem. Hubungi administrator.');
+        }
+
+        const ordered = this.buildProviderOrder(preferredSlug);
         const failoverLog: string[] = [];
+        let previousFailedSlug: string | undefined;
 
-        // Try preferred provider first
-        try {
-            if (preferredProvider === 'vertex') return await this.callVertex(prompt, jsonMode);
-            if (preferredProvider === 'gemini') return await this.callGemini(prompt, jsonMode);
-            if (preferredProvider === 'bedrock') return await this.callBedrock(prompt, jsonMode);
-            if (preferredProvider === 'bedrock-deepseek') return await this.callBedrockDeepseek(prompt, jsonMode);
-            if (preferredProvider === 'anthropic') return await this.callAnthropic(prompt, jsonMode);
-            if (preferredProvider === 'mistral') return await this.callMistral(prompt, jsonMode);
-            if (preferredProvider === 'z_ai') return await this.callGLM(prompt, jsonMode);
-        } catch (e: any) {
-            const errMsg = e?.message || String(e);
-            console.error(`[AI-FAILOVER] ${preferredProvider} FAILED:`, errMsg);
-            failoverLog.push(`${preferredProvider}: ${errMsg.substring(0, 200)}`);
-            // Khusus untuk pengguna yang memilih Claude (bedrock), prioritas fallback adalah direct Anthropic
-            if (preferredProvider === 'bedrock' && this.anthropicKeys.length > 0) {
-                try {
-                    return await this.callAnthropic(prompt, jsonMode);
-                } catch (e2: any) {
-                    const errMsg2 = e2?.message || String(e2);
-                    console.error(`[AI-FAILOVER] Anthropic fallback also FAILED:`, errMsg2);
-                    failoverLog.push(`anthropic: ${errMsg2.substring(0, 200)}`);
-                }
-            }
-        }
-
-        // Failover order: vertex → anthropic → bedrock → gemini → mistral → z_ai
-        const providers: AIProvider[] = ['vertex', 'anthropic', 'bedrock', 'bedrock-deepseek', 'gemini', 'mistral', 'z_ai'];
-        const remaining = providers.filter(p => p !== preferredProvider && p !== 'anthropic' /* already tried above if bedrock */);
-
-        // Jika preferred bukan bedrock, atau sudah coba anthropic tapi gagal, coba sisa provider lain
-        if (preferredProvider !== 'bedrock') {
-            remaining.push('anthropic'); // pastikan masih ada dalam list
-        }
-
-        for (const provider of remaining) {
+        for (let i = 0; i < ordered.length; i++) {
+            const provider = ordered[i];
             try {
-                let result: AIResponse | null = null;
-                if (provider === 'vertex') result = await this.callVertex(prompt, jsonMode);
-                else if (provider === 'gemini') result = await this.callGemini(prompt, jsonMode);
-                else if (provider === 'bedrock') result = await this.callBedrock(prompt, jsonMode);
-                else if (provider === 'bedrock-deepseek') result = await this.callBedrockDeepseek(prompt, jsonMode);
-                else if (provider === 'anthropic') result = await this.callAnthropic(prompt, jsonMode);
-                else if (provider === 'mistral') result = await this.callMistral(prompt, jsonMode);
-                else if (provider === 'z_ai') result = await this.callGLM(prompt, jsonMode);
+                const response = await this.callProvider(provider, prompt, jsonMode);
 
-                if (result) {
-                    // Tag the response with failover info
-                    (result as any).failover_from = preferredProvider;
-                    (result as any).failover_errors = failoverLog;
-                    console.warn(`[AI-FAILOVER] Successfully fell over from ${preferredProvider} → ${provider}`);
-                    return result;
+                if (i > 0) {
+                    (response as any).failover_from = previousFailedSlug;
+                    (response as any).failover_errors = failoverLog;
                 }
+
+                // Asynchronously record token usage in background
+                if (response.usage?.total_tokens && this.db) {
+                    this.recordUsage(provider.id, response.usage.total_tokens).catch(e => {
+                        console.warn('[AI-USAGE] Failed to record usage:', e);
+                    });
+                }
+
+                return response;
             } catch (e: any) {
                 const errMsg = e?.message || String(e);
-                console.warn(`${provider} failed:`, errMsg);
-                failoverLog.push(`${provider}: ${errMsg.substring(0, 200)}`);
+                console.error(`[AI-FAILOVER] ${provider.slug} FAILED:`, errMsg);
+                failoverLog.push(`${provider.slug}: ${errMsg.substring(0, 200)}`);
+                previousFailedSlug = provider.slug;
             }
         }
 
-        throw new Error(`All AI providers failed. Errors: ${failoverLog.join(' | ')}`);
+        throw new Error(`Semua provider AI gagal dipanggil. Detail: ${failoverLog.join(' | ')}`);
     }
 
-    // ── Vertex AI (Gemini 2.5 Flash) — DITERUSKAN KE VM GCP (PROXY) ──────────
-    private async callVertex(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        if (!this.vmProxyKey) {
-            throw new Error('AI_BACKEND_KEY tidak ditemukan. Harap atur di environment/admin.');
+    /**
+     * Build ordered provider list with Circuit Breaker.
+     * Healthy providers are prioritized over recently failed ones.
+     */
+    private buildProviderOrder(preferredSlug?: string): DBProvider[] {
+        const now = Date.now();
+        const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+        // Partition into healthy vs recently failed (Circuit Breaker)
+        const isHealthy = (p: DBProvider) => {
+            if (p.last_check_ok === -1 && p.last_check_at) {
+                const checkTime = new Date(p.last_check_at).getTime();
+                if (now - checkTime < TEN_MINUTES_MS) {
+                    return false; // Still within penalty cooldown
+                }
+            }
+            return true;
+        };
+
+        const healthy = this.providers.filter(isHealthy);
+        const penalized = this.providers.filter(p => !isHealthy(p));
+
+        const baseList = [...healthy, ...penalized];
+
+        if (!preferredSlug) return baseList;
+
+        const preferred = this.providers.find(p => p.slug === preferredSlug);
+        const rest = baseList.filter(p => p.slug !== preferredSlug);
+
+        if (preferred) {
+            return [preferred, ...rest];
         }
+        return baseList;
+    }
+
+    /**
+     * Asynchronously record usage counters in D1
+     */
+    private async recordUsage(providerId: number, tokens: number): Promise<void> {
+        if (!this.db || !providerId) return;
+        try {
+            await this.db.prepare(
+                `UPDATE ai_providers SET total_tokens_used = total_tokens_used + ?, total_calls = total_calls + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(tokens, providerId).run();
+        } catch (e) {
+            console.warn('[AI-METRICS] Could not update usage metrics:', e);
+        }
+    }
+
+    // ─── Provider Dispatcher ──────────────────────────────────────
+
+    private async callProvider(provider: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        if (!provider.api_key && provider.api_type !== 'custom_proxy') {
+            throw new Error(`API key tidak tersedia untuk provider "${provider.name}".`);
+        }
+
+        switch (provider.api_type) {
+            case 'openai_compat':
+                return this.callOpenAICompat(provider, prompt, jsonMode);
+            case 'anthropic':
+                return this.callAnthropic(provider, prompt, jsonMode);
+            case 'gemini_sdk':
+                return this.callGeminiSDK(provider, prompt, jsonMode);
+            case 'bedrock':
+                return this.callBedrock(provider, prompt, jsonMode);
+            case 'custom_proxy':
+                return this.callCustomProxy(provider, prompt, jsonMode);
+            default:
+                throw new Error(`Tipe API tidak dikenal: ${provider.api_type}`);
+        }
+    }
+
+    // ─── OpenAI Compatible (with Reasoning Model o1/o3 support & timeout) ─
+
+    private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
+        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
 
         const body: any = {
-            prompt: prompt,
-            json_mode: jsonMode
+            model: p.model,
+            messages: isReasoningModel
+                ? [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + prompt }]
+                : [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: prompt }
+                ],
+            ...p.extra_body,
         };
 
-        const response = await fetch(this.vmProxyUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': this.vmProxyKey,
-            },
-            body: JSON.stringify(body),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`VM GCP Proxy Error ${response.status}: ${errorText}`);
-        }
-
-        const data: any = await response.json();
-        const text = data?.result || '';
-
-        return { content: text, provider: 'vertex', model: 'gemini-2.5-flash (via GCP VM)' };
-    }
-
-    // ── Google AI Studio (Gemini 2.0 Flash) — SDK ────────────────────────────
-    private async callGemini(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.geminiKeys);
-        if (!key) throw new Error('No Gemini keys available');
-
-        const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
-            generationConfig: {
-                responseMimeType: jsonMode ? 'application/json' : 'text/plain'
+        if (isReasoningModel) {
+            body.max_completion_tokens = p.max_tokens;
+            // Omit temperature for reasoning models
+        } else {
+            body.temperature = p.temperature;
+            body.max_tokens = p.max_tokens;
+            if (jsonMode) {
+                body.response_format = { type: 'json_object' };
             }
-        });
+        }
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return {
-            content: response.text(),
-            provider: 'gemini',
-            model: 'gemini-2.0-flash'
-        };
-    }
-
-    // ── Direct Anthropic (Claude 4.6 Sonnet) ─────────────────────────────────
-    private async callAnthropic(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.anthropicKeys);
-        if (!key) throw new Error('No Anthropic API key available.');
-
-        const requestBody: any = {
-            model: 'claude-sonnet-4-6-20250514',
-            max_tokens: 8192,
-            temperature: 0.7,
-            messages: [
-                {
-                    role: 'user',
-                    content: jsonMode
-                        ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
-                        : prompt
-                }
-            ]
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${p.api_key}`,
+            ...p.extra_headers,
         };
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': key,
-                'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify(requestBody),
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[AI-ANTHROPIC] Error ${response.status}:`, errorText);
-            throw new Error(`Anthropic Error ${response.status}: ${errorText}`);
+            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
         }
 
         const data: any = await response.json();
-        const content = data?.content?.[0]?.text || '';
+        const content = data.choices?.[0]?.message?.content || '';
 
-        return {
-            content,
-            provider: 'anthropic',
-            model: 'claude-sonnet-4.6 (Anthropic API)'
+        const usage: AIUsage = {
+            prompt_tokens: data.usage?.prompt_tokens || 0,
+            completion_tokens: data.usage?.completion_tokens || 0,
+            total_tokens: data.usage?.total_tokens || (Math.round(content.length / 4)),
         };
+
+        return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ── AWS Bedrock (Claude Sonnet 4.6) — via InvokeModel API ──────────────────────
-    // Menggunakan /invoke (InvokeModel) karena proxy ABSK tidak mendukung /converse (524 timeout)
-    private async callBedrock(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.bedrockKeys);
-        if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
+    // ─── Anthropic Messages API (with timeout & usage) ────────────
 
-        const modelId = 'global.anthropic.claude-sonnet-4-6';
-        const region = this.bedrockRegion;
-
-        // Endpoint InvokeModel — satu-satunya yang didukung proxy ABSK
-        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/invoke`;
-        console.log(`[AI-BEDROCK] Calling InvokeModel endpoint: ${endpoint}`);
+    private async callAnthropic(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const url = `${p.base_url.replace(/\/+$/, '')}/v1/messages`;
 
         const userContent = jsonMode
             ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
             : prompt;
 
-        const requestBody: any = {
-            anthropic_version: 'bedrock-2023-05-31',
-            max_tokens: 8192,
-            temperature: 0.7,
-            messages: [{ role: 'user', content: userContent }]
+        const body: any = {
+            model: p.model,
+            max_tokens: p.max_tokens,
+            temperature: p.temperature,
+            messages: [{ role: 'user', content: userContent }],
+            system: SYSTEM_PROMPT,
+            ...p.extra_body,
         };
 
-        const maxRetries = 3;
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'x-api-key': p.api_key,
+            'anthropic-version': '2023-06-01',
+            ...p.extra_headers,
+        };
 
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
+        }
+
+        const data: any = await response.json();
+        const content = data?.content?.[0]?.text || '';
+
+        const promptTokens = data.usage?.input_tokens || 0;
+        const completionTokens = data.usage?.output_tokens || 0;
+        const usage: AIUsage = {
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            total_tokens: promptTokens + completionTokens || (Math.round(content.length / 4)),
+        };
+
+        return { content, provider: p.slug, model: p.model, usage };
+    }
+
+    // ─── Google Gemini SDK (with timeout & usage) ─────────────────
+
+    private async callGeminiSDK(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const genAI = new GoogleGenerativeAI(p.api_key);
+        const model = genAI.getGenerativeModel({
+            model: p.model,
+            generationConfig: {
+                responseMimeType: jsonMode ? 'application/json' : 'text/plain',
+                maxOutputTokens: p.max_tokens,
+                temperature: p.temperature,
+            }
+        });
+
+        // Enforce timeout on SDK call
+        const generatePromise = model.generateContent(SYSTEM_PROMPT + '\n\n' + prompt);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout ${DEFAULT_SUBREQUEST_TIMEOUT_MS}ms exceeded on ${p.name}`)), DEFAULT_SUBREQUEST_TIMEOUT_MS)
+        );
+
+        const result = await Promise.race([generatePromise, timeoutPromise]);
+        const response = await result.response;
+        const content = response.text();
+
+        const meta = (response as any).usageMetadata;
+        const usage: AIUsage = {
+            prompt_tokens: meta?.promptTokenCount || 0,
+            completion_tokens: meta?.candidatesTokenCount || 0,
+            total_tokens: meta?.totalTokenCount || (Math.round(content.length / 4)),
+        };
+
+        return { content, provider: p.slug, model: p.model, usage };
+    }
+
+    // ─── AWS Bedrock (InvokeModel with retries, timeout & usage) ──
+
+    private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const region = p.extra_body?.region || this.env?.BEDROCK_REGION || 'us-east-1';
+        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke`;
+
+        const userContent = jsonMode
+            ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+            : prompt;
+
+        const body: any = {
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: p.max_tokens,
+            temperature: p.temperature,
+            messages: [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + userContent }],
+            ...p.extra_body,
+        };
+        delete body.region;
+
+        const maxRetries = 2;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${key}`,
+                    'Authorization': `Bearer ${p.api_key}`,
+                    ...p.extra_headers,
                 },
-                body: JSON.stringify(requestBody),
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
             });
 
             if (response.ok) {
                 const data: any = await response.json();
                 const content = data?.content?.[0]?.text || '';
-                const stopReason = data?.stop_reason || '';
-                console.log(`[AI-BEDROCK] Success on attempt ${attempt}, stop_reason: ${stopReason}`);
-                if (stopReason === 'max_tokens') {
-                    console.warn('[AI-BEDROCK] ⚠️ Response cut at max_tokens — proxy is capping output!');
-                }
-                return {
-                    content,
-                    provider: 'bedrock',
-                    model: 'claude-sonnet-4.6 (AWS Bedrock)'
+
+                const promptTokens = data.usage?.input_tokens || 0;
+                const completionTokens = data.usage?.output_tokens || 0;
+                const usage: AIUsage = {
+                    prompt_tokens: promptTokens,
+                    completion_tokens: completionTokens,
+                    total_tokens: promptTokens + completionTokens || (Math.round(content.length / 4)),
                 };
+
+                return { content, provider: p.slug, model: p.model, usage };
             }
 
             if ((response.status === 429 || response.status === 529) && attempt < maxRetries) {
-                const delay = attempt * 3000;
+                const delay = attempt * 2000;
                 console.warn(`[AI-BEDROCK] Got ${response.status}, retrying in ${delay}ms...`);
                 await new Promise(r => setTimeout(r, delay));
                 continue;
             }
 
             const errorText = await response.text();
-            console.error(`[AI-BEDROCK] Error ${response.status}:`, errorText);
-            throw new Error(`AWS Bedrock Error ${response.status}: ${errorText}`);
+            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
         }
 
-        throw new Error('AWS Bedrock: Max retries exceeded');
+        throw new Error(`${p.name}: Max retries exceeded`);
     }
 
-    // ── AWS Bedrock (DeepSeek 3.2) — via Converse API ────────────────
-    private async callBedrockDeepseek(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.bedrockKeys);
-        if (!key) throw new Error('No AWS Bedrock API key available. Harap atur BEDROCK_API_KEY di admin settings.');
+    // ─── Custom Proxy (with timeout) ──────────────────────────────
 
-        const modelId = 'deepseek.v3.2'; // Ganti jika ID persisnya berbeda di region Anda
-        const region = this.bedrockRegion;
+    private async callCustomProxy(p: DBProvider, prompt: string, jsonMode: boolean): Promise<AIResponse> {
+        const apiKey = p.api_key || this.env?.AI_BACKEND_KEY || 'kkg-2026-rahasia';
 
-        // Gunakan Converse API yang menjadi standar AWS Bedrock untuk DeepSeek & Llama
-        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/converse`;
-        console.log(`[AI-BEDROCK-DEEPSEEK] Calling endpoint: ${endpoint}`);
-
-        const requestBody: any = {
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        { text: jsonMode ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.` : prompt }
-                    ]
-                }
-            ],
-            inferenceConfig: {
-                maxTokens: 8192,
-                temperature: 0.7
-            }
-        };
-
-        const maxRetries = 3;
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${key}`,
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (response.ok) {
-                const data: any = await response.json();
-                const content = data?.output?.message?.content?.[0]?.text || '';
-                console.log(`[AI-BEDROCK-DEEPSEEK] Success on attempt ${attempt}`);
-                return {
-                    content,
-                    provider: 'bedrock-deepseek',
-                    model: 'deepseek-v3.2 (AWS Bedrock)'
-                };
-            }
-
-            if ((response.status === 429 || response.status === 529) && attempt < maxRetries) {
-                const delay = attempt * 3000;
-                console.warn(`[AI-BEDROCK-DEEPSEEK] Got ${response.status}, retrying in ${delay}ms...`);
-                await new Promise(r => setTimeout(r, delay));
-                continue;
-            }
-
-            const errorText = await response.text();
-            console.error(`[AI-BEDROCK-DEEPSEEK] Error ${response.status} on attempt ${attempt}:`, errorText);
-            throw new Error(`AWS Bedrock DeepSeek Error ${response.status}: ${errorText}`);
-        }
-
-        throw new Error('AWS Bedrock DeepSeek: Max retries exceeded');
-    }
-
-    private async callMistral(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.mistralKeys);
-        if (!key) throw new Error('No Mistral keys available');
-
-        const client = new Mistral({ apiKey: key });
-        const completion = await client.chat.complete({
-            model: 'mistral-medium-latest',
-            messages: [{ role: 'user', content: prompt }],
-            responseFormat: jsonMode ? { type: 'json_object' } : undefined
-        });
-
-        // Handle string | ContentChunk[]
-        let content = '';
-        const messageContent = completion.choices?.[0]?.message.content;
-
-        if (typeof messageContent === 'string') {
-            content = messageContent;
-        } else if (Array.isArray(messageContent)) {
-            content = messageContent.map((c: any) => c.text || '').join('');
-        }
-
-        return {
-            content: content || '',
-            provider: 'mistral',
-            model: 'mistral-medium-latest'
-        };
-    }
-
-    private async callGLM(prompt: string, jsonMode: boolean): Promise<AIResponse> {
-        const key = this.getRandomKey(this.zAiKeys);
-        if (!key) throw new Error('No Zhipu AI (GLM) keys available');
-
-        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        const response = await fetch(p.base_url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${key}`,
+                'x-api-key': apiKey,
+                ...p.extra_headers,
             },
             body: JSON.stringify({
-                model: 'glm-4-flash',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.7,
-                response_format: jsonMode ? { type: 'json_object' } : undefined
+                prompt,
+                json_mode: jsonMode,
+                ...p.extra_body,
             }),
+            signal: AbortSignal.timeout(DEFAULT_SUBREQUEST_TIMEOUT_MS),
         });
 
         if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Gagal memanggil API GLM: ${response.status} - ${error}`);
+            const errorText = await response.text();
+            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
         }
 
         const data: any = await response.json();
-        return {
-            content: data.choices[0]?.message?.content || '',
-            provider: 'z_ai',
-            model: 'glm-4-flash'
+        const content = data?.result || '';
+        const usage: AIUsage = {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: Math.round(content.length / 4),
         };
+
+        return { content, provider: p.slug, model: p.model, usage };
     }
+
+    // ─── Check Live ───────────────────────────────────────────────
+
+    async checkLive(db: D1Database, providerId: number): Promise<CheckResult> {
+        const row: any = await db.prepare(
+            'SELECT * FROM ai_providers WHERE id = ?'
+        ).bind(providerId).first();
+
+        if (!row) throw new Error('Provider tidak ditemukan.');
+
+        let key = row.api_key || '';
+        if (key && isEncrypted(key)) {
+            try {
+                key = await decrypt(key, this.env);
+            } catch (e) {
+                console.warn('[AI-CHECK] Decrypt failed:', e);
+            }
+        }
+
+        const provider: DBProvider = {
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            api_type: row.api_type,
+            base_url: row.base_url,
+            model: row.model,
+            api_key: key,
+            priority: row.priority,
+            is_active: !!row.is_active,
+            max_tokens: row.max_tokens || 8192,
+            temperature: row.temperature ?? 0.7,
+            extra_headers: safeParse(row.extra_headers),
+            extra_body: safeParse(row.extra_body),
+        };
+
+        if (!provider.api_key) {
+            provider.api_key = this.resolveEnvKey(provider) || '';
+        }
+
+        const start = Date.now();
+        try {
+            await this.callProvider(provider, 'Respond with the single word "OK". Nothing else.', false);
+            const latency = Date.now() - start;
+
+            await db.prepare(
+                `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = 1, last_check_ms = ?, last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(latency, providerId).run();
+
+            return { ok: true, latency_ms: latency };
+        } catch (e: any) {
+            const latency = Date.now() - start;
+            const errMsg = e?.message || String(e);
+
+            await db.prepare(
+                `UPDATE ai_providers SET last_check_at = CURRENT_TIMESTAMP, last_check_ok = -1, last_check_ms = ?, last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+            ).bind(latency, errMsg.substring(0, 500), providerId).run();
+
+            return { ok: false, latency_ms: latency, error: errMsg };
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════
+
+function safeParse(val: any): Record<string, any> {
+    if (!val || val === '{}') return {};
+    try { return JSON.parse(val); } catch { return {}; }
 }

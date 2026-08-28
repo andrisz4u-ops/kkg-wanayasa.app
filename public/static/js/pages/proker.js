@@ -1,7 +1,7 @@
 
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { formatDate, formatDateTime, escapeHtml, showToast } from '../utils.js';
+import { formatDate, formatDateTime, escapeHtml, showToast, populateAiModelSelect } from '../utils.js';
 import { navigate } from '../router.js';
 import { renderAdminLayout } from '../layouts/admin.js';
 
@@ -116,6 +116,11 @@ export function renderProker() {
 
     <div id="proker-history" class="hidden mt-8"></div>
   </div>`;
+
+  setTimeout(() => {
+    populateAiModelSelect('select[name="model"]');
+  }, 0);
+
   return renderAdminLayout(content, 'proker');
 }
 

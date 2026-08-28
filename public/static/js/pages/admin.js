@@ -12,6 +12,7 @@ import './admin-modules/users.js';
 import './admin-modules/logs.js';
 import './admin-modules/templates.js';
 import './admin-modules/sekolah.js';
+import './admin-modules/ai-providers.js';
 
 export async function renderAdmin() {
   const { renderAdminLayout } = await import('../layouts/admin.js');
@@ -404,145 +405,133 @@ export async function renderAdmin() {
           </div>
       </div>
       
-      <!-- System Configuration (Merged from Settings) -->
-      <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] relative overflow-hidden">
-         <div class="absolute top-0 right-0 w-64 h-64 bg-slate-100/50 backdrop-blur-md rounded-bl-full pointer-events-none opacity-50"></div>
-         <h2 class="font-display text-2xl font-semibold text-slate-900 mb-8 flex items-center gap-4 tracking-tighter relative z-10">
-            <span class="w-10 h-10 rounded-2xl bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-indigo-600 flex items-center justify-center text-sm shadow-sm shadow-slate-200/50"><i class="fas fa-robot"></i></span>
-            Konfigurasi AI & Sistem
-         </h2>
-         <div class="space-y-6">
-            <div>
-               <label class="label">Mistral AI API Key</label>
-               <div class="relative">
-                 <input type="password" id="settings-mistral_api_key" class="input-field font-mono pr-10" placeholder="sk-...">
-                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500">
-                   <i class="fas fa-key"></i>
+       <!-- Centralized AI Provider Banner & Storage -->
+       <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-slate-100/50 backdrop-blur-md rounded-bl-full pointer-events-none opacity-50"></div>
+          <h2 class="font-display text-2xl font-semibold text-slate-900 mb-8 flex items-center gap-4 tracking-tighter relative z-10">
+             <span class="w-10 h-10 rounded-2xl bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-indigo-600 flex items-center justify-center text-sm shadow-sm shadow-slate-200/50"><i class="fas fa-robot"></i></span>
+             Konfigurasi AI & Sistem
+          </h2>
+          <div class="space-y-6">
+             <!-- AI Provider Migration Banner -->
+             <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start gap-4">
+                   <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">
+                      <i class="fas fa-microchip"></i>
+                   </div>
+                   <div>
+                      <h4 class="text-base font-bold text-indigo-950">Pengelolaan AI Provider Multi-Vendor</h4>
+                      <p class="text-xs text-indigo-700 mt-1 max-w-xl leading-relaxed">
+                         Pengaturan model AI, Base URL custom (OpenAI-compatible, Anthropic, Bedrock, Gemini SDK), API Key, dan uji koneksi langsung kini dikelola di tab <strong>AI Provider</strong>.
+                      </p>
+                   </div>
+                </div>
+                <button type="button" onclick="switchAdminTab('ai-providers')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shrink-0 transition-all shadow-sm flex items-center gap-2">
+                   <span>Buka Kelola AI Provider</span> <i class="fas fa-arrow-right text-[10px]"></i>
+                </button>
+             </div>
+
+             <div class="pt-4 border-t border-slate-200/50">
+                <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <i class="fas fa-database text-indigo-600"></i> Supabase Storage (File Upload)
+                </h3>
+                <div class="space-y-4">
+                   <div>
+                      <label class="label">Supabase URL</label>
+                      <input type="text" id="settings-supabase_url" class="input-field font-mono" placeholder="https://xyz.supabase.co">
+                   </div>
+                   <div>
+                      <label class="label">Supabase Service Key (Secret)</label>
+                      <input type="password" id="settings-supabase_key" class="input-field font-mono" placeholder="eyJhbGciOiJIUzI1NiI...">
+                   </div>
+                   <div>
+                      <label class="label">Supabase Bucket Name</label>
+                      <input type="text" id="settings-supabase_bucket" class="input-field font-mono" placeholder="materi-kkg">
+                   </div>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-3">Konfigurasi ini digunakan untuk menyimpan file materi dan logo. Jika dikosongkan, sistem akan menggunakan nilai dari environment server.</p>
+             </div>
+             
+              <div class="pt-8 border-t border-slate-200/70 mt-8 relative z-10">
+                 <h3 class="font-bold text-slate-900 mb-5 text-xs uppercase tracking-widest">Zona Bahaya</h3>
+                 <div class="flex flex-wrap gap-4">
+                     <button type="button" onclick="clearAllCaches()" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-white/95 backdrop-blur-xl border border-indigo-100 text-slate-900 hover:bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 hover:text-slate-900 transition-colors duration-300 shadow-sm shadow-slate-200/50 flex items-center">
+                       <i class="fas fa-broom mr-2"></i>Clear Cache
+                     </button>
+                     <button type="button" onclick="initDb()" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-slate-900 transition-colors duration-300 shadow-sm shadow-slate-200/50 flex items-center">
+                       <i class="fas fa-database mr-2"></i>Reset Database
+                     </button>
                  </div>
-               </div>
-                <p class="text-xs text-slate-500 mt-1.5">Kunci API untuk fitur Generator Surat dan RPP Otomatis.</p>
              </div>
-             <div>
-                <label class="label">Gemini API Key <span class="text-xs font-normal text-emerald-600">(Rekomendasi — Gratis)</span></label>
-                <div class="relative">
-                  <input type="password" id="settings-gemini_api_key" class="input-field font-mono pr-10" placeholder="AIzaSy...">
-                  <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500">
-                    <i class="fas fa-gem text-xs opacity-50"></i>
-                  </div>
-                </div>
-                <p class="text-xs text-slate-500 mt-1.5">Kunci API Google Gemini 2.0 Flash (<a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-600 hover:underline">Dapatkan gratis di sini</a>).</p>
-             </div>
-             <div>
-                <label class="label">Groq API Key</label>
-                <div class="relative">
-                  <input type="password" id="settings-groq_api_key" class="input-field font-mono pr-10" placeholder="gsk_...">
-                  <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500">
-                    <i class="fas fa-bolt text-xs opacity-50"></i>
-                  </div>
-                </div>
-                 <p class="text-xs text-slate-500 mt-1.5">Kunci API Groq untuk model LLaMA 3.3 (<a href="https://console.groq.com/keys" target="_blank" class="text-blue-600 hover:underline">Dapatkan di sini</a>).</p>
-             </div>
-             <div class="col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                <div class="flex items-center gap-2 mb-3">
-                  <div class="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center">
-                    <i class="fas fa-star text-white text-xs"></i>
-                  </div>
-                  <h4 class="text-sm font-bold text-blue-900">Vertex AI (Gemini 3 Flash Preview) — Pay-as-you-go</h4>
-                  <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded-full uppercase tracking-wide">Terbaru</span>
-                </div>
-                <p class="text-xs text-blue-700 mb-3">Gunakan Gemini 2.5 Flash terbaru via Vertex AI. Lebih cerdas dan powerful dari versi gratis. Butuh akun Google Cloud dengan billing aktif.</p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="label">Vertex AI API Key</label>
-                    <div class="relative">
-                      <input type="password" id="settings-vertex_api_key" class="input-field font-mono pr-10" placeholder="AIzaSy...">
-                      <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500">
-                        <i class="fas fa-key text-xs opacity-50"></i>
-                      </div>
-                    </div>
-                    <p class="text-xs text-slate-500 mt-1">API Key dari <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-blue-600 hover:underline">Google Cloud Console</a>.</p>
-                  </div>
-                  <div>
-                    <label class="label">Project ID (Opsional)</label>
-                    <input type="text" id="settings-vertex_project_id" class="input-field font-mono" placeholder="my-project-123">
-                    <p class="text-xs text-slate-500 mt-1">Google Cloud Project ID Anda (cek di <a href="https://console.cloud.google.com" target="_blank" class="text-blue-600 hover:underline">Cloud Console</a>).</p>
-                  </div>
-                </div>
-             </div>
-             <div>
-               <label class="label">GLM-4 (Zhipu AI) API Key</label>
-               <div class="relative">
-                 <input type="password" id="settings-z_ai_api_key" class="input-field font-mono pr-10" placeholder="Enter GLM API key...">
-                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500">
-                   <i class="fas fa-robot text-xs opacity-50"></i>
-                 </div>
-               </div>
-               <p class="text-xs text-slate-500 mt-1.5">Kunci API untuk model GLM-4.7-Flash (Pilihan alternatif).</p>
-            </div>
+          </div>
+       </div>
 
-            <div class="pt-6 border-t border-slate-200/50">
-               <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                 <i class="fas fa-database text-indigo-600"></i> Supabase Storage (File Upload)
-               </h3>
-               <div class="space-y-4">
-                  <div>
-                     <label class="label">Supabase URL</label>
-                     <input type="text" id="settings-supabase_url" class="input-field font-mono" placeholder="https://xyz.supabase.co">
-                  </div>
-                  <div>
-                     <label class="label">Supabase Service Key (Secret)</label>
-                     <input type="password" id="settings-supabase_key" class="input-field font-mono" placeholder="eyJhbGciOiJIUzI1NiI...">
-                  </div>
-                  <div>
-                     <label class="label">Supabase Bucket Name</label>
-                     <input type="text" id="settings-supabase_bucket" class="input-field font-mono" placeholder="materi-kkg">
-                  </div>
-               </div>
-               <p class="text-[10px] text-slate-500 mt-3">Konfigurasi ini digunakan untuk menyimpan file materi dan logo. Jika dikosongkan, sistem akan menggunakan nilai dari environment server.</p>
-            </div>
+       <div class="flex justify-end sticky bottom-6 z-20">
+         <button onclick="saveProfilKKG()" class="px-8 py-3.5 bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 rounded-full font-medium text-sm shadow-[0_12px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center">
+           <i class="fas fa-save mr-2.5"></i>Simpan Konfigurasi
+         </button>
+       </div>
+    </div>
 
-            <div class="p-5 bg-slate-50 border border-slate-200 rounded-2xl">
-               <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                 <i class="fas fa-info-circle text-indigo-600"></i> Informasi Penggunaan Model AI
-               </h4>
-               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] leading-relaxed">
-                  <div class="space-y-2">
-                    <p class="font-semibold text-slate-700 uppercase tracking-wider">Fitur Utama</p>
-                    <ul class="space-y-1 text-slate-600">
-                       <li>• <strong>Surat Otomatis:</strong> Mistral Large / GLM</li>
-                       <li>• <strong>Program Kerja:</strong> Mistral Large / GLM</li>
-                       <li>• <strong>Laporan KKG:</strong> Mistral (Default)</li>
-                    </ul>
-                  </div>
-                  <div class="space-y-2">
-                    <p class="font-semibold text-slate-700 uppercase tracking-wider">Asisten Pembelajaran</p>
-                    <ul class="space-y-1 text-slate-600">
-                       <li>• <strong>RPP Deep Learning:</strong> GLM-4.7 (Default)</li>
-                       <li>• <strong>Asesmen & Kisi:</strong> Mistral / GLM</li>
-                       <li>• <strong>Slide Presentation:</strong> Mistral / GLM</li>
-                    </ul>
-                  </div>
-               </div>
-            </div>
-            
-             <div class="pt-8 border-t border-slate-200/70 mt-8 relative z-10">
-                <h3 class="font-bold text-slate-900 mb-5 text-xs uppercase tracking-widest">Zona Bahaya</h3>
-                <div class="flex flex-wrap gap-4">
-                    <button type="button" onclick="clearAllCaches()" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-white/95 backdrop-blur-xl border border-indigo-100 text-slate-900 hover:bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 hover:text-slate-900 transition-colors duration-300 shadow-sm shadow-slate-200/50 flex items-center">
-                      <i class="fas fa-broom mr-2"></i>Clear Cache
-                    </button>
-                    <button type="button" onclick="initDb()" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-slate-900 transition-colors duration-300 shadow-sm shadow-slate-200/50 flex items-center">
-                      <i class="fas fa-database mr-2"></i>Reset Database
-                    </button>
-                </div>
-            </div>
-         </div>
-      </div>
+    <!-- ============================================
+    AI PROVIDERS TAB - PENGELOLAAN PROVIDER AI DINAMIS
+    ============================================ -->
+    <div id="panel-ai-providers" class="hidden animate-fade-in" data-tab-content="ai-providers">
+      <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] min-h-[500px]">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h2 class="font-display text-2xl font-semibold text-slate-900 tracking-tighter mb-1 flex items-center gap-3">
+              <span class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm shadow-sm border border-indigo-100">
+                <i class="fas fa-robot"></i>
+              </span>
+              Kelola AI Provider
+            </h2>
+            <p class="text-slate-600 font-light tracking-tight">Atur provider custom (OpenAI-compatible, Anthropic, Bedrock, Gemini SDK), kelola API Key, uji koneksi secara langsung, dan atur prioritas failover.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="loadAdminAiProviders()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium text-xs transition-colors flex items-center gap-2">
+              <i class="fas fa-rotate text-xs"></i> Refresh
+            </button>
+            <button onclick="showAddAiProviderModal()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium text-sm shadow-md transition-all flex items-center gap-2">
+              <i class="fas fa-plus text-xs"></i> Tambah Provider
+            </button>
+          </div>
+        </div>
 
-      <div class="flex justify-end sticky bottom-6 z-20">
-        <button onclick="saveProfilKKG()" class="px-8 py-3.5 bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 rounded-full font-medium text-sm shadow-[0_12px_24px_rgba(99,102,241,0.12)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center">
-          <i class="fas fa-save mr-2.5"></i>Simpan Konfigurasi
-        </button>
+        <!-- Presets bar -->
+        <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs text-indigo-900 font-medium shrink-0">
+            <i class="fas fa-wand-magic-sparkles text-indigo-600"></i>
+            <span>Quick-Add Preset:</span>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button type="button" onclick="showAddAiProviderModal('gemini_flash')" class="px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 font-medium rounded-lg border border-indigo-200/70 shadow-2xs transition-all">
+              + Gemini 2.0 Flash
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('openai_gpt4o')" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-700 font-medium rounded-lg border border-emerald-200/70 shadow-2xs transition-all">
+              + OpenAI GPT-4o
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('claude_anthropic')" class="px-3 py-1.5 bg-white hover:bg-purple-50 text-purple-700 font-medium rounded-lg border border-purple-200/70 shadow-2xs transition-all">
+              + Claude Sonnet
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('groq_llama')" class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-700 font-medium rounded-lg border border-amber-200/70 shadow-2xs transition-all">
+              + Groq LLaMA 3.3
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('openrouter')" class="px-3 py-1.5 bg-white hover:bg-sky-50 text-sky-700 font-medium rounded-lg border border-sky-200/70 shadow-2xs transition-all">
+              + OpenRouter
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('ollama_local')" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-medium rounded-lg border border-slate-200/70 shadow-2xs transition-all">
+              + Ollama (Lokal)
+            </button>
+          </div>
+        </div>
+
+        <!-- Providers List Container -->
+        <div id="ai-providers-list">
+          <div class="text-center py-12 text-slate-400">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Memuat provider AI...
+          </div>
+        </div>
       </div>
     </div>
 
@@ -984,6 +973,122 @@ export async function renderAdmin() {
               <button type="button" onclick="closeResetPasswordModal()" class="px-5 py-2.5 rounded-full text-sm font-medium border border-slate-200/70 bg-white/95 backdrop-blur-xl text-slate-600 hover:bg-slate-100/50 backdrop-blur-md hover:text-slate-900 transition-colors">Batal</button>
               <button id="reset-password-submit" type="submit" class="px-5 py-2.5 bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 rounded-full font-medium text-sm shadow-[0_12px_24px_rgba(99,102,241,0.12)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300">Simpan Password</button>
             </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add / Edit AI Provider Modal -->
+    <div id="ai-provider-modal" role="dialog" aria-modal="true" aria-labelledby="ai-provider-modal-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAiProviderModal()"></div>
+      <div class="bg-white/95 backdrop-blur-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative z-10 animate-slide-up border border-slate-200/70">
+        <div class="px-8 py-6 border-b border-slate-200/70 bg-slate-50/80 backdrop-blur-md flex justify-between items-center sticky top-0 bg-white/95 z-10">
+          <div>
+            <h3 id="ai-provider-modal-title" class="font-display text-xl font-semibold text-slate-900 tracking-tight">Tambah Provider AI</h3>
+            <p class="text-xs text-slate-500 mt-1">Konfigurasi endpoint, model, dan autentikasi provider AI.</p>
+          </div>
+          <button type="button" onclick="closeAiProviderModal()" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all shadow-sm">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <form id="ai-provider-form" onsubmit="saveAiProvider(event)" class="p-8 space-y-5">
+          <input type="hidden" id="ai-provider-id">
+
+          <!-- Row 1: Name & Slug -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Nama Provider <span class="text-rose-500">*</span></label>
+              <input type="text" id="aip-name" required placeholder="Contoh: Google Gemini Flash" class="input-field" oninput="onAiProviderNameChange()">
+            </div>
+            <div>
+              <label class="label">Slug Identifier <span class="text-rose-500">*</span></label>
+              <input type="text" id="aip-slug" required placeholder="gemini-flash" class="input-field font-mono" onfocus="onAiProviderSlugTouch()">
+              <p class="text-[11px] text-slate-400 mt-1">Huruf kecil, angka, dan tanda hubung.</p>
+            </div>
+          </div>
+
+          <!-- Row 2: API Type & Priority -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Tipe API <span class="text-rose-500">*</span></label>
+              <select id="aip-api_type" class="input-field" onchange="onAiProviderTypeChange()">
+                <option value="openai_compat">OpenAI Compatible (Standard)</option>
+                <option value="anthropic">Anthropic Messages API</option>
+                <option value="gemini_sdk">Google Generative AI SDK</option>
+                <option value="bedrock">AWS Bedrock</option>
+                <option value="custom_proxy">Custom HTTP Proxy</option>
+              </select>
+            </div>
+            <div>
+              <label class="label">Prioritas Failover (1 = Utama)</label>
+              <input type="number" id="aip-priority" min="1" max="999" value="100" class="input-field">
+              <p class="text-[11px] text-slate-400 mt-1">Urutan prioritas pemanggilan (angka kecil diprioritaskan).</p>
+            </div>
+          </div>
+
+          <!-- Row 3: Base URL -->
+          <div>
+            <label class="label">Base URL <span class="text-rose-500">*</span></label>
+            <input type="url" id="aip-base_url" required placeholder="https://api.openai.com/v1" class="input-field font-mono">
+            <p class="text-[11px] text-slate-400 mt-1">Untuk OpenAI-compat, sistem otomatis menambahkan <code>/chat/completions</code>.</p>
+          </div>
+
+          <!-- Row 4: Model ID & API Key -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Model ID <span class="text-rose-500">*</span></label>
+              <input type="text" id="aip-model" required placeholder="gemini-2.0-flash / gpt-4o" class="input-field font-mono">
+            </div>
+            <div>
+              <label class="label">API Key</label>
+              <div class="relative">
+                <input type="password" id="aip-api_key" placeholder="sk-..." class="input-field font-mono pr-10">
+                <button type="button" onclick="const f=document.getElementById('aip-api_key');f.type=f.type==='password'?'text':'password';" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                  <i class="fas fa-eye text-xs"></i>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika menggunakan variabel environment server.</p>
+            </div>
+          </div>
+
+          <!-- Row 5: Max Tokens & Temperature -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Max Output Tokens</label>
+              <input type="number" id="aip-max_tokens" min="256" max="131072" value="8192" class="input-field font-mono">
+            </div>
+            <div>
+              <label class="label">Temperature (0.0 - 2.0)</label>
+              <input type="number" id="aip-temperature" min="0" max="2" step="any" value="0.7" class="input-field font-mono">
+            </div>
+          </div>
+
+          <!-- Advanced Accordion: Headers & Body -->
+          <details class="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+            <summary class="text-xs font-semibold text-slate-700 cursor-pointer select-none">
+              <i class="fas fa-sliders mr-1 text-slate-400"></i> Pengaturan Lanjutan (Extra Headers & Body JSON)
+            </summary>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200/60">
+              <div>
+                <label class="label">Extra HTTP Headers (JSON)</label>
+                <textarea id="aip-extra_headers" rows="3" class="input-field font-mono text-xs" placeholder="{}">{}</textarea>
+              </div>
+              <div>
+                <label class="label">Extra Request Body (JSON)</label>
+                <textarea id="aip-extra_body" rows="3" class="input-field font-mono text-xs" placeholder="{}">{}</textarea>
+              </div>
+            </div>
+          </details>
+
+          <!-- Modal Actions -->
+          <div class="flex justify-end gap-3 pt-6 border-t border-slate-200/70 mt-6">
+            <button type="button" onclick="closeAiProviderModal()" class="px-5 py-2.5 rounded-full text-sm font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button id="ai-provider-submit-btn" type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium text-sm shadow-md transition-all">
+              <i class="fas fa-save mr-1.5"></i> Simpan Provider
+            </button>
+          </div>
         </form>
       </div>
     </div>

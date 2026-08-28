@@ -478,3 +478,27 @@ export function validateId(idParam: string): { valid: true; id: number } | { val
     }
     return { valid: false, message: 'ID tidak valid' };
 }
+
+// ============================================
+// AI Provider Schemas
+// ============================================
+
+export const aiProviderApiTypes = ['openai_compat', 'anthropic', 'gemini_sdk', 'bedrock', 'custom_proxy'] as const;
+
+export const createAiProviderSchema = z.object({
+    name: z.string().min(1, 'Nama provider wajib diisi').max(100, 'Nama terlalu panjang'),
+    slug: z.string().min(1, 'Slug wajib diisi').max(50, 'Slug terlalu panjang')
+        .regex(/^[a-z0-9][a-z0-9-]*$/, 'Slug hanya boleh berisi huruf kecil, angka, dan tanda hubung'),
+    api_type: z.enum(aiProviderApiTypes, { message: 'Tipe API tidak valid' }),
+    base_url: z.string().min(1, 'Base URL wajib diisi').max(500, 'URL terlalu panjang'),
+    model: z.string().min(1, 'Model wajib diisi').max(200, 'Nama model terlalu panjang'),
+    api_key: z.string().max(1000, 'API key terlalu panjang').optional().default(''),
+    priority: z.coerce.number().int().min(1).max(999).optional().default(100),
+    is_active: z.coerce.number().int().min(0).max(1).optional().default(1),
+    max_tokens: z.coerce.number().int().min(1).max(131072).optional().default(8192),
+    temperature: z.coerce.number().min(0).max(2).optional().default(0.7),
+    extra_headers: z.string().max(2000).optional().default('{}'),
+    extra_body: z.string().max(2000).optional().default('{}'),
+});
+
+export const updateAiProviderSchema = createAiProviderSchema.partial();

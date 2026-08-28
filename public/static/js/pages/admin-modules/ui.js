@@ -362,7 +362,7 @@ window.initAdminData = async function () {
 
   // Sync panel visibility with the active tab (don't force-reset if user switched tab)
   const activeTab = state.currentAdminTab || 'dashboard';
-  const allPanels = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs'];
+  const allPanels = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers'];
   allPanels.forEach(tabName => {
     const panel = document.getElementById(`panel-${tabName}`);
     if (panel) {
@@ -392,8 +392,8 @@ window.initAdminData = async function () {
 // ============================================
 
 window.switchAdminTab = function (tab) {
-  const tabs = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs'];
-  const restrictedInOperator = ['profil', 'templates', 'logs'];
+  const tabs = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers'];
+  const restrictedInOperator = ['profil', 'templates', 'logs', 'ai-providers'];
 
   if (isOperatorMode() && restrictedInOperator.includes(tab)) {
     tab = 'dashboard';
@@ -465,6 +465,9 @@ window.switchAdminTab = function (tab) {
   }
   else if (tab === 'dashboard') {
     if (window.loadAdminDashboard) window.loadAdminDashboard();
+  }
+  else if (tab === 'ai-providers') {
+    if (window.loadAdminAiProviders) window.loadAdminAiProviders();
   }
 
   applyAdminModeUI();

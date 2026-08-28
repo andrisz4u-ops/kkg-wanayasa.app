@@ -160,18 +160,35 @@ export function showUndoActionBar(label, onConfirm, onUndo, timeoutMs = 5000) {
 
 export function setBusyButton(button, isBusy, busyLabel = 'Memproses...') {
   if (!button) return () => { };
-  const previousHtml = button.innerHTML;
-  const previousDisabled = button.disabled;
+  
+  // Save original states on the button element if not already saved
   if (isBusy) {
+    if (!button.dataset.originalHtml) {
+      button.dataset.originalHtml = button.innerHTML;
+      button.dataset.originalDisabled = button.disabled ? 'true' : 'false';
+    }
     button.disabled = true;
     button.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>${busyLabel}`;
   } else {
-    button.disabled = previousDisabled;
-    button.innerHTML = previousHtml;
+    if (button.dataset.originalHtml) {
+      button.innerHTML = button.dataset.originalHtml;
+      button.disabled = button.dataset.originalDisabled === 'true';
+      delete button.dataset.originalHtml;
+      delete button.dataset.originalDisabled;
+    } else {
+      button.disabled = false;
+    }
   }
+
   return () => {
-    button.disabled = previousDisabled;
-    button.innerHTML = previousHtml;
+    if (button.dataset.originalHtml) {
+      button.innerHTML = button.dataset.originalHtml;
+      button.disabled = button.dataset.originalDisabled === 'true';
+      delete button.dataset.originalHtml;
+      delete button.dataset.originalDisabled;
+    } else {
+      button.disabled = false;
+    }
   };
 }
 

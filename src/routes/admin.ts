@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie, hashPassword } from '../lib/auth';
+import { encrypt, decrypt, isEncrypted } from '../lib/crypto';
 import { successResponse, Errors } from '../lib/response';
 import {
   createAuditLog,
@@ -11,7 +12,8 @@ import {
   formatAuditAction
 } from '../lib/audit';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
-import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSchema, updateSettingsSchema, listUsersQuerySchema, auditLogsQuerySchema, bulkApproveSchema, cleanupLogsSchema } from '../lib/validation';
+import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSchema, updateSettingsSchema, listUsersQuerySchema, auditLogsQuerySchema, bulkApproveSchema, cleanupLogsSchema, createAiProviderSchema, updateAiProviderSchema } from '../lib/validation';
+import { AIService } from '../services/ai';
 
 import type { DashboardStats } from '../types';
 
@@ -1097,6 +1099,263 @@ admin.get('/users/approval-stats', async (c) => {
     console.error('Get approval stats error:', e);
     return Errors.internal(c);
   }
+});
+
+// ============================================
+// AI Provider Management
+// ============================================
+
+const providerWriteLimit = rateLimitMiddleware({ windowMs: 60 * 1000, maxRequests: 30, keyPrefix: 'admin-ai' });
+
+function maskApiKey(key: string | null | undefined): string {
+  if (!key || key.length === 0) return '';
+  if (key.length <= 8) return '****';
+  return key.substring(0, 4) + '****' + key.substring(key.length - 4);
+}
+
+// GET /admin/ai-providers — List all providers
+admin.get('/ai-providers', async (c) => {
+  try {
+    const result = await c.env.DB.prepare(
+      'SELECT * FROM ai_providers ORDER BY priority ASC, id ASC'
+    ).all();
+
+    const providers = await Promise.all((result.results || []).map(async (row: any) => {
+      let rawKey = row.api_key || '';
+      if (rawKey && isEncrypted(rawKey)) {
+        try {
+          rawKey = await decrypt(rawKey, c.env);
+        } catch {
+          // keep as is
+        }
+      }
+      return {
+        ...row,
+        api_key: maskApiKey(rawKey),
+      };
+    }));
+
+    return successResponse(c, providers);
+  } catch (e: any) {
+    console.error('List AI providers error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// POST /admin/ai-providers — Create new provider (with AES-GCM encryption at rest)
+admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const body = await c.req.json();
+    const validation = validate(createAiProviderSchema, body);
+    if (!validation.success) {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Data tidak valid', details: validation.errors } }, 400);
+    }
+
+    const d = validation.data;
+
+    // Check slug uniqueness
+    const existing = await c.env.DB.prepare('SELECT id FROM ai_providers WHERE slug = ?').bind(d.slug).first();
+    if (existing) {
+      return c.json({ success: false, error: { code: 'DUPLICATE', message: `Slug "${d.slug}" sudah digunakan.` } }, 409);
+    }
+
+    // Enforce max 20 providers
+    const count: any = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM ai_providers').first();
+    if ((count?.cnt || 0) >= 20) {
+      return c.json({ success: false, error: { code: 'LIMIT', message: 'Maksimal 20 provider.' } }, 400);
+    }
+
+    // Encrypt sensitive API key at rest
+    let storedKey = d.api_key || '';
+    if (storedKey && !isEncrypted(storedKey)) {
+      storedKey = await encrypt(storedKey, c.env);
+    }
+
+    const result = await c.env.DB.prepare(`
+      INSERT INTO ai_providers (name, slug, api_type, base_url, model, api_key, priority, is_active, max_tokens, temperature, extra_headers, extra_body)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      d.name, d.slug, d.api_type, d.base_url, d.model, storedKey,
+      d.priority, d.is_active, d.max_tokens, d.temperature,
+      d.extra_headers || '{}', d.extra_body || '{}'
+    ).run();
+
+    const currentUser: any = c.get('user');
+    await createAuditLog(c.env.DB, {
+      userId: currentUser.id,
+      action: 'AI_PROVIDER_CREATE',
+      entityType: 'ai_provider',
+      entityId: result.meta.last_row_id,
+      details: `Created AI provider: ${d.name} (${d.slug})`
+    });
+
+    return successResponse(c, { id: result.meta.last_row_id, slug: d.slug }, 'Provider berhasil ditambahkan', 201);
+  } catch (e: any) {
+    console.error('Create AI provider error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// PUT /admin/ai-providers/:id — Update provider (with AES-GCM encryption at rest)
+admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
+
+    const existing: any = await c.env.DB.prepare('SELECT * FROM ai_providers WHERE id = ?').bind(id).first();
+    if (!existing) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
+
+    const body = await c.req.json();
+    const validation = validate(updateAiProviderSchema, body);
+    if (!validation.success) {
+      return c.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Data tidak valid', details: validation.errors } }, 400);
+    }
+
+    const d = validation.data;
+
+    // Don't overwrite api_key if masked value is sent, otherwise encrypt new key
+    if (d.api_key) {
+      if (d.api_key.includes('****')) {
+        delete d.api_key;
+      } else if (!isEncrypted(d.api_key)) {
+        d.api_key = await encrypt(d.api_key, c.env);
+      }
+    }
+
+    // Check slug uniqueness if changing
+    if (d.slug && d.slug !== existing.slug) {
+      const slugConflict = await c.env.DB.prepare('SELECT id FROM ai_providers WHERE slug = ? AND id != ?').bind(d.slug, id).first();
+      if (slugConflict) {
+        return c.json({ success: false, error: { code: 'DUPLICATE', message: `Slug "${d.slug}" sudah digunakan.` } }, 409);
+      }
+    }
+
+    // Build dynamic update
+    const updates: string[] = [];
+    const values: any[] = [];
+    const fields: Record<string, any> = {
+      name: d.name, slug: d.slug, api_type: d.api_type, base_url: d.base_url,
+      model: d.model, api_key: d.api_key, priority: d.priority, is_active: d.is_active,
+      max_tokens: d.max_tokens, temperature: d.temperature,
+      extra_headers: d.extra_headers, extra_body: d.extra_body,
+    };
+
+    for (const [key, val] of Object.entries(fields)) {
+      if (val !== undefined) {
+        updates.push(`${key} = ?`);
+        values.push(val);
+      }
+    }
+
+    if (updates.length === 0) {
+      return successResponse(c, null, 'Tidak ada perubahan');
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+
+    await c.env.DB.prepare(
+      `UPDATE ai_providers SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const currentUser: any = c.get('user');
+    await createAuditLog(c.env.DB, {
+      userId: currentUser.id,
+      action: 'AI_PROVIDER_UPDATE',
+      entityType: 'ai_provider',
+      entityId: id,
+      details: `Updated AI provider: ${d.name || existing.name}`
+    });
+
+    return successResponse(c, null, 'Provider berhasil diperbarui');
+  } catch (e: any) {
+    console.error('Update AI provider error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// DELETE /admin/ai-providers/:id — Delete provider
+admin.delete('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
+
+    const existing: any = await c.env.DB.prepare('SELECT name FROM ai_providers WHERE id = ?').bind(id).first();
+    if (!existing) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
+
+    await c.env.DB.prepare('DELETE FROM ai_providers WHERE id = ?').bind(id).run();
+
+    const currentUser: any = c.get('user');
+    await createAuditLog(c.env.DB, {
+      userId: currentUser.id,
+      action: 'AI_PROVIDER_DELETE',
+      entityType: 'ai_provider',
+      entityId: id,
+      details: `Deleted AI provider: ${existing.name}`
+    });
+
+    return successResponse(c, null, 'Provider berhasil dihapus');
+  } catch (e: any) {
+    console.error('Delete AI provider error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// POST /admin/ai-providers/:id/check — Check Live
+admin.post('/ai-providers/:id/check', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
+
+    const ai = new AIService(c.env);
+    const result = await ai.checkLive(c.env.DB, id);
+
+    return successResponse(c, result, result.ok ? 'Provider aktif dan responsif' : 'Provider gagal merespons');
+  } catch (e: any) {
+    console.error('Check AI provider error:', e);
+    return c.json({ success: false, error: { code: 'CHECK_FAILED', message: e.message } }, 500);
+  }
+});
+
+// PUT /admin/ai-providers/:id/toggle — Toggle active/inactive
+admin.put('/ai-providers/:id/toggle', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
+
+    const existing: any = await c.env.DB.prepare('SELECT name, is_active FROM ai_providers WHERE id = ?').bind(id).first();
+    if (!existing) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
+
+    const newState = existing.is_active ? 0 : 1;
+    await c.env.DB.prepare(
+      'UPDATE ai_providers SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(newState, id).run();
+
+    return successResponse(c, { is_active: newState }, `Provider ${newState ? 'diaktifkan' : 'dinonaktifkan'}`);
+  } catch (e: any) {
+    console.error('Toggle AI provider error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// GET /admin/ai-providers/presets — Get preset provider templates
+admin.get('/ai-providers/presets', async (c) => {
+  const presets = [
+    { name: 'OpenAI GPT-4o', slug: 'openai-gpt4o', api_type: 'openai_compat', base_url: 'https://api.openai.com/v1', model: 'gpt-4o', max_tokens: 8192 },
+    { name: 'OpenAI GPT-4o Mini', slug: 'openai-gpt4o-mini', api_type: 'openai_compat', base_url: 'https://api.openai.com/v1', model: 'gpt-4o-mini', max_tokens: 16384 },
+    { name: 'Google Gemini 2.0 Flash', slug: 'gemini-flash', api_type: 'openai_compat', base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash', max_tokens: 8192 },
+    { name: 'Google Gemini 2.5 Flash', slug: 'gemini-25-flash', api_type: 'openai_compat', base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash-preview-05-20', max_tokens: 8192 },
+    { name: 'Claude Sonnet 4.6 (Direct)', slug: 'claude-anthropic', api_type: 'anthropic', base_url: 'https://api.anthropic.com', model: 'claude-sonnet-4-6-20250514', max_tokens: 8192 },
+    { name: 'Mistral Large', slug: 'mistral-large', api_type: 'openai_compat', base_url: 'https://api.mistral.ai/v1', model: 'mistral-large-latest', max_tokens: 16384 },
+    { name: 'Groq LLaMA 3.3 70B', slug: 'groq-llama', api_type: 'openai_compat', base_url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', max_tokens: 8192 },
+    { name: 'OpenRouter (Auto)', slug: 'openrouter-auto', api_type: 'openai_compat', base_url: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o', max_tokens: 8192 },
+    { name: 'Together AI', slug: 'together-ai', api_type: 'openai_compat', base_url: 'https://api.together.xyz/v1', model: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', max_tokens: 8192 },
+    { name: 'DeepSeek V3', slug: 'deepseek-v3', api_type: 'openai_compat', base_url: 'https://api.deepseek.com/v1', model: 'deepseek-chat', max_tokens: 8192 },
+    { name: 'GLM-4 Flash (Zhipu)', slug: 'glm4-flash', api_type: 'openai_compat', base_url: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash', max_tokens: 8192 },
+    { name: 'Ollama (Local)', slug: 'ollama-local', api_type: 'openai_compat', base_url: 'http://localhost:11434/v1', model: 'llama3', max_tokens: 4096 },
+  ];
+
+  return successResponse(c, presets);
 });
 
 export default admin;

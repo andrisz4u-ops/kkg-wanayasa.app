@@ -11,15 +11,7 @@ function start(name, scriptPath, args = [], required = true) {
   const child = spawn(process.execPath, [scriptPath, ...args], {
     cwd: root,
     env: process.env,
-    stdio: ['inherit', 'pipe', 'pipe'],
-  });
-
-  const prefix = `[${name}]`;
-  child.stdout.on('data', (chunk) => {
-    process.stdout.write(`${prefix} ${chunk}`);
-  });
-  child.stderr.on('data', (chunk) => {
-    process.stderr.write(`${prefix} ${chunk}`);
+    stdio: 'inherit',
   });
 
   child.on('exit', (code, signal) => {

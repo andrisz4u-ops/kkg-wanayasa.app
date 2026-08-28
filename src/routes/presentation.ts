@@ -70,28 +70,19 @@ function getImageCandidateIndexes(slides: PresentationSlide[]): number[] {
 
 async function getAiService(c: any): Promise<AIService> {
     const ai = new AIService(c.env);
-    try {
-        const settingsResult: any = await c.env.DB.prepare(
-            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-        ).all();
-        const settings: any = {};
-        settingsResult.results?.forEach((row: any) => settings[row.key] = row.value);
-
-        const mistralKey = settings.mistral_api_key || c.env.MISTRAL_API_KEY;
-        const zAiKey = settings.z_ai_api_key || c.env.Z_AI_API_KEY;
-        const geminiKey = settings.gemini_api_key || c.env.GEMINI_API_KEY;
-        const bedrockKey = settings.bedrock_api_key || c.env.BEDROCK_API_KEY;
-        const vertexKey = settings.vertex_api_key || c.env.VERTEX_API_KEY;
-
-        if (mistralKey) ai.addKey('mistral', mistralKey);
-        if (zAiKey) ai.addKey('z_ai', zAiKey);
-        if (geminiKey) ai.addKey('gemini', geminiKey);
-        if (bedrockKey) ai.addKey('bedrock', bedrockKey);
-        if (vertexKey) ai.addKey('vertex', vertexKey);
-    } catch (e) {
-        console.warn('Could not load DB settings for AI keys, using env:', e);
-    }
+    await ai.loadProviders(c.env.DB);
     return ai;
+}
+
+function resolveProviderSlug(provider?: string): string {
+    const slugMap: Record<string, string> = {
+        vertex: 'vertex-proxy',
+        gemini: 'gemini-flash',
+        bedrock: 'bedrock-claude',
+        mistral: 'mistral-large',
+        z_ai: 'glm4-flash'
+    };
+    return (provider && slugMap[provider]) || provider || 'gemini-flash';
 }
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -133,7 +124,7 @@ STRUKTUR (${slideCount} slide wajib):
 Balas HANYA JSON: {"title":"...","subtitle":"...","outline":[{"index":1,"title":"...","layout":"title|content|twoColumn|imageText|timeline|stats|comparison|quiz|flipcard|activity|quote|summary|thankyou","focus":"...","visualConcept":"..."}]}
 `;
 
-        const result = await ai.generateJSON(prompt, aiProvider || 'gemini');
+        const result = await ai.generateJSON(prompt, resolveProviderSlug(aiProvider));
         const validatedResult = validate(presentationOutlineResponseSchema, result);
         if (!validatedResult.success) {
             console.error('Outline Validation Failed:', JSON.stringify(result, null, 2));
@@ -219,7 +210,7 @@ KEMBALIKAN HANYA JSON VALID:
 {"title":"...","subtitle":"...","slides":[{"layout":"title|content|twoColumn|imageText|timeline|stats|comparison|quiz|flipcard|activity|quote|summary|thankyou","title":"...","subtitle":"...","content":["Poin: Penjelasan..."],"speakerNotes":"...","imageQuery":"..."}]}
 `;
 
-        const result = await ai.generateJSON(prompt, aiProvider || 'gemini');
+        const result = await ai.generateJSON(prompt, resolveProviderSlug(aiProvider));
         const validatedResult = validate(presentationResponseSchema, result);
         if (!validatedResult.success) {
             console.error('AI Output Validation Failed:', JSON.stringify(result, null, 2));
@@ -349,7 +340,7 @@ OUTPUT HANYA BERUPA JSON VALID UNTUK SATU SLIDE TERSEBUT:
 }
 `;
 
-        const result = await ai.generateJSON(prompt, aiProvider || 'mistral');
+        const result = await ai.generateJSON(prompt, resolveProviderSlug(aiProvider));
         const validatedResult = validate(baseSlideSchema, result);
         if (!validatedResult.success) {
             return Errors.validation(c, 'Output revisi slide AI tidak sesuai schema', validatedResult.errors);

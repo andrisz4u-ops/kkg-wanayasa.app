@@ -148,6 +148,19 @@ app.route('/api/kisi', kisiRoutes);
 import presentationRoutes from './routes/presentation';
 app.route('/api/presentation', presentationRoutes);
 
+// Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)
+app.get('/api/ai-providers/active', async (c) => {
+  try {
+    const result = await c.env.DB.prepare(
+      'SELECT id, name, slug, api_type, model, priority FROM ai_providers WHERE is_active = 1 ORDER BY priority ASC'
+    ).all();
+    return successResponse(c, result.results || []);
+  } catch (e: any) {
+    console.error('List active AI providers error:', e);
+    return Errors.internal(c);
+  }
+});
+
 // Admin-only middleware helper
 const requireAdminOnly = async (c: any, next: () => Promise<void>) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');

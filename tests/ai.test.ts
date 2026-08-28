@@ -142,56 +142,38 @@ describe('AIService', () => {
     });
 });
 
-describe('AI Provider Failover Logic', () => {
-    it('should define provider priority order', () => {
-        const providers: ('gemini' | 'groq' | 'mistral')[] = ['gemini', 'groq', 'mistral'];
-        const preferred = 'gemini';
-        
-        const remaining = providers.filter(p => p !== preferred);
-        
-        expect(remaining).toEqual(['groq', 'mistral']);
+describe('AI Provider Circuit Breaker & Health Logic', () => {
+    it('should deprioritize providers that recently failed health check', () => {
+        const now = Date.now();
+        const providers = [
+            { slug: 'p1', priority: 1, last_check_ok: -1, last_check_at: new Date(now - 60000).toISOString() },
+            { slug: 'p2', priority: 2, last_check_ok: 1, last_check_at: new Date(now - 60000).toISOString() },
+            { slug: 'p3', priority: 3, last_check_ok: 0 }
+        ];
+
+        const TEN_MINUTES_MS = 10 * 60 * 1000;
+        const isHealthy = (p: any) => {
+            if (p.last_check_ok === -1 && p.last_check_at) {
+                const checkTime = new Date(p.last_check_at).getTime();
+                if (now - checkTime < TEN_MINUTES_MS) return false;
+            }
+            return true;
+        };
+
+        const healthy = providers.filter(isHealthy);
+        const penalized = providers.filter(p => !isHealthy(p));
+        const reordered = [...healthy, ...penalized];
+
+        expect(reordered.map(p => p.slug)).toEqual(['p2', 'p3', 'p1']);
     });
 
-    it('should try remaining providers on failure', () => {
-        const providers = ['gemini', 'groq', 'mistral'];
-        const failed: string[] = ['gemini'];
-        
-        const available = providers.filter(p => !failed.includes(p));
-        
-        expect(available).toEqual(['groq', 'mistral']);
-    });
-});
+    it('should detect OpenAI reasoning models (o1/o3) correctly', () => {
+        const isReasoning = (model: string) => model.startsWith('o1') || model.startsWith('o3');
 
-describe('Prompt Engineering', () => {
-    it('should construct valid prompts for letter generation', () => {
-        const prompt = `
-Buatkan surat undangan dengan detail berikut:
-- Jenis Kegiatan: Rapat Bulanan
-- Tanggal: 15 Februari 2025
-- Waktu: 09:00 - 12:00
-- Tempat: SDN 1 Wanayasa
-- Agenda: Evaluasi program semester
-
-Format surat harus formal dan profesional.
-        `.trim();
-        
-        expect(prompt).toContain('Jenis Kegiatan');
-        expect(prompt).toContain('Tanggal');
-        expect(prompt).toContain('formal');
-    });
-
-    it('should construct valid prompts for RPP generation', () => {
-        const prompt = `
-Buatkan RPP dengan detail berikut:
-- Mata Pelajaran: Matematika
-- Kelas: 4
-- Topik: Pecahan
-- Alokasi Waktu: 2 x 35 menit
-
-Format RPP harus mengikuti Kurikulum Merdeka.
-        `.trim();
-        
-        expect(prompt).toContain('Mata Pelajaran');
-        expect(prompt).toContain('Kurikulum Merdeka');
+        expect(isReasoning('o1')).toBe(true);
+        expect(isReasoning('o1-mini')).toBe(true);
+        expect(isReasoning('o3-mini')).toBe(true);
+        expect(isReasoning('gpt-4o')).toBe(false);
+        expect(isReasoning('gemini-2.0-flash')).toBe(false);
     });
 });

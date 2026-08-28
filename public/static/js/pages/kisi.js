@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
@@ -406,6 +406,8 @@ function hasSundaneseInCanvas(canvasEl) {
 export function initKisi() {
   const form = document.getElementById('asesmen-form');
   if (!form) return;
+
+  populateAiModelSelect('select[name="aiProvider"]');
 
   // Counter buttons
   document.querySelectorAll('.asesmen-counter-btn').forEach(btn => {

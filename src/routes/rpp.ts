@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { AIService, AIProvider } from '../services/ai';
+import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
 import { cpData } from '../lib/cp-data';
@@ -13,6 +13,7 @@ type Bindings = {
   BEDROCK_API_KEY?: string;
   BEDROCK_REGION?: string;
   VERTEX_API_KEY?: string;
+  AI_BACKEND_KEY?: string;
 };
 
 const rpp = new Hono<{ Bindings: Bindings }>();
@@ -29,28 +30,7 @@ rpp.post('/generate', async (c) => {
     } = body;
 
     const ai = new AIService(c.env);
-
-    // Inject keys from admin settings (DB) with fallback from env
-    const settingsResult: any = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-    ).all();
-
-    const settings: any = {};
-    settingsResult.results?.forEach((row: any) => {
-      settings[row.key] = row.value;
-    });
-
-    const mistralKey = c.env.MISTRAL_API_KEY || settings.mistral_api_key;
-    const zAiKey = c.env.Z_AI_API_KEY || settings.z_ai_api_key;
-    const geminiKey = c.env.GEMINI_API_KEY || settings.gemini_api_key;
-    const bedrockKey = c.env.BEDROCK_API_KEY || settings.bedrock_api_key;
-    const vertexKey = c.env.VERTEX_API_KEY || settings.vertex_api_key;
-
-    if (mistralKey) ai.addKey('mistral', mistralKey);
-    if (zAiKey) ai.addKey('z_ai', zAiKey);
-    if (geminiKey) ai.addKey('gemini', geminiKey);
-    if (bedrockKey) ai.addKey('bedrock', bedrockKey);
-    if (vertexKey) ai.addKey('vertex', vertexKey);
+    await ai.loadProviders(c.env.DB);
 
     // Time distribution logic
     const totalMinutes = (() => {
@@ -255,7 +235,15 @@ rpp.post('/generate', async (c) => {
       - penilaian: Wajib berikan minimal 5 soal (pilihan ganda atau esai).
     `;
 
-    const result = await ai.generateJSON(prompt, aiProvider as AIProvider || 'mistral');
+    const slugMap: Record<string, string> = {
+      vertex: 'vertex-proxy',
+      gemini: 'gemini-flash',
+      bedrock: 'bedrock-claude',
+      mistral: 'mistral-large',
+      z_ai: 'glm4-flash'
+    };
+    const preferredSlug = slugMap[aiProvider] || aiProvider;
+    const result = await ai.generateJSON(prompt, preferredSlug);
 
     // Remove LKPD if user selected 'Tidak'
     if (lampirkanLKPD !== 'Ya' && result?.pertemuan) {
@@ -338,25 +326,7 @@ rpp.post('/lampiran', async (c) => {
     }
 
     const ai = new AIService(c.env);
-
-    // Inject keys from admin settings (DB) with fallback from env
-    const lampSettings: any = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-    ).all();
-    const lampSettingsMap: any = {};
-    lampSettings.results?.forEach((row: any) => { lampSettingsMap[row.key] = row.value; });
-
-    const lMistralKey = c.env.MISTRAL_API_KEY || lampSettingsMap.mistral_api_key;
-    const lZAiKey = c.env.Z_AI_API_KEY || lampSettingsMap.z_ai_api_key;
-    const lGeminiKey = c.env.GEMINI_API_KEY || lampSettingsMap.gemini_api_key;
-    const lBedrockKey = c.env.BEDROCK_API_KEY || lampSettingsMap.bedrock_api_key;
-    const lVertexKey = c.env.VERTEX_API_KEY || lampSettingsMap.vertex_api_key;
-
-    if (lMistralKey) ai.addKey('mistral', lMistralKey);
-    if (lZAiKey) ai.addKey('z_ai', lZAiKey);
-    if (lGeminiKey) ai.addKey('gemini', lGeminiKey);
-    if (lBedrockKey) ai.addKey('bedrock', lBedrockKey);
-    if (lVertexKey) ai.addKey('vertex', lVertexKey);
+    await ai.loadProviders(c.env.DB);
 
     const prompt = `Bertindaklah sebagai Ahli Asesmen Pendidikan Kurikulum Merdeka.
 Berdasarkan RPP tentang mapel ${mataPelajaran}, topik ${topik} untuk kelas ${jenjangKelas || ''}, buatkan LAMPIRAN RUBRIK PENILAIAN yang lengkap.
@@ -385,7 +355,15 @@ OUTPUT YANG DIBUTUHKAN (Format JSON):
 Pastikan rubrik RELEVAN dengan kegiatan pembelajaran di RPP yang sudah dibuat untuk topik ${topik} kelas ${jenjangKelas || ''}.
 Wajib mengisi minimal 4-5 baris tabel untuk kognitif dan keterampilan.`;
 
-    const result = await ai.generateJSON(prompt, aiProvider as AIProvider || 'mistral');
+    const slugMap: Record<string, string> = {
+      vertex: 'vertex-proxy',
+      gemini: 'gemini-flash',
+      bedrock: 'bedrock-claude',
+      mistral: 'mistral-large',
+      z_ai: 'glm4-flash'
+    };
+    const preferredSlug = slugMap[aiProvider] || aiProvider;
+    const result = await ai.generateJSON(prompt, preferredSlug);
     return successResponse(c, result);
   } catch (e: any) {
     console.error('Lampiran Gen Error:', e);

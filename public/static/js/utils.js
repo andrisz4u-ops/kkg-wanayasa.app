@@ -423,3 +423,27 @@ export function getQueryParams() {
   return params;
 }
 
+/**
+ * Populate AI Model <select> element dynamically from active providers API
+ */
+export async function populateAiModelSelect(selector, preferredDefault) {
+  const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+  if (!el) return;
+
+  try {
+    const res = await fetch('/api/ai-providers/active');
+    const json = await res.json();
+    if (!json.success || !json.data || json.data.length === 0) return;
+
+    const providers = json.data;
+    const currentVal = el.value || preferredDefault;
+
+    el.innerHTML = providers.map((p, idx) => {
+      const isSelected = currentVal ? (p.slug === currentVal) : (idx === 0);
+      return `<option value="${escapeHtml(p.slug)}" ${isSelected ? 'selected' : ''}>${escapeHtml(p.name)} (${escapeHtml(p.model)})</option>`;
+    }).join('');
+  } catch (e) {
+    console.warn('Failed to load active AI providers, keeping fallback options:', e);
+  }
+}
+

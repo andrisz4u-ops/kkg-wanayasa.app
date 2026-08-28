@@ -40,13 +40,14 @@ export function renderAdminLayout(content, activePage = 'dashboard') {
     { id: 'users', label: 'Manajemen User', icon: 'fa-users-cog', section: 'Data Master' },
     { id: 'sekolah', label: 'Data Sekolah', icon: 'fa-school', section: 'Data Master' },
 
+    { id: 'ai-providers', label: 'AI Provider', icon: 'fa-robot', section: 'System' },
     { id: 'logs', label: 'Audit Logs', icon: 'fa-history', section: 'System' },
     { id: 'templates', label: 'Template Surat', icon: 'fa-file-alt', section: 'System' },
     { id: 'profil', label: 'Organisasi', icon: 'fa-building', section: 'System' },
   ];
 
   const visibleItems = adminPanelMode === 'operator'
-    ? sidebarItems.filter(item => !['logs', 'templates', 'profil'].includes(item.id))
+    ? sidebarItems.filter(item => !['logs', 'templates', 'profil', 'ai-providers'].includes(item.id))
     : sidebarItems;
 
   /* Group items by section */

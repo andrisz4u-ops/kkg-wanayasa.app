@@ -1,7 +1,7 @@
 
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { formatDate, escapeHtml, showToast } from '../utils.js';
+import { formatDate, escapeHtml, showToast, populateAiModelSelect } from '../utils.js';
 import { navigate } from '../router.js';
 import { renderAdminLayout } from '../layouts/admin.js';
 
@@ -225,6 +225,11 @@ export function renderSurat() {
 
     <div id="surat-history" class="hidden mt-10"></div>
   </div>`;
+
+  setTimeout(() => {
+    populateAiModelSelect('#model');
+  }, 0);
+
   return renderAdminLayout(content, 'surat');
 }
 

@@ -1,7 +1,8 @@
 
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
-import { callAI, buildLaporanPrompt } from '../lib/mistral';
+import { AIService } from '../services/ai';
+import { buildLaporanPrompt } from '../lib/prompts';
 import { generateLaporanBuffer } from '../lib/docx-generator';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
@@ -15,6 +16,7 @@ type Bindings = {
     BEDROCK_API_KEY?: string;
     BEDROCK_REGION?: string;
     VERTEX_API_KEY?: string;
+    AI_BACKEND_KEY?: string;
 };
 
 const laporan = new Hono<{ Bindings: Bindings }>();
@@ -49,13 +51,6 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
     try {
         const body = await c.req.json();
         const { judul_laporan, periode, program_kerja_judul, tema, narasumber, tempat, model = 'vertex' } = body;
-        const providerMap: Record<string, string> = { mistral: 'mistral', z_ai: 'z_ai', gemini: 'gemini', bedrock: 'bedrock', vertex: 'vertex' };
-        const provider = providerMap[model] || 'vertex';
-
-        // Get API keys from settings
-        const results: any = await c.env.DB.prepare(
-            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-        ).all();
 
         // Get All Settings
         const { results: allSettingsRows } = await c.env.DB.prepare(
@@ -65,22 +60,6 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
         allSettingsRows?.forEach((row: any) => {
             settings[row.key] = row.value;
         });
-
-        const keyMap: Record<string, { envKey: string; dbKey: string }> = {
-            mistral: { envKey: 'MISTRAL_API_KEY', dbKey: 'mistral_api_key' },
-            z_ai: { envKey: 'Z_AI_API_KEY', dbKey: 'z_ai_api_key' },
-            gemini: { envKey: 'GEMINI_API_KEY', dbKey: 'gemini_api_key' },
-            bedrock: { envKey: 'BEDROCK_API_KEY', dbKey: 'bedrock_api_key' },
-            vertex: { envKey: 'VERTEX_API_KEY', dbKey: 'vertex_api_key' },
-        };
-
-        const keyConfig = keyMap[provider] || keyMap.vertex;
-        const apiKey = (c.env as any)[keyConfig.envKey] || settings[keyConfig.dbKey];
-
-        if (!apiKey) {
-            const providerNames: Record<string, string> = { mistral: 'Mistral', z_ai: 'GLM', gemini: 'Gemini', bedrock: 'AWS Bedrock', vertex: 'Vertex AI' };
-            return Errors.configError(c, `API Key ${providerNames[provider] || provider} belum dikonfigurasi.`);
-        }
 
         const prompt = buildLaporanPrompt({
             judul_laporan,
@@ -92,7 +71,19 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
             settings
         });
 
-        const generatedText = await callAI(provider as any, apiKey as string, prompt);
+        const ai = new AIService(c.env);
+        await ai.loadProviders(c.env.DB);
+
+        const slugMap: Record<string, string> = {
+            vertex: 'vertex-proxy',
+            gemini: 'gemini-flash',
+            bedrock: 'bedrock-claude',
+            mistral: 'mistral-large',
+            z_ai: 'glm4-flash'
+        };
+        const preferredSlug = slugMap[model] || model;
+        const aiResponse = await ai.generateText(prompt, preferredSlug);
+        const generatedText = aiResponse.content;
 
         // Robust parsing logic
         const extractRegex = (startPattern: RegExp, endPattern: RegExp | null = null): string => {

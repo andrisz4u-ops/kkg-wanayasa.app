@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { AIService, AIProvider } from '../services/ai';
+import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { UnsplashService } from '../services/unsplash';
 import { generateCrossword } from '../lib/crossword';
@@ -18,25 +18,17 @@ kisi.post('/generate', async (c) => {
         } = body;
 
         const ai = new AIService(c.env);
+        await ai.loadProviders(c.env.DB);
 
-        // Inject all AI keys from admin settings (DB) with fallback from env
-        const aiSettings: any = await c.env.DB.prepare(
-            "SELECT key, value FROM settings WHERE key IN ('mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key')"
-        ).all();
-        const settingsMap: any = {};
-        aiSettings.results?.forEach((row: any) => { settingsMap[row.key] = row.value; });
+        const slugMap: Record<string, string> = {
+            vertex: 'vertex-proxy',
+            gemini: 'gemini-flash',
+            bedrock: 'bedrock-claude',
+            mistral: 'mistral-large',
+            z_ai: 'glm4-flash'
+        };
+        const preferredSlug = slugMap[aiProvider] || aiProvider;
 
-        const mistralKey = c.env.MISTRAL_API_KEY || settingsMap.mistral_api_key || '';
-        const zAiKey = c.env.Z_AI_API_KEY || settingsMap.z_ai_api_key || '';
-        const geminiKey = c.env.GEMINI_API_KEY || settingsMap.gemini_api_key || '';
-        const bedrockKey = c.env.BEDROCK_API_KEY || settingsMap.bedrock_api_key || '';
-        const vertexKey = c.env.VERTEX_API_KEY || settingsMap.vertex_api_key || '';
-
-        if (mistralKey) ai.addKey('mistral', mistralKey);
-        if (zAiKey) ai.addKey('z_ai', zAiKey);
-        if (geminiKey) ai.addKey('gemini', geminiKey);
-        if (bedrockKey) ai.addKey('bedrock', bedrockKey);
-        if (vertexKey) ai.addKey('vertex', vertexKey);
         const totalPG = parseInt(jumlahPG) || 0;
         const totalIsian = parseInt(jumlahIsian) || 0;
         const totalUraian = parseInt(jumlahUraian) || 0;
@@ -119,7 +111,7 @@ kisi.post('/generate', async (c) => {
             for (let i = 0; i < totalPG; i += BATCH_SIZE) {
                 const currentCount = Math.min(BATCH_SIZE, totalPG - i);
                 const prompt = buildPrompt('pg', i + 1, currentCount);
-                const result = await ai.generateJSON(prompt, (aiProvider as AIProvider) || 'mistral');
+                const result = await ai.generateJSON(prompt, preferredSlug);
                 if (result?._ai_meta) finalData._meta = result._ai_meta;
                 if (result?.pg && Array.isArray(result.pg)) {
                     for (const q of result.pg) {
@@ -158,7 +150,7 @@ kisi.post('/generate', async (c) => {
         if (totalIsian > 0 || totalUraian > 0) {
             const startNoIsian = totalPG + 1;
             const prompt = buildPrompt('isian', startNoIsian, totalIsian, totalPG);
-            const result = await ai.generateJSON(prompt, (aiProvider as AIProvider) || 'mistral');
+            const result = await ai.generateJSON(prompt, preferredSlug);
             if (result?._ai_meta) finalData._meta = result._ai_meta;
 
             if (result?.isian) {

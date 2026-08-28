@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
@@ -436,6 +436,8 @@ let currentLampiran = null;
 export function initRpp() {
   const form = document.getElementById('rpp-form');
   if (!form) return;
+
+  populateAiModelSelect('select[name="aiProvider"]');
 
   const selectedDimensions = new Set();
 

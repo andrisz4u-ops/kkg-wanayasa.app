@@ -34,3 +34,27 @@ backup/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary / debug / scratch files
+*.tmp
+out.txt
+error.txt
+tw_error*.txt
+tmp_*.txt
+settings_keys*.txt
+cot_test_result.json
+validation_error_output.json
+test_gen.js
+test_mistral.js
+rewrite.js
+recovered.js
+update_home.js
+minified_*.js
+kkg-fix-*.md
+slidegen_next_steps.md
+CHECKPOINT_*.md
+
+# Agent / tool directories
+.agent/
+.opencode/
+graphify-out/

@@ -40,8 +40,18 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 // Minimum log level - default to 'info' in Cloudflare Workers
 const MIN_LOG_LEVEL: LogLevel = 'info';
 
-// Check if we're in development mode
-const IS_DEVELOPMENT = true; // Set to false in production build
+// Detect development mode at runtime (safe for Cloudflare Workers)
+// In production, ENVIRONMENT should be set to 'production' in wrangler.jsonc vars
+let IS_DEVELOPMENT = false;
+
+/**
+ * Initialize logger environment (call once from middleware with env bindings)
+ */
+export function initLoggerEnv(env?: Record<string, any>) {
+    if (env?.ENVIRONMENT) {
+        IS_DEVELOPMENT = env.ENVIRONMENT !== 'production';
+    }
+}
 
 /**
  * Format log entry as JSON for structured logging

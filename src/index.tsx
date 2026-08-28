@@ -18,12 +18,16 @@ import sekolahRoutes from './routes/sekolah';
 import settingsRoutes from './routes/settings';
 import profileRoutes from './routes/profile';
 import notificationRoutes from './routes/notifications';
+import laporanRoutes from './routes/laporan';
+import rppRoutes from './routes/rpp';
+import kisiRoutes from './routes/kisi';
+import presentationRoutes from './routes/presentation';
 import { renderHTML } from './templates/layout';
 import { rateLimitMiddleware, RATE_LIMITS } from './lib/ratelimit';
 import { successResponse, Errors } from './lib/response';
 import { hashPassword, getCurrentUser, getCookie } from './lib/auth';
 import { initSentry, captureError } from './lib/sentry';
-import { loggingMiddleware, logger } from './lib/logger';
+import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
 import type { R2Bucket } from './lib/upload';
 
@@ -49,8 +53,9 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Bindings, Variables: Variables }>();
 
-// Initialize Sentry error tracking
+// Initialize Sentry error tracking & logger environment
 app.use('*', async (c, next) => {
+  initLoggerEnv(c.env);
   const sentry = initSentry(c.env);
   if (sentry) {
     c.set('sentry', sentry);
@@ -129,9 +134,6 @@ app.route('/api/pengumuman', pengumumanRoutes);
 app.route('/api/forum', forumRoutes);
 app.route('/api/materi', materiRoutes);
 app.route('/api/admin', adminRoutes);
-import laporanRoutes from './routes/laporan';
-
-// ... existing routes ...
 app.route('/api/files', filesRoutes);
 app.route('/api/laporan', laporanRoutes);
 app.route('/api/dashboard', dashboardRoutes);
@@ -141,11 +143,8 @@ app.route('/api/sekolah', sekolahRoutes);
 app.route('/api/settings', settingsRoutes);
 app.route('/api/profile', profileRoutes);
 app.route('/api/notifications', notificationRoutes);
-import rppRoutes from './routes/rpp';
 app.route('/api/rpp', rppRoutes);
-import kisiRoutes from './routes/kisi';
 app.route('/api/kisi', kisiRoutes);
-import presentationRoutes from './routes/presentation';
 app.route('/api/presentation', presentationRoutes);
 
 // Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)

@@ -1210,10 +1210,10 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      userId: currentUser.id,
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_CREATE',
-      entityType: 'ai_provider',
-      entityId: result.meta.last_row_id,
+      entity_type: 'ai_provider',
+      entity_id: result.meta.last_row_id,
       details: `Created AI provider: ${d.name} (${d.slug})`
     });
 
@@ -1330,10 +1330,10 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      userId: currentUser.id,
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_UPDATE',
-      entityType: 'ai_provider',
-      entityId: id,
+      entity_type: 'ai_provider',
+      entity_id: id,
       details: `Updated AI provider: ${d.name || existing.name}`
     });
 
@@ -1357,10 +1357,10 @@ admin.delete('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async 
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      userId: currentUser.id,
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_DELETE',
-      entityType: 'ai_provider',
-      entityId: id,
+      entity_type: 'ai_provider',
+      entity_id: id,
       details: `Deleted AI provider: ${existing.name}`
     });
 

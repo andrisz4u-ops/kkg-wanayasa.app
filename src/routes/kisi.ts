@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { UnsplashService } from '../services/unsplash';
+import { generateCrossword } from '../lib/crossword';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();

@@ -711,10 +711,20 @@ CRITICAL JSON RULES:
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════
-
 function safeParse(val: any): Record<string, any> {
-    if (!val || val === '{}') return {};
-    try { return JSON.parse(val); } catch { return {}; }
+    if (!val || val === '{}' || val === '""' || val === 'null') return {};
+    if (typeof val === 'object' && val !== null && !Array.isArray(val)) return val;
+    try {
+        let parsed = typeof val === 'string' ? JSON.parse(val) : val;
+        // Handle double-stringified JSON like "\"{}\""
+        if (typeof parsed === 'string') {
+            try { parsed = JSON.parse(parsed); } catch { return {}; }
+        }
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            return parsed;
+        }
+        return {};
+    } catch {
+        return {};
+    }
 }

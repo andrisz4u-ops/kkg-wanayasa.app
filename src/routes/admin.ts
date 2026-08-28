@@ -1492,8 +1492,13 @@ admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit,
       }
     }
 
-    // Deduplicate and sort alphabetically
-    const uniqueModels = Array.from(new Set(models)).sort((a, b) => a.localeCompare(b));
+    // Filter out non-generative / embedding / audio / image models
+    const nonChatPatterns = /embedding|embed|whisper|tts-|dall-e|moderation|rerank|bge-|flux|stable-diffusion|speech|audio/i;
+    const filteredModels = models.filter((m: string) => typeof m === 'string' && m && !nonChatPatterns.test(m));
+
+    // Deduplicate and sort alphabetically (fallback to raw if filter was too aggressive)
+    const candidateList = filteredModels.length > 0 ? filteredModels : models;
+    const uniqueModels = Array.from(new Set(candidateList)).sort((a, b) => a.localeCompare(b));
 
     if (uniqueModels.length === 0) {
       return c.json({ success: false, error: { code: 'NO_MODELS', message: 'Tidak ada model yang ditemukan dari server provider.' } }, 404);

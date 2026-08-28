@@ -254,6 +254,26 @@ window.deleteAiProvider = function deleteAiProvider(id, name) {
 // Auto-Fetch Models from Provider Endpoint
 // ============================================
 
+window.onAiModelSelectChange = function onAiModelSelectChange(val) {
+  const modelInput = document.getElementById('aip-model');
+  if (modelInput && val) {
+    modelInput.value = val;
+    window.highlightModelChip(val);
+  }
+};
+
+window.highlightModelChip = function highlightModelChip(activeModel) {
+  const chips = document.querySelectorAll('.model-chip');
+  chips.forEach(chip => {
+    const val = chip.dataset.modelValue || chip.textContent.trim();
+    if (val === activeModel) {
+      chip.className = 'model-chip px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs cursor-pointer';
+    } else {
+      chip.className = 'model-chip px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border-slate-200 cursor-pointer';
+    }
+  });
+};
+
 window.fetchAiProviderModels = async function fetchAiProviderModels() {
   const btn = document.getElementById('btn-fetch-models');
   const baseUrlInput = document.getElementById('aip-base_url');
@@ -261,8 +281,10 @@ window.fetchAiProviderModels = async function fetchAiProviderModels() {
   const apiTypeInput = document.getElementById('aip-api_type');
   const providerIdInput = document.getElementById('ai-provider-id');
   const modelInput = document.getElementById('aip-model');
-  const datalist = document.getElementById('aip-model-datalist');
   const feedback = document.getElementById('aip-models-feedback');
+  const selectWrapper = document.getElementById('aip-model-select-wrapper');
+  const selectEl = document.getElementById('aip-model-select');
+  const chipsContainer = document.getElementById('aip-model-chips');
 
   const base_url = baseUrlInput ? baseUrlInput.value.trim() : '';
   const api_key = apiKeyInput ? apiKeyInput.value.trim() : '';
@@ -291,21 +313,35 @@ window.fetchAiProviderModels = async function fetchAiProviderModels() {
     const count = data.count || models.length;
 
     if (models.length > 0) {
-      if (datalist) {
-        datalist.innerHTML = models.map(m => `<option value="${escapeHtml(m)}"></option>`).join('');
+      if (selectWrapper && selectEl) {
+        selectWrapper.classList.remove('hidden');
+        selectEl.innerHTML = `<option value="">-- Pilih dari ${count} Model yang Tersedia --</option>` +
+          models.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+
+        if (modelInput && modelInput.value && models.includes(modelInput.value)) {
+          selectEl.value = modelInput.value;
+        }
+      }
+
+      if (chipsContainer) {
+        chipsContainer.innerHTML = models.slice(0, 16).map(m => {
+          const isCurrent = (modelInput && modelInput.value === m);
+          return `<button type="button" data-model-value="${escapeHtml(m)}" onclick="document.getElementById('aip-model').value='${escapeHtml(m)}'; if(document.getElementById('aip-model-select')) document.getElementById('aip-model-select').value='${escapeHtml(m)}'; window.highlightModelChip('${escapeHtml(m)}');" class="model-chip px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border ${isCurrent ? 'bg-indigo-600 text-white border-indigo-600 font-bold shadow-xs' : 'bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border-slate-200'} cursor-pointer">${escapeHtml(m)}</button>`;
+        }).join('');
       }
 
       moduleToast('AI Provider', `Berhasil menarik ${count} model aktif!`, 'success');
       if (feedback) {
-        feedback.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="fas fa-check-circle mr-1"></i> ${count} Model ditemukan! Ketik atau pilih dari autocomplete.</span>`;
+        feedback.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="fas fa-check-circle mr-1"></i> ${count} Model ditemukan! Klik nama model di bawah atau pilih dari menu dropdown.</span>`;
       }
 
-      // If model input is empty, pre-select the first one or open the datalist
+      // If model input is empty, pre-select the first one
       if (modelInput && !modelInput.value) {
         modelInput.value = models[0];
-      }
-      if (modelInput) {
-        modelInput.focus();
+        if (selectEl) selectEl.value = models[0];
+        window.highlightModelChip(models[0]);
+      } else if (modelInput && modelInput.value) {
+        window.highlightModelChip(modelInput.value);
       }
     } else {
       moduleToast('AI Provider', 'Tidak ada model yang ditemukan dari server.', 'info');
@@ -334,8 +370,10 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
   document.getElementById('ai-provider-form').reset();
   document.getElementById('ai-provider-id').value = '';
 
-  const datalist = document.getElementById('aip-model-datalist');
-  if (datalist) datalist.innerHTML = '';
+  const selectWrapper = document.getElementById('aip-model-select-wrapper');
+  if (selectWrapper) selectWrapper.classList.add('hidden');
+  const chipsContainer = document.getElementById('aip-model-chips');
+  if (chipsContainer) chipsContainer.innerHTML = '';
   const feedback = document.getElementById('aip-models-feedback');
   if (feedback) {
     feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';
@@ -429,8 +467,10 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
 
   window.updateAiKeyCountPill();
 
-  const datalist = document.getElementById('aip-model-datalist');
-  if (datalist) datalist.innerHTML = '';
+  const selectWrapper = document.getElementById('aip-model-select-wrapper');
+  if (selectWrapper) selectWrapper.classList.add('hidden');
+  const chipsContainer = document.getElementById('aip-model-chips');
+  if (chipsContainer) chipsContainer.innerHTML = '';
   const feedback = document.getElementById('aip-models-feedback');
   if (feedback) {
     feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';

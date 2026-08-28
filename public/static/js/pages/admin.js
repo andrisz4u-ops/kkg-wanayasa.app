@@ -1033,7 +1033,7 @@ export async function renderAdmin() {
             <p class="text-[11px] text-slate-400 mt-1">Untuk OpenAI-compat, sistem otomatis menambahkan <code>/chat/completions</code>.</p>
           </div>
 
-          <!-- Row 4: Model ID (with Auto-Fetch Models Button & Datalist) -->
+          <!-- Row 4: Model ID (with Auto-Fetch Models Button, Dropdown Picker & Chips) -->
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="label mb-0">Model ID <span class="text-rose-500">*</span></label>
@@ -1041,11 +1041,26 @@ export async function renderAdmin() {
                 <i class="fas fa-satellite-dish text-[10px]"></i> <span>Tarik Daftar Model</span>
               </button>
             </div>
-            <div class="relative">
-              <input type="text" id="aip-model" list="aip-model-datalist" required placeholder="Ketik atau pilih dari daftar model..." class="input-field font-mono" autocomplete="off">
-              <datalist id="aip-model-datalist"></datalist>
+            
+            <div class="space-y-2">
+              <div class="relative">
+                <input type="text" id="aip-model" required placeholder="Ketik atau pilih dari daftar model..." class="input-field font-mono" autocomplete="off">
+              </div>
+
+              <!-- Quick Model Select Dropdown (Visible after fetch) -->
+              <div id="aip-model-select-wrapper" class="hidden">
+                <div class="flex items-center gap-2">
+                  <select id="aip-model-select" onchange="window.onAiModelSelectChange(this.value)" class="input-field font-mono text-xs text-indigo-900 bg-indigo-50/70 border-indigo-200 focus:border-indigo-500 py-2">
+                    <option value="">-- Pilih Model dari Server --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Clickable Model Chips Container -->
+              <div id="aip-model-chips" class="flex flex-wrap gap-1.5 pt-0.5"></div>
             </div>
-            <p id="aip-models-feedback" class="text-[11px] text-slate-400 mt-1">
+
+            <p id="aip-models-feedback" class="text-[11px] text-slate-400 mt-1.5">
               💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.
             </p>
           </div>

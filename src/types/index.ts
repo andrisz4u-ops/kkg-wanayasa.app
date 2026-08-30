@@ -15,6 +15,7 @@ export interface User {
     no_hp?: string;
     alamat?: string;
     foto_url?: string;
+    last_login_at?: string;
     created_at: string;
     updated_at: string;
 }

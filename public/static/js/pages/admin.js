@@ -754,6 +754,7 @@ export async function renderAdmin() {
                    <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Nama Lengkap</th>
                    <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Email</th>
                    <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Sekolah Asal</th>
+                   <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Terakhir Login</th>
                    <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest text-center">Peran</th>
                    <th class="px-6 py-4 text-[11px] font-semibold text-slate-500 uppercase tracking-widest text-center">Aksi</th>
                  </tr>

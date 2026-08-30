@@ -1,6 +1,6 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
-import { debounce, escapeHtml, skeletonTable } from '../../utils.js';
+import { debounce, escapeHtml, skeletonTable, formatRelativeTime, formatDateTime } from '../../utils.js';
 import {
   adminUsersPagination,
   pendingApprovalState,
@@ -21,7 +21,7 @@ window.loadAdminUsers = async function (page = 1) {
   if (!container) return;
 
   // Show loading state
-  container.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-600"><i class="fas fa-spinner fa-spin mr-2"></i>Mengambil data pengguna...</td></tr>`;
+  container.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-600"><i class="fas fa-spinner fa-spin mr-2"></i>Mengambil data pengguna...</td></tr>`;
 
   try {
     const searchInput = document.getElementById('user-search-input');
@@ -53,7 +53,7 @@ window.loadAdminUsers = async function (page = 1) {
     renderUsersPagination();
   } catch (e) {
     usersSelectionState.selectedIds.clear();
-    container.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/30">
+    container.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/30">
       <i class="fas fa-exclamation-circle mr-2"></i>Gagal memuat user: ${escapeHtml(e.message)}
       <button onclick="loadAdminUsers(${page})" class="ml-2 underline hover:text-red-700">Coba lagi</button>
     </td></tr>`;
@@ -148,7 +148,7 @@ function renderAdminUsersTable() {
     usersSelectionState.selectedIds.clear();
     container.innerHTML = `
       <tr>
-        <td colspan="6" class="py-12 text-center">
+        <td colspan="7" class="py-12 text-center">
           <div class="flex flex-col items-center justify-center text-slate-500">
             ${adminUsersPagination.total === 0
         ? `<i class="fas fa-users-slash text-4xl mb-3 opacity-50"></i><p>Belum ada data pengguna.</p>`
@@ -161,51 +161,71 @@ function renderAdminUsersTable() {
     return;
   }
 
-  container.innerHTML = users.map(u => `
-    <tr tabindex="0" class="border-t border-slate-200/70 odd:bg-slate-900/50 backdrop-blur-xl even:bg-slate-50 backdrop-blur-xl/35 hover:bg-slate-50 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-primary-400 transition-colors group ${spacing.row}">
-      <td class="px-4 py-3 text-center"><input type="checkbox" onchange="toggleUserRowSelection('${u.id}', this.checked)"></td>
-      <td class="${spacing.td}">
-         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center font-bold text-xs ring-2 ring-white dark:ring-gray-800">
-                ${u.nama.charAt(0).toUpperCase()}
-            </div>
-            <div>
-                <p class="font-medium text-slate-900">${escapeHtml(u.nama)}</p>
-                <p class="text-xs text-slate-500 group-hover:block hidden absolute bg-black text-slate-900 px-2 py-1 rounded -mt-8 shadow-lg z-50">ID: ${u.id}</p>
-            </div>
-         </div>
-      </td>
-      <td class="${spacing.td} text-slate-600 font-mono text-xs">${escapeHtml(u.email)}</td>
-      <td class="${spacing.td} text-slate-600">
-        ${u.sekolah ? `<span class="flex items-center gap-1.5"><i class="fas fa-building text-slate-500 text-xs"></i>${escapeHtml(u.sekolah)}</span>` : '<span class="text-slate-500 italic">-</span>'}
-      </td>
-      <td class="${spacing.td} text-center">
-          <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${u.role === 'admin'
-      ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
-      : u.role === 'operator'
-        ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
-        : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700'}">
-            ${u.role === 'admin' ? '<i class="fas fa-crown text-[10px] mr-1"></i>' : ''}${u.role.toUpperCase()}
-          </span>
-      </td>
-      <td class="${spacing.td} text-center">
-        ${canManageUsers ? `
-        <div class="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-          <button onclick='editUser(${JSON.stringify(u).replace(/'/g, "&#39;")})' class="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors" title="Edit User">
-            <i class="fas fa-pen"></i>
-          </button>
-          <button onclick="resetUserPassword(${u.id})" class="p-2 rounded-lg text-amber-600 hover:bg-slate-100mber-50 dark:hover:bg-slate-100mber-900/30 transition-colors" title="Reset Password Default">
-            <i class="fas fa-key"></i>
-          </button>
-          ${u.role !== 'admin' || u.id !== state.user?.id ? `
-          <button onclick="deleteUser(${u.id})" class="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus User">
-            <i class="fas fa-trash-alt"></i>
-          </button>` : ''}
+  container.innerHTML = users.map(u => {
+    const isRecent = u.last_login_at && (Date.now() - new Date(u.last_login_at).getTime() < 48 * 3600 * 1000);
+    const lastLoginHtml = u.last_login_at ? `
+      <div class="flex items-center gap-2" title="Waktu Login: ${escapeHtml(formatDateTime(u.last_login_at))}">
+        <span class="w-2 h-2 rounded-full shrink-0 ${isRecent ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20' : 'bg-slate-300 dark:bg-slate-600'}"></span>
+        <div>
+          <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">${escapeHtml(formatRelativeTime(u.last_login_at))}</p>
+          <p class="text-[10px] text-slate-400 font-mono">${escapeHtml(formatDateTime(u.last_login_at))}</p>
         </div>
-        ` : '<span class="text-xs text-slate-500">Operator mode</span>'}
-      </td>
-    </tr>
-  `).join('');
+      </div>
+    ` : `
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border border-slate-200/60 dark:border-slate-700">
+        <i class="fas fa-clock-rotate-left text-[10px] opacity-60"></i> Belum login
+      </span>
+    `;
+
+    return `
+      <tr tabindex="0" class="border-t border-slate-200/70 odd:bg-slate-900/50 backdrop-blur-xl even:bg-slate-50 backdrop-blur-xl/35 hover:bg-slate-50 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-primary-400 transition-colors group ${spacing.row}">
+        <td class="px-4 py-3 text-center"><input type="checkbox" onchange="toggleUserRowSelection('${u.id}', this.checked)"></td>
+        <td class="${spacing.td}">
+           <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center font-bold text-xs ring-2 ring-white dark:ring-gray-800">
+                  ${u.nama.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                  <p class="font-medium text-slate-900">${escapeHtml(u.nama)}</p>
+                  <p class="text-xs text-slate-500 group-hover:block hidden absolute bg-black text-slate-900 px-2 py-1 rounded -mt-8 shadow-lg z-50">ID: ${u.id}</p>
+              </div>
+           </div>
+        </td>
+        <td class="${spacing.td} text-slate-600 font-mono text-xs">${escapeHtml(u.email)}</td>
+        <td class="${spacing.td} text-slate-600">
+          ${u.sekolah ? `<span class="flex items-center gap-1.5"><i class="fas fa-building text-slate-500 text-xs"></i>${escapeHtml(u.sekolah)}</span>` : '<span class="text-slate-500 italic">-</span>'}
+        </td>
+        <td class="${spacing.td}">
+          ${lastLoginHtml}
+        </td>
+        <td class="${spacing.td} text-center">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${u.role === 'admin'
+        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+        : u.role === 'operator'
+          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+          : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700'}">
+              ${u.role === 'admin' ? '<i class="fas fa-crown text-[10px] mr-1"></i>' : ''}${u.role.toUpperCase()}
+            </span>
+        </td>
+        <td class="${spacing.td} text-center">
+          ${canManageUsers ? `
+          <div class="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+            <button onclick='editUser(${JSON.stringify(u).replace(/'/g, "&#39;")})' class="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors" title="Edit User">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button onclick="resetUserPassword(${u.id})" class="p-2 rounded-lg text-amber-600 hover:bg-slate-100mber-50 dark:hover:bg-slate-100mber-900/30 transition-colors" title="Reset Password Default">
+              <i class="fas fa-key"></i>
+            </button>
+            ${u.role !== 'admin' || u.id !== state.user?.id ? `
+            <button onclick="deleteUser(${u.id})" class="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus User">
+              <i class="fas fa-trash-alt"></i>
+            </button>` : ''}
+          </div>
+          ` : '<span class="text-xs text-slate-500">Operator mode</span>'}
+        </td>
+      </tr>
+    `;
+  }).join('');
 
   updateUsersSelectionUI();
 }

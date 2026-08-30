@@ -682,7 +682,7 @@ admin.get('/users', async (c) => {
 
     // Get users with pagination
     const usersQuery = `
-      SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at
+      SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at, last_login_at
       FROM users
       WHERE ${whereClause}
       ORDER BY nama ASC

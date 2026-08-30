@@ -556,6 +556,11 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
       await c.env.DB.prepare("ALTER TABLE materi_reviews ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP").run();
     } catch (e) { /* ignore */ }
 
+    // Migration: Add last_login_at to users table
+    try {
+      await c.env.DB.prepare("ALTER TABLE users ADD COLUMN last_login_at DATETIME").run();
+    } catch (e) { /* ignore if already exists */ }
+
     // Hash password with new PBKDF2 method
     const adminPasswordHash = await hashPassword('admin123');
 

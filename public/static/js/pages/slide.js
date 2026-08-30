@@ -1,63 +1,64 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, escapeHtml } from '../utils.js';
+import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
+import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
 
 // Slide Templates Collection with Category Tags
 export const slideTemplates = {
   'minimalist-dark': {
     name: 'Dark Elegance',
     category: 'minimalist',
-    description: 'High contrast dark theme berkelas dan formal',
-    colorScheme: { primary: '#1a1a2e', secondary: '#16213e', accent: '#0f3460', background: '#0f172a', cardBg: '#1e293b', text: '#f8fafc', subtext: '#94a3b8' }
+    description: 'Kontras gelap berkelas dengan teks putih & aksen cyan terang',
+    colorScheme: { primary: '#38bdf8', secondary: '#818cf8', accent: '#38bdf8', background: '#0f172a', cardBg: '#1e293b', text: '#f8fafc', subtext: '#94a3b8' }
   },
   'educational-blue': {
     name: 'Modern Flow',
     category: 'corporate',
-    description: 'Aksen biru cerah untuk materi eksak / sains',
-    colorScheme: { primary: '#1a5fb4', secondary: '#3584e4', accent: '#99c1f1', background: '#f6f8ff', cardBg: '#ffffff', text: '#1e3a5f', subtext: '#64748b' }
+    description: 'Aksen biru cerah & bersih untuk materi sains dan umum',
+    colorScheme: { primary: '#1d4ed8', secondary: '#2563eb', accent: '#3b82f6', background: '#f8fafc', cardBg: '#ffffff', text: '#0f172a', subtext: '#475569' }
   },
   'minimalist-light': {
     name: 'Neo Clean',
     category: 'minimalist',
-    description: 'Desain sangat bersih dengan fokus maksimal pada teks',
-    colorScheme: { primary: '#18181b', secondary: '#3f3f46', accent: '#71717a', background: '#fafafa', cardBg: '#ffffff', text: '#18181b', subtext: '#52525b' }
+    description: 'Desain sangat bersih dengan fokus maksimal pada kejelasan teks',
+    colorScheme: { primary: '#0f172a', secondary: '#334155', accent: '#269494', background: '#ffffff', cardBg: '#f8fafc', text: '#0f172a', subtext: '#475569' }
   },
   'colorful-rainbow': {
     name: 'Vibrant Creative',
     category: 'bold',
-    description: 'Warna-warni ceria untuk siswa SD Fase A & B',
-    colorScheme: { primary: '#e11d48', secondary: '#ea580c', accent: '#0284c7', background: '#fff5f5', cardBg: '#ffffff', text: '#1c1917', subtext: '#57534e' }
+    description: 'Warna-warni ceria & dinamis untuk siswa SD & SMP',
+    colorScheme: { primary: '#e11d48', secondary: '#ea580c', accent: '#0284c7', background: '#fffbf5', cardBg: '#ffffff', text: '#1e293b', subtext: '#475569' }
   },
   'aurora-cosmic': {
     name: 'Aurora Borealis',
     category: 'super-premium',
-    description: 'Gradien kosmik bercahaya utara yang futuristik',
-    colorScheme: { primary: '#0f172a', secondary: '#0284c7', accent: '#00f5d4', background: '#0a192f', cardBg: '#112240', text: '#e0fbfc', subtext: '#8892b0' }
+    description: 'Gradien kosmik bercahaya neon mint yang memukau murid',
+    colorScheme: { primary: '#00f5d4', secondary: '#38bdf8', accent: '#a78bfa', background: '#0a192f', cardBg: '#112240', text: '#f1f5f9', subtext: '#94a3b8' }
   },
   'sunset-warm': {
     name: 'Sunset Academia',
     category: 'super-premium',
-    description: 'Gradien hangat senja yang nyaman dan artistik',
-    colorScheme: { primary: '#6b2737', secondary: '#c2185b', accent: '#ff6f61', background: '#fff8f0', cardBg: '#ffffff', text: '#3e2723', subtext: '#795548' }
+    description: 'Gradien hangat senja yang nyaman, artistik, dan ramah mata',
+    colorScheme: { primary: '#9f1239', secondary: '#c2410c', accent: '#f97316', background: '#fff8f0', cardBg: '#ffffff', text: '#27272a', subtext: '#52525b' }
   },
   'ocean-deep': {
     name: 'Ocean Deep',
     category: 'super-premium',
-    description: 'Kedalaman samudra dengan aksen bioluminescent',
-    colorScheme: { primary: '#023e8a', secondary: '#0077b6', accent: '#00b4d8', background: '#caf0f8', cardBg: '#ffffff', text: '#03045e', subtext: '#0077b6' }
+    description: 'Kedalaman samudra dengan nuansa biru laut yang segar',
+    colorScheme: { primary: '#0369a1', secondary: '#0284c7', accent: '#0ea5e9', background: '#f0f9ff', cardBg: '#ffffff', text: '#0c4a6e', subtext: '#334155' }
   },
   'sakura-bloom': {
     name: 'Neon Sakura',
     category: 'super-premium',
-    description: 'Bunga sakura dengan sentuhan neon modern',
-    colorScheme: { primary: '#2d0036', secondary: '#7b2d8e', accent: '#ff6ec7', background: '#fdf2f8', cardBg: '#ffffff', text: '#3b0764', subtext: '#86198f' }
+    description: 'Sentuhan nuansa merah muda dan ungu modern yang estetik',
+    colorScheme: { primary: '#86198f', secondary: '#a21caf', accent: '#db2777', background: '#fdf2f8', cardBg: '#ffffff', text: '#3b0764', subtext: '#701a75' }
   },
   'golden-luxury': {
     name: 'Golden Hour',
     category: 'super-premium',
-    description: 'Kemewahan emas dengan kontras gelap elegan',
-    colorScheme: { primary: '#1a1a2e', secondary: '#2d2d44', accent: '#f0c27f', background: '#111827', cardBg: '#1f2937', text: '#fef3c7', subtext: '#d1d5db' }
+    description: 'Nuansa emas bercahaya di atas kanvas gelap yang megah',
+    colorScheme: { primary: '#fbbf24', secondary: '#f59e0b', accent: '#fde047', background: '#0f172a', cardBg: '#1e293b', text: '#fef3c7', subtext: '#cbd5e1' }
   }
 };
 
@@ -104,14 +105,10 @@ export async function renderSlide() {
     currentIndex: 0,
     activeFilter: 'all',
     config: {
-      mataPelajaran: 'IPAS',
       topik: '',
-      jenjangKelas: 'Kelas 6 Smt 1',
-      semester: '1',
-      strategi: 'Problem Based Learning',
-      alokasiWaktu: '2 x 35 Menit',
-      slideCount: 6,
-      aiProvider: 'gemini'
+      slideCount: 8,
+      aiProvider: '',
+      extraInstructions: ''
     }
   };
 
@@ -144,14 +141,14 @@ function renderLandingView() {
       </div>
       
       <div class="text-center mb-10 animate-fade-in-up">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider mb-4">
-          <i class="fas fa-sparkles"></i> SlideGen Studio 2.0
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-teal-200 dark:border-teal-800">
+          <i class="fas fa-sparkles text-teal-600 dark:text-teal-400"></i> SlideGen Studio 2.0
         </div>
         <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 text-gray-900 dark:text-white font-display">
           Rancang Slide Pembelajaran Interaktif
         </h1>
         <p class="text-base md:text-lg text-gray-600 dark:text-gray-400 font-light max-w-2xl mx-auto">
-          Buat media ajar Kurikulum Merdeka yang memukau. Susun outline otomatis, sesuaikan materi, dan tampilkan langsung di kelas.
+          Ketik topik materi secara bebas di bawah ini. AI otomatis merancang slide kelas yang memukau, visual, dan mudah dipahami murid.
         </p>
       </div>
 
@@ -159,16 +156,35 @@ function renderLandingView() {
       <div class="w-full max-w-3xl mb-8 animate-slide-up" style="animation-delay: 100ms;">
         <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-xl p-2 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary">
           <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-500">
-            <span class="flex items-center gap-1.5"><i class="fas fa-magic text-primary"></i> AI Kurikulum Merdeka Engine</span>
-            <span class="text-[11px] bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">Model: <strong id="sg-landing-model-badge">${s?.config?.aiProvider?.toUpperCase() || 'BEDROCK'}</strong></span>
+            <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-magic text-teal-600 dark:text-teal-400"></i> AI Studio Presentasi</span>
+            <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg text-xs">
+              <i class="fas fa-microchip text-teal-600 dark:text-teal-400 text-[11px]"></i>
+              <label for="sg-landing-model-select" class="text-[11px] text-gray-500 font-medium">Model:</label>
+              <select id="sg-landing-model-select" class="text-[11px] font-bold bg-transparent border-0 py-0 pl-1 pr-6 focus:ring-0 cursor-pointer text-teal-600 dark:text-teal-400">
+                <option value="">Memuat model...</option>
+              </select>
+            </div>
           </div>
           <div class="p-3">
             <textarea id="sg-main-prompt" class="w-full bg-transparent border-none focus:ring-0 text-base md:text-lg placeholder-gray-400 dark:placeholder-gray-500 resize-none h-24 text-gray-800 dark:text-gray-100" placeholder="Apa topik presentasi Anda? (Contoh: Sistem Tata Surya & Planet, IPAS Kelas 6 SD)"></textarea>
           </div>
+          <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="text-gray-500 font-medium flex items-center gap-1.5"><i class="fas fa-layer-group text-primary"></i> Target Jumlah Slide:</span>
+            <div class="flex flex-wrap items-center gap-1.5" id="sg-landing-count-pills">
+              ${[6, 8, 10, 12, 15, 20].map(cnt => `
+                <button type="button" class="sg-landing-count-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${(s?.config?.slideCount || 8) === cnt ? 'bg-primary text-white shadow-sm ring-2 ring-primary/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}" data-count="${cnt}">
+                  ${cnt} Slide ${cnt === 15 ? '⭐' : ''}
+                </button>
+              `).join('')}
+            </div>
+          </div>
           <div class="px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-50 dark:border-gray-800/50 pt-3">
             <div class="flex items-center space-x-2">
-              <button id="sg-btn-settings" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-sm flex items-center gap-2" title="Pengaturan AI">
+              <button id="sg-btn-settings" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-sm flex items-center gap-2 cursor-pointer" title="Pengaturan AI">
                 <i class="fas fa-sliders-h"></i> <span class="text-xs">Parameter AI</span>
+              </button>
+              <button id="sg-btn-archive" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 transition-colors p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-sm flex items-center gap-2 cursor-pointer" title="Riwayat Slide">
+                <i class="fas fa-folder-open text-amber-500"></i> <span class="text-xs font-semibold">Riwayat Slide</span>
               </button>
             </div>
             <div class="flex items-center space-x-2">
@@ -220,10 +236,10 @@ function renderOutlineView() {
         </div>
 
         <div class="flex items-center gap-3">
-          <button id="sg-btn-add-outline-slide" class="px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-all flex items-center gap-1.5">
-            <i class="fas fa-plus text-primary"></i> Tambah Slide
+          <button id="sg-btn-add-outline-slide" class="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-teal-500 hover:text-teal-600 dark:hover:text-teal-400 bg-white dark:bg-gray-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm">
+            <i class="fas fa-plus text-teal-600 dark:text-teal-400"></i> Tambah Slide
           </button>
-          <button id="sg-btn-outline-to-gallery" class="px-5 py-2 rounded-xl bg-primary text-white font-semibold text-xs shadow-md hover:bg-primary-600 transition-all flex items-center gap-2">
+          <button id="sg-btn-outline-to-gallery" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer">
             <span>Pilih Template & Desain</span> <i class="fas fa-arrow-right text-xs"></i>
           </button>
         </div>
@@ -314,29 +330,27 @@ function renderGalleryView() {
 
         <!-- AI Settings -->
         <div class="mb-8 border-t border-gray-100 dark:border-gray-800 pt-6">
-          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Pengaturan Kurikulum</h3>
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Pengaturan Slide</h3>
           <div class="space-y-4">
             <div class="space-y-1.5">
-              <label class="block text-xs text-gray-500 font-medium">Mata Pelajaran</label>
-              <input type="text" id="sg-input-mapel" value="${escapeHtml(s.config.mataPelajaran || 'IPAS')}" class="w-full text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-primary">
-            </div>
-            <div class="space-y-1.5">
-               <label class="block text-xs text-gray-500 font-medium">Kelas / Semester</label>
-               <input type="text" id="sg-input-kelas" value="${escapeHtml(s.config.jenjangKelas || 'Kelas 6 Smt 1')}" class="w-full text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-primary">
-            </div>
-            <div class="space-y-1.5">
-              <label class="block text-xs text-gray-500 font-medium">Jumlah Slide: <strong id="sg-count-val" class="text-primary">${s.config.slideCount}</strong></label>
-              <input type="range" id="sg-input-count" min="5" max="20" value="${s.config.slideCount}" class="w-full accent-primary h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer">
-            </div>
-            <div class="space-y-1.5">
-              <label class="block text-xs text-gray-500 font-medium">AI Engine</label>
-              <select id="sg-input-engine" class="w-full text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="bedrock" ${s.config.aiProvider === 'bedrock' ? 'selected' : ''}>🚀 AWS Bedrock (Claude 4.6)</option>
-                <option value="gemini" ${s.config.aiProvider === 'gemini' ? 'selected' : ''}>✨ Gemini 2.0 Flash (Smart)</option>
-                <option value="mistral" ${s.config.aiProvider === 'mistral' ? 'selected' : ''}>Mistral Large (Akademis)</option>
-                <option value="z_ai" ${s.config.aiProvider === 'z_ai' ? 'selected' : ''}>GLM-4.7 Flash (Cepat)</option>
-                <option value="vertex" ${s.config.aiProvider === 'vertex' ? 'selected' : ''}>Vertex AI (Gemini 3)</option>
+              <label class="block text-xs text-gray-500 font-medium">Model / Engine AI</label>
+              <select id="sg-input-engine" class="w-full text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-primary text-gray-800 dark:text-gray-200 font-medium">
+                <option value="">Memuat model AI...</option>
               </select>
+            </div>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="block text-xs text-gray-500 font-medium">Jumlah Slide: <strong id="sg-count-val" class="text-teal-600 dark:text-teal-400 font-bold">${s.config.slideCount || 8}</strong></label>
+                <span class="text-[10px] text-gray-400 font-semibold">4 - 25 Slide</span>
+              </div>
+              <input type="range" id="sg-input-count" min="4" max="25" value="${s.config.slideCount || 8}" class="w-full accent-primary h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+              <div class="grid grid-cols-6 gap-1 pt-0.5" id="sg-sidebar-count-presets">
+                ${[6, 8, 10, 12, 15, 20].map(cnt => `
+                  <button type="button" class="sg-sidebar-count-btn py-1 rounded-md text-[10px] font-bold text-center transition-all ${(s.config.slideCount || 8) === cnt ? 'bg-teal-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}" data-count="${cnt}">
+                    ${cnt}
+                  </button>
+                `).join('')}
+              </div>
             </div>
           </div>
         </div>
@@ -380,11 +394,11 @@ function renderGalleryView() {
         <!-- Sticky Floating Generate Bar -->
         <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 lg:ml-36 z-40 max-w-xl w-full px-4 animate-slide-up">
           <div class="bg-white/95 dark:bg-card-dark/95 backdrop-blur-xl border border-gray-200 dark:border-gray-700 shadow-2xl rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="text-xs text-gray-600 dark:text-gray-300 font-medium px-2">
-              Template: <strong id="sg-display-template" class="text-primary">${slideTemplates[s.template]?.name || 'Pilih Template'}</strong>
-              ${s.outline.length > 0 ? `<span class="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">${s.outline.length} Bab Outline Terpasang</span>` : ''}
+            <div class="text-xs text-gray-700 dark:text-gray-300 font-medium px-2">
+              Template: <strong id="sg-display-template" class="text-teal-600 dark:text-teal-400 font-bold">${slideTemplates[s.template]?.name || 'Pilih Template'}</strong>
+              ${s.outline.length > 0 ? `<span class="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 text-[10px] font-bold">${s.outline.length} Bab Outline Terpasang</span>` : ''}
             </div>
-            <button id="sg-btn-generate" class="w-full sm:w-auto px-6 py-2.5 bg-primary text-white font-semibold rounded-xl shadow-lg hover:bg-primary-600 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+            <button id="sg-btn-generate" class="w-full sm:w-auto px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer">
               <i class="fas fa-magic"></i> Generate AI Slide
             </button>
           </div>
@@ -415,6 +429,9 @@ function renderEditorView() {
           
           <div class="flex items-center gap-2">
             <input type="text" id="sg-editor-title" value="${escapeHtml(s.config.topik || s.prompt || 'Presentasi Pembelajaran')}" class="font-bold text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none text-sm px-1 py-0.5 max-w-[180px] md:max-w-md truncate" title="Klik untuk mengedit judul presentasi">
+            <button id="sg-btn-editor-archive" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 transition-colors flex items-center gap-1 cursor-pointer" title="Buka Riwayat Slide">
+              <i class="fas fa-folder-open text-amber-500"></i> Riwayat
+            </button>
             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hidden sm:inline-block">
               <i class="fas fa-check-circle mr-1"></i>Tersimpan Otomatis
             </span>
@@ -582,9 +599,9 @@ function generateSlideHTML(slide, index, colorScheme) {
       const steps = slide.timeline && Array.isArray(slide.timeline) && slide.timeline.length > 0
         ? slide.timeline
         : [
-            { step: '1', title: 'Fase 1: Eksplorasi', desc: 'Siswa mengamati fenomena dan masalah' },
-            { step: '2', title: 'Fase 2: Diskusi', desc: 'Membahas konsep utama secara kelompok' },
-            { step: '3', title: 'Fase 3: Refleksi', desc: 'Menyimpulkan hasil pemahaman bersama' }
+            { step: '1', title: 'Tahap Pertama', desc: 'Pengenalan konsep dasar materi.' },
+            { step: '2', title: 'Tahap Kedua', desc: 'Eksplorasi dan diskusi materi mendalam.' },
+            { step: '3', title: 'Tahap Ketiga', desc: 'Menyimpulkan pemahaman bersama.' }
           ];
       return `
         <div class="w-full h-full p-8 md:p-10 flex flex-col" style="background: ${colorScheme.background}; color: ${colorScheme.text};">
@@ -612,9 +629,9 @@ function generateSlideHTML(slide, index, colorScheme) {
       const statsList = slide.stats && Array.isArray(slide.stats) && slide.stats.length > 0
         ? slide.stats
         : [
-            { value: '71%', label: 'Permukaan Bumi', desc: 'Tertutup oleh perairan dan samudra' },
-            { value: '8 Planet', label: 'Tata Surya Kita', desc: 'Mengorbit matahari sebagai pusat' },
-            { value: '24 Jam', label: 'Rotasi Bumi', desc: 'Menyebabkan pergantian siang dan malam' }
+            { value: '📌', label: 'Fakta Utama', desc: 'Informasi penting yang wajib diketahui' },
+            { value: '💡', label: 'Tahukah Kamu?', desc: 'Fakta menarik seputar topik ini' },
+            { value: '🎯', label: 'Poin Kunci', desc: 'Hal yang wajib diingat siswa' }
           ];
       return `
         <div class="w-full h-full p-8 md:p-10 flex flex-col justify-between" style="background: ${colorScheme.background}; color: ${colorScheme.text};">
@@ -639,10 +656,10 @@ function generateSlideHTML(slide, index, colorScheme) {
       const flipItems = (slide.flipcards && Array.isArray(slide.flipcards) && slide.flipcards.length > 0)
         ? slide.flipcards
         : [
-            { front: 'Konsep 1', back: 'Penjelasan detail konsep pertama untuk siswa' },
-            { front: 'Konsep 2', back: 'Penjelasan detail konsep kedua untuk siswa' },
-            { front: 'Konsep 3', back: 'Penjelasan detail konsep ketiga untuk siswa' },
-            { front: 'Konsep 4', back: 'Penjelasan detail konsep keempat untuk siswa' },
+            { front: 'Konsep 1', back: 'Klik untuk menambahkan penjelasan konsep pertama.' },
+            { front: 'Konsep 2', back: 'Klik untuk menambahkan penjelasan konsep kedua.' },
+            { front: 'Konsep 3', back: 'Klik untuk menambahkan penjelasan konsep ketiga.' },
+            { front: 'Konsep 4', back: 'Klik untuk menambahkan penjelasan konsep keempat.' },
           ];
       const cols = Math.min(flipItems.length, 4);
       return `
@@ -717,7 +734,7 @@ function generateSlideHTML(slide, index, colorScheme) {
                 ${leftContent.map((item, i) => `
                   <li class="flex items-start gap-2 text-sm">
                     <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" style="background: ${colorScheme.primary};"></span>
-                    <span contenteditable="true" data-left-content-index="${i}" class="sg-editable focus:outline-none rounded px-1 w-full" style="color: ${colorScheme.text};">${escapeHtml(item)}</span>
+                    <span contenteditable="true" data-left-content-index="${i}" class="sg-editable focus:outline-none rounded px-1 w-full" style="color: ${colorScheme.text};">${escapeHtml(cleanSlideText(item))}</span>
                   </li>
                 `).join('')}
               </ul>
@@ -730,7 +747,7 @@ function generateSlideHTML(slide, index, colorScheme) {
                 ${rightContent.map((item, i) => `
                   <li class="flex items-start gap-2 text-sm">
                     <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" style="background: ${colorScheme.secondary};"></span>
-                    <span contenteditable="true" data-right-content-index="${i}" class="sg-editable focus:outline-none rounded px-1 w-full" style="color: ${colorScheme.text};">${escapeHtml(item)}</span>
+                    <span contenteditable="true" data-right-content-index="${i}" class="sg-editable focus:outline-none rounded px-1 w-full" style="color: ${colorScheme.text};">${escapeHtml(cleanSlideText(item))}</span>
                   </li>
                 `).join('')}
               </ul>
@@ -837,8 +854,16 @@ function generateSlideHTML(slide, index, colorScheme) {
   }
 }
 
+function cleanSlideText(raw) {
+  if (raw === null || raw === undefined) return '';
+  let str = typeof raw === 'object'
+    ? (raw.text || raw.desc || raw.title || raw.point || raw.name || '')
+    : String(raw);
+  return str.replace(/\*\*(.*?)\*\*/g, '$1').trim();
+}
+
 function formatContentBullet(rawText, index, colorScheme) {
-  const text = String(rawText || '');
+  let text = cleanSlideText(rawText);
   const colonIdx = text.indexOf(':');
   if (colonIdx > 0 && colonIdx < 40) {
     const lead = text.substring(0, colonIdx).trim();
@@ -873,6 +898,33 @@ export function initSlide() {
       reRenderContainer();
     }
   };
+
+  // Check incoming Smart Content Bridge data from RPP
+  try {
+    const rawBridge = sessionStorage.getItem('kkg_bridge_data');
+    if (rawBridge) {
+      const bridge = JSON.parse(rawBridge);
+      if (bridge.target === 'slide' && bridge.topik) {
+        sessionStorage.removeItem('kkg_bridge_data');
+        if (window.slideGenState) {
+          const fullPrompt = `${bridge.mataPelajaran ? bridge.mataPelajaran + ': ' : ''}${bridge.topik} (${bridge.jenjangKelas || 'SD'})`;
+          window.slideGenState.prompt = fullPrompt;
+          window.slideGenState.config.topik = bridge.topik;
+          if (bridge.mataPelajaran) window.slideGenState.config.mataPelajaran = bridge.mataPelajaran;
+          if (bridge.jenjangKelas) window.slideGenState.config.jenjangKelas = bridge.jenjangKelas;
+          if (bridge.semester) window.slideGenState.config.semester = bridge.semester;
+          if (bridge.strategi) window.slideGenState.config.strategi = bridge.strategi;
+
+          const promptInput = document.getElementById('sg-main-prompt');
+          if (promptInput) {
+            promptInput.value = fullPrompt;
+            promptInput.focus();
+          }
+          showToast(`✨ Materi dari RPP (${bridge.topik}) berhasil disinkronkan ke Slide Studio!`, 'success');
+        }
+      }
+    }
+  } catch (_) {}
 
   attachCurrentViewEvents();
 }
@@ -920,6 +972,19 @@ function attachCurrentViewEvents() {
       });
     });
 
+    // Landing count pills
+    document.querySelectorAll('.sg-landing-count-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const count = parseInt(e.currentTarget.dataset.count) || 8;
+        s.config.slideCount = count;
+        document.querySelectorAll('.sg-landing-count-btn').forEach(b => {
+          b.className = 'sg-landing-count-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700';
+        });
+        e.currentTarget.className = 'sg-landing-count-btn px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-primary text-white shadow-sm ring-2 ring-primary/30';
+        showToast(`Target slide diatur ke ${count} Slide`, 'info');
+      });
+    });
+
     // Option A: Outline Flow
     const btnOutline = document.getElementById('sg-btn-outline-flow');
     if (btnOutline) {
@@ -945,10 +1010,25 @@ function attachCurrentViewEvents() {
       });
     }
 
+    // Landing model select
+    const landingModelSelect = document.getElementById('sg-landing-model-select');
+    if (landingModelSelect) {
+      populateAiModelSelect(landingModelSelect, s.config.aiProvider);
+      landingModelSelect.addEventListener('change', (e) => {
+        s.config.aiProvider = e.target.value;
+      });
+    }
+
     // Settings Modal
     const settingsBtn = document.getElementById('sg-btn-settings');
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => showAISettingsModal());
+    }
+
+    // Archive Modal
+    const archiveBtn = document.getElementById('sg-btn-archive');
+    if (archiveBtn) {
+      archiveBtn.addEventListener('click', () => openSlideArchiveDrawer());
     }
   }
   else if (s.view === 'outline') {
@@ -1069,21 +1149,40 @@ function attachCurrentViewEvents() {
     });
 
     // Config Inputs sync
-    const mapelInput = document.getElementById('sg-input-mapel');
-    const kelasInput = document.getElementById('sg-input-kelas');
     const countInput = document.getElementById('sg-input-count');
     const countVal = document.getElementById('sg-count-val');
     const engineInput = document.getElementById('sg-input-engine');
 
-    if (mapelInput) mapelInput.addEventListener('input', e => s.config.mataPelajaran = e.target.value);
-    if (kelasInput) kelasInput.addEventListener('input', e => s.config.jenjangKelas = e.target.value);
-    if (engineInput) engineInput.addEventListener('change', e => s.config.aiProvider = e.target.value);
+    if (engineInput) {
+      populateAiModelSelect(engineInput, s.config.aiProvider);
+      engineInput.addEventListener('change', e => s.config.aiProvider = e.target.value);
+    }
     if (countInput && countVal) {
       countInput.addEventListener('input', e => {
-        s.config.slideCount = parseInt(e.target.value);
-        countVal.textContent = s.config.slideCount;
+        const count = parseInt(e.target.value);
+        s.config.slideCount = count;
+        countVal.textContent = count;
+        document.querySelectorAll('.sg-sidebar-count-btn').forEach(b => {
+          const bCount = parseInt(b.dataset.count);
+          b.className = bCount === count
+            ? 'sg-sidebar-count-btn py-1 rounded-md text-[10px] font-bold text-center transition-all bg-teal-600 text-white shadow-sm'
+            : 'sg-sidebar-count-btn py-1 rounded-md text-[10px] font-bold text-center transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+        });
       });
     }
+
+    document.querySelectorAll('.sg-sidebar-count-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const count = parseInt(e.currentTarget.dataset.count) || 8;
+        s.config.slideCount = count;
+        if (countInput) countInput.value = count;
+        if (countVal) countVal.textContent = count;
+        document.querySelectorAll('.sg-sidebar-count-btn').forEach(b => {
+          b.className = 'sg-sidebar-count-btn py-1 rounded-md text-[10px] font-bold text-center transition-all bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+        });
+        e.currentTarget.className = 'sg-sidebar-count-btn py-1 rounded-md text-[10px] font-bold text-center transition-all bg-teal-600 text-white shadow-sm';
+      });
+    });
 
     // Generate Full Presentation
     const btnGenerate = document.getElementById('sg-btn-generate');
@@ -1123,6 +1222,11 @@ function attachCurrentViewEvents() {
     if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreenPresentation);
     if (patchBtn) patchBtn.addEventListener('click', showPatchSlideModal);
 
+    const editorArchiveBtn = document.getElementById('sg-btn-editor-archive');
+    if (editorArchiveBtn) {
+      editorArchiveBtn.addEventListener('click', () => openSlideArchiveDrawer());
+    }
+
     if (titleInput) {
       titleInput.addEventListener('input', (e) => {
         s.config.topik = e.target.value;
@@ -1160,24 +1264,40 @@ function attachCurrentViewEvents() {
   }
 }
 
+function openSlideArchiveDrawer() {
+  openArchiveDrawer({
+    module: 'slide',
+    moduleName: 'Slide Presentasi',
+    onSelect: (item) => {
+      if (window.slideGenState && item.content) {
+        window.slideGenState.slides = item.content.slides || [];
+        window.slideGenState.outline = item.content.outline || [];
+        window.slideGenState.template = item.content.template || 'minimalist-dark';
+        window.slideGenState.prompt = item.content.prompt || item.title || '';
+        window.slideGenState.config = item.inputData || window.slideGenState.config;
+        window.slideGenState.currentIndex = 0;
+        window.slidgenGoTo('editor');
+        showToast(`Membuka riwayat: ${item.title}`, 'info');
+      }
+    }
+  });
+}
+
 // ==========================================
-// 7. ASYNC GENERATION HANDLERS (Outline & Slides)
+// 7. PRESENTATION GENERATION
 // ==========================================
 
 async function generateOutline() {
   const s = window.slideGenState;
-  showLoading('SlideGen AI sedang merancang struktur outline Kurikulum Merdeka...');
+  if (!s || !s.prompt.trim()) return;
+
+  showLoading('AI sedang merancang outline presentasi...', 'Menyusun alur pedagogik Kurikulum Merdeka');
 
   try {
     const payload = {
-      mataPelajaran: s.config.mataPelajaran || 'IPAS',
-      topik: s.prompt,
-      jenjangKelas: s.config.jenjangKelas || 'Kelas 6 Smt 1',
-      semester: s.config.semester || '1',
-      alokasiWaktu: s.config.alokasiWaktu || '2 x 35 Menit',
-      strategi: s.config.strategi || 'Problem Based Learning',
-      slideCount: s.config.slideCount || 8,
-      aiProvider: s.config.aiProvider || 'bedrock'
+      topik: s.config.topik || s.prompt || 'Materi Pembelajaran',
+      slideCount: Math.max(3, Math.min(25, parseInt(s.config.slideCount) || 8)),
+      aiProvider: s.config.aiProvider || undefined
     };
 
     const res = await api('/presentation/outline', {
@@ -1188,15 +1308,14 @@ async function generateOutline() {
 
     if (res.data && Array.isArray(res.data.outline)) {
       s.outline = res.data.outline;
-      s.config.slideCount = s.outline.length;
-      showToast('Proposal outline berhasil dibuat!', 'success');
+      showToast('Outline berhasil dirancang! Silakan sesuaikan.', 'success');
       window.slidgenGoTo('outline');
     } else {
-      throw new Error('Respons outline AI tidak valid');
+      throw new Error('Format outline tidak valid');
     }
   } catch (err) {
     console.error('Outline generation error:', err);
-    showToast(err.message || 'Gagal membuat outline. Coba lagi.', 'error');
+    showToast(err.message || 'Gagal merancang outline. Silakan coba lagi.', 'error');
   } finally {
     hideLoading();
   }
@@ -1204,20 +1323,17 @@ async function generateOutline() {
 
 async function generateFullSlides() {
   const s = window.slideGenState;
-  showLoading('SlideGen AI sedang menyusun materi & visualisasi slide lengkap...');
+  if (!s) return;
+
+  showLoading('AI sedang merakit seluruh slide...', 'Memproses visual, tipografi & catatan pengajar');
 
   try {
     const payload = {
-      mataPelajaran: s.config.mataPelajaran || 'IPAS',
-      topik: s.config.topik || s.prompt,
-      jenjangKelas: s.config.jenjangKelas || 'Kelas 6 Smt 1',
-      semester: s.config.semester || '1',
-      alokasiWaktu: s.config.alokasiWaktu || '2 x 35 Menit',
-      strategi: s.config.strategi || 'Problem Based Learning',
-      slideCount: s.config.slideCount || 8,
-      template: s.template,
-      aiProvider: s.config.aiProvider,
-      customOutline: s.outline.length > 0 ? s.outline : undefined
+      topik: s.config.topik || s.prompt || 'Materi Pembelajaran',
+      slideCount: Math.max(3, Math.min(25, parseInt(s.config.slideCount) || (s.outline?.length || 8))),
+      template: s.template || 'minimalist-dark',
+      aiProvider: s.config.aiProvider || undefined,
+      customOutline: (s.outline && s.outline.length > 0) ? s.outline : undefined
     };
 
     const res = await api('/presentation/generate', {
@@ -1229,7 +1345,22 @@ async function generateFullSlides() {
     if (res.data && Array.isArray(res.data.slides)) {
       s.slides = res.data.slides;
       s.currentIndex = 0;
-      showToast('Presentasi berhasil dibuat!', 'success');
+
+      // Auto-archive presentation deck
+      saveDocArchive({
+        module: 'slide',
+        title: s.config.topik || s.prompt || 'Slide Presentasi',
+        subtitle: `${s.slides.length} Slide | ${s.config.jenjangKelas || 'SD'}`,
+        inputData: s.config,
+        content: {
+          slides: s.slides,
+          outline: s.outline,
+          template: s.template,
+          prompt: s.prompt
+        }
+      });
+
+      showToast('Presentasi berhasil dibuat dan otomatis diarsipkan!', 'success');
       window.slidgenGoTo('editor');
     } else {
       throw new Error('Format output slide AI tidak valid');
@@ -1428,7 +1559,7 @@ function showPatchSlideModal() {
           <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
             Batal
           </button>
-          <button id="sg-btn-submit-patch" class="px-5 py-2 text-xs font-bold text-white bg-primary rounded-xl shadow hover:bg-primary-600 transition-all flex items-center gap-1.5">
+          <button id="sg-btn-submit-patch" class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
             <i class="fas fa-sparkles"></i> Jalankan Revisi AI
           </button>
         </div>
@@ -1769,10 +1900,10 @@ async function exportToHTMLFile() {
     const slidesHtml = s.slides.map((slide, idx) => {
       const isActive = idx === 0 ? 'active' : '';
       const layout = slide.layout || 'content';
-      const t = escapeHtml(slide.title || 'Judul Slide');
-      const sub = escapeHtml(slide.subtitle || '');
-      const content = Array.isArray(slide.content) ? slide.content : [];
-      const notes = escapeHtml(slide.speakerNotes || '');
+      const t = escapeHtml(cleanSlideText(slide.title || 'Judul Slide'));
+      const sub = escapeHtml(cleanSlideText(slide.subtitle || ''));
+      let content = Array.isArray(slide.content) ? slide.content.map(c => cleanSlideText(c)).filter(Boolean) : [];
+      const notes = escapeHtml(cleanSlideText(slide.speakerNotes || ''));
 
       let inner = '';
       if (layout === 'title') {
@@ -1783,47 +1914,81 @@ async function exportToHTMLFile() {
 <div class="rainbow-bar"></div></div>`;
       } else if (layout === 'quote') {
         inner = `<div class="quote-wrap"><i class="fas fa-quote-left quote-icon"></i>
-<blockquote class="slide-quote">"${escapeHtml(slide.quote || t)}"</blockquote>
-<cite class="quote-author">— ${escapeHtml(slide.author || 'Sumber')}</cite></div>`;
+<blockquote class="slide-quote">"${escapeHtml(cleanSlideText(slide.quote || t))}"</blockquote>
+<cite class="quote-author">— ${escapeHtml(cleanSlideText(slide.author || 'Sumber Inspirasi'))}</cite></div>`;
       } else if (layout === 'stats') {
-        const stats = Array.isArray(slide.stats) ? slide.stats : [];
-        inner = `<div class="slide-header"><div class="slide-tag">Fakta &amp; Data</div><h2 class="slide-h2">${t}</h2></div>
+        let stats = Array.isArray(slide.stats) && slide.stats.length > 0 ? slide.stats : [
+          { value: '📌', label: 'Fakta Utama', desc: 'Informasi penting yang wajib diketahui' },
+          { value: '💡', label: 'Tahukah Kamu?', desc: 'Fakta menarik seputar topik ini' },
+          { value: '🎯', label: 'Poin Kunci', desc: 'Hal yang wajib diingat siswa' }
+        ];
+        inner = `<div class="slide-header"><div class="slide-tag">Fakta &amp; Data Kunci</div><h2 class="slide-h2">${t}</h2></div>
 <div class="stats-grid">
-${stats.map(st => `<div class="stat-card"><div class="stat-val">${escapeHtml(st.value||'')}</div><div class="stat-label">${escapeHtml(st.label||'')}</div><div class="stat-desc">${escapeHtml(st.desc||'')}</div></div>`).join('')}
+${stats.map(st => `<div class="stat-card"><div class="stat-val">${escapeHtml(cleanSlideText(st.value||'100%'))}</div><div class="stat-label">${escapeHtml(cleanSlideText(st.label||'Fakta'))}</div><div class="stat-desc">${escapeHtml(cleanSlideText(st.desc||''))}</div></div>`).join('')}
 </div>`;
       } else if (layout === 'timeline') {
-        const steps = Array.isArray(slide.timeline) ? slide.timeline : [];
-        inner = `<div class="slide-header"><div class="slide-tag">Alur Pembelajaran</div><h2 class="slide-h2">${t}</h2></div>
+        let steps = Array.isArray(slide.timeline) && slide.timeline.length > 0 ? slide.timeline : [
+          { step: '1', title: 'Tahap Pertama', desc: 'Pengenalan konsep dasar materi.' },
+          { step: '2', title: 'Tahap Kedua', desc: 'Eksplorasi dan diskusi materi mendalam.' },
+          { step: '3', title: 'Tahap Ketiga', desc: 'Menyimpulkan pemahaman bersama.' }
+        ];
+        inner = `<div class="slide-header"><div class="slide-tag">Alur &amp; Langkah Pembelajaran</div><h2 class="slide-h2">${t}</h2></div>
 <div class="timeline-grid">
-${steps.map((st,i) => `<div class="tl-card"><div class="tl-num">${escapeHtml(st.step||String(i+1))}</div><div class="tl-title">${escapeHtml(st.title||'')}</div><div class="tl-desc">${escapeHtml(st.desc||'')}</div></div>`).join('')}
+${steps.map((st,i) => `<div class="tl-card"><div class="tl-num">${escapeHtml(cleanSlideText(st.step||String(i+1)))}</div><div class="tl-title">${escapeHtml(cleanSlideText(st.title||'Langkah'))}</div><div class="tl-desc">${escapeHtml(cleanSlideText(st.desc||''))}</div></div>`).join('')}
 </div>`;
       } else if (layout === 'quiz') {
-        const opts = Array.isArray(slide.quizOptions) ? slide.quizOptions : [];
-        inner = `<div class="slide-header"><div class="slide-tag"><i class="fas fa-question-circle"></i> Kuis Pemantik</div><h2 class="slide-h2">${escapeHtml(slide.question||t)}</h2></div>
+        let opts = Array.isArray(slide.quizOptions) && slide.quizOptions.length >= 2 ? slide.quizOptions : [
+          'A. Pilihan jawaban pertama',
+          'B. Pilihan jawaban kedua',
+          'C. Pilihan jawaban ketiga',
+          'D. Pilihan jawaban keempat'
+        ];
+        const qTitle = escapeHtml(cleanSlideText(slide.question || t));
+        const qAns = escapeHtml(cleanSlideText(slide.quizAnswer || 'A'));
+        const qExp = escapeHtml(cleanSlideText(slide.quizExplanation || 'Penjelasan jawaban yang benar.'));
+        inner = `<div class="slide-header"><div class="slide-tag"><i class="fas fa-question-circle"></i> Kuis Pemantik</div><h2 class="slide-h2">${qTitle}</h2></div>
 <div class="quiz-grid">
-${opts.map((o,i) => `<div class="quiz-opt"><span class="quiz-letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(o)}</span></div>`).join('')}
+${opts.map((o,i) => `<div class="quiz-opt"><span class="quiz-letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(cleanSlideText(o))}</span></div>`).join('')}
 </div>
-<div class="quiz-key"><i class="fas fa-lightbulb"></i> Jawaban: <strong>${escapeHtml(slide.quizAnswer||'')}</strong> &mdash; ${escapeHtml(slide.quizExplanation||'')}</div>`;
+<div class="quiz-key"><i class="fas fa-lightbulb"></i> Jawaban: <strong>${qAns}</strong> &mdash; ${qExp}</div>`;
       } else if (layout === 'flipcard') {
-        const cards = Array.isArray(slide.flipcards) ? slide.flipcards : [];
+        let cards = Array.isArray(slide.flipcards) && slide.flipcards.length > 0 ? slide.flipcards : [
+          { front: 'Konsep 1', back: 'Penjelasan konsep pertama.' },
+          { front: 'Konsep 2', back: 'Penjelasan konsep kedua.' },
+          { front: 'Konsep 3', back: 'Penjelasan konsep ketiga.' },
+          { front: 'Konsep 4', back: 'Penjelasan konsep keempat.' }
+        ];
         inner = `<div class="slide-header"><div class="slide-tag">Kartu Interaktif</div><h2 class="slide-h2">${t}</h2></div>
 <div class="flip-grid" style="grid-template-columns:repeat(${Math.min(cards.length||4,4)},1fr)">
-${cards.map((c,i) => `<div class="flip-card" onclick="this.classList.toggle('flipped')"><div class="flip-inner"><div class="flip-front"><span class="flip-letter">${'ABCD'[i]||i+1}</span><p class="flip-ft">${escapeHtml(c.front||'')}</p><div class="flip-hint">klik untuk balik ↩</div></div><div class="flip-back"><i class="fas fa-lightbulb flip-icon"></i><p class="flip-bk">${escapeHtml(c.back||'')}</p></div></div></div>`).join('')}
+${cards.map((c,i) => `<div class="flip-card" onclick="this.classList.toggle('flipped')"><div class="flip-inner"><div class="flip-front"><span class="flip-letter">${'ABCD'[i]||i+1}</span><p class="flip-ft">${escapeHtml(cleanSlideText(c.front||'Konsep'))}</p><div class="flip-hint">klik untuk balik ↩</div></div><div class="flip-back"><i class="fas fa-lightbulb flip-icon"></i><p class="flip-bk">${escapeHtml(cleanSlideText(c.back||'Penjelasan'))}</p></div></div></div>`).join('')}
 </div>`;
       } else if (layout === 'twoColumn' || layout === 'comparison') {
-        const lc = Array.isArray(slide.leftContent) ? slide.leftContent : [];
-        const rc = Array.isArray(slide.rightContent) ? slide.rightContent : [];
+        let lc = Array.isArray(slide.leftContent) ? slide.leftContent.map(c => cleanSlideText(c)).filter(Boolean) : [];
+        let rc = Array.isArray(slide.rightContent) ? slide.rightContent.map(c => cleanSlideText(c)).filter(Boolean) : [];
+        if (lc.length === 0 && rc.length === 0) {
+          if (content.length >= 2) {
+            const mid = Math.ceil(content.length / 2);
+            lc = content.slice(0, mid);
+            rc = content.slice(mid);
+          } else {
+            lc = ['Klik untuk menambahkan konten kolom kiri.'];
+            rc = ['Klik untuk menambahkan konten kolom kanan.'];
+          }
+        }
         inner = `<h2 class="slide-h2" style="margin-bottom:24px">${t}</h2>
 <div class="two-col">
-<div class="col-card col-left"><h3 class="col-title">${escapeHtml(slide.leftTitle||'Konsep A')}</h3>${lc.map(i=>`<div class="col-item">${escapeHtml(i)}</div>`).join('')}</div>
-<div class="col-card col-right"><h3 class="col-title">${escapeHtml(slide.rightTitle||'Konsep B')}</h3>${rc.map(i=>`<div class="col-item">${escapeHtml(i)}</div>`).join('')}</div>
+<div class="col-card col-left"><h3 class="col-title">${escapeHtml(cleanSlideText(slide.leftTitle||'Konsep A'))}</h3>${lc.map(i=>`<div class="col-item">${escapeHtml(i)}</div>`).join('')}</div>
+<div class="col-card col-right"><h3 class="col-title">${escapeHtml(cleanSlideText(slide.rightTitle||'Konsep B'))}</h3>${rc.map(i=>`<div class="col-item">${escapeHtml(i)}</div>`).join('')}</div>
 </div>`;
       } else if (layout === 'thankyou') {
         inner = `<div class="ty-wrap"><div class="ty-icon"><i class="fas fa-heart"></i></div>
 <h1 class="ty-h1">Terima Kasih!</h1>
-<p class="ty-msg">${escapeHtml(slide.message||'Semoga pembelajaran hari ini membawa manfaat.')}</p></div>`;
+<p class="ty-msg">${escapeHtml(cleanSlideText(slide.message||'Semoga pembelajaran hari ini membawa manfaat.'))}</p></div>`;
       } else {
         // content / summary / activity / imageText / default
+        if (content.length === 0) {
+          content = ['Memahami materi utama secara mendalam dan terstruktur.'];
+        }
         inner = `<div class="slide-header"><div class="slide-tag">${layout === 'summary' ? 'Rangkuman' : 'Materi Ajar'}</div><h2 class="slide-h2">${t}</h2></div>
 <div class="content-list">
 ${content.map((item,i) => {
@@ -1985,18 +2150,17 @@ function showAISettingsModal() {
   if (!modalContainer) return;
 
   const s = window.slideGenState;
-
   modalContainer.innerHTML = `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div class="bg-white dark:bg-surface-dark rounded-3xl p-6 shadow-2xl max-w-md w-full animate-slide-up border border-border-light dark:border-border-dark space-y-5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-              <i class="fas fa-sliders-h"></i>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div class="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 animate-scale-in">
+        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <i class="fas fa-sliders-h text-lg"></i>
             </div>
             <div>
-              <h3 class="font-bold text-gray-900 dark:text-white text-base">Pengaturan AI Engine</h3>
-              <p class="text-xs text-gray-500">Pilih model komputasi kecerdasan buatan</p>
+              <h3 class="font-bold text-gray-900 dark:text-white text-base">Parameter Model AI</h3>
+              <p class="text-xs text-gray-500">Pilih engine AI aktif dan preferensi target slide</p>
             </div>
           </div>
           <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -2004,40 +2168,102 @@ function showAISettingsModal() {
           </button>
         </div>
 
-        <div class="space-y-2">
-          ${[
-            { id: 'bedrock', name: '🚀 AWS Bedrock (Claude 4.6)', desc: 'Model terbaik untuk materi kurikulum & tata bahasa', tag: 'Rekomendasi' },
-            { id: 'gemini', name: '✨ Gemini 2.0 Flash', desc: 'Cepat, cerdas, dan visual thinking yang kuat', tag: 'Smart' },
-            { id: 'mistral', name: 'Mistral Large', desc: 'Sangat formal, berbobot, dan detail akademis', tag: 'Akademis' },
-            { id: 'z_ai', name: 'GLM-4.7 Flash', desc: 'Pemrosesan kilat untuk generasi slide instan', tag: 'Cepat' },
-            { id: 'vertex', name: 'Vertex AI (Gemini 3 Preview)', desc: 'Model terbaru dan tercanggih Google Cloud', tag: 'Terbaru' },
-          ].map(m => `
-            <label class="flex items-center gap-3 p-3 rounded-2xl border ${s.config.aiProvider === m.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 dark:border-gray-700'} hover:border-primary cursor-pointer transition-all">
-              <input type="radio" name="sg-modal-ai-provider" value="${m.id}" ${s.config.aiProvider === m.id ? 'checked' : ''} class="w-4 h-4 text-primary">
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-xs text-gray-900 dark:text-white">${m.name}</span>
-                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase">${m.tag}</span>
-                </div>
-                <p class="text-[11px] text-gray-500 line-clamp-1">${m.desc}</p>
-              </div>
+        <div class="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+          <!-- AI Model Provider Select -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fas fa-microchip text-teal-600 dark:text-teal-400"></i> Model / Engine AI
             </label>
-          `).join('')}
+            <select id="sg-modal-ai-provider" class="w-full text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 font-medium focus:outline-none focus:ring-1 focus:ring-primary text-gray-800 dark:text-gray-200">
+              <option value="">Memuat model AI...</option>
+            </select>
+            <p class="text-[11px] text-gray-400">Model aktif disinkronkan langsung dari Admin Panel (Prioritas & Kuota)</p>
+          </div>
+
+          <!-- Slide Count -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Target Jumlah Slide</label>
+              <span id="sg-modal-count-display" class="text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2.5 py-0.5 rounded-lg">${s.config.slideCount || 8} Slide</span>
+            </div>
+            <input type="range" id="sg-modal-count" min="4" max="25" value="${s.config.slideCount || 8}" class="w-full accent-primary h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <div class="flex flex-wrap gap-1.5 pt-0.5" id="sg-modal-count-presets">
+              ${[6, 8, 10, 12, 15, 20].map(cnt => `
+                <button type="button" class="sg-modal-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${(s.config.slideCount || 8) === cnt ? 'bg-teal-600 text-white shadow-sm ring-1 ring-teal-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}" data-count="${cnt}">
+                  ${cnt} Slide ${cnt === 15 ? '⭐ Lengkap' : ''}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Extra Instructions / Tone -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fas fa-wand-magic-sparkles text-teal-600 dark:text-teal-400"></i> Catatan Gaya / Preferensi Khusus (Opsional)
+            </label>
+            <textarea id="sg-modal-extra-notes" rows="2" placeholder="Contoh: Gunakan bahasa ramah anak, perbanyak analogi visual dan kuis seru..." class="w-full text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-primary text-gray-800 dark:text-gray-200 resize-none">${escapeHtml(s.config.extraInstructions || '')}</textarea>
+          </div>
         </div>
 
-        <button id="sg-save-ai-settings" class="w-full py-3 bg-primary text-white font-bold rounded-xl shadow-lg hover:bg-primary-600 transition-all text-xs">
-          Simpan Pengaturan
-        </button>
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-border-light dark:border-border-dark">
+          <button onclick="this.closest('.fixed').remove()" class="px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+            Batal
+          </button>
+          <button id="sg-save-ai-settings" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-xs flex items-center gap-1.5 cursor-pointer">
+            <i class="fas fa-check"></i> Simpan Parameter
+          </button>
+        </div>
       </div>
     </div>
   `;
 
+  // Populate AI model select from active API
+  const aiSelect = modalContainer.querySelector('#sg-modal-ai-provider');
+  if (aiSelect) {
+    populateAiModelSelect(aiSelect, s.config.aiProvider);
+  }
+
+  const countRange = modalContainer.querySelector('#sg-modal-count');
+  const countDisp = modalContainer.querySelector('#sg-modal-count-display');
+  if (countRange && countDisp) {
+    countRange.addEventListener('input', e => {
+      const val = parseInt(e.target.value);
+      countDisp.textContent = `${val} Slide`;
+      modalContainer.querySelectorAll('.sg-modal-preset-btn').forEach(b => {
+        const bCount = parseInt(b.dataset.count);
+        b.className = bCount === val
+          ? 'sg-modal-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-sm ring-1 ring-teal-600'
+          : 'sg-modal-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700';
+      });
+    });
+  }
+
+  modalContainer.querySelectorAll('.sg-modal-preset-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const cnt = parseInt(e.currentTarget.dataset.count) || 8;
+      if (countRange) countRange.value = cnt;
+      if (countDisp) countDisp.textContent = `${cnt} Slide`;
+      modalContainer.querySelectorAll('.sg-modal-preset-btn').forEach(b => {
+        b.className = 'sg-modal-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700';
+      });
+      e.currentTarget.className = 'sg-modal-preset-btn px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-teal-600 text-white shadow-sm ring-1 ring-teal-600';
+    });
+  });
+
   document.getElementById('sg-save-ai-settings').onclick = () => {
-    const selected = modalContainer.querySelector('input[name="sg-modal-ai-provider"]:checked').value;
-    s.config.aiProvider = selected;
-    const badge = document.getElementById('sg-landing-model-badge');
-    if (badge) badge.textContent = selected.toUpperCase();
-    showToast(`AI Engine diatur ke ${selected.toUpperCase()}`, 'success');
+    if (aiSelect) s.config.aiProvider = aiSelect.value;
+    const count = parseInt(countRange?.value) || 8;
+    const extra = modalContainer.querySelector('#sg-modal-extra-notes')?.value.trim();
+
+    s.config.slideCount = count;
+    s.config.extraInstructions = extra;
+
+    const landingSelect = document.getElementById('sg-landing-model-select');
+    if (landingSelect && aiSelect) {
+      landingSelect.value = aiSelect.value;
+    }
+
+    showToast('Parameter AI berhasil disimpan!', 'success');
     modalContainer.querySelector('.fixed')?.remove();
   };
 }

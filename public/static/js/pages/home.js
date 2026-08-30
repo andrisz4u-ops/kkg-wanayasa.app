@@ -35,8 +35,22 @@ export async function renderHome() {
     {
       id: 'kisi',
       icon: 'fa-clipboard-check',
-      title: 'Asesmen Digital',
-      desc: 'Kelola ujian dan penilaian murid secara efisien dengan sistem otomatis.',
+      title: 'Asesmen & Kisi-Kisi',
+      desc: 'Kelola soal ujian HOTS, AKM dan penilaian murid secara otomatis.',
+      style: 'white',
+    },
+    {
+      id: 'tts',
+      icon: 'fa-puzzle-piece',
+      title: 'Teka-Teki Silang (TTS)',
+      desc: 'Game edukasi interaktif kelas & LKPD teka-teki silang otomatis dengan AI.',
+      style: 'white',
+    },
+    {
+      id: 'slide',
+      icon: 'fa-file-powerpoint',
+      title: 'Slide Studio AI',
+      desc: 'Rancang media presentasi materi ajar interaktif Kurikulum Merdeka.',
       style: 'white',
     },
     {

@@ -1,7 +1,9 @@
 import { showToast, showLoading, hideLoading, populateAiModelSelect } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
+import { navigate } from '../router.js';
 import { renderLockedFeature } from '../components.js';
+import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
 
 export async function renderRpp() {
   if (!state.user) {
@@ -17,14 +19,19 @@ export async function renderRpp() {
       <!-- FORM VIEW -->
       <div id="rpp-form-view">
         <!-- Header -->
-        <div class="rpp-header">
-          <div class="rpp-logo-mark">
-            <i class="fas fa-layer-group"></i>
+        <div class="rpp-header flex-col sm:flex-row justify-between items-center">
+          <div class="flex items-center gap-4">
+            <div class="rpp-logo-mark">
+              <i class="fas fa-layer-group"></i>
+            </div>
+            <div>
+              <h1 class="rpp-title">RPP <span>MERDEKA</span></h1>
+              <p class="rpp-subtitle"><i class="fas fa-sparkles"></i> DEEP LEARNING ARCHITECT A4EDU</p>
+            </div>
           </div>
-          <div>
-            <h1 class="rpp-title">RPP <span>MERDEKA</span></h1>
-            <p class="rpp-subtitle"><i class="fas fa-sparkles"></i> DEEP LEARNING ARCHITECT A4EDU</p>
-          </div>
+          <button type="button" id="btn-rpp-archive" class="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-indigo-100 hover:text-white border border-indigo-300/20 backdrop-blur-md text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
+            <i class="fas fa-folder-open text-amber-300"></i> Riwayat RPP Tersimpan
+          </button>
         </div>
 
         <!-- 3-Column Form -->
@@ -187,11 +194,11 @@ export async function renderRpp() {
 
         <div id="rpp-result-view" class="hidden">
         <div class="rpp-result-toolbar">
-          <button id="btn-rpp-back" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors"><i class="fas fa-arrow-left mr-2"></i>Kembali</button>
-          <div class="flex gap-3">
-            <button id="btn-rpp-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors"><i class="fas fa-file-word mr-2"></i>Unduh .docx</button>
-
-            <button id="btn-rpp-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
+          <button id="btn-rpp-back" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors cursor-pointer"><i class="fas fa-arrow-left mr-2"></i>Kembali</button>
+          <div class="flex gap-2 sm:gap-3 flex-wrap">
+            <button id="btn-rpp-history" class="px-4 py-2.5 rounded-full text-sm font-medium border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1.5 text-amber-500"></i>Riwayat</button>
+            <button id="btn-rpp-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer"><i class="fas fa-file-word mr-2"></i>Unduh .docx</button>
+            <button id="btn-rpp-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
           </div>
         </div>
 
@@ -208,6 +215,29 @@ export async function renderRpp() {
           </div>
           <div id="lampiran-canvas" class="hidden">
             <!-- Lampiran content rendered here -->
+          </div>
+        </div>
+
+        <!-- Smart Content Bridge (Pipeline ke Slide & Soal) -->
+        <div id="rpp-bridge-card" class="mt-8 mb-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-900/90 via-slate-900/95 to-indigo-950 text-white border border-indigo-500/30 shadow-2xl print-hidden">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="max-w-xl">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-3">
+                <i class="fas fa-wand-magic-sparkles text-amber-400"></i> Smart Content Bridge
+              </div>
+              <h3 class="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">Lanjutkan ke Media Ajar &amp; Evaluasi?</h3>
+              <p class="text-xs sm:text-sm text-indigo-200/80 font-light mt-1 leading-relaxed">
+                Gunakan data RPP ini untuk membuat <strong>Slide Presentasi</strong> dan <strong>Soal Asesmen / TTS</strong> secara otomatis tanpa perlu mengetik ulang informasi topik &amp; tujuan pembelajaran.
+              </p>
+            </div>
+            <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full md:w-auto">
+              <button id="btn-bridge-to-slide" type="button" class="flex-1 sm:flex-initial px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+                <i class="fas fa-file-powerpoint text-amber-300 text-base"></i> Buat Slide Presentasi
+              </button>
+              <button id="btn-bridge-to-kisi" type="button" class="flex-1 sm:flex-initial px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+                <i class="fas fa-puzzle-piece text-yellow-300 text-base"></i> Buat Soal &amp; TTS
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -514,8 +544,21 @@ export function initRpp() {
       if (result.success) {
         const aiMeta = result.data?._ai_meta;
         const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
+        currentRppFormData = data;
+        currentRppContent = result.data;
+        currentLampiran = null;
         renderResult(result.data, data);
-        showToast(`RPP berhasil digenerate!${aiInfo}`, 'success');
+
+        // Auto-archive document
+        saveDocArchive({
+          module: 'rpp',
+          title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+          subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
+          inputData: data,
+          content: result.data
+        });
+
+        showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
         // Log failover details for debugging
         if (aiMeta?.failover_from) {
           console.warn('[AI Failover]', aiMeta.failover_from, '→', aiMeta.provider);
@@ -534,6 +577,60 @@ export function initRpp() {
       btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
     }
   });
+
+  // Archive Drawer Handler
+  const handleOpenRppArchive = () => {
+    openArchiveDrawer({
+      module: 'rpp',
+      moduleName: 'RPP Merdeka',
+      onSelect: (item) => {
+        currentRppFormData = item.inputData;
+        currentRppContent = item.content;
+        currentLampiran = item.extra?.lampiran || null;
+        renderResult(item.content, item.inputData);
+        if (currentLampiran) {
+          renderLampiran(currentLampiran);
+          document.getElementById('lampiran-canvas')?.classList.remove('hidden');
+        }
+        document.getElementById('rpp-form-view').classList.add('hidden');
+        document.getElementById('rpp-result-view').classList.remove('hidden');
+        showToast(`Membuka riwayat: ${item.title}`, 'info');
+      },
+      onDownloadDocx: async (item) => {
+        showToast('Menyiapkan file DOCX...', 'info');
+        try {
+          const resp = await fetch('/api/rpp/docx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              inputData: item.inputData,
+              content: item.content,
+              lampiran: item.extra?.lampiran || null,
+              kopSuratUrl: state.user?.kop_surat_url || null
+            })
+          });
+          if (!resp.ok) throw new Error('Gagal mengunduh');
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const topik = item.inputData?.topik || 'RPP';
+          const mapel = item.inputData?.mataPelajaran || 'Mapel';
+          a.download = `RPP_${String(mapel).replace(/\s+/g, '_')}_${String(topik).replace(/\s+/g, '_')}.docx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('File DOCX berhasil diunduh!', 'success');
+        } catch (e) {
+          showToast('Gagal mengunduh: ' + e.message, 'error');
+        }
+      }
+    });
+  };
+
+  document.getElementById('btn-rpp-archive')?.addEventListener('click', handleOpenRppArchive);
+  document.getElementById('btn-rpp-history')?.addEventListener('click', handleOpenRppArchive);
 
   // Initialize Lampiran Button
   initLampiranBtn();
@@ -569,7 +666,7 @@ export function initRpp() {
     const btnArea = document.getElementById('lampiran-btn-area');
     if (btnArea) {
       btnArea.innerHTML = `
-        <button id="btn-generate-lampiran" class="px-8 py-3 rounded-full font-semibold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+        <button id="btn-generate-lampiran" class="px-8 py-3 rounded-full font-semibold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
           <i class="fas fa-plus mr-2"></i>Generate Lampiran Rubrik &amp; Penilaian
         </button>`;
       initLampiranBtn();
@@ -627,6 +724,47 @@ export function initRpp() {
       btn.disabled = false;
       btn.innerHTML = origHtml;
     }
+  });
+
+  // Bridge to Slide Presentasi
+  document.getElementById('btn-bridge-to-slide')?.addEventListener('click', () => {
+    if (!currentRppFormData) {
+      showToast('Tidak ada data RPP untuk disinkronkan.', 'error');
+      return;
+    }
+    const bridgeData = {
+      source: 'rpp',
+      target: 'slide',
+      mataPelajaran: currentRppFormData.mataPelajaran || '',
+      topik: currentRppFormData.topik || '',
+      jenjangKelas: currentRppFormData.jenjangKelas || '',
+      semester: currentRppFormData.semester || '',
+      strategi: currentRppFormData.strategi || '',
+    };
+    sessionStorage.setItem('kkg_bridge_data', JSON.stringify(bridgeData));
+    showToast('🚀 Mengalihkan ke Slide Studio...', 'info');
+    navigate('slide');
+  });
+
+  // Bridge to Kisi-kisi & Asesmen
+  document.getElementById('btn-bridge-to-kisi')?.addEventListener('click', () => {
+    if (!currentRppFormData) {
+      showToast('Tidak ada data RPP untuk disinkronkan.', 'error');
+      return;
+    }
+    const ds = currentRppContent?.desain || {};
+    const bridgeData = {
+      source: 'rpp',
+      target: 'kisi',
+      mataPelajaran: currentRppFormData.mataPelajaran || '',
+      topik: currentRppFormData.topik || '',
+      jenjangKelas: currentRppFormData.jenjangKelas || '',
+      semester: currentRppFormData.semester || '',
+      capaian: ds.capaian || '',
+    };
+    sessionStorage.setItem('kkg_bridge_data', JSON.stringify(bridgeData));
+    showToast('🧩 Mengalihkan ke Asesmen & Soal Generator...', 'info');
+    navigate('kisi');
   });
 }
 

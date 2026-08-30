@@ -514,3 +514,88 @@
 .animate-teal-glow {
     animation: teal-glow-pulse 3s ease-in-out infinite;
 }
+
+/* ===================================================
+   Print & PDF Export Optimization
+   =================================================== */
+@media print {
+    /* Hide navigation, toolbars, and action cards */
+    header, nav, .app-header, .sidebar, #mobile-menu, 
+    .rpp-result-toolbar, #rpp-form-view, #rpp-bridge-card, #lampiran-btn-area,
+    .asesmen-toolbar, #asesmen-form-view,
+    .print-hidden, .print\:hidden,
+    button:not(.print-keep), [role="dialog"], #toast-container {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Reset background colors and shadows */
+    body, html, #app, main {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 11pt !important;
+    }
+
+    /* Ensure A4 paper size and margin */
+    @page {
+        size: A4 portrait;
+        margin: 1.25cm 1.25cm 1.25cm 1.25cm;
+    }
+
+    /* Page break helpers */
+    .page-break-before {
+        page-break-before: always !important;
+        break-before: page !important;
+    }
+
+    .page-break-after {
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    .page-break-inside-avoid {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
+    }
+
+    .rpp-a4, .asesmen-a4 {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Core Primary / Teal Utility Guarantees (Prevents White-on-White button text)
+   ═════════════════════════════════════════════════════════════════════════ */
+.bg-primary { background-color: #269494 !important; }
+.bg-primary-500 { background-color: #269494 !important; }
+.bg-primary-600 { background-color: #1a7474 !important; }
+.hover\:bg-primary-600:hover { background-color: #1a7474 !important; }
+.hover\:bg-primary-700:hover { background-color: #155e5e !important; }
+.text-primary { color: #269494 !important; }
+.border-primary { border-color: #269494 !important; }
+.ring-primary { --tw-ring-color: #269494 !important; }

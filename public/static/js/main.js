@@ -24,34 +24,76 @@ window.confirm = confirm;
 window.toggleTheme = toggleTheme;
 window.state = state; // Expose state for inline onclick handlers
 
-// Emergency cleanup for stale legacy service workers.
-// If a previous deployment registered a SW and current app no longer manages it,
-// that SW can keep serving old assets indefinitely.
-async function cleanupLegacyServiceWorkers() {
-  if (!('serviceWorker' in navigator)) return;
-
-  const alreadyReloaded = sessionStorage.getItem('sw-cleanup-reloaded') === '1';
-  const registrations = await navigator.serviceWorker.getRegistrations();
-  if (!registrations.length) return;
-
-  await Promise.all(registrations.map((registration) => registration.unregister()));
-
-  if ('caches' in window) {
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames
-      .filter((name) => name.startsWith('kkg-portal-'))
-      .map((name) => caches.delete(name)));
-  }
-
-  if (!alreadyReloaded) {
-    sessionStorage.setItem('sw-cleanup-reloaded', '1');
-    window.location.reload();
-  }
+// Register Service Worker for PWA (Progressive Web App)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[PWA] Versi baru tersedia.');
+            }
+          });
+        }
+      });
+    }).catch((err) => {
+      console.warn('[PWA] SW register error:', err);
+    });
+  });
 }
 
-cleanupLegacyServiceWorkers().catch(() => {
-  // Silent fallback: app keeps running even if cleanup is blocked by browser policy.
+// Handle PWA BeforeInstallPrompt (A2HS)
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  window.showPwaInstallBanner?.();
 });
+
+window.showPwaInstallBanner = function() {
+  const existing = document.getElementById('pwa-install-banner');
+  if (existing || !deferredPrompt) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-[9999] bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-teal-500/30 flex items-center justify-between gap-3 animate-slide-up print-hidden';
+  banner.innerHTML = `
+    <div class="flex items-center gap-3">
+      <img src="/favicon.png" class="w-10 h-10 rounded-xl border border-teal-400/40 shadow-sm" alt="KKG App">
+      <div>
+        <h4 class="font-bold text-xs text-white">Pasang Aplikasi KKG</h4>
+        <p class="text-[10px] text-teal-200/80">Akses cepat & hemat kuota di layar utama</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-pwa-install" class="px-3 py-1.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs shadow transition-all cursor-pointer">
+        Install
+      </button>
+      <button id="btn-pwa-dismiss" class="text-slate-400 hover:text-white p-1 text-xs cursor-pointer">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('btn-pwa-install')?.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        showToast('Terima kasih telah memasang aplikasi KKG Portal!', 'success');
+      }
+      deferredPrompt = null;
+      banner.remove();
+    }
+  });
+
+  document.getElementById('btn-pwa-dismiss')?.addEventListener('click', () => {
+    banner.remove();
+  });
+};
 
 // Global handler for admin sidebar tab clicks
 window.handleAdminTabClick = function (tabId) {
@@ -124,6 +166,7 @@ const pages = {
   rpp: async () => (await loadPageModule('rpp')).renderRpp(),
   kisi: async () => (await loadPageModule('kisi')).renderKisi(),
   slide: async () => (await loadPageModule('slide')).renderSlide(),
+  tts: async () => (await loadPageModule('tts')).renderTts(),
 };
 
 // Pages that have their own full layout (no main wrapper)
@@ -150,6 +193,7 @@ const navLinks = [
   { page: 'rpp', label: 'Buat RPP', icon: 'fa-magic', public: true, section: 'AI Assistant', ai: true },
   { page: 'slide', label: 'Buat Slide', icon: 'fa-file-powerpoint', public: true, section: 'AI Assistant', ai: true },
   { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, section: 'AI Assistant', ai: true },
+  { page: 'tts', label: 'Teka-Teki Silang', icon: 'fa-puzzle-piece', public: true, section: 'AI Assistant', ai: true },
 
   // KEGIATAN (Auth)
   { page: 'absensi', label: 'Absensi Kegiatan', icon: 'fa-clipboard-check', auth: true, section: 'Kegiatan' },
@@ -287,7 +331,8 @@ async function render() {
       notifications: 'Pusat Notifikasi',
       rpp: 'RPM Generator',
       kisi: 'Asesmen',
-      slide: 'Slide Generator'
+      slide: 'Slide Generator',
+      tts: 'Teka-Teki Silang'
     };
     // announce disabled
 
@@ -311,6 +356,10 @@ async function render() {
     if (page === 'slide') {
       const { initSlide } = await loadPageModule('slide');
       setTimeout(() => initSlide(), 100);
+    }
+    if (page === 'tts') {
+      const { initTts } = await loadPageModule('tts');
+      setTimeout(() => initTts(), 100);
     }
     if (page === 'notifications') {
       const { initNotifications } = await loadPageModule('notifications');

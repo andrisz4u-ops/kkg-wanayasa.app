@@ -3,6 +3,7 @@ import { showToast, showLoading, hideLoading, populateAiModelSelect } from '../u
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
+import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
 
 export async function renderKisi() {
   if (!state.user) {
@@ -18,14 +19,19 @@ export async function renderKisi() {
       <!-- FORM VIEW -->
       <div id="asesmen-form-view">
         <!-- Header -->
-        <div class="asesmen-header">
-          <div class="asesmen-logo-mark">
-            <i class="fas fa-brain"></i>
+        <div class="asesmen-header flex-col sm:flex-row justify-between items-center">
+          <div class="flex items-center gap-4">
+            <div class="asesmen-logo-mark">
+              <i class="fas fa-brain"></i>
+            </div>
+            <div>
+              <h1 class="asesmen-title">ASESMEN A4EDU</h1>
+              <p class="asesmen-subtitle">NEURAL QUESTION ARCHITECT A4EDU</p>
+            </div>
           </div>
-          <div>
-            <h1 class="asesmen-title">ASESMEN A4EDU</h1>
-            <p class="asesmen-subtitle">NEURAL QUESTION ARCHITECT A4EDU</p>
-          </div>
+          <button type="button" id="btn-kisi-archive" class="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-cyan-100 hover:text-white border border-cyan-300/20 backdrop-blur-md text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
+            <i class="fas fa-folder-open text-amber-300"></i> Riwayat Soal Tersimpan
+          </button>
         </div>
 
         <!-- 3-Column Form -->
@@ -184,10 +190,11 @@ export async function renderKisi() {
       <!-- RESULT VIEW (Hidden by default) -->
       <div id="asesmen-result-view" class="hidden">
         <div class="asesmen-result-toolbar">
-          <button id="btn-back-form" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors"><i class="fas fa-arrow-left mr-2"></i>Kembali ke Form</button>
-          <div class="flex gap-3">
-            <button id="btn-download-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors"><i class="fas fa-download mr-2"></i>Unduh .docx</button>
-            <button id="btn-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
+          <button id="btn-back-form" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors cursor-pointer"><i class="fas fa-arrow-left mr-2"></i>Kembali ke Form</button>
+          <div class="flex gap-2 sm:gap-3 flex-wrap">
+            <button id="btn-kisi-history" class="px-4 py-2.5 rounded-full text-sm font-medium border border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1.5 text-amber-500"></i>Riwayat</button>
+            <button id="btn-download-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer"><i class="fas fa-download mr-2"></i>Unduh .docx</button>
+            <button id="btn-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
           </div>
         </div>
 
@@ -409,6 +416,66 @@ export function initKisi() {
 
   populateAiModelSelect('select[name="aiProvider"]');
 
+  // Check incoming Smart Content Bridge data from RPP
+  try {
+    const rawBridge = sessionStorage.getItem('kkg_bridge_data');
+    if (rawBridge) {
+      const bridge = JSON.parse(rawBridge);
+      if (bridge.target === 'kisi' && bridge.topik) {
+        sessionStorage.removeItem('kkg_bridge_data');
+
+        const setVal = (name, val) => {
+          const el = form.querySelector(`[name="${name}"]`);
+          if (el && val) el.value = val;
+        };
+
+        if (bridge.mataPelajaran) {
+          const selectMapel = form.querySelector('select[name="mataPelajaran"]');
+          if (selectMapel) {
+            const opts = Array.from(selectMapel.options);
+            const matched = opts.find(o => 
+              o.value.toLowerCase().includes(bridge.mataPelajaran.toLowerCase()) || 
+              bridge.mataPelajaran.toLowerCase().includes(o.value.toLowerCase())
+            );
+            if (matched) selectMapel.value = matched.value;
+          }
+        }
+
+        if (bridge.jenjangKelas) {
+          const selectKelas = form.querySelector('select[name="jenjangKelas"]');
+          if (selectKelas) {
+            const num = bridge.jenjangKelas.match(/\d+/);
+            if (num) {
+              const matched = Array.from(selectKelas.options).find(o => o.value.includes(num[0]));
+              if (matched) selectKelas.value = matched.value;
+            }
+          }
+        }
+
+        if (bridge.semester) {
+          const selectSmt = form.querySelector('select[name="semester"]');
+          if (selectSmt) {
+            const isGanjil = bridge.semester.toLowerCase().includes('ganjil') || bridge.semester === '1';
+            selectSmt.value = isGanjil ? 'Ganjil' : 'Genap';
+          }
+        }
+
+        if (bridge.topik) {
+          setVal('topik', bridge.topik);
+        }
+
+        if (bridge.capaian) {
+          setVal('capaianPembelajaran', bridge.capaian);
+        }
+
+        const topikEl = form.querySelector('[name="topik"]');
+        if (topikEl) topikEl.focus();
+
+        showToast(`✨ Materi dari RPP (${bridge.topik}) berhasil disinkronkan ke Asesmen & Soal!`, 'success');
+      }
+    }
+  } catch (_) {}
+
   // Counter buttons
   document.querySelectorAll('.asesmen-counter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -445,7 +512,17 @@ export function initKisi() {
       if (result.success) {
         renderResult(result.data, data);
         const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
-        showToast(`Soal berhasil digenerate!${modelInfo}`, 'success');
+
+        // Auto-archive document
+        saveDocArchive({
+          module: 'kisi',
+          title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+          subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
+          inputData: data,
+          content: result.data
+        });
+
+        showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
       } else {
         showToast(result.error?.message || 'Gagal generate', 'error');
       }
@@ -456,6 +533,42 @@ export function initKisi() {
       hideLoading();
     }
   });
+
+  // Archive Drawer Handler
+  const handleOpenKisiArchive = () => {
+    openArchiveDrawer({
+      module: 'kisi',
+      moduleName: 'Asesmen & Soal',
+      onSelect: (item) => {
+        renderResult(item.content, item.inputData);
+        showToast(`Membuka riwayat: ${item.title}`, 'info');
+      },
+      onDownloadDocx: async (item) => {
+        showToast('Menyiapkan file DOCX...', 'info');
+        try {
+          const origin = window.location.origin;
+          const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
+          const blob = await generateAsesmenDocx(item.content, item.inputData, kopSuratUrl);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const fileName = `${item.inputData?.jenisUjian || 'Asesmen'}_${item.inputData?.jenjangKelas || ''}_${item.inputData?.mataPelajaran || 'Soal'}`
+            .replace(/\s+/g, '_').replace(/_{2,}/g, '_');
+          a.download = `${fileName}.docx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('File .docx berhasil diunduh!', 'success');
+        } catch (e) {
+          showToast('Gagal mengunduh: ' + e.message, 'error');
+        }
+      }
+    });
+  };
+
+  document.getElementById('btn-kisi-archive')?.addEventListener('click', handleOpenKisiArchive);
+  document.getElementById('btn-kisi-history')?.addEventListener('click', handleOpenKisiArchive);
 
   // Back button — reset field konten agar bersih untuk asesmen berikutnya
   document.getElementById('btn-back-form')?.addEventListener('click', () => {
@@ -716,6 +829,23 @@ function renderResult(data, formData) {
     } else if (isianType === 'Crossword' && data.isian.crossword) {
       const cw = data.isian.crossword;
       if (cw.success && cw.grid) {
+        html += `
+          <div class="my-5 p-4 rounded-2xl bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-purple-950 text-white flex flex-col sm:flex-row items-center justify-between gap-4 border border-purple-500/30 shadow-lg print:hidden">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-lg">
+                <i class="fas fa-gamepad"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-white font-sans">Mode Game TTS Interaktif Kelas</h4>
+                <p class="text-xs text-purple-200/80 font-sans">Mainkan teka-teki silang ini langsung di proyektor kelas bersama siswa!</p>
+              </div>
+            </div>
+            <button id="btn-launch-tts-game" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-extrabold text-xs shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center gap-2 cursor-pointer font-sans">
+              <i class="fas fa-play"></i> Mainkan di Kelas
+            </button>
+          </div>
+        `;
+
         html += `<div style="margin: 20px 0;">`;
         html += `<table style="border-collapse:collapse; display:block; margin:0 auto; table-layout:fixed; width:auto;">`;
         for (let r = 0; r < cw.grid.length; r++) {
@@ -874,4 +1004,284 @@ function renderResult(data, formData) {
 
   canvas.innerHTML = html;
   window.scrollTo(0, 0);
+
+  // Attach interactive crossword game player listener
+  if (isianType === 'Crossword' && data.isian?.crossword?.success) {
+    document.getElementById('btn-launch-tts-game')?.addEventListener('click', () => {
+      openInteractiveCrosswordGame(data.isian.crossword, data, formData);
+    });
+  }
+}
+
+/**
+ * Interactive Crossword Player Modal for Classroom Gaming (3-Column Layout)
+ */
+function openInteractiveCrosswordGame(cw, data, formData) {
+  const existing = document.getElementById('interactive-tts-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'interactive-tts-modal';
+  modal.className = 'fixed inset-0 z-[10000] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in text-slate-100';
+
+  const rows = cw.grid.length;
+  const cols = cw.grid[0].length;
+
+  const mendatar = [];
+  const menurun = [];
+  cw.placements.forEach(p => {
+    let qData = data.isian?.data ? data.isian.data[p.originalIndex] : null;
+    const soalRaw = qData ? qData.soal : p.word;
+    const cleanSoal = soalRaw.replace(/^(Mendatar:|Menurun:)\s*/i, '').trim();
+    const item = { num: p.number, soal: cleanSoal, word: p.word, row: p.row, col: p.col, dir: p.direction };
+    if (p.direction === 'H') mendatar.push(item);
+    else menurun.push(item);
+  });
+
+  mendatar.sort((a, b) => a.num - b.num);
+  menurun.sort((a, b) => a.num - b.num);
+
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-7xl 2xl:max-w-[1550px] max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Game Header Bar -->
+      <div class="px-6 py-3.5 bg-slate-800/90 border-b border-slate-700/80 flex items-center justify-between gap-4 flex-wrap shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-base font-black shadow-md">
+            <i class="fas fa-gamepad"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-white font-display">${escapeHtml(formData.topik || 'Teka-Teki Silang Pembelajaran')}</h3>
+            <p class="text-xs text-amber-300/90">${escapeHtml(formData.mataPelajaran || 'Mata Pelajaran')} • ${escapeHtml(formData.jenjangKelas || 'SD')}</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div class="px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-700 text-xs font-mono font-bold text-amber-400 flex items-center gap-2">
+            <i class="fas fa-stopwatch text-slate-400"></i> <span id="tts-game-timer">00:00</span>
+          </div>
+          <button id="btn-tts-check" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="fas fa-check-circle"></i> Cek Jawaban
+          </button>
+          <button id="btn-tts-hint" class="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Buka 1 Huruf">
+            <i class="fas fa-lightbulb"></i> Bantuan
+          </button>
+          <button id="btn-tts-reset" class="px-3 py-1.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer" title="Kosongkan Kotak">
+            <i class="fas fa-undo"></i>
+          </button>
+          <button id="btn-tts-close" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Body: 3 Bagian (Kotak TTS Kiri Paling Besar, Mendatar Tengah, Menurun Kanan) -->
+      <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 sm:p-5 min-h-0">
+        
+        <!-- 1. KIRI: Kotak Grid TTS (Paling Besar & Ideal, lg:col-span-6) -->
+        <div class="lg:col-span-6 flex flex-col items-center justify-between p-4 bg-slate-950/60 rounded-2xl sm:rounded-3xl border border-slate-800 h-full overflow-hidden">
+          <div class="flex-1 w-full flex items-center justify-center overflow-auto p-2" id="tts-interactive-grid-container"></div>
+          <div class="mt-2 pt-2 border-t border-slate-800/80 w-full text-center text-[11px] text-slate-400 shrink-0">
+            <span class="inline-block mr-2.5"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-mono text-[9px]">A-Z</kbd> Ketik</span>
+            <span class="inline-block mr-2.5"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-mono text-[9px]">Backspace</kbd> Hapus</span>
+            <span class="inline-block"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-300 font-mono text-[9px]">Panah</kbd> Geser</span>
+          </div>
+        </div>
+
+        <!-- 2. TENGAH: Soal Mendatar (lg:col-span-3) -->
+        <div class="lg:col-span-3 flex flex-col p-4 rounded-2xl sm:rounded-3xl bg-slate-800/70 border border-slate-700/80 h-full overflow-hidden shadow-inner">
+          <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-700/80 shrink-0">
+            <h4 class="font-bold text-xs uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+              <i class="fas fa-arrows-alt-h text-sm"></i> Mendatar
+            </h4>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+              ${mendatar.length} Soal
+            </span>
+          </div>
+          <div class="flex-1 overflow-y-auto space-y-2 pr-1.5 custom-scrollbar">
+            ${mendatar.map(item => `
+              <div class="p-2.5 rounded-2xl bg-slate-900/70 hover:bg-cyan-950/40 border border-slate-700/60 hover:border-cyan-500/50 transition-all cursor-pointer clue-item group" data-num="${item.num}" data-row="${item.row}" data-col="${item.col}">
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="font-extrabold text-xs text-cyan-400 group-hover:text-cyan-300 font-mono">${item.num}.</span>
+                  <span class="text-[9px] text-slate-400 font-semibold px-1.5 py-0.5 bg-slate-800/80 rounded border border-slate-700/60">${item.word.length} huruf</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed group-hover:text-white transition-colors">${escapeHtml(item.soal)}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 3. KANAN: Soal Menurun (lg:col-span-3) -->
+        <div class="lg:col-span-3 flex flex-col p-4 rounded-2xl sm:rounded-3xl bg-slate-800/70 border border-slate-700/80 h-full overflow-hidden shadow-inner">
+          <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-700/80 shrink-0">
+            <h4 class="font-bold text-xs uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+              <i class="fas fa-arrows-alt-v text-sm"></i> Menurun
+            </h4>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-950 text-purple-300 border border-purple-500/30">
+              ${menurun.length} Soal
+            </span>
+          </div>
+          <div class="flex-1 overflow-y-auto space-y-2 pr-1.5 custom-scrollbar">
+            ${menurun.map(item => `
+              <div class="p-2.5 rounded-2xl bg-slate-900/70 hover:bg-purple-950/40 border border-slate-700/60 hover:border-purple-500/50 transition-all cursor-pointer clue-item group" data-num="${item.num}" data-row="${item.row}" data-col="${item.col}">
+                <div class="flex items-baseline justify-between mb-1">
+                  <span class="font-extrabold text-xs text-purple-400 group-hover:text-purple-300 font-mono">${item.num}.</span>
+                  <span class="text-[9px] text-slate-400 font-semibold px-1.5 py-0.5 bg-slate-800/80 rounded border border-slate-700/60">${item.word.length} huruf</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed group-hover:text-white transition-colors">${escapeHtml(item.soal)}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Render Grid Inputs
+  const gridContainer = document.getElementById('tts-interactive-grid-container');
+  let tableHtml = `<table style="border-collapse: separate; border-spacing: 2px;">`;
+  for (let r = 0; r < rows; r++) {
+    tableHtml += `<tr>`;
+    for (let c = 0; c < cols; c++) {
+      const char = cw.grid[r][c];
+      if (char !== ' ') {
+        const p = cw.placements.find(pl => pl.row === r && pl.col === c);
+        const numLabel = p ? `<span class="absolute top-0.5 left-1 text-[8px] font-bold text-slate-400 pointer-events-none">${p.number}</span>` : '';
+        tableHtml += `
+          <td class="relative w-8 h-8 sm:w-9 sm:h-9 bg-slate-900 border border-slate-600/80 rounded-lg p-0 text-center">
+            ${numLabel}
+            <input type="text" maxlength="1" data-row="${r}" data-col="${c}" data-correct="${char}" class="tts-cell w-full h-full text-center uppercase font-bold text-sm sm:text-base text-white bg-transparent outline-none focus:bg-indigo-600/30 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 rounded-lg caret-transparent cursor-pointer transition-colors" />
+          </td>
+        `;
+      } else {
+        tableHtml += `<td class="w-8 h-8 sm:w-9 sm:h-9"></td>`;
+      }
+    }
+    tableHtml += `</tr>`;
+  }
+  tableHtml += `</table>`;
+  gridContainer.innerHTML = tableHtml;
+
+  // Stopwatch Timer
+  let seconds = 0;
+  const timerEl = document.getElementById('tts-game-timer');
+  const timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${m}:${s}`;
+  }, 1000);
+
+  // Cell Navigation Logic
+  const inputs = Array.from(modal.querySelectorAll('.tts-cell'));
+  inputs.forEach((input) => {
+    input.addEventListener('input', (e) => {
+      const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+      e.target.value = val;
+      if (val) {
+        // Move to next cell
+        const r = parseInt(input.dataset.row);
+        const c = parseInt(input.dataset.col);
+        const nextHorizontal = inputs.find(i => parseInt(i.dataset.row) === r && parseInt(i.dataset.col) === c + 1);
+        const nextVertical = inputs.find(i => parseInt(i.dataset.row) === r + 1 && parseInt(i.dataset.col) === c);
+        const next = nextHorizontal || nextVertical;
+        if (next) next.focus();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      const r = parseInt(input.dataset.row);
+      const c = parseInt(input.dataset.col);
+
+      if (e.key === 'Backspace' && !input.value) {
+        const prevH = inputs.find(i => parseInt(i.dataset.row) === r && parseInt(i.dataset.col) === c - 1);
+        const prevV = inputs.find(i => parseInt(i.dataset.row) === r - 1 && parseInt(i.dataset.col) === c);
+        const prev = prevH || prevV;
+        if (prev) {
+          prev.focus();
+          prev.value = '';
+        }
+      } else if (e.key === 'ArrowRight') {
+        const target = inputs.find(i => parseInt(i.dataset.row) === r && parseInt(i.dataset.col) === c + 1);
+        if (target) target.focus();
+      } else if (e.key === 'ArrowLeft') {
+        const target = inputs.find(i => parseInt(i.dataset.row) === r && parseInt(i.dataset.col) === c - 1);
+        if (target) target.focus();
+      } else if (e.key === 'ArrowDown') {
+        const target = inputs.find(i => parseInt(i.dataset.row) === r + 1 && parseInt(i.dataset.col) === c);
+        if (target) target.focus();
+      } else if (e.key === 'ArrowUp') {
+        const target = inputs.find(i => parseInt(i.dataset.row) === r - 1 && parseInt(i.dataset.col) === c);
+        if (target) target.focus();
+      }
+    });
+  });
+
+  // Clue item click: Focus first cell of word
+  modal.querySelectorAll('.clue-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const row = parseInt(item.dataset.row);
+      const col = parseInt(item.dataset.col);
+      const targetInput = inputs.find(i => parseInt(i.dataset.row) === row && parseInt(i.dataset.col) === col);
+      if (targetInput) targetInput.focus();
+    });
+  });
+
+  // Button Check Answers
+  document.getElementById('btn-tts-check')?.addEventListener('click', () => {
+    let correctCount = 0;
+    let filledCount = 0;
+    inputs.forEach(input => {
+      const userVal = input.value.trim().toUpperCase();
+      const correctVal = input.dataset.correct;
+      input.classList.remove('bg-emerald-600/40', 'border-emerald-500', 'bg-rose-600/40', 'border-rose-500');
+
+      if (userVal) {
+        filledCount++;
+        if (userVal === correctVal) {
+          input.classList.add('bg-emerald-600/40', 'border-emerald-500');
+          correctCount++;
+        } else {
+          input.classList.add('bg-rose-600/40', 'border-rose-500');
+        }
+      }
+    });
+
+    if (filledCount === inputs.length && correctCount === inputs.length) {
+      clearInterval(timerInterval);
+      showToast('🎉 LUAR BIASA! Seluruh Teka-Teki Silang Berhasil Terpecahkan dengan Sempurna!', 'success');
+    } else {
+      showToast(`${correctCount} dari ${inputs.length} huruf benar. Terus semangat!`, 'info');
+    }
+  });
+
+  // Button Hint (Reveal 1 random letter)
+  document.getElementById('btn-tts-hint')?.addEventListener('click', () => {
+    const unrevealed = inputs.filter(i => i.value.trim().toUpperCase() !== i.dataset.correct);
+    if (unrevealed.length > 0) {
+      const randomCell = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+      randomCell.value = randomCell.dataset.correct;
+      randomCell.classList.add('bg-amber-500/30', 'border-amber-400', 'text-amber-300');
+      showToast('💡 1 Huruf berhasil dibuka!', 'info');
+    } else {
+      showToast('Semua kotak sudah terisi dengan benar!', 'success');
+    }
+  });
+
+  // Button Reset
+  document.getElementById('btn-tts-reset')?.addEventListener('click', () => {
+    inputs.forEach(input => {
+      input.value = '';
+      input.className = 'tts-cell w-full h-full text-center uppercase font-bold text-sm sm:text-base text-white bg-transparent outline-none focus:bg-indigo-600/30 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 rounded-lg caret-transparent cursor-pointer transition-colors';
+    });
+  });
+
+  // Button Close
+  document.getElementById('btn-tts-close')?.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    modal.remove();
+  });
 }

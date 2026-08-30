@@ -10,8 +10,14 @@ export function renderHTML(): string {
   <title>Portal Digital KKG Gugus 3 Wanayasa</title>
   <meta name="description" content="Portal Digital Kelompok Kerja Guru (KKG) Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta">
   <meta name="theme-color" content="#269494">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KKG Wanayasa">
 
   <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/manifest.json">
   
   <link rel="stylesheet" href="/static/style.css?v=${APP_VERSION}">
   

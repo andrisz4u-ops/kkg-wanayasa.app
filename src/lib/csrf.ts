@@ -22,6 +22,10 @@ const CSRF_IGNORE_PATHS = [
     '/api/rpp/docx', // DOCX generation (session-authenticated, JSON body)
     '/api/kisi/generate', // AI generation (session-authenticated)
     '/api/presentation/generate', // AI generation (session-authenticated)
+    '/api/presentation/outline', // AI outline (session-authenticated)
+    '/api/presentation/patch-slide', // AI single-slide patch (session-authenticated)
+    '/api/tts/generate', // AI generation (session-authenticated)
+    '/api/tts/custom', // Crossword assembler (session-authenticated)
 ];
 
 /**

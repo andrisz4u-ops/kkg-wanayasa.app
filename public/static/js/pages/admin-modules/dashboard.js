@@ -486,15 +486,186 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
       `;
     }).join('');
 
+    _lastSchoolAnalyticsData = data;
+
   } catch (e) {
     console.error('Failed to load school AI analytics:', e);
     tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-rose-500">Gagal memuat analitik sekolah.</td></tr>`;
   }
 };
 
+let _lastSchoolAnalyticsData = null;
+
 window.refreshSchoolAiAnalytics = function() {
   const monthSelect = document.getElementById('school-analytics-month');
   const month = monthSelect ? monthSelect.value : '';
   window.loadSchoolAiAnalytics(month);
+};
+
+window.exportLeaderboardCsv = function() {
+  if (!_lastSchoolAnalyticsData || !_lastSchoolAnalyticsData.leaderboard) {
+    showToast('Data analitik belum siap. Silakan segarkan halaman.', 'error');
+    return;
+  }
+
+  const data = _lastSchoolAnalyticsData;
+  const list = data.leaderboard || [];
+  const monthLabel = data.selected_month === 'all' ? 'Semua Periode' : data.selected_month;
+
+  let csv = '\uFEFF'; // UTF-8 BOM for Excel
+  csv += `"LAPORAN REKAPITULASI PEMANFAATAN AI SEKOLAH - KKG WANAYASA"\n`;
+  csv += `"Periode: ${monthLabel}"\n`;
+  csv += `"Dicetak Pada: ${new Date().toLocaleString('id-ID')}"\n\n`;
+
+  csv += `"Peringkat","Nama Sekolah","NPSN","Status Penggerak","Total RPP","Total Asesmen & TTS","Total Slide","Total Dokumen AI","Guru Paling Aktif","Jumlah Dokumen Guru","Tingkat Keaktifan"\n`;
+
+  list.forEach((s, i) => {
+    let statusText = 'Sangat Aktif';
+    if (s.total_all === 0) statusText = 'Belum Aktif';
+    else if (s.total_all < 5) statusText = 'Cukup Aktif';
+    else if (s.total_all < 15) statusText = 'Aktif';
+
+    const teacherName = s.top_teacher?.nama ? `"${s.top_teacher.nama.replace(/"/g, '""')}"` : `"-"`;
+    const teacherCount = s.top_teacher?.count || 0;
+
+    csv += `"${i + 1}","${s.nama.replace(/"/g, '""')}","${s.npsn || '-'}","${s.is_sekolah_penggerak ? 'Ya' : 'Bukan'}","${s.total_rpp}","${s.total_asesmen}","${s.total_slide}","${s.total_all}",${teacherName},"${teacherCount}","${statusText}"\n`;
+  });
+
+  const summary = data.summary || {};
+  csv += `\n"TOTAL KESELURUHAN GUGUS","","","","${summary.total_rpp || 0}","${summary.total_asesmen || 0}","${summary.total_slide || 0}","${summary.total_generations || 0}","","",""\n`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Rekapitulasi_AI_Sekolah_${String(monthLabel).replace(/\s+/g, '_')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📊 Laporan Excel/CSV berhasil diunduh!', 'success');
+};
+
+window.printLeaderboardReport = function() {
+  if (!_lastSchoolAnalyticsData || !_lastSchoolAnalyticsData.leaderboard) {
+    showToast('Data analitik belum siap untuk dicetak.', 'error');
+    return;
+  }
+
+  const data = _lastSchoolAnalyticsData;
+  const list = data.leaderboard || [];
+  const monthSelect = document.getElementById('school-analytics-month');
+  const monthText = monthSelect ? monthSelect.options[monthSelect.selectedIndex]?.text : (data.selected_month || 'Periode Berjalan');
+  const summary = data.summary || {};
+
+  const existing = document.getElementById('print-leaderboard-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'print-leaderboard-modal';
+  modal.className = 'fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in';
+
+  modal.innerHTML = `
+    <div class="bg-white text-slate-900 rounded-3xl max-w-4xl w-full p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto print:max-h-none print:shadow-none print:p-0 print:border-none">
+      
+      <!-- Modal Action Bar (Hidden on print) -->
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 print:hidden">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <i class="fas fa-file-invoice"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900 font-display">Pratinjau Cetak Laporan Resmi</h3>
+            <p class="text-xs text-slate-500">Format resmi untuk Pengawas Pembina & Disdik</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btn-do-print-report" class="px-5 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer">
+            <i class="fas fa-print"></i> Cetak / Simpan PDF
+          </button>
+          <button id="btn-close-print-report" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-sm cursor-pointer">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Official Printable Document Body -->
+      <div class="p-4 sm:p-8 bg-white border border-slate-200 print:border-none print:p-0 rounded-2xl font-serif text-slate-900" id="official-report-canvas">
+        
+        <!-- Header / Kop -->
+        <div class="text-center pb-4 mb-6 border-b-2 border-double border-slate-900">
+          <h2 class="text-base sm:text-lg font-bold uppercase tracking-wider mb-0.5">KELOMPOK KERJA GURU (KKG) KECAMATAN WANAYASA</h2>
+          <h3 class="text-sm sm:text-base font-bold uppercase text-slate-800 mb-1">PUSAT PENGEMBANGAN PROFESI GURU &amp; TRANSFORMASI DIGITAL</h3>
+          <p class="text-xs text-slate-600 italic">Kecamatan Wanayasa, Kabupaten Purwakarta, Jawa Barat</p>
+        </div>
+
+        <!-- Title -->
+        <div class="text-center mb-6">
+          <h4 class="text-sm sm:text-base font-bold uppercase underline mb-1">LAPORAN REKAPITULASI PEMANFAATAN TEKNOLOGI AI PEMBELAJARAN</h4>
+          <p class="text-xs font-sans text-slate-600">Periode Evaluasi: <strong>${escapeHtml(monthText)}</strong></p>
+        </div>
+
+        <!-- Ringkasan Gugus -->
+        <div class="grid grid-cols-4 gap-2 mb-6 text-center font-sans text-xs border border-slate-300 rounded-xl p-3 bg-slate-50/50">
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total RPP</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_rpp || 0}</strong></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Asesmen/TTS</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_asesmen || 0}</strong></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Slide</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_slide || 0}</strong></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Akumulasi Dokumen</span><strong class="text-sm font-extrabold text-indigo-700">${summary.total_generations || 0}</strong></div>
+        </div>
+
+        <!-- Table -->
+        <table class="w-full text-left text-xs border-collapse border border-slate-900 font-sans mb-8">
+          <thead>
+            <tr class="bg-slate-100 text-slate-900 font-bold border-b border-slate-900 text-center">
+              <th class="border border-slate-900 p-2 w-10">No</th>
+              <th class="border border-slate-900 p-2 text-left">Nama Satuan Pendidikan</th>
+              <th class="border border-slate-900 p-2 w-16">RPP</th>
+              <th class="border border-slate-900 p-2 w-16">Soal</th>
+              <th class="border border-slate-900 p-2 w-16">Slide</th>
+              <th class="border border-slate-900 p-2 w-16 font-extrabold">Total</th>
+              <th class="border border-slate-900 p-2 text-left">Pendidik Paling Aktif</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map((s, i) => `
+              <tr class="border-b border-slate-400">
+                <td class="border border-slate-900 p-2 text-center">${i + 1}</td>
+                <td class="border border-slate-900 p-2 font-semibold">${escapeHtml(s.nama)}</td>
+                <td class="border border-slate-900 p-2 text-center">${s.total_rpp}</td>
+                <td class="border border-slate-900 p-2 text-center">${s.total_asesmen}</td>
+                <td class="border border-slate-900 p-2 text-center">${s.total_slide}</td>
+                <td class="border border-slate-900 p-2 text-center font-bold text-slate-900">${s.total_all}</td>
+                <td class="border border-slate-900 p-2 text-xs">${s.top_teacher?.nama ? `${escapeHtml(s.top_teacher.nama)} (${s.top_teacher.count}x)` : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <!-- Signature Section -->
+        <div class="grid grid-cols-2 gap-8 text-center text-xs font-sans pt-6 border-t border-slate-200">
+          <div>
+            <p class="mb-1 text-slate-500">Mengetahui,</p>
+            <p class="font-bold text-slate-900 mb-16">Pengawas Pembina SD Wanayasa</p>
+            <p class="font-bold underline text-slate-900">.....................................................</p>
+            <p class="text-slate-500">NIP. .............................................</p>
+          </div>
+          <div>
+            <p class="mb-1 text-slate-500">Wanayasa, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p class="font-bold text-slate-900 mb-16">Ketua KKG Kecamatan Wanayasa</p>
+            <p class="font-bold underline text-slate-900">.....................................................</p>
+            <p class="text-slate-500">NIP. .............................................</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById('btn-close-print-report')?.addEventListener('click', () => modal.remove());
+  document.getElementById('btn-do-print-report')?.addEventListener('click', () => {
+    window.print();
+  });
 };
 

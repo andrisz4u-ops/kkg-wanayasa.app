@@ -147,45 +147,45 @@ export const createMateriSchema = z.object({
 // ============================================
 
 export const presentationOutlineItemSchema = z.object({
-    index: z.coerce.number().int().min(1),
-    title: z.string().min(1).max(200),
-    layout: z.enum(['title', 'content', 'twoColumn', 'activity', 'quote', 'summary', 'thankyou', 'imageText', 'timeline', 'stats', 'comparison', 'quiz', 'flipcard', 'process']).default('content'),
-    focus: z.string().min(1).max(300),
+    index: z.coerce.number().int().optional().default(1),
+    title: z.string().max(200).optional().default('Judul Slide'),
+    layout: z.string().optional().default('content'),
+    focus: z.string().max(500).optional().default('Fokus materi utama'),
     visualConcept: z.string().max(200).optional(),
 });
 
 export const presentationOutlineSchema = z.object({
-    mataPelajaran: z.string().min(2, 'Mata pelajaran harus diisi').max(120),
-    topik: z.string().min(3, 'Topik harus diisi').max(200),
-    jenjangKelas: z.string().min(1, 'Jenjang kelas harus diisi').max(80),
-    semester: z.string().min(1, 'Semester harus diisi').max(20),
-    alokasiWaktu: z.string().min(1, 'Alokasi waktu harus diisi').max(100),
-    strategi: z.string().min(2, 'Strategi pembelajaran harus diisi').max(120),
+    mataPelajaran: z.string().max(120).optional().default('IPAS'),
+    topik: z.string().min(1, 'Topik harus diisi').max(2000),
+    jenjangKelas: z.string().max(80).optional().default('Kelas 5'),
+    semester: z.string().max(20).optional().default('1'),
+    alokasiWaktu: z.string().max(100).optional().default('2 x 35 menit'),
+    strategi: z.string().max(120).optional().default('Problem Based Learning'),
     profilSosial: z.string().max(160).optional().nullable(),
     capaianPembelajaran: z.string().max(1000).optional().nullable(),
-    slideCount: z.coerce.number().int().min(5).max(20).default(10),
-    aiProvider: z.enum(['mistral', 'gemini', 'bedrock', 'z_ai', 'vertex']).optional(),
+    slideCount: z.coerce.number().int().min(3).max(30).default(8),
+    aiProvider: z.string().optional(),
 });
 
 export const presentationOutlineResponseSchema = z.object({
-    title: z.string().min(3).max(140),
+    title: z.string().max(200).optional().default('Presentasi Pembelajaran'),
     subtitle: z.string().max(220).optional(),
-    outline: z.array(presentationOutlineItemSchema).min(5).max(20),
+    outline: z.array(presentationOutlineItemSchema).min(1).max(30),
 });
 
 export const presentationGenerateSchema = z.object({
-    mataPelajaran: z.string().min(2, 'Mata pelajaran harus diisi').max(120),
-    topik: z.string().min(3, 'Topik harus diisi').max(200),
-    jenjangKelas: z.string().min(1, 'Jenjang kelas harus diisi').max(80),
-    semester: z.string().min(1, 'Semester harus diisi').max(20),
-    alokasiWaktu: z.string().min(1, 'Alokasi waktu harus diisi').max(100),
-    strategi: z.string().min(2, 'Strategi pembelajaran harus diisi').max(120),
+    mataPelajaran: z.string().max(120).optional().default('IPAS'),
+    topik: z.string().min(1, 'Topik harus diisi').max(2000),
+    jenjangKelas: z.string().max(80).optional().default('Kelas 5'),
+    semester: z.string().max(20).optional().default('1'),
+    alokasiWaktu: z.string().max(100).optional().default('2 x 35 menit'),
+    strategi: z.string().max(120).optional().default('Problem Based Learning'),
     profilSosial: z.string().max(160).optional().nullable(),
     capaianPembelajaran: z.string().max(1000).optional().nullable(),
-    slideCount: z.coerce.number().int().min(5).max(20).default(10),
-    aiProvider: z.enum(['mistral', 'gemini', 'bedrock', 'z_ai', 'vertex']).optional(),
+    slideCount: z.coerce.number().int().min(3).max(30).default(8),
+    aiProvider: z.string().optional(),
     template: z.string().max(80).optional(),
-    customOutline: z.array(presentationOutlineItemSchema).optional(),
+    customOutline: z.array(presentationOutlineItemSchema.passthrough()).optional(),
 });
 
 const speakerNotesSchema = z
@@ -197,92 +197,110 @@ const speakerNotesSchema = z
 export const presentationImageSchema = z.object({
     source: z.literal('unsplash'),
     url: z.string().url('URL gambar tidak valid'),
-    alt: z.string().min(5).max(180),
-    query: z.string().min(2).max(120),
-    creditName: z.string().min(2).max(100),
-    creditUrl: z.string().url('URL kredit gambar tidak valid'),
-    unsplashId: z.string().min(3).max(80),
+    alt: z.string().max(180).optional().default('Foto edukasi'),
+    query: z.string().max(120).optional().default('pendidikan'),
+    creditName: z.string().max(100).optional().default('Unsplash'),
+    creditUrl: z.string().optional().default('https://unsplash.com'),
+    unsplashId: z.string().max(80).optional().default('image'),
 });
 
 export const baseSlideSchema = z.object({
-    layout: z.enum(['title', 'content', 'twoColumn', 'activity', 'quote', 'summary', 'thankyou', 'imageText', 'timeline', 'stats', 'comparison', 'quiz', 'flipcard', 'process']),
-    title: z.string().min(1).max(250).optional().default('Judul Slide'),
-    subtitle: z.string().max(250).optional(),
-    content: z.array(z.string().min(1).max(500)).max(12).optional(),
-    leftTitle: z.string().max(120).optional().default('Ciri-ciri'),
-    leftContent: z.array(z.string().min(1).max(500)).max(12).optional(),
-    rightTitle: z.string().max(120).optional().default('Contoh'),
-    rightContent: z.array(z.string().min(1).max(500)).max(12).optional(),
-    instruction: z.string().max(800).optional().default('Ayo diskusikan!'),
-    time: z.string().max(80).optional(),
-    groupSize: z.string().max(80).optional(),
-    materials: z.string().max(180).optional(),
-    quote: z.string().max(800).optional().default('Semangat belajar!'),
-    author: z.string().max(180).optional(),
-    question: z.string().max(500).optional(),
-    message: z.string().max(500).optional(),
-    teacher: z.string().max(180).optional(),
-    school: z.string().max(250).optional(),
-    icon: z.string().max(80).optional(),
-    // New Modular Layout fields
-    timeline: z.array(z.object({
-        step: z.string().max(60).optional(),
-        title: z.string().max(140),
-        desc: z.string().max(300),
-    })).max(8).optional(),
-    stats: z.array(z.object({
-        value: z.string().max(60),
-        label: z.string().max(140),
-        desc: z.string().max(200).optional(),
-    })).max(6).optional(),
-    quizOptions: z.array(z.string().max(200)).max(6).optional(),
-    quizAnswer: z.string().max(200).optional(),
-    quizExplanation: z.string().max(500).optional(),
-    // Flip Card layout fields (from html-slides integration)
-    flipcards: z.array(z.object({
-        front: z.string().max(200),
-        back: z.string().max(500),
-    })).max(6).optional(),
-    imageQuery: z.string().min(2).max(120).optional(),
-    imageAlt: z.string().min(5).max(180).optional(),
-    image: presentationImageSchema.optional(),
-    speakerNotes: speakerNotesSchema,
-}).superRefine((slide, ctx) => {
-    if ((slide.layout === 'content' || slide.layout === 'summary') && (!slide.content || slide.content.length === 0)) {
-        ctx.addIssue({ code: 'custom', path: ['content'], message: 'Layout content/summary wajib memiliki content' });
-    }
-    if (slide.layout === 'twoColumn' || slide.layout === 'comparison') {
-        if (!slide.leftTitle || !slide.rightTitle) {
-            ctx.addIssue({ code: 'custom', path: ['leftTitle'], message: 'Layout twoColumn/comparison wajib memiliki leftTitle dan rightTitle' });
+    layout: z.string().optional().default('content'),
+    title: z.any().transform(v => String(v || 'Judul Slide')).optional().default('Judul Slide'),
+    subtitle: z.any().transform(v => v ? String(v) : undefined).optional(),
+    content: z.any().transform(v => {
+        if (!v) return [];
+        if (Array.isArray(v)) return v.map(i => typeof i === 'string' ? i : (i.point || i.text || i.desc ? `${i.title ? i.title + ': ' : ''}${i.text || i.point || i.desc || ''}` : JSON.stringify(i)));
+        return [String(v)];
+    }).optional().default([]),
+    leftTitle: z.any().transform(v => v ? String(v) : 'Ciri-ciri').optional().default('Ciri-ciri'),
+    leftContent: z.any().transform(v => {
+        if (!v) return [];
+        if (Array.isArray(v)) return v.map(i => typeof i === 'string' ? i : (i.point || i.text || JSON.stringify(i)));
+        return [String(v)];
+    }).optional().default([]),
+    rightTitle: z.any().transform(v => v ? String(v) : 'Contoh').optional().default('Contoh'),
+    rightContent: z.any().transform(v => {
+        if (!v) return [];
+        if (Array.isArray(v)) return v.map(i => typeof i === 'string' ? i : (i.point || i.text || JSON.stringify(i)));
+        return [String(v)];
+    }).optional().default([]),
+    instruction: z.any().transform(v => v ? String(v) : undefined).optional(),
+    time: z.any().transform(v => v ? String(v) : undefined).optional(),
+    groupSize: z.any().transform(v => v ? String(v) : undefined).optional(),
+    materials: z.any().transform(v => v ? String(v) : undefined).optional(),
+    quote: z.any().transform(v => v ? String(v) : undefined).optional(),
+    author: z.any().transform(v => v ? String(v) : undefined).optional(),
+    question: z.any().optional(),
+    message: z.any().transform(v => v ? String(v) : undefined).optional(),
+    teacher: z.any().transform(v => v ? String(v) : undefined).optional(),
+    school: z.any().transform(v => v ? String(v) : undefined).optional(),
+    icon: z.any().transform(v => v ? String(v) : undefined).optional(),
+    timeline: z.array(z.any()).optional(),
+    stats: z.array(z.any()).optional(),
+    quizOptions: z.any().optional(),
+    quizAnswer: z.any().optional(),
+    quizExplanation: z.any().optional(),
+    flipcards: z.array(z.any()).optional(),
+    imageQuery: z.any().transform(v => v ? String(v) : undefined).optional(),
+    imageAlt: z.any().transform(v => v ? String(v) : undefined).optional(),
+    image: z.any().optional(),
+    speakerNotes: z.any().transform(v => v ? String(v) : undefined).optional(),
+}).passthrough().transform((slide: any) => {
+    // If question is an array of objects (e.g. Mistral format)
+    if (Array.isArray(slide.question) && slide.question.length > 0) {
+        const q0 = slide.question[0];
+        if (typeof q0 === 'object' && q0 !== null) {
+            if (!slide.quizOptions && Array.isArray(q0.quizOptions)) {
+                slide.quizOptions = q0.quizOptions.map((o: any) => typeof o === 'string' ? o : (o.text ? `${o.option || ''} ${o.text}`.trim() : JSON.stringify(o)));
+            }
+            if (!slide.quizAnswer && q0.quizAnswer) {
+                slide.quizAnswer = String(q0.quizAnswer);
+            }
+            if (!slide.quizExplanation && q0.quizExplanation) {
+                slide.quizExplanation = String(q0.quizExplanation);
+            }
+            slide.question = String(q0.text || q0.question || q0.prompt || slide.title || 'Pertanyaan Kuis');
+        } else {
+            slide.question = String(slide.question[0]);
         }
-        if (!slide.leftContent || !slide.rightContent) {
-            ctx.addIssue({ code: 'custom', path: ['leftContent'], message: 'Layout twoColumn/comparison wajib memiliki leftContent dan rightContent' });
+    } else if (slide.question && typeof slide.question === 'object') {
+        const q = slide.question as any;
+        if (!slide.quizOptions && Array.isArray(q.quizOptions)) {
+            slide.quizOptions = q.quizOptions.map((o: any) => typeof o === 'string' ? o : (o.text ? `${o.option || ''} ${o.text}`.trim() : JSON.stringify(o)));
         }
+        if (!slide.quizAnswer && q.quizAnswer) slide.quizAnswer = String(q.quizAnswer);
+        if (!slide.quizExplanation && q.quizExplanation) slide.quizExplanation = String(q.quizExplanation);
+        slide.question = String(q.text || q.question || slide.title || 'Pertanyaan Kuis');
+    } else if (slide.question) {
+        slide.question = String(slide.question);
     }
-    if (slide.layout === 'activity' && !slide.instruction) {
-        ctx.addIssue({ code: 'custom', path: ['instruction'], message: 'Layout activity wajib memiliki instruction' });
+
+    if (Array.isArray(slide.quizOptions)) {
+        slide.quizOptions = slide.quizOptions.map((o: any) => typeof o === 'string' ? o : (o.text ? `${o.option || ''} ${o.text}`.trim() : JSON.stringify(o)));
+    } else if (slide.quizOptions) {
+        slide.quizOptions = [String(slide.quizOptions)];
     }
-    if (slide.layout === 'quote' && !slide.quote) {
-        ctx.addIssue({ code: 'custom', path: ['quote'], message: 'Layout quote wajib memiliki quote' });
-    }
-    if (slide.layout === 'imageText' && (!slide.content || slide.content.length === 0)) {
-        ctx.addIssue({ code: 'custom', path: ['content'], message: 'Layout imageText wajib memiliki content' });
-    }
+
+    if (slide.quizAnswer) slide.quizAnswer = String(slide.quizAnswer);
+    if (slide.quizExplanation) slide.quizExplanation = String(slide.quizExplanation);
+
+    return slide;
 });
 
 export const presentationResponseSchema = z.object({
-    title: z.string().min(3).max(140),
-    subtitle: z.string().max(220).optional(),
-    slides: z.array(baseSlideSchema).min(5).max(20),
-});
+    title: z.any().transform(v => String(v || 'Presentasi Pembelajaran')).optional().default('Presentasi Pembelajaran'),
+    subtitle: z.any().transform(v => v ? String(v) : undefined).optional(),
+    slides: z.array(baseSlideSchema).min(1).max(50),
+}).passthrough();
 
 export const presentationPatchSlideSchema = z.object({
     currentSlide: baseSlideSchema,
-    instruction: z.string().min(3, 'Instruksi revisi harus diisi').max(1000),
+    instruction: z.string().min(1, 'Instruksi revisi harus diisi').max(2000),
     mataPelajaran: z.string().max(120).optional(),
     topik: z.string().max(200).optional(),
     jenjangKelas: z.string().max(80).optional(),
-    aiProvider: z.enum(['mistral', 'gemini', 'bedrock', 'z_ai', 'vertex']).optional(),
+    aiProvider: z.string().optional(),
 });
 
 export type PresentationOutlineInput = z.infer<typeof presentationOutlineSchema>;

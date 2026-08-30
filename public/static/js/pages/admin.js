@@ -286,13 +286,19 @@ export async function renderAdmin() {
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-2 text-xs self-start sm:self-auto">
+            <div class="flex items-center gap-2 text-xs self-start sm:self-auto flex-wrap">
               <label class="text-[10px] uppercase font-semibold text-slate-500 tracking-widest hidden md:inline">Periode</label>
               <select id="school-analytics-month" onchange="window.loadSchoolAiAnalytics(this.value)" class="px-4 py-2 rounded-xl border border-slate-200/80 bg-slate-50 text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
                 <option value="">Memuat bulan...</option>
               </select>
-              <button onclick="window.refreshSchoolAiAnalytics()" title="Segarkan Data" class="p-2.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-sm">
+              <button onclick="window.refreshSchoolAiAnalytics()" title="Segarkan Data" class="p-2.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-sm cursor-pointer">
                 <i class="fas fa-sync-alt"></i>
+              </button>
+              <button onclick="window.exportLeaderboardCsv()" title="Ekspor ke Excel / CSV" class="px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer">
+                <i class="fas fa-file-excel text-emerald-600"></i> <span class="hidden md:inline">Ekspor Excel</span>
+              </button>
+              <button onclick="window.printLeaderboardReport()" title="Cetak Laporan Resmi untuk Pengawas" class="px-3.5 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer">
+                <i class="fas fa-print"></i> <span class="hidden md:inline">Cetak Laporan</span>
               </button>
             </div>
           </div>

@@ -21,6 +21,7 @@ module.exports = {
       },
       colors: {
         teal: {
+          DEFAULT: '#269494',
           50: '#f0fdfa',
           100: '#ccfbf1',
           200: '#99f6e4',
@@ -34,6 +35,7 @@ module.exports = {
           950: '#072828',
         },
         primary: {
+          DEFAULT: '#269494',
           50: '#f0fdfa',
           100: '#ccfbf1',
           200: '#99f6e4',
@@ -52,6 +54,7 @@ module.exports = {
           dark: '#1a7474',
         },
         accent: {
+          DEFAULT: '#1a7474',
           50: '#f0fdfa',
           100: '#e0f2f1',
           200: '#b2dfdb',

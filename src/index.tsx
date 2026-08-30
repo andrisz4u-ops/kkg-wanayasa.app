@@ -22,6 +22,7 @@ import laporanRoutes from './routes/laporan';
 import rppRoutes from './routes/rpp';
 import kisiRoutes from './routes/kisi';
 import presentationRoutes from './routes/presentation';
+import ttsRoutes from './routes/tts';
 import { renderHTML } from './templates/layout';
 import { rateLimitMiddleware, RATE_LIMITS } from './lib/ratelimit';
 import { successResponse, Errors } from './lib/response';
@@ -126,6 +127,7 @@ app.route('/api/notifications', notificationRoutes);
 app.route('/api/rpp', rppRoutes);
 app.route('/api/kisi', kisiRoutes);
 app.route('/api/presentation', presentationRoutes);
+app.route('/api/tts', ttsRoutes);
 
 // Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)
 app.get('/api/ai-providers/active', async (c) => {

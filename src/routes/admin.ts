@@ -680,19 +680,44 @@ admin.get('/users', async (c) => {
     const countResult = await c.env.DB.prepare(countQuery).bind(...params).first() as any;
     const total = countResult?.cnt || 0;
 
-    // Get users with pagination
-    const usersQuery = `
-      SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at, last_login_at
-      FROM users
-      WHERE ${whereClause}
-      ORDER BY nama ASC
-      LIMIT ? OFFSET ?
-    `;
-
-    const results = await c.env.DB.prepare(usersQuery).bind(...params, limit, offset).all();
+    // Get users with pagination (with auto-healing fallback if last_login_at column doesn't exist yet)
+    let results: any;
+    try {
+      const usersQuery = `
+        SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at, last_login_at
+        FROM users
+        WHERE ${whereClause}
+        ORDER BY nama ASC
+        LIMIT ? OFFSET ?
+      `;
+      results = await c.env.DB.prepare(usersQuery).bind(...params, limit, offset).all();
+    } catch (dbErr: any) {
+      console.warn('Querying users with last_login_at failed, attempting auto-heal migration:', dbErr.message);
+      try {
+        await c.env.DB.prepare("ALTER TABLE users ADD COLUMN last_login_at DATETIME").run();
+        const retryQuery = `
+          SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at, last_login_at
+          FROM users
+          WHERE ${whereClause}
+          ORDER BY nama ASC
+          LIMIT ? OFFSET ?
+        `;
+        results = await c.env.DB.prepare(retryQuery).bind(...params, limit, offset).all();
+      } catch {
+        // Fallback without last_login_at
+        const fallbackQuery = `
+          SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, created_at, NULL as last_login_at
+          FROM users
+          WHERE ${whereClause}
+          ORDER BY nama ASC
+          LIMIT ? OFFSET ?
+        `;
+        results = await c.env.DB.prepare(fallbackQuery).bind(...params, limit, offset).all();
+      }
+    }
 
     return successResponse(c, {
-      users: results.results,
+      users: results.results || [],
       pagination: {
         page,
         limit,
@@ -704,7 +729,7 @@ admin.get('/users', async (c) => {
     });
   } catch (e: any) {
     console.error('Get users error:', e);
-    return Errors.internal(c);
+    return Errors.internal(c, e.message);
   }
 });
 

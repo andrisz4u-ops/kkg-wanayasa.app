@@ -29,8 +29,8 @@ export async function renderKisi() {
               <p class="asesmen-subtitle">NEURAL QUESTION ARCHITECT A4EDU</p>
             </div>
           </div>
-          <button type="button" id="btn-kisi-archive" class="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-cyan-100 hover:text-white border border-cyan-300/20 backdrop-blur-md text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
-            <i class="fas fa-folder-open text-amber-300"></i> Riwayat Soal Tersimpan
+          <button type="button" id="btn-kisi-archive" class="px-5 py-2.5 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
+            <i class="fas fa-folder-open text-amber-500"></i> Riwayat Soal Tersimpan
           </button>
         </div>
 
@@ -652,7 +652,7 @@ export function initKisi() {
       URL.revokeObjectURL(url);
 
       showToast('File .docx berhasil diunduh!', 'success');
-    } catch (err) {
+} catch (err) {
       console.error('DOCX generation error:', err);
       showToast('Gagal membuat file .docx: ' + err.message, 'error');
     } finally {
@@ -665,6 +665,8 @@ function renderResult(data, formData) {
   // Simpan formData dan raw data ke module scope untuk download handler
   _lastFormData = formData;
   _lastGeneratedData = data;
+
+  const isianType = data.isian?.type || formData.isianType || 'Standard';
 
   // Show result view, hide form
   document.getElementById('asesmen-form-view').classList.add('hidden');

@@ -29,8 +29,8 @@ export async function renderRpp() {
               <p class="rpp-subtitle"><i class="fas fa-sparkles"></i> DEEP LEARNING ARCHITECT A4EDU</p>
             </div>
           </div>
-          <button type="button" id="btn-rpp-archive" class="px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-indigo-100 hover:text-white border border-indigo-300/20 backdrop-blur-md text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
-            <i class="fas fa-folder-open text-amber-300"></i> Riwayat RPP Tersimpan
+          <button type="button" id="btn-rpp-archive" class="px-5 py-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
+            <i class="fas fa-folder-open text-amber-500"></i> Riwayat RPP Tersimpan
           </button>
         </div>
 

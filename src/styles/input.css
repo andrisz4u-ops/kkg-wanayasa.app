@@ -519,32 +519,61 @@
    Print & PDF Export Optimization
    =================================================== */
 @media print {
-    /* Hide navigation, toolbars, and action cards */
-    header, nav, .app-header, .sidebar, #mobile-menu, 
+    /* 1. Global Viewport & Container Unlock (Prevents 1-page cutoff & scrollbars) */
+    html, body, #app, 
+    .flex.h-screen, .flex-1, 
+    main, #main-content,
+    .max-w-7xl, .max-w-6xl {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+    }
+
+    /* 2. Hide ALL non-document UI: Sidebar, Header, Nav, Toolbar Buttons, Overlays */
+    aside, header, nav, footer,
+    #mobile-menu, #pwa-install-banner, #toast-container,
+    .app-header, .sidebar,
+    .fixed, .sticky,
+    button:not(.print-keep), input, select, textarea,
+    [role="dialog"], .modal,
+    #tts-form-view, .asesmen-result-toolbar, #asesmen-form-view,
     .rpp-result-toolbar, #rpp-form-view, #rpp-bridge-card, #lampiran-btn-area,
-    .asesmen-toolbar, #asesmen-form-view,
-    .print-hidden, .print\:hidden,
-    button:not(.print-keep), [role="dialog"], #toast-container {
+    .surat-header, #surat-form,
+    .print-hidden, .print\:hidden {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* Reset background colors and shadows */
-    body, html, #app, main {
-        background: #ffffff !important;
-        color: #000000 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        font-size: 11pt !important;
-    }
-
-    /* Ensure A4 paper size and margin */
+    /* 3. Paper Configuration (Standard A4 Portrait) */
     @page {
         size: A4 portrait;
-        margin: 1.25cm 1.25cm 1.25cm 1.25cm;
+        margin: 1cm 1.25cm 1cm 1.25cm;
     }
 
-    /* Page break helpers */
+    /* 4. Canvas Document Formats (RPP, Asesmen, TTS, Surat, Proker) */
+    .rpp-a4, .asesmen-a4, #tts-canvas, .surat-preview, .proker-paper, .print-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    /* 5. Page Breaks & Table Formatting */
     .page-break-before {
         page-break-before: always !important;
         break-before: page !important;
@@ -555,12 +584,14 @@
         break-after: page !important;
     }
 
-    .page-break-inside-avoid {
+    .page-break-inside-avoid, tr, .avoid-break {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 
     table {
+        width: 100% !important;
+        border-collapse: collapse !important;
         page-break-inside: auto;
     }
 
@@ -575,16 +606,6 @@
 
     tfoot {
         display: table-footer-group;
-    }
-
-    .rpp-a4, .asesmen-a4 {
-        box-shadow: none !important;
-        border: none !important;
-        border-radius: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
     }
 }
 

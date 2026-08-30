@@ -12,19 +12,11 @@ import {
     validate,
 } from '../lib/validation';
 import { UnsplashService } from '../services/unsplash';
+import { getCookie, getCurrentUser } from '../lib/auth';
+import { recordAIGeneration } from '../lib/telemetry';
+import { type AppBindings } from '../types/env';
 
-type Bindings = {
-    DB: D1Database;
-    MISTRAL_API_KEY?: string;
-    Z_AI_API_KEY?: string;
-    GEMINI_API_KEY?: string;
-    BEDROCK_API_KEY?: string;
-    BEDROCK_REGION?: string;
-    VERTEX_API_KEY?: string;
-    UNSPLASH_ACCESS_KEY?: string;
-};
-
-const presentation = new Hono<{ Bindings: Bindings }>();
+const presentation = new Hono<{ Bindings: AppBindings }>();
 
 const COT_PATTERN = /(chain\s*of\s*thought|let'?s\s+think|step\s*by\s*step|reasoning|analisis\s+internal|internal\s+analysis)/i;
 
@@ -264,6 +256,22 @@ KEMBALIKAN HANYA JSON VALID:
                 imagePolicy: hasUnsplash ? 'minimum_30_percent' : 'vector_fallback',
             },
         };
+
+        // Record usage telemetry for school & teacher analytics
+        try {
+            const sessionId = getCookie(c.req.header('Cookie'), 'session');
+            const user = await getCurrentUser(c.env.DB, sessionId);
+            await recordAIGeneration(c.env.DB, {
+                user_id: user?.id || 1,
+                user_nama: user?.nama || 'Guru',
+                sekolah: user?.sekolah || 'SDN 2 Nangerang',
+                feature_type: 'SLIDE',
+                mata_pelajaran: mataPelajaran,
+                topik: topik,
+                jenjang_kelas: jenjangKelas,
+                ai_provider: aiProvider,
+            });
+        } catch (_) {}
 
         return successResponse(c, finalResult);
     } catch (e: unknown) {

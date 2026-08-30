@@ -4,7 +4,7 @@ import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
 import { cpData } from '../lib/cp-data';
 import { getCookie, getCurrentUser } from '../lib/auth';
-
+import { recordAIGeneration } from '../lib/telemetry';
 import { type AppBindings } from '../types/env';
 
 const rpp = new Hono<{ Bindings: AppBindings }>();
@@ -240,6 +240,22 @@ rpp.post('/generate', async (c) => {
     if (lampirkanLKPD !== 'Ya' && result?.pertemuan) {
       result.pertemuan.forEach((p: any) => delete p.lkpd);
     }
+
+    // Record usage telemetry for school & teacher analytics
+    try {
+      const sessionId = getCookie(c.req.header('Cookie'), 'session');
+      const user = await getCurrentUser(c.env.DB, sessionId);
+      await recordAIGeneration(c.env.DB, {
+        user_id: user?.id || 1,
+        user_nama: user?.nama || (namaGuru || 'Guru'),
+        sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
+        feature_type: 'RPP',
+        mata_pelajaran: mataPelajaran,
+        topik: topik,
+        jenjang_kelas: jenjangKelas,
+        ai_provider: preferredSlug,
+      });
+    } catch (_) {}
 
     return successResponse(c, result);
   } catch (e: any) {

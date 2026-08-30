@@ -269,6 +269,86 @@ export async function renderAdmin() {
             </div>
           </div>
         </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <!-- SCHOOL AI USAGE LEADERBOARD & ANALYTICS                                     -->
+        <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-base font-bold shadow-sm">
+                  <i class="fas fa-trophy"></i>
+                </span>
+                <div>
+                  <h3 class="font-display text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Peringkat Penggunaan AI per Sekolah</h3>
+                  <p class="text-xs text-slate-500 font-light mt-0.5">Statistik pemanfaatan fitur AI (RPP, Asesmen & Slide) seluruh sekolah anggota gugus</p>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs self-start sm:self-auto">
+              <label class="text-[10px] uppercase font-semibold text-slate-500 tracking-widest hidden md:inline">Periode</label>
+              <select id="school-analytics-month" onchange="window.loadSchoolAiAnalytics(this.value)" class="px-4 py-2 rounded-xl border border-slate-200/80 bg-slate-50 text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
+                <option value="">Memuat bulan...</option>
+              </select>
+              <button onclick="window.refreshSchoolAiAnalytics()" title="Segarkan Data" class="p-2.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-sm">
+                <i class="fas fa-sync-alt"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Metric Chips -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100/80 shadow-sm">
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-indigo-600 mb-1">Total Generasi AI</p>
+              <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-total">0</h4>
+              <p class="text-[10px] text-slate-500 mt-1">Dokumen dibuat guru</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100/80 shadow-sm">
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 mb-1">RPP / Modul Ajar</p>
+              <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-rpp">0</h4>
+              <p class="text-[10px] text-slate-500 mt-1">Format Word siap pakai</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-sky-50/60 border border-sky-100/80 shadow-sm">
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-sky-600 mb-1">Asesmen & TTS</p>
+              <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-asesmen">0</h4>
+              <p class="text-[10px] text-slate-500 mt-1">Soal HOTS & kisi-kisi</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-100/80 shadow-sm">
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-amber-600 mb-1">Slide Pembelajaran</p>
+              <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-slide">0</h4>
+              <p class="text-[10px] text-slate-500 mt-1">Media ajar presentasi</p>
+            </div>
+          </div>
+
+          <!-- Podium Cards Top 3 -->
+          <div id="school-podium-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+
+          <!-- Full Table of Schools -->
+          <div class="overflow-x-auto rounded-2xl border border-slate-200/80 shadow-sm">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200/80 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th class="px-4 py-3.5 text-center w-14">Rank</th>
+                  <th class="px-4 py-3.5">Nama Sekolah</th>
+                  <th class="px-3 py-3.5 text-center">RPP 📄</th>
+                  <th class="px-3 py-3.5 text-center">Soal 🧩</th>
+                  <th class="px-3 py-3.5 text-center">Slide 📽️</th>
+                  <th class="px-4 py-3.5 text-center">Total AI</th>
+                  <th class="px-4 py-3.5">Guru Paling Aktif</th>
+                  <th class="px-4 py-3.5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="school-leaderboard-tbody" class="divide-y divide-slate-100 bg-white">
+                <tr>
+                  <td colspan="8" class="text-center py-8 text-slate-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Memuat data analitik sekolah...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div >
 

@@ -115,9 +115,13 @@ window.loadAdminDashboard = async function loadAdminDashboard(isSilent = false) 
     await new Promise(resolve => setTimeout(resolve, 100));
     await loadDashboardTaskList(stats, approvalStats);
 
-    // Load activity last
+    // Load activity
     await new Promise(resolve => setTimeout(resolve, 100));
     await window.loadDashboardActivity();
+
+    // Load School AI Usage Analytics Leaderboard
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await window.loadSchoolAiAnalytics();
 
     // Initialize charts if panel is visible
     if (!isSilent && !document.getElementById('panel-dashboard').classList.contains('hidden')) {
@@ -348,4 +352,149 @@ window.initDashboardCharts = async function () {
 }
 
 // ============================================
+// SCHOOL AI ANALYTICS LEADERBOARD
+// ============================================
+
+window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') {
+  const tbody = document.getElementById('school-leaderboard-tbody');
+  const podiumContainer = document.getElementById('school-podium-container');
+  const monthSelect = document.getElementById('school-analytics-month');
+
+  if (!tbody) return;
+
+  try {
+    const query = month ? `?month=${encodeURIComponent(month)}` : '';
+    const res = await api(`/admin/analytics/schools${query}`);
+    const data = res?.data;
+
+    if (!data) return;
+
+    // Populate month dropdown if empty or needed
+    if (monthSelect && data.available_months && (monthSelect.options.length <= 1 || !month)) {
+      const currentSelected = month || data.selected_month;
+      monthSelect.innerHTML = data.available_months.map(m => {
+        const [y, mo] = m.split('-');
+        const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const label = `${monthNames[parseInt(mo, 10)] || mo} ${y}`;
+        return `<option value="${m}" ${m === currentSelected ? 'selected' : ''}>${label}</option>`;
+      }).join('') + `<option value="all" ${currentSelected === 'all' ? 'selected' : ''}>Semua Periode (All-Time)</option>`;
+    }
+
+    // Update Summary counters
+    const summary = data.summary || {};
+    setMetricValue('school-stat-total', summary.total_generations || 0);
+    setMetricValue('school-stat-rpp', summary.total_rpp || 0);
+    setMetricValue('school-stat-asesmen', summary.total_asesmen || 0);
+    setMetricValue('school-stat-slide', summary.total_slide || 0);
+
+    const list = data.leaderboard || [];
+
+    // Render Podium for Top 3 (if any active schools exist)
+    const activeSchools = list.filter(s => s.total_all > 0);
+    if (podiumContainer) {
+      if (activeSchools.length === 0) {
+        podiumContainer.innerHTML = `
+          <div class="col-span-full py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+              <i class="fas fa-chart-line text-lg"></i>
+            </div>
+            <p class="text-sm font-semibold text-slate-700">Belum Ada Aktivitas AI di Periode Ini</p>
+            <p class="text-xs text-slate-500 mt-1">Data akan otomatis muncul saat guru men-generate RPP, Asesmen, atau Slide.</p>
+          </div>
+        `;
+      } else {
+        const top3 = activeSchools.slice(0, 3);
+        const medals = [
+          { rank: 1, label: 'Juara 1', icon: '🥇', bg: 'from-amber-500/10 via-amber-500/5 to-transparent', border: 'border-amber-300', badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+          { rank: 2, label: 'Juara 2', icon: '🥈', bg: 'from-slate-400/10 via-slate-400/5 to-transparent', border: 'border-slate-300', badge: 'bg-slate-100 text-slate-800 border-slate-200' },
+          { rank: 3, label: 'Juara 3', icon: '🥉', bg: 'from-amber-700/10 via-amber-700/5 to-transparent', border: 'border-amber-600/30', badge: 'bg-amber-50 text-amber-900 border-amber-200' },
+        ];
+
+        podiumContainer.innerHTML = top3.map((sch, i) => {
+          const m = medals[i];
+          const teacherInfo = sch.top_teacher ? `<span class="text-slate-500 font-normal">Guru teraktif:</span> <strong class="text-slate-800">${escapeHtml(sch.top_teacher.nama)}</strong> (${sch.top_teacher.count}x)` : 'Belum ada guru aktif';
+          return `
+            <div class="p-5 rounded-2xl border ${m.border} bg-gradient-to-b ${m.bg} relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-2xl">${m.icon}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${m.badge}">${m.label}</span>
+              </div>
+              <h4 class="font-bold text-slate-900 text-base tracking-tight truncate" title="${escapeHtml(sch.nama)}">${escapeHtml(sch.nama)}</h4>
+              <div class="flex items-baseline gap-2 mt-2 mb-3">
+                <span class="text-3xl font-extrabold text-indigo-600 font-display">${sch.total_all}</span>
+                <span class="text-xs text-slate-500 font-medium">total dokumen</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1 py-2 px-3 rounded-xl bg-white/80 border border-slate-200/60 text-center text-[11px] mb-3">
+                <div><span class="text-slate-400 block text-[9px] uppercase">RPP</span><strong class="text-slate-800">${sch.total_rpp}</strong></div>
+                <div><span class="text-slate-400 block text-[9px] uppercase">Soal</span><strong class="text-slate-800">${sch.total_asesmen}</strong></div>
+                <div><span class="text-slate-400 block text-[9px] uppercase">Slide</span><strong class="text-slate-800">${sch.total_slide}</strong></div>
+              </div>
+              <p class="text-[11px] text-slate-600 truncate">${teacherInfo}</p>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Render Full Table
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Tidak ada data sekolah terdaftar.</td></tr>`;
+      return;
+    }
+
+    const maxTotal = Math.max(1, ...list.map(s => s.total_all));
+
+    tbody.innerHTML = list.map((s, idx) => {
+      let rankBadge = `<span class="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-slate-100 text-slate-600">${idx + 1}</span>`;
+      if (idx === 0 && s.total_all > 0) rankBadge = `<span class="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-amber-100 text-amber-700 border border-amber-300">🥇</span>`;
+      else if (idx === 1 && s.total_all > 0) rankBadge = `<span class="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-slate-200 text-slate-700 border border-slate-300">🥈</span>`;
+      else if (idx === 2 && s.total_all > 0) rankBadge = `<span class="w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs bg-amber-50 text-amber-900 border border-amber-600/40">🥉</span>`;
+
+      const pct = Math.round((s.total_all / maxTotal) * 100);
+      let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">🟢 Sangat Aktif</span>';
+      if (s.total_all === 0) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">🔴 Belum Aktif</span>';
+      } else if (s.total_all < 5) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">🟡 Cukup Aktif</span>';
+      } else if (s.total_all < 15) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">🔵 Aktif</span>';
+      }
+
+      const teacherText = s.top_teacher 
+        ? `<div class="font-medium text-slate-800">${escapeHtml(s.top_teacher.nama)}</div><div class="text-[10px] text-slate-400">${s.top_teacher.count} dokumen</div>`
+        : `<span class="text-slate-400 italic">-</span>`;
+
+      return `
+        <tr class="hover:bg-slate-50/80 transition-colors">
+          <td class="px-4 py-3 text-center">${rankBadge}</td>
+          <td class="px-4 py-3">
+            <div class="font-semibold text-slate-900">${escapeHtml(s.nama)}</div>
+            <div class="text-[10px] text-slate-400">NPSN: ${escapeHtml(s.npsn || '-')} ${s.is_sekolah_penggerak ? '• <span class="text-indigo-600 font-medium">Sekolah Penggerak</span>' : ''}</div>
+          </td>
+          <td class="px-3 py-3 text-center font-semibold text-emerald-700">${s.total_rpp}</td>
+          <td class="px-3 py-3 text-center font-semibold text-sky-700">${s.total_asesmen}</td>
+          <td class="px-3 py-3 text-center font-semibold text-amber-700">${s.total_slide}</td>
+          <td class="px-4 py-3 text-center">
+            <div class="font-bold text-slate-900 text-sm">${s.total_all}</div>
+            <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+              <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${pct}%"></div>
+            </div>
+          </td>
+          <td class="px-4 py-3">${teacherText}</td>
+          <td class="px-4 py-3 text-center">${statusBadge}</td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (e) {
+    console.error('Failed to load school AI analytics:', e);
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-rose-500">Gagal memuat analitik sekolah.</td></tr>`;
+  }
+};
+
+window.refreshSchoolAiAnalytics = function() {
+  const monthSelect = document.getElementById('school-analytics-month');
+  const month = monthSelect ? monthSelect.value : '';
+  window.loadSchoolAiAnalytics(month);
+};
 

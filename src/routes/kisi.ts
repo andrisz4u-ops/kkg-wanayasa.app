@@ -3,6 +3,8 @@ import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { UnsplashService } from '../services/unsplash';
 import { generateCrossword } from '../lib/crossword';
+import { getCookie, getCurrentUser } from '../lib/auth';
+import { recordAIGeneration } from '../lib/telemetry';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
@@ -199,6 +201,22 @@ kisi.post('/generate', async (c) => {
                 }
             }
         }
+
+        // Record usage telemetry for school & teacher analytics
+        try {
+            const sessionId = getCookie(c.req.header('Cookie'), 'session');
+            const user = await getCurrentUser(c.env.DB, sessionId);
+            await recordAIGeneration(c.env.DB, {
+                user_id: user?.id || 1,
+                user_nama: user?.nama || (namaGuru || 'Guru'),
+                sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
+                feature_type: 'ASESMEN',
+                mata_pelajaran: mataPelajaran,
+                topik: topik,
+                jenjang_kelas: jenjangKelas,
+                ai_provider: preferredSlug,
+            });
+        } catch (_) {}
 
         return successResponse(c, finalData);
 

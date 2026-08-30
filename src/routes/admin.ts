@@ -159,6 +159,162 @@ admin.get('/dashboard', async (c) => {
   }
 });
 
+// GET /api/admin/analytics/schools — Leaderboard & monthly analytics per school
+admin.get('/analytics/schools', async (c) => {
+  try {
+    const requestedMonth = c.req.query('month') || new Date().toISOString().substring(0, 7); // e.g. "2026-08"
+
+    // 1. Get all registered schools
+    const schoolsRes = await c.env.DB.prepare(
+      'SELECT id, nama, npsn, tipe, is_sekretariat, is_sekolah_penggerak FROM sekolah ORDER BY nama ASC'
+    ).all();
+    const allSchools = schoolsRes.results || [];
+
+    // 2. Get distinct available months in logs for filter dropdown
+    const monthsRes = await c.env.DB.prepare(
+      "SELECT DISTINCT strftime('%Y-%m', created_at) as month FROM ai_generation_logs ORDER BY month DESC"
+    ).all();
+    const availableMonths: string[] = (monthsRes.results || []).map((r: any) => r.month).filter(Boolean);
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    if (!availableMonths.includes(currentMonthStr)) {
+      availableMonths.unshift(currentMonthStr);
+    }
+
+    // 3. Aggregate generation counts per school for the selected month (or 'all')
+    const statsQuery = requestedMonth === 'all'
+      ? `SELECT 
+           sekolah,
+           COUNT(*) as total_all,
+           SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
+           SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
+           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide
+         FROM ai_generation_logs
+         GROUP BY sekolah`
+      : `SELECT 
+           sekolah,
+           COUNT(*) as total_all,
+           SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
+           SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
+           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide
+         FROM ai_generation_logs
+         WHERE strftime('%Y-%m', created_at) = ?
+         GROUP BY sekolah`;
+
+    const statsRes = requestedMonth === 'all'
+      ? await c.env.DB.prepare(statsQuery).all()
+      : await c.env.DB.prepare(statsQuery).bind(requestedMonth).all();
+
+    const statsMap = new Map<string, any>();
+    (statsRes.results || []).forEach((row: any) => {
+      statsMap.set(row.sekolah, row);
+    });
+
+    // 4. Find the most active teacher per school in this period
+    const topTeacherQuery = requestedMonth === 'all'
+      ? `SELECT sekolah, user_nama, COUNT(*) as gen_count 
+         FROM ai_generation_logs 
+         GROUP BY sekolah, user_nama 
+         ORDER BY sekolah, gen_count DESC`
+      : `SELECT sekolah, user_nama, COUNT(*) as gen_count 
+         FROM ai_generation_logs 
+         WHERE strftime('%Y-%m', created_at) = ? 
+         GROUP BY sekolah, user_nama 
+         ORDER BY sekolah, gen_count DESC`;
+
+    const teachersRes = requestedMonth === 'all'
+      ? await c.env.DB.prepare(topTeacherQuery).all()
+      : await c.env.DB.prepare(topTeacherQuery).bind(requestedMonth).all();
+
+    const topTeacherMap = new Map<string, { nama: string; count: number }>();
+    (teachersRes.results || []).forEach((row: any) => {
+      if (!topTeacherMap.has(row.sekolah)) {
+        topTeacherMap.set(row.sekolah, { nama: row.user_nama, count: row.gen_count });
+      }
+    });
+
+    // 5. Build unified leaderboard (including schools with 0 generations)
+    const schoolLeaderboard = allSchools.map((sch: any) => {
+      const stats = statsMap.get(sch.nama) || {
+        total_all: 0,
+        total_rpp: 0,
+        total_asesmen: 0,
+        total_slide: 0
+      };
+      const topTeacher = topTeacherMap.get(sch.nama) || null;
+
+      return {
+        id: sch.id,
+        nama: sch.nama,
+        npsn: sch.npsn,
+        tipe: sch.tipe,
+        is_sekretariat: sch.is_sekretariat === 1,
+        is_sekolah_penggerak: sch.is_sekolah_penggerak === 1,
+        total_all: Number(stats.total_all) || 0,
+        total_rpp: Number(stats.total_rpp) || 0,
+        total_asesmen: Number(stats.total_asesmen) || 0,
+        total_slide: Number(stats.total_slide) || 0,
+        top_teacher: topTeacher,
+      };
+    });
+
+    // Also include any unknown schools from logs that aren't in \`sekolah\` table
+    (statsRes.results || []).forEach((row: any) => {
+      if (!schoolLeaderboard.some(s => s.nama === row.sekolah)) {
+        const topTeacher = topTeacherMap.get(row.sekolah) || null;
+        schoolLeaderboard.push({
+          id: 0,
+          nama: row.sekolah,
+          npsn: '-',
+          tipe: 'negeri',
+          is_sekretariat: false,
+          is_sekolah_penggerak: false,
+          total_all: Number(row.total_all) || 0,
+          total_rpp: Number(row.total_rpp) || 0,
+          total_asesmen: Number(row.total_asesmen) || 0,
+          total_slide: Number(row.total_slide) || 0,
+          top_teacher: topTeacher,
+        });
+      }
+    });
+
+    // Sort by total_all DESC, then name ASC
+    schoolLeaderboard.sort((a, b) => {
+      if (b.total_all !== a.total_all) return b.total_all - a.total_all;
+      return a.nama.localeCompare(b.nama);
+    });
+
+    // Assign ranks
+    schoolLeaderboard.forEach((s, idx) => {
+      (s as any).rank = idx + 1;
+    });
+
+    // 6. Calculate Gugus-wide totals
+    const totalGenerations = schoolLeaderboard.reduce((sum, s) => sum + s.total_all, 0);
+    const totalRpp = schoolLeaderboard.reduce((sum, s) => sum + s.total_rpp, 0);
+    const totalAsesmen = schoolLeaderboard.reduce((sum, s) => sum + s.total_asesmen, 0);
+    const totalSlide = schoolLeaderboard.reduce((sum, s) => sum + s.total_slide, 0);
+    const activeSchoolsCount = schoolLeaderboard.filter(s => s.total_all > 0).length;
+
+    return successResponse(c, {
+      selected_month: requestedMonth,
+      available_months: availableMonths,
+      summary: {
+        total_generations: totalGenerations,
+        total_rpp: totalRpp,
+        total_asesmen: totalAsesmen,
+        total_slide: totalSlide,
+        active_schools_count: activeSchoolsCount,
+        total_schools_count: schoolLeaderboard.length,
+        top_school: schoolLeaderboard[0] || null
+      },
+      leaderboard: schoolLeaderboard
+    });
+  } catch (e: any) {
+    console.error('Get school analytics error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
 // Get settings
 admin.get('/settings', requireStrictAdmin, async (c) => {
   try {

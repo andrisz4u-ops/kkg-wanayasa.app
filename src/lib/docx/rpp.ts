@@ -77,91 +77,7 @@ export function createRppCell(
 export function formatComplexText(text: any): string {
     if (text === null || text === undefined) return '';
     
-    // If it's an object or array, try to format questions/soal
-    if (typeof text === 'object') {
-        const soalArray = text.soal || (Array.isArray(text) ? text : null);
-        if (Array.isArray(soalArray) && soalArray.length > 0) {
-            const firstItem = soalArray[0];
-            if (firstItem && (firstItem.pertanyaan || firstItem.question || firstItem.soal)) {
-                return soalArray.map((s: any, idx: number) => {
-                    const qNum = s.nomor || (idx + 1);
-                    const qText = s.pertanyaan || s.question || s.soal || '';
-                    let sStr = `${qNum}. ${qText}`;
-                    if (s.pilihan && Array.isArray(s.pilihan)) {
-                        sStr += '\n   ' + s.pilihan.map((p: any) => String(p)).join('\n   ');
-                    } else if (s.options && Array.isArray(s.options)) {
-                        sStr += '\n   ' + s.options.map((o: any) => String(o)).join('\n   ');
-                    }
-                    return sStr;
-                }).join('\n');
-            }
-        }
-        
-        // General fallbacks for narrative fields that might be returned as objects
-        if (text.isi && typeof text.isi === 'string') return text.isi;
-        if (text.text && typeof text.text === 'string') return text.text;
-        if (text.deskripsi && typeof text.deskripsi === 'string') return text.deskripsi;
-
-        // Handle metode_pembelajaran object structure from AI
-        // Format: { strategi_utama: "...", profil_lulusan: { keimanan_ketakwaan: "...", ... } }
-        // Or Format: { strategi: "Discovery Learning", langkah_langkah: [...] }
-        if (typeof text === 'object' && text !== null && !Array.isArray(text)) {
-            const parts: string[] = [];
-            
-            if (text.strategi_utama && typeof text.strategi_utama === 'string') {
-                parts.push(text.strategi_utama);
-            }
-            if (text.strategi && typeof text.strategi === 'string') {
-                parts.push(`**Strategi:** ${text.strategi}`);
-            }
-            if (text.langkah_langkah && Array.isArray(text.langkah_langkah)) {
-                parts.push(`**Langkah-langkah:**`);
-                text.langkah_langkah.forEach((l: any) => parts.push(`- ${l}`));
-            }
-
-            if (text.profil_lulusan && typeof text.profil_lulusan === 'object') {
-                const pl = text.profil_lulusan;
-                const labelMap: Record<string, string> = {
-                    keimanan_ketakwaan: 'Keimanan & Ketakwaan',
-                    penalaran_kritis: 'Penalaran Kritis',
-                    kolaborasi: 'Kolaborasi',
-                    komunikasi: 'Komunikasi',
-                    kreativitas: 'Kreativitas',
-                    kebhinnekaan: 'Kebhinnekaan Global',
-                    mandiri: 'Mandiri',
-                };
-                for (const [key, val] of Object.entries(pl)) {
-                    if (typeof val === 'string' && val.trim()) {
-                        const label = labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                        parts.push(`**${label}:** ${val}`);
-                    }
-                }
-            }
-            
-            // Also handle any other keys at top level
-            const knownKeys = new Set(['strategi_utama', 'profil_lulusan', 'strategi', 'langkah_langkah', 'isi', 'text', 'deskripsi']);
-            for (const [key, val] of Object.entries(text)) {
-                if (!knownKeys.has(key)) {
-                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                    if (typeof val === 'string' && val.trim()) {
-                        parts.push(`**${label}:** ${val}`);
-                    } else if (Array.isArray(val) && val.every(i => typeof i === 'string')) {
-                        parts.push(`**${label}:**`);
-                        val.forEach((item: any) => parts.push(`- ${item}`));
-                    }
-                }
-            }
-            if (parts.length > 0) return parts.join('\n');
-        }
-        
-        // Handle simple arrays of strings
-        if (Array.isArray(text) && text.every(i => typeof i === 'string')) {
-            return text.join('\n');
-        }
-
-        return JSON.stringify(text, null, 2);
-    }
-
+    // If it's a string, clean and check if it's stringified JSON
     if (typeof text === 'string') {
         const trimmed = text.trim();
         // Check if string contains "soal:" followed by JSON
@@ -181,6 +97,95 @@ export function formatComplexText(text: any): string {
                 return formatComplexText(parsed);
             } catch (e) { /* fall back to normal string */ }
         }
+        return text;
+    }
+
+    // If it's an array
+    if (Array.isArray(text)) {
+        if (text.length === 0) return '-';
+        // Array of questions (soal)
+        if (text.some(i => i && typeof i === 'object' && (i.pertanyaan || i.question || i.soal))) {
+            return text.map((s: any, idx: number) => {
+                const qNum = s.nomor || (idx + 1);
+                const qText = s.pertanyaan || s.question || s.soal || '';
+                let sStr = `${qNum}. ${qText}`;
+                if (s.pilihan && Array.isArray(s.pilihan)) {
+                    sStr += '\n   ' + s.pilihan.map((p: any) => String(p)).join('\n   ');
+                } else if (s.options && Array.isArray(s.options)) {
+                    sStr += '\n   ' + s.options.map((o: any) => String(o)).join('\n   ');
+                }
+                return sStr;
+            }).join('\n\n');
+        }
+        // Array of items (strings, numbers, or objects)
+        return text.map((item, idx) => {
+            if (typeof item === 'string') return `- ${item}`;
+            if (item && typeof item === 'object') {
+                const str = item.isi || item.text || item.deskripsi || item.kegiatan || item.langkah || item.soal || Object.values(item).filter(v => typeof v === 'string').join(' - ');
+                return str ? `- ${str}` : `- ${JSON.stringify(item)}`;
+            }
+            return `- ${String(item)}`;
+        }).join('\n');
+    }
+
+    // If it's an object
+    if (typeof text === 'object') {
+        if (text.isi && typeof text.isi === 'string') return text.isi;
+        if (text.text && typeof text.text === 'string') return text.text;
+        if (text.deskripsi && typeof text.deskripsi === 'string') return text.deskripsi;
+
+        // Check for .soal array inside object
+        if (Array.isArray(text.soal) && text.soal.length > 0) {
+            return formatComplexText(text.soal);
+        }
+
+        const parts: string[] = [];
+        if (text.strategi_utama && typeof text.strategi_utama === 'string') {
+            parts.push(text.strategi_utama);
+        }
+        if (text.strategi && typeof text.strategi === 'string') {
+            parts.push(`**Strategi:** ${text.strategi}`);
+        }
+        if (text.langkah_langkah && Array.isArray(text.langkah_langkah)) {
+            parts.push(`**Langkah-langkah:**`);
+            text.langkah_langkah.forEach((l: any) => parts.push(`- ${typeof l === 'object' ? formatComplexText(l) : l}`));
+        }
+
+        if (text.profil_lulusan && typeof text.profil_lulusan === 'object') {
+            const pl = text.profil_lulusan;
+            const labelMap: Record<string, string> = {
+                keimanan_ketakwaan: 'Keimanan & Ketakwaan',
+                penalaran_kritis: 'Penalaran Kritis',
+                kolaborasi: 'Kolaborasi',
+                komunikasi: 'Komunikasi',
+                kreativitas: 'Kreativitas',
+                kebhinnekaan: 'Kebhinnekaan Global',
+                mandiri: 'Mandiri',
+            };
+            for (const [key, val] of Object.entries(pl)) {
+                if (typeof val === 'string' && val.trim()) {
+                    const label = labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    parts.push(`**${label}:** ${val}`);
+                }
+            }
+        }
+
+        const knownKeys = new Set(['strategi_utama', 'profil_lulusan', 'strategi', 'langkah_langkah', 'isi', 'text', 'deskripsi', 'soal']);
+        for (const [key, val] of Object.entries(text)) {
+            if (!knownKeys.has(key)) {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                if (typeof val === 'string' && val.trim()) {
+                    parts.push(`**${label}:** ${val}`);
+                } else if (Array.isArray(val)) {
+                    parts.push(`**${label}:**\n${formatComplexText(val)}`);
+                } else if (val && typeof val === 'object') {
+                    parts.push(`**${label}:**\n${formatComplexText(val)}`);
+                }
+            }
+        }
+        if (parts.length > 0) return parts.join('\n');
+
+        return JSON.stringify(text, null, 2);
     }
 
     return String(text);
@@ -303,27 +308,29 @@ export async function generateRppDocx(
         try {
             const resp = await fetch(settings.kop_surat_url);
             if (resp.ok) {
+                const contentType = resp.headers.get('content-type') || '';
                 const arrBuf = await resp.arrayBuffer();
-                let typeStr = resp.headers.get('content-type') || 'image/png';
-                const imageType = typeStr.includes('jpeg') || typeStr.includes('jpg') ? 'jpg' : 'png';
-                kopSuratContent.push(new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { after: 0 },
-                    children: [
-                        new ImageRun({
-                            data: arrBuf,
-                            transformation: { width: 650, height: 125 },
-                            type: imageType as any,
-                        })
-                    ]
-                }));
-                kopSuratContent.push(new Paragraph({
-                    spacing: { after: 80 },
-                    border: {
-                        bottom: { style: BorderStyle.DOUBLE, size: 6, color: '000000', space: 2 }
-                    },
-                    children: []
-                }));
+                if (arrBuf.byteLength > 100 && (contentType.includes('image') || settings.kop_surat_url.match(/\.(png|jpg|jpeg|webp)/i))) {
+                    let imageType = contentType.includes('jpeg') || contentType.includes('jpg') || settings.kop_surat_url.includes('jpg') ? 'jpg' : 'png';
+                    kopSuratContent.push(new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 0 },
+                        children: [
+                            new ImageRun({
+                                data: arrBuf,
+                                transformation: { width: 650, height: 125 },
+                                type: imageType as any,
+                            })
+                        ]
+                    }));
+                    kopSuratContent.push(new Paragraph({
+                        spacing: { after: 80 },
+                        border: {
+                            bottom: { style: BorderStyle.DOUBLE, size: 6, color: '000000', space: 2 }
+                        },
+                        children: []
+                    }));
+                }
             }
         } catch (e) { }
     }
@@ -391,7 +398,7 @@ export async function generateRppDocx(
                 renderTwoCols('Topik / Materi Pokok', inputData.topik),
                 renderTwoCols('Kelas / Semester', `${inputData.jenjangKelas} / ${inputData.semester}`),
                 renderTwoCols('Alokasi Waktu', inputData.alokasiWaktu),
-                renderTwoCols('Jumlah Pertemuan', `${inputData.jumlahPertemuan} Pertemuan`),
+                renderTwoCols('Jumlah Pertemuan', `${inputData.jumlahPertemuan || pertemuan.length || 1} Pertemuan`),
             ]
         }),
         new Paragraph({ spacing: { after: 80 } }),
@@ -423,6 +430,14 @@ export async function generateRppDocx(
         new Paragraph({ spacing: { after: 80 } }),
     ];
 
+    const saranaStr = typeof sp === 'string'
+        ? sp
+        : `Sumber Belajar: ${sp.sumber_belajar || '-'}\nMedia: ${sp.media || '-'}\nAlat Peraga: ${sp.alat_peraga || '-'}`;
+
+    const difStr = typeof dif === 'string'
+        ? dif
+        : `Visual: ${dif.visual || '-'}\nAuditori: ${dif.auditori || '-'}\nKinestetik: ${dif.kinestetik || '-'}`;
+
     const desainSection: (Paragraph | Table)[] = [
         new Paragraph({
             spacing: { before: 160, after: 120 },
@@ -437,9 +452,9 @@ export async function generateRppDocx(
                     { label: 'Strategi Pembelajaran', value: inputData.strategi || '-' },
                     { label: 'Metode Relevan', value: ds.metode_relevan || ds.metode_pembelajaran || '-' },
                     { label: '1. Metode Pembelajaran', value: ds.metode_pembelajaran || '-' },
-                    { label: '2. Sarana dan Prasarana', value: `Sumber Belajar: ${sp.sumber_belajar || '-'}\nMedia: ${sp.media || '-'}\nAlat Peraga: ${sp.alat_peraga || '-'}` },
+                    { label: '2. Sarana dan Prasarana', value: saranaStr },
                     { label: '3. Dimensi Profil Lulusan', value: profilStr || '-' },
-                    { label: '4. Diferensiasi Pembelajaran', value: `Visual: ${dif.visual || '-'}\nAuditori: ${dif.auditori || '-'}\nKinestetik: ${dif.kinestetik || '-'}` },
+                    { label: '4. Diferensiasi Pembelajaran', value: difStr },
                 ].map(row => new TableRow({
                     children: [
                         new TableCell({
@@ -486,9 +501,46 @@ export async function generateRppDocx(
         penutup: 'PENUTUP',
     };
 
-    pertemuan.forEach((p, idx) => {
-        const k = p.kegiatan || {};
-        const tuj = p.tujuan_pertemuan || p.tujuan || [];
+    pertemuan.forEach((p: any, idx: number) => {
+        // Normalize kegiatan into object map
+        const kRaw = p.kegiatan || p.kegiatan_pembelajaran || p.langkah_pembelajaran || {};
+        let kMap: Record<string, { isi: any; waktu: string }> = {};
+
+        if (Array.isArray(kRaw)) {
+            kRaw.forEach((item: any) => {
+                if (!item) return;
+                const faseKey = String(item.fase || item.phase || item.kategori || item.nama || '').toLowerCase().trim();
+                const matchedKey = Object.keys(phaseLabels).find(pk => faseKey.includes(pk)) || 'meaningful';
+                kMap[matchedKey] = {
+                    isi: item.isi || item.kegiatan || item.deskripsi || item.text || item,
+                    waktu: item.waktu || item.durasi || '-'
+                };
+            });
+        } else if (typeof kRaw === 'object' && kRaw !== null) {
+            for (const [key, val] of Object.entries(kRaw)) {
+                const lowerKey = key.toLowerCase();
+                const matchedKey = Object.keys(phaseLabels).find(pk => lowerKey.includes(pk)) || lowerKey;
+                if (typeof val === 'string') {
+                    kMap[matchedKey] = { isi: val, waktu: '-' };
+                } else if (val && typeof val === 'object') {
+                    kMap[matchedKey] = {
+                        isi: (val as any).isi || (val as any).deskripsi || (val as any).kegiatan || (val as any).text || val,
+                        waktu: (val as any).waktu || (val as any).durasi || '-'
+                    };
+                }
+            }
+        }
+
+        // Normalize tujuan_pertemuan safely to string array
+        const tujRaw = p.tujuan_pertemuan || p.tujuan || [];
+        let tujArray: string[] = [];
+        if (Array.isArray(tujRaw)) {
+            tujArray = tujRaw.map((t: any) => typeof t === 'object' ? (t.tujuan || t.text || JSON.stringify(t)) : String(t));
+        } else if (typeof tujRaw === 'string' && tujRaw.trim()) {
+            tujArray = tujRaw.split('\n').map(s => s.trim()).filter(Boolean);
+        } else if (tujRaw && typeof tujRaw === 'object') {
+            tujArray = Object.values(tujRaw).map(v => String(v));
+        }
 
         skenarioSection.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
@@ -526,7 +578,7 @@ export async function generateRppDocx(
         }));
         skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
 
-        if (tuj.length > 0) {
+        if (tujArray.length > 0) {
             skenarioSection.push(new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
@@ -537,10 +589,10 @@ export async function generateRppDocx(
                                 margins: { top: convertInchesToTwip(0.08), bottom: convertInchesToTwip(0.08), left: convertInchesToTwip(0.12), right: convertInchesToTwip(0.12) },
                                 children: [
                                     new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: 'Tujuan Pembelajaran Khusus:', font: FONT_FAMILY, size: FONT_SIZE_SMALL, bold: true, underline: {} })] }),
-                                    ...tuj.map((t, i) => new Paragraph({
+                                    ...tujArray.map((t, i) => new Paragraph({
                                         alignment: AlignmentType.JUSTIFIED,
                                         spacing: { after: 40, line: 276 },
-                                        children: [new TextRun({ text: `${i + 1}. ${typeof t === 'object' ? JSON.stringify(t) : String(t)}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
+                                        children: [new TextRun({ text: `${i + 1}. ${t}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
                                     }))
                                 ]
                             })
@@ -550,6 +602,48 @@ export async function generateRppDocx(
             }));
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
         }
+
+        const phaseRows = Object.entries(phaseLabels).map(([key, label]) => {
+            const phase = kMap[key];
+            if (!phase) return null;
+            const labelParts = String(label).split('\n');
+            return new TableRow({
+                children: [
+                    new TableCell({
+                        width: { size: 18, type: WidthType.PERCENTAGE },
+                        shading: { fill: phaseColors[key] || 'F8FAFC', type: 'clear', color: 'auto' },
+                        margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
+                        verticalAlign: VerticalAlign.CENTER,
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: labelParts.map((part, i) => new TextRun({
+                                text: String(part),
+                                font: FONT_FAMILY,
+                                size: FONT_SIZE_SMALL,
+                                bold: i === 0,
+                                italics: i > 0,
+                                break: i > 0 ? 1 : 0,
+                            })),
+                        })],
+                    }),
+                    new TableCell({
+                        width: { size: 14, type: WidthType.PERCENTAGE },
+                        margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
+                        verticalAlign: VerticalAlign.CENTER,
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({ text: String(phase.waktu || '-'), font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
+                        })],
+                    }),
+                    new TableCell({
+                        width: { size: 68, type: WidthType.PERCENTAGE },
+                        margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
+                        verticalAlign: VerticalAlign.TOP,
+                        children: parseRppText(phase.isi || '-'),
+                    }),
+                ]
+            });
+        }).filter(Boolean) as TableRow[];
 
         skenarioSection.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
@@ -580,52 +674,29 @@ export async function generateRppDocx(
                         }),
                     ]
                 }),
-                ...(Object.entries(phaseLabels).map(([key, label]) => {
-                    const phase = (k as any)[key] as { isi?: string; waktu?: string } | undefined;
-                    if (!phase) return null;
-                    const labelParts = String(label).split('\n');
-                    return new TableRow({
+                ...(phaseRows.length > 0 ? phaseRows : [
+                    new TableRow({
                         children: [
-                            new TableCell({
-                                width: { size: 18, type: WidthType.PERCENTAGE },
-                                shading: { fill: phaseColors[key], type: 'clear', color: 'auto' },
-                                margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
-                                verticalAlign: VerticalAlign.CENTER,
-                                children: [new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: labelParts.map((part, i) => new TextRun({
-                                        text: String(part),
-                                        font: FONT_FAMILY,
-                                        size: FONT_SIZE_SMALL,
-                                        bold: i === 0,
-                                        italics: i > 0,
-                                        break: i > 0 ? 1 : 0,
-                                    })),
-                                })],
-                            }),
-                            new TableCell({
-                                width: { size: 14, type: WidthType.PERCENTAGE },
-                                margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
-                                verticalAlign: VerticalAlign.CENTER,
-                                children: [new Paragraph({
-                                    alignment: AlignmentType.CENTER,
-                                    children: [new TextRun({ text: String(phase.waktu || '-'), font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
-                                })],
-                            }),
-                            new TableCell({
-                                width: { size: 68, type: WidthType.PERCENTAGE },
-                                margins: { top: convertInchesToTwip(0.06), bottom: convertInchesToTwip(0.06), left: convertInchesToTwip(0.1), right: convertInchesToTwip(0.1) },
-                                verticalAlign: VerticalAlign.TOP,
-                                children: parseRppText(phase.isi || '-'),
-                            }),
+                            new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: '-', font: FONT_FAMILY, size: FONT_SIZE_SMALL })] })] }),
+                            new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: '-', font: FONT_FAMILY, size: FONT_SIZE_SMALL })] })] }),
+                            new TableCell({ width: { size: 68, type: WidthType.PERCENTAGE }, children: parseRppText(p.kegiatan || '-') }),
                         ]
-                    });
-                }).filter(Boolean) as TableRow[])
+                    })
+                ])
             ]
         }));
         skenarioSection.push(new Paragraph({ spacing: { after: 120 } }));
 
-        if (p.lkpd) {
+        let lkpd = p.lkpd;
+        if (typeof lkpd === 'string') {
+            try {
+                lkpd = JSON.parse(lkpd);
+            } catch (e) {
+                lkpd = { aktivitas: lkpd };
+            }
+        }
+
+        if (lkpd && typeof lkpd === 'object') {
             skenarioSection.push(new Paragraph({ children: [new PageBreak()] }));
             skenarioSection.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -654,8 +725,8 @@ export async function generateRppDocx(
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
 
             skenarioSection.push(sectionTitle('A. Petunjuk, Identitas & Tujuan'));
-            skenarioSection.push(...parseRppText(p.lkpd.identitas_petunjuk || '-'));
-            skenarioSection.push(...parseRppText(p.lkpd.tujuan_siswa || '-'));
+            skenarioSection.push(...parseRppText(lkpd.identitas_petunjuk || '-'));
+            skenarioSection.push(...parseRppText(lkpd.tujuan_siswa || '-'));
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
             skenarioSection.push(sectionTitle('B. Masalah / Kasus'));
             skenarioSection.push(new Table({
@@ -666,7 +737,7 @@ export async function generateRppDocx(
                             new TableCell({
                                 shading: { fill: 'F8F9FA', type: 'clear', color: 'auto' },
                                 margins: { top: convertInchesToTwip(0.1), bottom: convertInchesToTwip(0.1), left: convertInchesToTwip(0.15), right: convertInchesToTwip(0.15) },
-                                children: parseRppText(p.lkpd.masalah || '-'),
+                                children: parseRppText(lkpd.masalah || '-'),
                             })
                         ]
                     })
@@ -674,7 +745,7 @@ export async function generateRppDocx(
             }));
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
             skenarioSection.push(sectionTitle('C. Aktivitas Murid'));
-            skenarioSection.push(...parseRppText(p.lkpd.aktivitas || '-'));
+            skenarioSection.push(...parseRppText(lkpd.aktivitas || '-'));
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
             skenarioSection.push(sectionTitle('D. Hasil Kerja'));
             skenarioSection.push(new Table({
@@ -684,7 +755,7 @@ export async function generateRppDocx(
                         children: [
                             new TableCell({
                                 margins: { top: convertInchesToTwip(0.15), bottom: convertInchesToTwip(1.5), left: convertInchesToTwip(0.15), right: convertInchesToTwip(0.15) },
-                                children: parseRppText(p.lkpd.hasil_kerja || '-'),
+                                children: parseRppText(lkpd.hasil_kerja || '-'),
                             })
                         ]
                     })
@@ -692,7 +763,7 @@ export async function generateRppDocx(
             }));
             skenarioSection.push(new Paragraph({ spacing: { after: 80 } }));
             skenarioSection.push(sectionTitle('E. Soal Latihan / Penilaian'));
-            skenarioSection.push(...parseRppText(p.lkpd.penilaian || '-'));
+            skenarioSection.push(...parseRppText(lkpd.penilaian || '-'));
             skenarioSection.push(new Paragraph({ spacing: { after: 120 } }));
         }
     });

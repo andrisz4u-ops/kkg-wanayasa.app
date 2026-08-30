@@ -267,17 +267,28 @@ rpp.post('/generate', async (c) => {
 // Download RPP as DOCX (server-side generation)
 rpp.post('/docx', async (c) => {
   try {
-    const body = await c.req.json();
-    const sessionId = getCookie(c.req.header('Cookie'), 'session');
-    const user = await getCurrentUser(c.env.DB, sessionId);
-    const { inputData, content, kopSuratUrl, lampiran } = body;
-    
-    if (user && !inputData.jabatanGuru) {
-      inputData.jabatanGuru = user.mata_pelajaran || user.role;
+    const body = await c.req.json().catch(() => ({}));
+    let inputData = body.inputData;
+    let content = body.content;
+    const kopSuratUrl = body.kopSuratUrl;
+    const lampiran = body.lampiran;
+
+    if (typeof inputData === 'string') {
+      try { inputData = JSON.parse(inputData); } catch (_) {}
+    }
+    if (typeof content === 'string') {
+      try { content = JSON.parse(content); } catch (_) {}
     }
 
     if (!inputData || !content) {
       return Errors.badRequest(c, 'inputData dan content wajib diisi');
+    }
+
+    const sessionId = getCookie(c.req.header('Cookie'), 'session');
+    const user = await getCurrentUser(c.env.DB, sessionId);
+
+    if (user && !inputData.jabatanGuru) {
+      inputData.jabatanGuru = user.mata_pelajaran || user.role;
     }
 
     // Get KKG settings
@@ -305,8 +316,8 @@ rpp.post('/docx', async (c) => {
       lampiran || null  // Lampiran rubrik & penilaian (jika sudah digenerate)
     );
 
-    const mata = String(inputData.mataPelajaran || 'RPP').replace(/\s+/g, '_');
-    const topikStr = String(inputData.topik || 'Topik').replace(/\s+/g, '_');
+    const mata = String(inputData.mataPelajaran || 'RPP').replace(/[/\\?%*:|"<>]/g, '').replace(/\s+/g, '_');
+    const topikStr = String(inputData.topik || 'Topik').replace(/[/\\?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const filename = `RPP_${mata}_${topikStr}.docx`;
 
     return new Response(buffer, {

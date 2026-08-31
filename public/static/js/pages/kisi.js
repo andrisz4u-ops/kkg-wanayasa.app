@@ -562,6 +562,7 @@ export function initKisi() {
     e.preventDefault();
     const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries());
+    data.useGambar = form.querySelector('input[name="useGambar"]')?.checked !== false;
 
     if (!data.topik || !data.topik.trim()) {
       showToast('Harap masukkan Topik/Materi terlebih dahulu.', 'error');
@@ -682,6 +683,9 @@ export function initKisi() {
     }
     setVal('jenjangKelas', defaultKelas);
     setVal('semester', 'Ganjil');
+
+    const useGambarCb = form.querySelector('input[name="useGambar"]');
+    if (useGambarCb) useGambarCb.checked = true;
 
     // Ensure AI provider dropdown is populated and never becomes blank
     const providerSelect = form.querySelector('select[name="aiProvider"]');

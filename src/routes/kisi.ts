@@ -98,7 +98,11 @@ kisi.post('/generate', async (c) => {
             let gambarRule = '';
             if (isPG) {
                 if (isGambarEnabled) {
-                    gambarRule = `\n                7. GAMBAR (KONTEKSTUAL): HANYA jika topik/materi memang membutuhkan stimulus visual nyata (contoh: anatomi tubuh, siklus air/hewan, bangun ruang/datar, peta), Anda boleh membuat MAKSIMAL 1-2 soal yang memakai gambar dengan mengisi "gambar_keyword" (1-2 kata kunci objek spesifik dalam Bahasa Inggris, contoh: "water cycle", "food chain", "fraction diagram"). Untuk materi kalkulasi/angka murni (seperti KPK, FPB, perkalian, aritmatika) atau tata bahasa, DILARANG menggunakan gambar ("gambar_keyword": "").`;
+                    const minImages = count >= 10 ? Math.max(2, Math.round(count * 0.25)) : 1;
+                    gambarRule = `\n                7. ATURAN GAMBAR (WAJIB MINIMAL ${minImages} BUTIR SOAL DENGAN GAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} soal PG ini, Anda WAJIB memilih MINIMAL ${minImages} butir soal (misalnya 2 butir soal untuk 10 soal) yang menggunakan gambar/diagram/skema/ilustrasi konkret sebagai stimulus visual pertanyaan.
+                - Pada butir soal bergambar tersebut, buat teks soal yang merujuk pada gambar (contoh: "Perhatikan gambar di bawah ini! Bagian yang ditunjuk berfungsi untuk..." atau "Berdasarkan gambar berikut, proses yang sedang terjadi adalah...").
+                - Tuliskan field "gambar_keyword" pada soal tersebut dengan 2-4 kata kunci deskriptif Bahasa Inggris yang spesifik dan jelas (contoh: "plant cell diagram", "human respiratory system", "water cycle illustration", "solar system planets", "food chain ecosystem", "geometric solid shapes").
+                - Pada butir soal lainnya yang tidak memerlukan gambar, isi "gambar_keyword": "".`;
                 } else {
                     gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "" untuk semua soal).`;
                 }
@@ -154,7 +158,7 @@ kisi.post('/generate', async (c) => {
                 if (result?._ai_meta) finalData._meta = result._ai_meta;
                 if (result?.pg && Array.isArray(result.pg)) {
                     for (const q of result.pg) {
-                        if (unsplash && q.gambar_keyword && unsplash.isConfigured()) {
+                        if (unsplash && q.gambar_keyword && q.gambar_keyword.trim() !== '') {
                             try {
                                 const img = await unsplash.searchImage(q.gambar_keyword, q.soal);
                                 if (img) {
@@ -183,6 +187,49 @@ kisi.post('/generate', async (c) => {
             });
             // Renumber setelah dedup
             finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
+
+            // ENFORCE MINIMUM GAMBAR: Jika useGambar aktif, jamin minimal 2 gambar untuk >=10 soal
+            if (isGambarEnabled && unsplash && finalData.pg.length > 0) {
+                const targetMinImages = finalData.pg.length >= 10 ? Math.max(2, Math.round(finalData.pg.length * 0.2)) : 1;
+                let currentAttached = finalData.pg.filter((q: any) => q.gambar && q.gambar.url).length;
+
+                if (currentAttached < targetMinImages) {
+                    // 1. Coba butir soal yang sudah punya gambar_keyword tapi belum ter-attach
+                    for (const q of finalData.pg) {
+                        if (currentAttached >= targetMinImages) break;
+                        if (!q.gambar || !q.gambar.url) {
+                            const query = q.gambar_keyword || `${topik} educational diagram`;
+                            try {
+                                const img = await unsplash.searchImage(query, q.soal);
+                                if (img) {
+                                    q.gambar = { url: img.url, credit: img.creditName };
+                                    currentAttached++;
+                                }
+                            } catch (e) {
+                                console.error('Fallback image search error:', e);
+                            }
+                        }
+                    }
+
+                    // 2. Jika masih kurang dari target, pasang pada butir soal berikutnya
+                    if (currentAttached < targetMinImages) {
+                        const candidates = finalData.pg.filter((q: any) => !q.gambar || !q.gambar.url);
+                        for (let idx = 0; idx < candidates.length && currentAttached < targetMinImages; idx++) {
+                            const q = candidates[idx];
+                            const query = `${topik} ${mataPelajaran} illustration diagram`;
+                            try {
+                                const img = await unsplash.searchImage(query, q.soal);
+                                if (img) {
+                                    q.gambar = { url: img.url, credit: img.creditName };
+                                    currentAttached++;
+                                }
+                            } catch (e) {
+                                console.error('Fallback image search error:', e);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Generate Isian + Uraian

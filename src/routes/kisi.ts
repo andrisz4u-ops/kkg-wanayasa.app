@@ -216,6 +216,35 @@ kisi.post('/generate', async (c) => {
                 jenjang_kelas: jenjangKelas,
                 ai_provider: preferredSlug,
             });
+
+            // Auto-save to Bank Soal (server-side persistence for collaborative sharing)
+            try {
+                await c.env.DB.prepare(`
+                    INSERT INTO bank_soal (
+                        user_id, user_nama, sekolah, mata_pelajaran, topik,
+                        jenjang_kelas, semester, jenis_ujian, capaian_pembelajaran,
+                        jumlah_pg, jumlah_isian, jumlah_uraian, isian_type, hots_ratio,
+                        content, ai_provider, is_public
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                `).bind(
+                    user?.id || 1,
+                    user?.nama || (namaGuru || 'Guru'),
+                    user?.sekolah || (namaSekolah || ''),
+                    mataPelajaran || '',
+                    topik || '',
+                    jenjangKelas || '',
+                    semester || null,
+                    jenisUjian || null,
+                    capaianPembelajaran || null,
+                    totalPG, totalIsian, totalUraian,
+                    isianType || 'Standard',
+                    hotsRatio || '30:40:30',
+                    JSON.stringify(finalData),
+                    preferredSlug || null
+                ).run();
+            } catch (bankErr) {
+                console.warn('[BankSoal] Auto-save failed (non-blocking):', bankErr);
+            }
         } catch (_) {}
 
         return successResponse(c, finalData);

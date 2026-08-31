@@ -26,6 +26,7 @@ const CSRF_IGNORE_PATHS = [
     '/api/presentation/patch-slide', // AI single-slide patch (session-authenticated)
     '/api/tts/generate', // AI generation (session-authenticated)
     '/api/tts/custom', // Crossword assembler (session-authenticated)
+    '/api/banksoal*', // Bank Soal API (session-authenticated)
 ];
 
 /**

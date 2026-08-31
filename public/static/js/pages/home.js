@@ -5,15 +5,18 @@ import { formatDateTime, escapeHtml } from '../utils.js';
 
 export async function renderHome() {
   let pengumuman = [];
+  let guruSummary = { total: 0, samples: [] };
+
   try {
-    const announcementPromise = api('/pengumuman?limit=3', { timeout: 1200 });
-    const timeoutPromise = new Promise((resolve) => {
-      setTimeout(() => resolve({ data: [] }), 450);
-    });
-    const res = await Promise.race([announcementPromise, timeoutPromise]);
-    pengumuman = res.data || [];
+    const fetchPromises = [
+      api('/pengumuman?limit=3', { timeout: 1200 }).catch(() => ({ data: [] })),
+      api('/guru/public-summary', { timeout: 1200 }).catch(() => ({ data: { total: 0, samples: [] } }))
+    ];
+    const [pengumumanRes, guruRes] = await Promise.all(fetchPromises);
+    pengumuman = pengumumanRes.data || [];
+    guruSummary = guruRes.data || { total: 0, samples: [] };
   } catch (e) {
-    console.log('Pengumuman not loaded quickly, rendering without it');
+    console.log('Public data not loaded quickly, rendering with defaults');
   }
 
   const bentoFeatures = [
@@ -75,6 +78,43 @@ export async function renderHome() {
     'SDN Sumurugul', 'SDN Sakambang', 'SDIT Al-Qalam'
   ];
 
+  // Dynamic Avatar & Member Badge Builder
+  const avatarGradients = [
+    'from-teal-500 to-emerald-600 text-white',
+    'from-indigo-500 to-blue-600 text-white',
+    'from-amber-500 to-orange-600 text-white',
+    'from-rose-500 to-pink-600 text-white',
+  ];
+
+  const samples = guruSummary.samples && guruSummary.samples.length > 0 ? guruSummary.samples.slice(0, 3) : [];
+  const avatarsHtml = samples.length > 0
+    ? samples.map((g, idx) => {
+        const initial = (g.nama || 'G').trim().charAt(0).toUpperCase();
+        const grad = avatarGradients[idx % avatarGradients.length];
+        if (g.foto_url) {
+          return `
+            <div class="relative w-10 h-10 rounded-full ring-2 ring-white shadow-sm overflow-hidden bg-slate-100 flex items-center justify-center">
+              <img src="${escapeHtml(g.foto_url)}" alt="${escapeHtml(g.nama)}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="hidden w-full h-full items-center justify-center bg-gradient-to-br ${grad} font-bold text-xs select-none">${initial}</div>
+            </div>
+          `;
+        }
+        return `
+          <div class="w-10 h-10 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center bg-gradient-to-br ${grad} font-bold text-xs select-none" title="${escapeHtml(g.nama)}">
+            ${initial}
+          </div>
+        `;
+      }).join('')
+    : `
+      <div class="w-10 h-10 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center bg-gradient-to-br from-teal-500 to-emerald-600 text-white text-xs"><i class="fas fa-graduation-cap"></i></div>
+      <div class="w-10 h-10 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center bg-gradient-to-br from-indigo-500 to-blue-600 text-white text-xs"><i class="fas fa-chalkboard-user"></i></div>
+      <div class="w-10 h-10 rounded-full ring-2 ring-white shadow-sm flex items-center justify-center bg-gradient-to-br from-amber-500 to-orange-600 text-white text-xs"><i class="fas fa-user-check"></i></div>
+    `;
+
+  const totalMembersLabel = guruSummary.total > 0
+    ? `${guruSummary.total}`
+    : 'Aktif';
+
   return `
     <div class="home-organic relative overflow-x-hidden">
       
@@ -100,12 +140,12 @@ export async function renderHome() {
           
           <div class="flex flex-col sm:flex-row gap-4 mt-10">
             ${!state.user ? `
-              <button onclick="navigate('login')" class="px-10 py-5 bg-teal-500 text-white rounded-full font-bold text-lg hover:bg-teal-600 transition-all shadow-xl shadow-teal-500/30 flex items-center justify-center gap-3 group">
+              <button onclick="navigate('login')" class="px-10 py-5 bg-teal-500 text-white rounded-full font-bold text-lg hover:bg-teal-600 transition-all shadow-xl shadow-teal-500/30 flex items-center justify-center gap-3 group cursor-pointer">
                 Masuk / Login
                 <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </button>
             ` : `
-              <button onclick="navigate('absensi')" class="px-10 py-5 bg-teal-500 text-white rounded-full font-bold text-lg hover:bg-teal-600 transition-all shadow-xl shadow-teal-500/30 flex items-center justify-center gap-3 group">
+              <button onclick="navigate('absensi')" class="px-10 py-5 bg-teal-500 text-white rounded-full font-bold text-lg hover:bg-teal-600 transition-all shadow-xl shadow-teal-500/30 flex items-center justify-center gap-3 group cursor-pointer">
                 Buka Dashboard
                 <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
               </button>
@@ -113,12 +153,10 @@ export async function renderHome() {
             
             <div class="flex items-center gap-4 px-6 py-4 bg-white/80 backdrop-blur-md rounded-full border border-slate-100 shadow-lg">
               <div class="flex -space-x-3">
-                ${[1, 2, 3].map(i => `
-                  <img src="https://picsum.photos/seed/user${i}/100/100" class="w-10 h-10 rounded-full border-2 border-white object-cover" />
-                `).join('')}
+                ${avatarsHtml}
               </div>
               <div>
-                <div class="font-bold text-slate-900 leading-tight">269k+</div>
+                <div class="font-bold text-slate-900 leading-tight">${totalMembersLabel}</div>
                 <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Pendidik Terdaftar</div>
               </div>
             </div>

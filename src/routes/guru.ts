@@ -57,6 +57,27 @@ guru.get('/', async (c) => {
   }
 });
 
+// Get summary stats & sample avatars for public landing page (non-blocking, fast)
+guru.get('/public-summary', async (c) => {
+  try {
+    const totalCount: any = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM users WHERE (is_active = 1 OR is_active IS NULL)'
+    ).first();
+
+    const sampleMembers = await c.env.DB.prepare(
+      'SELECT id, nama, foto_url FROM users WHERE (is_active = 1 OR is_active IS NULL) ORDER BY id ASC LIMIT 4'
+    ).all();
+
+    return successResponse(c, {
+      total: totalCount?.count || 0,
+      samples: sampleMembers.results || []
+    });
+  } catch (e: any) {
+    console.error('Get guru public-summary error:', e);
+    return successResponse(c, { total: 0, samples: [] });
+  }
+});
+
 // Get guru by ID
 guru.get('/:id', async (c) => {
   try {

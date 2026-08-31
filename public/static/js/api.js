@@ -135,7 +135,14 @@ export async function api(path, options = {}) {
 
         // Handle standardized error responses
         if (!response.ok || data.success === false) {
-            const errorMessage = data.error?.message || data.message || 'Terjadi kesalahan';
+            let errorMessage = data.error?.message || data.message || 'Terjadi kesalahan';
+            const details = data.error?.details;
+            if (details && Array.isArray(details) && details.length > 0) {
+                const detailMsgs = details.map(d => typeof d === 'string' ? d : d.message || `${d.path ? d.path.join('.') + ': ' : ''}${d.message}`).filter(Boolean);
+                if (detailMsgs.length > 0) {
+                    errorMessage = `${errorMessage} (${detailMsgs.join(', ')})`;
+                }
+            }
             const errorCode = data.error?.code || 'UNKNOWN_ERROR';
 
             throw new ApiError(errorMessage, errorCode, response.status);

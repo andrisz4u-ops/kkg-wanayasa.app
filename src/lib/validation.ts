@@ -506,17 +506,18 @@ export const aiProviderApiTypes = ['openai_compat', 'anthropic', 'gemini_sdk', '
 export const createAiProviderSchema = z.object({
     name: z.string().min(1, 'Nama provider wajib diisi').max(100, 'Nama terlalu panjang'),
     slug: z.string().min(1, 'Slug wajib diisi').max(50, 'Slug terlalu panjang')
-        .regex(/^[a-z0-9][a-z0-9-]*$/, 'Slug hanya boleh berisi huruf kecil, angka, dan tanda hubung'),
+        .regex(/^[a-z0-9][a-z0-9_-]*$/, 'Slug hanya boleh berisi huruf kecil, angka, tanda hubung, atau garis bawah'),
     api_type: z.enum(aiProviderApiTypes, { message: 'Tipe API tidak valid' }),
     base_url: z.string().min(1, 'Base URL wajib diisi').max(500, 'URL terlalu panjang'),
     model: z.string().min(1, 'Model wajib diisi').max(200, 'Nama model terlalu panjang'),
     api_key: z.string().max(10000, 'API key terlalu panjang').optional().default(''),
-    priority: z.coerce.number().int().min(1).max(999).optional().default(100),
+    priority: z.coerce.number().int().min(1, 'Prioritas minimal 1').max(999, 'Prioritas maksimal 999').optional().default(100),
     is_active: z.coerce.number().int().min(0).max(1).optional().default(1),
-    max_tokens: z.coerce.number().int().min(1).max(131072).optional().default(8192),
-    temperature: z.coerce.number().min(0).max(2).optional().default(0.7),
-    extra_headers: z.string().max(2000).optional().default('{}'),
-    extra_body: z.string().max(2000).optional().default('{}'),
+    max_tokens: z.coerce.number().int().min(1, 'Max tokens minimal 1').max(131072, 'Max tokens maksimal 131072').optional().default(8192),
+    temperature: z.coerce.number().min(0, 'Temperature minimal 0').max(2, 'Temperature maksimal 2').optional().default(0.7),
+    extra_headers: z.union([z.string().max(2000), z.record(z.any())]).optional().default('{}').transform(val => typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
+    extra_body: z.union([z.string().max(2000), z.record(z.any())]).optional().default('{}').transform(val => typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
 });
 
 export const updateAiProviderSchema = createAiProviderSchema.partial();
+

@@ -82,8 +82,15 @@ export function openAdminModal(modalId, focusSelector = 'input, select, textarea
   previousFocusedElement = document.activeElement;
   activeAdminModalId = modalId;
   modal.classList.remove('hidden');
+  const scrollContainer = modal.querySelector('.overflow-y-auto');
+  if (scrollContainer) scrollContainer.scrollTop = 0;
   const target = modal.querySelector(focusSelector);
-  if (target) setTimeout(() => target.focus(), 0);
+  if (target) {
+    setTimeout(() => {
+      target.focus({ preventScroll: true });
+      if (scrollContainer) scrollContainer.scrollTop = 0;
+    }, 0);
+  }
 }
 
 export function closeAdminModal(modalId) {

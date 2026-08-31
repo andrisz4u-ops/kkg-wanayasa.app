@@ -447,8 +447,31 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
   document.getElementById('aip-priority').value = p.priority ?? 100;
   document.getElementById('aip-max_tokens').value = p.max_tokens || 8192;
   document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
-  document.getElementById('aip-extra_headers').value = JSON.stringify(p.extra_headers || {}, null, 2);
-  document.getElementById('aip-extra_body').value = JSON.stringify(p.extra_body || {}, null, 2);
+
+  let extraHeadersStr = '{}';
+  if (typeof p.extra_headers === 'object' && p.extra_headers !== null) {
+    extraHeadersStr = JSON.stringify(p.extra_headers, null, 2);
+  } else if (typeof p.extra_headers === 'string' && p.extra_headers.trim()) {
+    try {
+      extraHeadersStr = JSON.stringify(JSON.parse(p.extra_headers), null, 2);
+    } catch {
+      extraHeadersStr = p.extra_headers;
+    }
+  }
+
+  let extraBodyStr = '{}';
+  if (typeof p.extra_body === 'object' && p.extra_body !== null) {
+    extraBodyStr = JSON.stringify(p.extra_body, null, 2);
+  } else if (typeof p.extra_body === 'string' && p.extra_body.trim()) {
+    try {
+      extraBodyStr = JSON.stringify(JSON.parse(p.extra_body), null, 2);
+    } catch {
+      extraBodyStr = p.extra_body;
+    }
+  }
+
+  document.getElementById('aip-extra_headers').value = extraHeadersStr;
+  document.getElementById('aip-extra_body').value = extraBodyStr;
 
   const form = document.getElementById('ai-provider-form');
   if (form && !form.dataset.enterBound) {
@@ -615,20 +638,24 @@ window.saveAiProvider = async function saveAiProvider(e) {
 
     let extra_headers = '{}';
     let extra_body = '{}';
-    try {
-      const h = document.getElementById('aip-extra_headers').value.trim() || '{}';
-      JSON.parse(h);
-      extra_headers = h;
-    } catch {
-      throw new Error('Extra Headers bukan format JSON yang valid');
+    const h = (document.getElementById('aip-extra_headers')?.value || '').trim();
+    if (h && h !== '{}') {
+      try {
+        JSON.parse(h);
+        extra_headers = h;
+      } catch {
+        throw new Error('Extra Headers bukan format JSON yang valid');
+      }
     }
 
-    try {
-      const b = document.getElementById('aip-extra_body').value.trim() || '{}';
-      JSON.parse(b);
-      extra_body = b;
-    } catch {
-      throw new Error('Extra Body bukan format JSON yang valid');
+    const b = (document.getElementById('aip-extra_body')?.value || '').trim();
+    if (b && b !== '{}') {
+      try {
+        JSON.parse(b);
+        extra_body = b;
+      } catch {
+        throw new Error('Extra Body bukan format JSON yang valid');
+      }
     }
 
     const payload = {

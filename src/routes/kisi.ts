@@ -52,7 +52,7 @@ kisi.post('/generate', async (c) => {
 
             let jsonStructure = '';
             if (isPG) {
-                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (untuk soal HOTS: awali dengan stimulus/wacana singkat sebelum pertanyaan)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "keyword inggris ATAU kosongkan" } ]`;
+                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "kata kunci ringkas 1-3 kata (contoh: Siklus air / Sayuti Melik / Fotosintesis)", "gambar_prompt_en": "detailed English visual description for AI image generator (contoh: clean 2D scientific textbook diagram of the water cycle showing evaporation from sea, cloud condensation, rain precipitation over mountains, clean white background, vector art)" } ]`;
             } else {
                 const parts: string[] = [];
                 if (totalIsian > 0) {
@@ -100,16 +100,15 @@ kisi.post('/generate', async (c) => {
                 if (isGambarEnabled) {
                     const exactImages = Math.max(1, Math.round(count * 0.2));
                     gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
-                - PEDOMAN STIMULUS GAMBAR SESUAI MATA PELAJARAN:
-                  a. Sejarah / IPS / PKn: Gunakan stimulus foto tokoh pahlawan, foto gedung/tempat bersejarah nyata, foto naskah dokumen asli, peta wilayah otentik, atau rumah adat/artefak (contoh: "Perhatikan foto tokoh pahlawan berikut! Tokoh ini bertugas...", "Perhatikan foto bangunan bersejarah berikut! Tempat ini digunakan untuk..."). Field "gambar_keyword" isi dengan nama tokoh/tempat spesifik Bahasa Indonesia atau Inggris (contoh: "Rumah Laksamana Maeda", "Sayuti Melik", "Naskah Proklamasi Kemerdekaan", "Candi Borobudur", "Pangeran Diponegoro", "Peta Kepulauan Indonesia").
-                  b. IPA / Sains: Gunakan stimulus diagram organ tubuh, siklus alam (siklus air, metamorfosis katak/kupu-kupu), penampang sel/tumbuhan, tata surya, atau rantai makanan. Field "gambar_keyword" isi dengan kata kunci deskriptif (contoh: "human lungs respiratory system", "water cycle diagram", "plant cell structure", "butterfly metamorphosis cycle").
-                  c. Matematika: Gunakan stimulus visual bangun ruang 3D, sudut, atau jaring-jaring bangun.
+                - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
+                  * Field "gambar_keyword": Isi dengan 1-3 kata kunci topik Bahasa Indonesia atau nama entitas resmi untuk pencarian Wikipedia/Wikimedia (contoh: "Siklus air", "Fotosintesis", "Rumah Laksamana Maeda", "Sayuti Melik", "Sistem pernapasan manusia", "Candi Borobudur").
+                  * Field "gambar_prompt_en": Isi dengan deskripsi adegan visual yang sangat rinci dalam BAHASA INGGRIS (15-25 kata) untuk AI Image Generator (contoh: "clear 2D scientific textbook illustration of the water cycle showing ocean evaporation, cloud formation, rain precipitation over green hills, white background, vector diagram").
                 - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
                   * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks (seperti "kotak berlabel Proklamasi pada diagram alur") atau diagram pohon faktor angka. Jika membutuhkan bagan alur teks atau data angka, sajikan langsung sebagai teks soal atau tabel Markdown yang dapat dibaca jelas oleh murid!
-                  * DILARANG menuliskan teks deskripsi gambar seperti "[Gambar menunjukkan...]" di dalam teks soal. Tulis langsung pertanyaan ujiannya.
-                - Pada butir soal lainnya (selain ${exactImages} butir soal terpilih), WAJIB mengosongkan field ("gambar_keyword": "").`;
+                  * DILARANG KERAS menuliskan teks deskripsi seperti "[Diagram menunjukkan...]" atau "[Foto menunjukkan...]" di dalam teks soal! Tulis langsung pertanyaan ujian yang bersih.
+                - Pada butir soal lainnya (selain ${exactImages} butir soal terpilih), WAJIB mengosongkan field ("gambar_keyword": "", "gambar_prompt_en": "").`;
                 } else {
-                    gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "" untuk semua soal).`;
+                    gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
                 }
             }
 
@@ -206,21 +205,24 @@ kisi.post('/generate', async (c) => {
                     if (targetSelected.has(q)) {
                         // Extract any bracketed description inside soal if present to enrich the visual prompt
                         let bracketHint = '';
-                        const bracketMatch = String(q.soal || '').match(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*:?([^\]]+)\]/i);
+                        const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
                         if (bracketMatch && bracketMatch[1]) {
                             bracketHint = bracketMatch[1].trim();
                         }
 
-                        // Clean bracketed text from the student's question
+                        // Clean bracketed text completely from the student's question
                         q.soal = String(q.soal || '')
-                            .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\[[^\]]*\]/g, '')
                             .replace(/\s{2,}/g, ' ')
                             .trim();
 
-                        const query = bracketHint || q.gambar_keyword || `${topik} ${mataPelajaran} educational diagram`;
+                        const searchKeyword = q.gambar_keyword || topik || 'diagram';
+                        const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
                         const subjectContext = `${mataPelajaran} ${topik}`;
+
                         try {
-                            const img = await unsplash.searchImage(query, q.soal, subjectContext);
+                            const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
                             if (img) {
                                 q.gambar = { url: img.url, credit: img.creditName };
                             }
@@ -231,8 +233,10 @@ kisi.post('/generate', async (c) => {
                         // Bersihkan field gambar agar soal lain 100% bebas gambar
                         delete q.gambar;
                         delete q.gambar_keyword;
+                        delete q.gambar_prompt_en;
                         q.soal = String(q.soal || '')
-                            .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\[[^\]]*\]/g, '')
                             .replace(/\s{2,}/g, ' ')
                             .trim();
                     }
@@ -242,8 +246,10 @@ kisi.post('/generate', async (c) => {
                 for (const q of finalData.pg) {
                     delete q.gambar;
                     delete q.gambar_keyword;
+                    delete q.gambar_prompt_en;
                     q.soal = String(q.soal || '')
-                        .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                        .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                        .replace(/\[[^\]]*\]/g, '')
                         .replace(/\s{2,}/g, ' ')
                         .trim();
                 }

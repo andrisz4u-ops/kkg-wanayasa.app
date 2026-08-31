@@ -95,12 +95,11 @@ export class UnsplashService {
         return true;
     }
 
-    async searchImage(query: string, fallbackAlt: string, subjectContext?: string): Promise<UnsplashImagePayload | null> {
+    async searchImage(query: string, fallbackAlt: string, subjectContext?: string, englishVisualPrompt?: string): Promise<UnsplashImagePayload | null> {
         const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
 
-        // 1. Prioritas Utama untuk Sejarah, IPS, PKn, Pahlawan, Budaya, & Peta: Wikimedia Commons (Foto Otentik Asli)
-        const isHistoricalOrReal = /(sejarah|ips|pkn|pancasila|geografi|budaya|seni|tokoh|pahlawan|indonesia|proklamasi|candi|rumah|presiden|peta|gedung|kerajaan|fauna|flora|daerah|maeda|soekarno|hatta|sayuti|sukarni)/i.test(`${query} ${subjectContext || ''}`);
-        if (isHistoricalOrReal) {
+        // 1. Prioritas Utama: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi untuk semua materi)
+        if (cleanQuery.length >= 3) {
             const wikiImg = await searchWikimediaImage(cleanQuery);
             if (wikiImg) {
                 return {
@@ -115,8 +114,11 @@ export class UnsplashService {
             }
         }
 
-        // 2. Prioritas Diagram Sains / Matematika / Biologi: Cloudflare Workers AI FLUX / SDXL
-        const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style, for school exam`;
+        // 2. Prioritas Kedua: Generasi AI Diagram Presisi (FLUX / Cloudflare AI) dengan Prompt Bahasa Inggris Terstruktur
+        const visualPrompt = (englishVisualPrompt && englishVisualPrompt.trim().length > 10)
+            ? `${englishVisualPrompt.replace(/[^\w\s-,.]/g, '').trim()}, educational textbook style, clean white background, 2D scientific vector diagram, high contrast, sharp details, no blur`
+            : `clear 2d educational textbook diagram of ${cleanQuery}, labeled science illustration, clean white background, simple vector art, high contrast, sharp details, for school exam, no blur`;
+
         if (this.cfAi && typeof this.cfAi.run === 'function') {
             try {
                 const cfResult: any = await this.cfAi.run('@cf/black-forest-labs/flux-1-schnell', {
@@ -185,7 +187,7 @@ export class UnsplashService {
             }
         }
 
-        // 3. Prioritas Ketiga: Educational Visual Engine (Instant, Diagram 2D berlatar putih)
+        // 3. Prioritas Ketiga: Educational Visual Engine (FLUX.1 via Pollinations dengan prompt bahasa Inggris tajam)
         try {
             const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
 

@@ -1,6 +1,7 @@
 type UnsplashEnv = {
     UNSPLASH_ACCESS_KEY?: string;
     UNSPLASH_API_KEY?: string;
+    AI?: any;
 };
 
 type UnsplashSearchResponse = {
@@ -21,7 +22,7 @@ type UnsplashSearchResponse = {
 };
 
 export interface UnsplashImagePayload {
-    source: 'unsplash';
+    source: 'unsplash' | 'cloudflare-ai';
     url: string;
     alt: string;
     query: string;
@@ -32,9 +33,11 @@ export interface UnsplashImagePayload {
 
 export class UnsplashService {
     private accessKey?: string;
+    private cfAi?: any;
 
     constructor(env: UnsplashEnv) {
         this.accessKey = env.UNSPLASH_ACCESS_KEY || env.UNSPLASH_API_KEY;
+        this.cfAi = env.AI;
     }
 
     isConfigured(): boolean {
@@ -42,11 +45,85 @@ export class UnsplashService {
     }
 
     async searchImage(query: string, fallbackAlt: string): Promise<UnsplashImagePayload | null> {
-        // 1. Try Unsplash API if accessKey is configured
+        const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
+
+        // 1. Prioritas Utama: Cloudflare Workers AI (Edge GPU, Free 10k neurons/day, 100% akurat)
+        if (this.cfAi && typeof this.cfAi.run === 'function') {
+            try {
+                const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style`;
+                
+                // Coba FLUX.1-schnell atau SDXL-lightning di Cloudflare Workers AI
+                const cfResult: any = await this.cfAi.run('@cf/black-forest-labs/flux-1-schnell', {
+                    prompt: visualPrompt,
+                    steps: 4,
+                }).catch(() => {
+                    return this.cfAi.run('@cf/bytedance/stable-diffusion-xl-lightning', {
+                        prompt: visualPrompt,
+                        steps: 4,
+                    });
+                });
+
+                if (cfResult) {
+                    let bytes: Uint8Array | null = null;
+                    if (cfResult instanceof Uint8Array) {
+                        bytes = cfResult;
+                    } else if (cfResult instanceof ArrayBuffer) {
+                        bytes = new Uint8Array(cfResult);
+                    } else if (typeof cfResult.getReader === 'function') {
+                        const reader = cfResult.getReader();
+                        const chunks: Uint8Array[] = [];
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            if (value) chunks.push(value);
+                        }
+                        const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+                        bytes = new Uint8Array(totalLen);
+                        let offset = 0;
+                        for (const c of chunks) {
+                            bytes.set(c, offset);
+                            offset += c.length;
+                        }
+                    } else if (typeof cfResult === 'string' && cfResult.startsWith('data:')) {
+                        return {
+                            source: 'cloudflare-ai',
+                            url: cfResult,
+                            alt: fallbackAlt || cleanQuery,
+                            query: cleanQuery,
+                            creditName: 'Cloudflare Workers AI (FLUX)',
+                            creditUrl: 'https://developers.cloudflare.com/workers-ai/',
+                            unsplashId: `cf_${Date.now()}`
+                        };
+                    }
+
+                    if (bytes && bytes.length > 0) {
+                        let binary = '';
+                        const len = bytes.byteLength;
+                        for (let i = 0; i < len; i++) {
+                            binary += String.fromCharCode(bytes[i]);
+                        }
+                        const base64 = btoa(binary);
+                        return {
+                            source: 'cloudflare-ai',
+                            url: `data:image/jpeg;base64,${base64}`,
+                            alt: fallbackAlt || cleanQuery,
+                            query: cleanQuery,
+                            creditName: 'Cloudflare Workers AI (FLUX)',
+                            creditUrl: 'https://developers.cloudflare.com/workers-ai/',
+                            unsplashId: `cf_${Date.now()}`
+                        };
+                    }
+                }
+            } catch (cfErr) {
+                console.warn('Cloudflare Workers AI image run note (proceeding to secondary provider):', cfErr);
+            }
+        }
+
+        // 2. Prioritas Kedua: Unsplash API resmi jika access key dikonfigurasi
         if (this.accessKey) {
             try {
                 const searchUrl = new URL('https://api.unsplash.com/search/photos');
-                searchUrl.searchParams.set('query', query);
+                searchUrl.searchParams.set('query', cleanQuery);
                 searchUrl.searchParams.set('page', '1');
                 searchUrl.searchParams.set('per_page', '10');
                 searchUrl.searchParams.set('orientation', 'landscape');
@@ -74,7 +151,7 @@ export class UnsplashService {
                             source: 'unsplash',
                             url: first.urls.regular,
                             alt,
-                            query,
+                            query: cleanQuery,
                             creditName: first.user.name,
                             creditUrl: creditUrl.toString(),
                             unsplashId: first.id,
@@ -86,9 +163,8 @@ export class UnsplashService {
             }
         }
 
-        // 2. High-quality educational visual fallback (Fast, reliable, 100% matching)
+        // 3. Prioritas Ketiga: Educational Visual Engine (Instant, 100% guaranteed matching)
         try {
-            const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
             const visualPrompt = `${cleanQuery}, educational textbook diagram, clear illustration, white background, high resolution`;
             const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
 

@@ -10,6 +10,7 @@ export type AppBindings = {
     // ─── Core Services ───────────────────────────
     DB: D1Database;
     STORAGE?: R2Bucket;
+    AI?: any;
     R2_PUBLIC_URL?: string;
 
     // ─── Security & Encryption ───────────────────

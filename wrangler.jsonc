@@ -19,6 +19,9 @@
             "bucket_name": "kkg-wanayasa-storage"
         }
     ],
+    "ai": {
+        "binding": "AI"
+    },
     "vars": {
         "SUPABASE_URL": "https://mytonopqqqxlwywqbadt.supabase.co",
         "SUPABASE_BUCKET": "materi-kkg"

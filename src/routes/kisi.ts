@@ -98,11 +98,12 @@ kisi.post('/generate', async (c) => {
             let gambarRule = '';
             if (isPG) {
                 if (isGambarEnabled) {
-                    const minImages = count >= 10 ? Math.max(2, Math.round(count * 0.25)) : 1;
-                    gambarRule = `\n                7. ATURAN GAMBAR (WAJIB MINIMAL ${minImages} BUTIR SOAL DENGAN GAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} soal PG ini, Anda WAJIB memilih MINIMAL ${minImages} butir soal (misalnya 2 butir soal untuk 10 soal) yang menggunakan gambar/diagram/skema/ilustrasi konkret sebagai stimulus visual pertanyaan.
-                - Pada butir soal bergambar tersebut, buat teks soal yang merujuk pada gambar (contoh: "Perhatikan gambar di bawah ini! Bagian yang ditunjuk berfungsi untuk..." atau "Berdasarkan gambar berikut, proses yang sedang terjadi adalah...").
-                - Tuliskan field "gambar_keyword" pada soal tersebut dengan 2-4 kata kunci deskriptif Bahasa Inggris yang spesifik dan jelas (contoh: "plant cell diagram", "human respiratory system", "water cycle illustration", "solar system planets", "food chain ecosystem", "geometric solid shapes").
-                - Pada butir soal lainnya yang tidak memerlukan gambar, isi "gambar_keyword": "".`;
+                    const exactImages = Math.max(1, Math.round(count * 0.2));
+                    gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan gambar/diagram/skema/grafik sebagai stimulus pertanyaan.
+                - Pada ${exactImages} butir soal tersebut, buat kalimat pengantar yang merujuk pada stimulus (contoh: "Perhatikan diagram di bawah ini! Berdasarkan diagram tersebut..." atau "Perhatikan gambar berikut! Bagian yang ditunjuk berfungsi untuk...").
+                - Isi field "gambar_keyword" pada butir soal tersebut dengan 3-6 kata kunci Bahasa Inggris deskriptif yang sangat spesifik dan detail mengenai objek diagram yang harus digambar (contoh: "prime factor tree diagram of 24 and 36", "human digestive system organ", "water cycle illustration with labels", "solar system planetary orbits", "plant cell structure diagram").
+                - DILARANG menuliskan teks placeholder di dalam teks soal seperti "[Gambar menunjukkan...]" atau "[Deskripsi gambar...]". Tulis langsung pertanyaan ujiannya.
+                - Pada butir soal lainnya (selain ${exactImages} butir soal terpilih), WAJIB mengosongkan field ("gambar_keyword": "").`;
                 } else {
                     gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "" untuk semua soal).`;
                 }
@@ -149,26 +150,16 @@ kisi.post('/generate', async (c) => {
 
         // Generate PG
         if (totalPG > 0) {
+            const exactImageCount = isGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
             const BATCH_SIZE = 20;
             const unsplash = isGambarEnabled ? new UnsplashService(c.env) : null;
+
             for (let i = 0; i < totalPG; i += BATCH_SIZE) {
                 const currentCount = Math.min(BATCH_SIZE, totalPG - i);
                 const prompt = buildPrompt('pg', i + 1, currentCount);
                 const result = await ai.generateJSON(prompt, preferredSlug);
                 if (result?._ai_meta) finalData._meta = result._ai_meta;
                 if (result?.pg && Array.isArray(result.pg)) {
-                    for (const q of result.pg) {
-                        if (unsplash && q.gambar_keyword && q.gambar_keyword.trim() !== '') {
-                            try {
-                                const img = await unsplash.searchImage(q.gambar_keyword, q.soal);
-                                if (img) {
-                                    q.gambar = { url: img.url, credit: img.creditName };
-                                }
-                            } catch (error) {
-                                console.error('Unsplash Error:', error);
-                            }
-                        }
-                    }
                     finalData.pg.push(...result.pg);
                 }
             }
@@ -188,46 +179,68 @@ kisi.post('/generate', async (c) => {
             // Renumber setelah dedup
             finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
 
-            // ENFORCE MINIMUM GAMBAR: Jika useGambar aktif, jamin minimal 2 gambar untuk >=10 soal
-            if (isGambarEnabled && unsplash && finalData.pg.length > 0) {
-                const targetMinImages = finalData.pg.length >= 10 ? Math.max(2, Math.round(finalData.pg.length * 0.2)) : 1;
-                let currentAttached = finalData.pg.filter((q: any) => q.gambar && q.gambar.url).length;
+            // ENFORCE EXACT IMAGE COUNT: Kunci jumlah soal bergambar TEPAT sesuai kuota (misal 2 untuk 10 soal, 3 untuk 15 soal)
+            if (isGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
+                // Beri skor pada setiap butir soal untuk menentukan butir mana yang paling tepat bergambar
+                const scoredQuestions = finalData.pg.map((q: any, index: number) => {
+                    let score = 0;
+                    const soalText = String(q.soal || '').toLowerCase();
+                    if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
+                    if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik')) score += 5;
+                    if (soalText.includes('perhatikan') || soalText.includes('berikut')) score += 3;
+                    return { q, index, score };
+                });
 
-                if (currentAttached < targetMinImages) {
-                    // 1. Coba butir soal yang sudah punya gambar_keyword tapi belum ter-attach
-                    for (const q of finalData.pg) {
-                        if (currentAttached >= targetMinImages) break;
-                        if (!q.gambar || !q.gambar.url) {
-                            const query = q.gambar_keyword || `${topik} educational diagram`;
-                            try {
-                                const img = await unsplash.searchImage(query, q.soal);
-                                if (img) {
-                                    q.gambar = { url: img.url, credit: img.creditName };
-                                    currentAttached++;
-                                }
-                            } catch (e) {
-                                console.error('Fallback image search error:', e);
-                            }
-                        }
-                    }
+                // Urutkan berdasarkan relevansi visual tertinggi
+                scoredQuestions.sort((a, b) => b.score - a.score);
 
-                    // 2. Jika masih kurang dari target, pasang pada butir soal berikutnya
-                    if (currentAttached < targetMinImages) {
-                        const candidates = finalData.pg.filter((q: any) => !q.gambar || !q.gambar.url);
-                        for (let idx = 0; idx < candidates.length && currentAttached < targetMinImages; idx++) {
-                            const q = candidates[idx];
-                            const query = `${topik} ${mataPelajaran} illustration diagram`;
-                            try {
-                                const img = await unsplash.searchImage(query, q.soal);
-                                if (img) {
-                                    q.gambar = { url: img.url, credit: img.creditName };
-                                    currentAttached++;
-                                }
-                            } catch (e) {
-                                console.error('Fallback image search error:', e);
-                            }
+                // Ambil TEPAT sebanyak exactImageCount butir soal
+                const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map(item => item.q));
+
+                // Pasang gambar HANYA pada targetSelected, dan hapus gambar dari butir soal lainnya
+                for (const q of finalData.pg) {
+                    if (targetSelected.has(q)) {
+                        // Extract any bracketed description inside soal if present to enrich the visual prompt
+                        let bracketHint = '';
+                        const bracketMatch = String(q.soal || '').match(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*:?([^\]]+)\]/i);
+                        if (bracketMatch && bracketMatch[1]) {
+                            bracketHint = bracketMatch[1].trim();
                         }
+
+                        // Clean bracketed text from the student's question
+                        q.soal = String(q.soal || '')
+                            .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+
+                        const query = bracketHint || q.gambar_keyword || `${topik} ${mataPelajaran} educational diagram`;
+                        try {
+                            const img = await unsplash.searchImage(query, q.soal);
+                            if (img) {
+                                q.gambar = { url: img.url, credit: img.creditName };
+                            }
+                        } catch (e) {
+                            console.error('Image search error:', e);
+                        }
+                    } else {
+                        // Bersihkan field gambar agar soal lain 100% bebas gambar
+                        delete q.gambar;
+                        delete q.gambar_keyword;
+                        q.soal = String(q.soal || '')
+                            .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
                     }
+                }
+            } else {
+                // Jika useGambar nonaktif, pastikan semua soal bersih dari gambar dan placeholder
+                for (const q of finalData.pg) {
+                    delete q.gambar;
+                    delete q.gambar_keyword;
+                    q.soal = String(q.soal || '')
+                        .replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                        .replace(/\s{2,}/g, ' ')
+                        .trim();
                 }
             }
         }

@@ -418,7 +418,8 @@ function containsSundaneseScript(text) {
 // Helper: format teks soal dan render Markdown table secara rapi dan proporsional
 function formatSoalText(text) {
   if (!text) return '';
-  const lines = String(text).split('\n');
+  const cleanText = String(text).replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '').replace(/\s{2,}/g, ' ').trim();
+  const lines = cleanText.split('\n');
   const resultBlocks = [];
   let tableLines = [];
 

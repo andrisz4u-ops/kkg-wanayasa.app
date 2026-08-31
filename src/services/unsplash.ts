@@ -46,12 +46,11 @@ export class UnsplashService {
 
     async searchImage(query: string, fallbackAlt: string): Promise<UnsplashImagePayload | null> {
         const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
+        const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style, for school exam`;
 
         // 1. Prioritas Utama: Cloudflare Workers AI (Edge GPU, Free 10k neurons/day, 100% akurat)
         if (this.cfAi && typeof this.cfAi.run === 'function') {
             try {
-                const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style`;
-                
                 // Coba FLUX.1-schnell atau SDXL-lightning di Cloudflare Workers AI
                 const cfResult: any = await this.cfAi.run('@cf/black-forest-labs/flux-1-schnell', {
                     prompt: visualPrompt,
@@ -115,11 +114,28 @@ export class UnsplashService {
                     }
                 }
             } catch (cfErr) {
-                console.warn('Cloudflare Workers AI image run note (proceeding to secondary provider):', cfErr);
+                console.warn('Cloudflare Workers AI image run note (proceeding to visual engine):', cfErr);
             }
         }
 
-        // 2. Prioritas Kedua: Unsplash API resmi jika access key dikonfigurasi
+        // 2. Prioritas Kedua: Educational Visual Engine (Instant, Diagram 2D berlatar putih, Bebas Stock Photo Acak)
+        try {
+            const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
+
+            return {
+                source: 'unsplash',
+                url: fallbackUrl,
+                alt: (fallbackAlt || cleanQuery).slice(0, 180),
+                query: cleanQuery,
+                creditName: 'Educational Visual Engine',
+                creditUrl: 'https://pollinations.ai',
+                unsplashId: `gen_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+            };
+        } catch (err) {
+            console.warn('Visual engine fallback note (proceeding to unsplash):', err);
+        }
+
+        // 3. Prioritas Ketiga: Unsplash API sebagai cadangan darurat
         if (this.accessKey) {
             try {
                 const searchUrl = new URL('https://api.unsplash.com/search/photos');
@@ -159,26 +175,10 @@ export class UnsplashService {
                     }
                 }
             } catch (err) {
-                console.warn('Unsplash API search error, falling back to visual generator:', err);
+                console.warn('Unsplash API search error:', err);
             }
         }
 
-        // 3. Prioritas Ketiga: Educational Visual Engine (Instant, 100% guaranteed matching)
-        try {
-            const visualPrompt = `${cleanQuery}, educational textbook diagram, clear illustration, white background, high resolution`;
-            const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
-
-            return {
-                source: 'unsplash',
-                url: fallbackUrl,
-                alt: (fallbackAlt || cleanQuery).slice(0, 180),
-                query: cleanQuery,
-                creditName: 'Educational Visual Engine',
-                creditUrl: 'https://pollinations.ai',
-                unsplashId: `gen_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-            };
-        } catch {
-            return null;
-        }
+        return null;
     }
 }

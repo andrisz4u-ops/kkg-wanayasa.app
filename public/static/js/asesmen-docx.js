@@ -284,16 +284,36 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
 // ============================================================
 async function fetchSafeImageBuffer(url) {
   try {
-    // Paksa ukuran kecil dan format jpg murni agar tidak berat/error di docx.js
-    const safeUrl = new URL(url);
-    safeUrl.searchParams.set('w', '400');
-    safeUrl.searchParams.set('h', '300');
-    safeUrl.searchParams.set('fit', 'crop');
-    safeUrl.searchParams.set('fm', 'jpg');
-    safeUrl.searchParams.set('cs', 'tinysrgb'); // strip profile/EXIF
-    
-    const resp = await fetch(safeUrl.toString());
-    if (!resp.ok) throw new Error('Fetch not ok');
+    if (!url) throw new Error('Image URL is empty');
+
+    // Handle Data URI (Base64) from Cloudflare Workers AI
+    if (url.startsWith('data:')) {
+      const base64Data = url.split(',')[1];
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Handle HTTP / HTTPS URLs
+    let fetchUrl = url;
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('unsplash.com')) {
+        parsed.searchParams.set('w', '400');
+        parsed.searchParams.set('h', '300');
+        parsed.searchParams.set('fit', 'crop');
+        parsed.searchParams.set('fm', 'jpg');
+        parsed.searchParams.set('cs', 'tinysrgb');
+        fetchUrl = parsed.toString();
+      }
+    } catch (_) {}
+
+    const resp = await fetch(fetchUrl);
+    if (!resp.ok) throw new Error('Fetch not ok: ' + resp.status);
     return await resp.arrayBuffer();
   } catch (e) {
     throw e;

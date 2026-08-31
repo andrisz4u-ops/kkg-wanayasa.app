@@ -31,6 +31,57 @@ export interface UnsplashImagePayload {
     unsplashId: string;
 }
 
+/**
+ * Helper: Search Wikipedia & Wikimedia Commons for authentic historical photos,
+ * Indonesian national heroes, cultural heritage sites, real maps, and biology/nature specimens.
+ */
+async function searchWikimediaImage(query: string): Promise<{ url: string; creditName: string } | null> {
+    try {
+        const cleanQuery = query.replace(/[\[\]]/g, '').trim();
+
+        // 1. Query Wikipedia Bahasa Indonesia (Prioritas untuk sejarah, tokoh, & tempat Indonesia)
+        const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
+        const res = await fetch(idWikiUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
+        if (res.ok) {
+            const data = await res.json() as any;
+            const pages = data?.query?.pages;
+            if (pages) {
+                for (const pId of Object.keys(pages)) {
+                    const page = pages[pId];
+                    if (page.thumbnail?.source) {
+                        return {
+                            url: page.thumbnail.source,
+                            creditName: `Wikimedia Commons (${page.title})`
+                        };
+                    }
+                }
+            }
+        }
+
+        // 2. Query Wikimedia Commons langsung
+        const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
+        const commRes = await fetch(commonsUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
+        if (commRes.ok) {
+            const commData = await commRes.json() as any;
+            const commPages = commData?.query?.pages;
+            if (commPages) {
+                for (const pId of Object.keys(commPages)) {
+                    const imgInfo = commPages[pId]?.imageinfo?.[0];
+                    if (imgInfo?.thumburl || imgInfo?.url) {
+                        return {
+                            url: imgInfo.thumburl || imgInfo.url,
+                            creditName: 'Wikimedia Commons'
+                        };
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Wikimedia image search note:', e);
+    }
+    return null;
+}
+
 export class UnsplashService {
     private accessKey?: string;
     private cfAi?: any;
@@ -44,14 +95,30 @@ export class UnsplashService {
         return true;
     }
 
-    async searchImage(query: string, fallbackAlt: string): Promise<UnsplashImagePayload | null> {
+    async searchImage(query: string, fallbackAlt: string, subjectContext?: string): Promise<UnsplashImagePayload | null> {
         const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
-        const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style, for school exam`;
 
-        // 1. Prioritas Utama: Cloudflare Workers AI (Edge GPU, Free 10k neurons/day, 100% akurat)
+        // 1. Prioritas Utama untuk Sejarah, IPS, PKn, Pahlawan, Budaya, & Peta: Wikimedia Commons (Foto Otentik Asli)
+        const isHistoricalOrReal = /(sejarah|ips|pkn|pancasila|geografi|budaya|seni|tokoh|pahlawan|indonesia|proklamasi|candi|rumah|presiden|peta|gedung|kerajaan|fauna|flora|daerah|maeda|soekarno|hatta|sayuti|sukarni)/i.test(`${query} ${subjectContext || ''}`);
+        if (isHistoricalOrReal) {
+            const wikiImg = await searchWikimediaImage(cleanQuery);
+            if (wikiImg) {
+                return {
+                    source: 'unsplash',
+                    url: wikiImg.url,
+                    alt: fallbackAlt || cleanQuery,
+                    query: cleanQuery,
+                    creditName: wikiImg.creditName,
+                    creditUrl: 'https://commons.wikimedia.org',
+                    unsplashId: `wiki_${Date.now()}`
+                };
+            }
+        }
+
+        // 2. Prioritas Diagram Sains / Matematika / Biologi: Cloudflare Workers AI FLUX / SDXL
+        const visualPrompt = `clean 2d educational textbook diagram of ${cleanQuery}, clear educational illustration, white background, simple, high contrast, vector style, for school exam`;
         if (this.cfAi && typeof this.cfAi.run === 'function') {
             try {
-                // Coba FLUX.1-schnell atau SDXL-lightning di Cloudflare Workers AI
                 const cfResult: any = await this.cfAi.run('@cf/black-forest-labs/flux-1-schnell', {
                     prompt: visualPrompt,
                     steps: 4,
@@ -118,7 +185,7 @@ export class UnsplashService {
             }
         }
 
-        // 2. Prioritas Kedua: Educational Visual Engine (Instant, Diagram 2D berlatar putih, Bebas Stock Photo Acak)
+        // 3. Prioritas Ketiga: Educational Visual Engine (Instant, Diagram 2D berlatar putih)
         try {
             const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
 
@@ -135,7 +202,7 @@ export class UnsplashService {
             console.warn('Visual engine fallback note (proceeding to unsplash):', err);
         }
 
-        // 3. Prioritas Ketiga: Unsplash API sebagai cadangan darurat
+        // 4. Prioritas Keempat: Unsplash API sebagai cadangan darurat
         if (this.accessKey) {
             try {
                 const searchUrl = new URL('https://api.unsplash.com/search/photos');

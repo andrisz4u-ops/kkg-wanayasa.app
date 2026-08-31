@@ -99,10 +99,14 @@ kisi.post('/generate', async (c) => {
             if (isPG) {
                 if (isGambarEnabled) {
                     const exactImages = Math.max(1, Math.round(count * 0.2));
-                    gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan gambar/diagram/skema/grafik sebagai stimulus pertanyaan.
-                - Pada ${exactImages} butir soal tersebut, buat kalimat pengantar yang merujuk pada stimulus (contoh: "Perhatikan diagram di bawah ini! Berdasarkan diagram tersebut..." atau "Perhatikan gambar berikut! Bagian yang ditunjuk berfungsi untuk...").
-                - Isi field "gambar_keyword" pada butir soal tersebut dengan 3-6 kata kunci Bahasa Inggris deskriptif yang sangat spesifik dan detail mengenai objek diagram yang harus digambar (contoh: "prime factor tree diagram of 24 and 36", "human digestive system organ", "water cycle illustration with labels", "solar system planetary orbits", "plant cell structure diagram").
-                - DILARANG menuliskan teks placeholder di dalam teks soal seperti "[Gambar menunjukkan...]" atau "[Deskripsi gambar...]". Tulis langsung pertanyaan ujiannya.
+                    gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
+                - PEDOMAN STIMULUS GAMBAR SESUAI MATA PELAJARAN:
+                  a. Sejarah / IPS / PKn: Gunakan stimulus foto tokoh pahlawan, foto gedung/tempat bersejarah nyata, foto naskah dokumen asli, peta wilayah otentik, atau rumah adat/artefak (contoh: "Perhatikan foto tokoh pahlawan berikut! Tokoh ini bertugas...", "Perhatikan foto bangunan bersejarah berikut! Tempat ini digunakan untuk..."). Field "gambar_keyword" isi dengan nama tokoh/tempat spesifik Bahasa Indonesia atau Inggris (contoh: "Rumah Laksamana Maeda", "Sayuti Melik", "Naskah Proklamasi Kemerdekaan", "Candi Borobudur", "Pangeran Diponegoro", "Peta Kepulauan Indonesia").
+                  b. IPA / Sains: Gunakan stimulus diagram organ tubuh, siklus alam (siklus air, metamorfosis katak/kupu-kupu), penampang sel/tumbuhan, tata surya, atau rantai makanan. Field "gambar_keyword" isi dengan kata kunci deskriptif (contoh: "human lungs respiratory system", "water cycle diagram", "plant cell structure", "butterfly metamorphosis cycle").
+                  c. Matematika: Gunakan stimulus visual bangun ruang 3D, sudut, atau jaring-jaring bangun.
+                - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
+                  * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks (seperti "kotak berlabel Proklamasi pada diagram alur") atau diagram pohon faktor angka. Jika membutuhkan bagan alur teks atau data angka, sajikan langsung sebagai teks soal atau tabel Markdown yang dapat dibaca jelas oleh murid!
+                  * DILARANG menuliskan teks deskripsi gambar seperti "[Gambar menunjukkan...]" di dalam teks soal. Tulis langsung pertanyaan ujiannya.
                 - Pada butir soal lainnya (selain ${exactImages} butir soal terpilih), WAJIB mengosongkan field ("gambar_keyword": "").`;
                 } else {
                     gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "" untuk semua soal).`;
@@ -214,8 +218,9 @@ kisi.post('/generate', async (c) => {
                             .trim();
 
                         const query = bracketHint || q.gambar_keyword || `${topik} ${mataPelajaran} educational diagram`;
+                        const subjectContext = `${mataPelajaran} ${topik}`;
                         try {
-                            const img = await unsplash.searchImage(query, q.soal);
+                            const img = await unsplash.searchImage(query, q.soal, subjectContext);
                             if (img) {
                                 q.gambar = { url: img.url, credit: img.creditName };
                             }

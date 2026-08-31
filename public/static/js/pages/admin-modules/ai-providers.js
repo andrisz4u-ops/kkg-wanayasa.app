@@ -84,7 +84,7 @@ function renderProviderCard(p, idx) {
 
   const keyCount = p.key_count || (p.api_key && p.api_key.includes('\n') ? p.api_key.split('\n').length : (p.api_key ? 1 : 0));
   const poolBadge = keyCount > 1
-    ? `<span class="text-[10px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200" title="Auto-Rotasi ${keyCount} Kunci (Load Balancing)"><i class="fas fa-layer-group text-[9px] mr-1 text-violet-500"></i>${keyCount} Keys (Pool)</span>`
+    ? `<button type="button" onclick="checkAiProviderLive(${p.id})" class="text-[10px] font-semibold bg-violet-50 hover:bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200 transition-colors cursor-pointer flex items-center gap-1" title="Klik untuk inspeksi kesehatan detail tiap kunci"><i class="fas fa-layer-group text-[9px] text-violet-500"></i>${keyCount} Keys (Pool) <i class="fas fa-magnifying-glass text-[8px] text-violet-400"></i></button>`
     : '';
 
   return `
@@ -149,7 +149,7 @@ function renderProviderCard(p, idx) {
         <span class="text-[11px] text-slate-400">
           ${p.last_check_at ? `Uji: ${new Date(p.last_check_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : 'Belum pernah diuji'}
         </span>
-        <button id="check-btn-${p.id}" onclick="checkAiProviderLive(${p.id})" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs">
+        <button id="check-btn-${p.id}" onclick="checkAiProviderLive(${p.id})" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer">
           <i class="fas fa-bolt text-[10px]"></i> Check Live
         </button>
       </div>
@@ -158,7 +158,7 @@ function renderProviderCard(p, idx) {
 }
 
 // ============================================
-// Check Live
+// Check Live & Key Diagnostics Modal
 // ============================================
 
 window.checkAiProviderLive = async function checkAiProviderLive(id) {
@@ -183,15 +183,112 @@ window.checkAiProviderLive = async function checkAiProviderLive(id) {
       moduleToast('AI Provider', `Gagal merespons: ${data.error || 'Unknown error'}`, 'error');
     }
 
-    // Reload list to update status badge
+    // Always show detailed diagnostics modal if key details are available
+    if (data.keys_detail && data.keys_detail.length > 0) {
+      window.showAiKeyDiagnostics(id, data);
+    }
+
+    // Reload list to update status badge in background
     await window.loadAdminAiProviders();
   } catch (e) {
     moduleToast('AI Provider', e.message || 'Gagal melakukan check live', 'error');
+  } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = originalHtml;
     }
   }
+};
+
+window.showAiKeyDiagnostics = function showAiKeyDiagnostics(id, checkData) {
+  const p = currentProviders.find(item => item.id === id);
+  const title = document.getElementById('ai-key-diag-title');
+  const subtitle = document.getElementById('ai-key-diag-subtitle');
+  const summary = document.getElementById('ai-key-diag-summary');
+  const tbody = document.getElementById('ai-key-diag-tbody');
+  const editBtn = document.getElementById('ai-key-diag-edit-btn');
+
+  if (title) title.textContent = `Diagnostik Pool Kunci: ${p ? p.name : 'AI Provider'}`;
+  if (subtitle) subtitle.textContent = `Model: ${p ? p.model : '-'} · Slug: ${p ? p.slug : '-'}`;
+
+  const details = checkData.keys_detail || [];
+  const total = details.length || checkData.total_keys || 1;
+  const liveCount = details.filter(k => k.status === 'live').length;
+  const rateLimitCount = details.filter(k => k.status === 'rate_limited').length;
+  const errorCount = details.filter(k => k.status === 'invalid' || k.status === 'error').length;
+
+  if (summary) {
+    summary.innerHTML = `
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+        <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mb-1">Total Kunci</span>
+        <div class="text-xl font-extrabold text-slate-800 font-mono">${total} <span class="text-xs font-normal text-slate-400">Keys</span></div>
+      </div>
+      <div class="bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200/70">
+        <span class="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider block mb-1">🟢 Live & Responsif</span>
+        <div class="text-xl font-extrabold text-emerald-700 font-mono">${liveCount} <span class="text-xs font-normal text-emerald-600/70">Kunci</span></div>
+      </div>
+      <div class="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200/70">
+        <span class="text-[10px] text-amber-700 font-semibold uppercase tracking-wider block mb-1">🟡 Rate Limit (429)</span>
+        <div class="text-xl font-extrabold text-amber-700 font-mono">${rateLimitCount} <span class="text-xs font-normal text-amber-600/70">Kunci</span></div>
+      </div>
+      <div class="bg-rose-50/80 p-3.5 rounded-2xl border border-rose-200/70">
+        <span class="text-[10px] text-rose-700 font-semibold uppercase tracking-wider block mb-1">🔴 Invalid / Error</span>
+        <div class="text-xl font-extrabold text-rose-700 font-mono">${errorCount} <span class="text-xs font-normal text-rose-600/70">Kunci</span></div>
+      </div>
+    `;
+  }
+
+  if (tbody) {
+    if (details.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 font-sans">Tidak ada detail kunci yang dapat ditampilkan.</td></tr>`;
+    } else {
+      tbody.innerHTML = details.map(k => {
+        let badgeHtml = '';
+        let rowBg = '';
+
+        if (k.status === 'live') {
+          badgeHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>LIVE</span>`;
+          rowBg = 'bg-white hover:bg-slate-50/80';
+        } else if (k.status === 'rate_limited') {
+          badgeHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs"><i class="fas fa-hourglass-half text-[9px]"></i>LIMIT (429)</span>`;
+          rowBg = 'bg-amber-50/30 hover:bg-amber-50/60';
+        } else if (k.status === 'invalid') {
+          badgeHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs"><i class="fas fa-ban text-[9px]"></i>INVALID</span>`;
+          rowBg = 'bg-rose-50/40 hover:bg-rose-50/70';
+        } else {
+          badgeHtml = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs"><i class="fas fa-triangle-exclamation text-[9px]"></i>ERROR</span>`;
+          rowBg = 'bg-rose-50/40 hover:bg-rose-50/70';
+        }
+
+        const latHtml = k.latency_ms !== undefined ? `<span class="font-bold text-slate-700">${k.latency_ms}ms</span>` : `<span class="text-slate-400">-</span>`;
+
+        return `
+          <tr class="${rowBg} transition-colors border-t border-slate-100">
+            <td class="px-4 py-3 text-center font-bold text-slate-500 font-mono">#${k.index}</td>
+            <td class="px-4 py-3 font-mono">
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-800 text-xs select-all">${escapeHtml(k.masked)}</span>
+            </td>
+            <td class="px-4 py-3 text-center">${badgeHtml}</td>
+            <td class="px-4 py-3 text-right font-mono">${latHtml}</td>
+            <td class="px-4 py-3 text-slate-700 text-xs font-sans">
+              <p class="leading-snug">${escapeHtml(k.error || '-')}</p>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  if (editBtn) {
+    editBtn.onclick = () => {
+      closeAdminModal('ai-key-diagnostics-modal');
+      setTimeout(() => {
+        showEditAiProviderModal(id);
+      }, 150);
+    };
+  }
+
+  openAdminModal('ai-key-diagnostics-modal');
 };
 
 window.updateAiKeyCountPill = function updateAiKeyCountPill() {

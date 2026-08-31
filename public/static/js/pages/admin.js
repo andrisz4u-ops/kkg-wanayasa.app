@@ -1210,6 +1210,79 @@ export async function renderAdmin() {
       </div>
     </div>
 
+    <!-- Key-by-Key Diagnostics Modal -->
+    <div id="ai-key-diagnostics-modal" role="dialog" aria-modal="true" aria-labelledby="ai-key-diag-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAdminModal('ai-key-diagnostics-modal')"></div>
+      <div class="bg-white/95 backdrop-blur-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative z-10 animate-slide-up border border-slate-200/70">
+        <!-- Header -->
+        <div class="px-8 py-6 border-b border-slate-200/70 bg-slate-50/80 backdrop-blur-md flex justify-between items-center sticky top-0 bg-white/95 z-10">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-sm">
+                <i class="fas fa-microchip"></i>
+              </span>
+              <div>
+                <h3 id="ai-key-diag-title" class="font-display text-lg font-bold text-slate-900 tracking-tight">Diagnostik Pool Kunci AI</h3>
+                <p id="ai-key-diag-subtitle" class="text-xs text-slate-500 font-mono">Hasil inspeksi status tiap kunci API</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="closeAdminModal('ai-key-diagnostics-modal')" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all shadow-sm">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-8 space-y-6">
+          <!-- Summary Cards Grid -->
+          <div id="ai-key-diag-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <!-- Injected via JS -->
+          </div>
+
+          <!-- Table of Keys -->
+          <div class="overflow-hidden rounded-2xl border border-slate-200/80 shadow-xs">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50/90 text-slate-500 font-semibold border-b border-slate-200/70">
+                <tr>
+                  <th class="px-4 py-3 text-center w-14">Baris</th>
+                  <th class="px-4 py-3">Kunci (Masked)</th>
+                  <th class="px-4 py-3 text-center w-28">Status</th>
+                  <th class="px-4 py-3 text-right w-24">Latency</th>
+                  <th class="px-4 py-3">Keterangan / Diagnostik</th>
+                </tr>
+              </thead>
+              <tbody id="ai-key-diag-tbody" class="divide-y divide-slate-100 font-mono">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Helpful Diagnostic Notes -->
+          <div class="p-4 rounded-xl bg-amber-50/80 border border-amber-200/60 text-xs text-amber-900 flex items-start gap-3">
+            <i class="fas fa-circle-info text-amber-600 mt-0.5 text-sm shrink-0"></i>
+            <div>
+              <p class="font-semibold text-amber-900 mb-0.5">Panduan Pengelolaan Multi-Key Pool:</p>
+              <ul class="list-disc list-inside space-y-1 text-[11px] text-amber-800">
+                <li>Kunci berstatus <strong>429 Rate Limit</strong> tidak mati permanen, melainkan mencapai kuota batas menit. Kunci ini akan aktif kembali setelah kuota reset.</li>
+                <li>Kunci berstatus <strong>401 Unauthorized</strong> atau <strong>403 Forbidden</strong> adalah kunci salah / kedaluwarsa yang perlu diganti.</li>
+                <li>Untuk mengganti baris kunci tertentu, silakan klik tombol <strong>"Buka Form Edit Provider"</strong> di bawah.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Modal Actions -->
+          <div class="flex items-center justify-between pt-4 border-t border-slate-200/70">
+            <button id="ai-key-diag-edit-btn" type="button" class="px-5 py-2.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 transition-colors flex items-center gap-2">
+              <i class="fas fa-pen"></i> Buka Form Edit Provider
+            </button>
+            <button type="button" onclick="closeAdminModal('ai-key-diagnostics-modal')" class="px-6 py-2.5 rounded-full text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   `;
   return renderAdminLayout(innerContent, state.currentAdminTab || 'dashboard');
 }

@@ -43,12 +43,22 @@ export interface AIResponse {
     total_keys_in_pool?: number;
 }
 
+export interface KeyCheckDetail {
+    index: number;
+    masked: string;
+    status: 'live' | 'rate_limited' | 'invalid' | 'error';
+    latency_ms?: number;
+    http_code?: number;
+    error?: string;
+}
+
 export interface CheckResult {
     ok: boolean;
     latency_ms: number;
     error?: string;
     valid_keys?: number;
     total_keys?: number;
+    keys_detail?: KeyCheckDetail[];
 }
 
 // Default subrequest timeout in milliseconds (120 seconds / 2 menit untuk dokumen besar RPP & Asesmen)
@@ -849,37 +859,122 @@ CRITICAL JSON RULES:
         let validKeys = 0;
         const totalKeys = Math.max(keys.length, 1);
         const errors: string[] = [];
+        const keysDetail: KeyCheckDetail[] = [];
+
+        const maskKeyPreview = (k: string) => {
+            if (!k) return '(kosong)';
+            if (k.length <= 8) return '****';
+            return k.substring(0, 4) + '****' + k.substring(k.length - 4);
+        };
 
         // If multiple keys in pool, test all keys concurrently in parallel
         if (keys.length > 1 && provider.api_type !== 'custom_proxy') {
-            const checkPromises = keys.map(async (key, i) => {
-                const singleP: DBProvider = { ...provider, api_key: key };
+            const checkPromises = keys.map(async (k, i) => {
+                const singleP: DBProvider = { ...provider, api_key: k };
+                const keyStart = Date.now();
                 try {
                     await this.callProvider(singleP, 'Respond with the single word "OK". Nothing else.', false, 15000);
-                    return { ok: true, index: i };
+                    const keyLat = Date.now() - keyStart;
+                    return {
+                        index: i + 1,
+                        masked: maskKeyPreview(k),
+                        status: 'live' as const,
+                        latency_ms: keyLat,
+                        error: 'Respons OK (Kunci Aktif)'
+                    };
                 } catch (e: any) {
-                    return { ok: false, index: i, error: `Key #${i + 1}: ${e?.message || String(e)}` };
+                    const errMsg = e?.message || String(e);
+                    let status: 'rate_limited' | 'invalid' | 'error' = 'error';
+                    let cleanMsg = errMsg;
+                    let httpCode: number | undefined;
+
+                    if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('rate')) {
+                        status = 'rate_limited';
+                        httpCode = 429;
+                        cleanMsg = '429 Rate Limit (Batas kuota/rate limit per menit terlewati, coba lagi nanti)';
+                    } else if (errMsg.includes('401') || errMsg.toLowerCase().includes('invalid') || errMsg.toLowerCase().includes('auth')) {
+                        status = 'invalid';
+                        httpCode = 401;
+                        cleanMsg = '401 Unauthorized (Kunci API tidak valid atau kedaluwarsa)';
+                    } else if (errMsg.includes('403')) {
+                        status = 'invalid';
+                        httpCode = 403;
+                        cleanMsg = '403 Forbidden (Akses ke model atau endpoint ditolak)';
+                    } else if (errMsg.toLowerCase().includes('timeout')) {
+                        cleanMsg = 'Timeout (>15 detik tanpa respons)';
+                    }
+
+                    return {
+                        index: i + 1,
+                        masked: maskKeyPreview(k),
+                        status,
+                        http_code: httpCode,
+                        error: cleanMsg
+                    };
                 }
             });
 
             const settled = await Promise.allSettled(checkPromises);
             for (const item of settled) {
                 if (item.status === 'fulfilled') {
-                    if (item.value.ok) {
+                    keysDetail.push(item.value);
+                    if (item.value.status === 'live') {
                         validKeys++;
-                    } else if (item.value.error) {
-                        errors.push(item.value.error);
+                    } else {
+                        errors.push(`Kunci #${item.value.index} (${item.value.masked}): ${item.value.error}`);
                     }
                 } else {
+                    const failDetail: KeyCheckDetail = {
+                        index: keysDetail.length + 1,
+                        masked: '(unknown)',
+                        status: 'error',
+                        error: String(item.reason)
+                    };
+                    keysDetail.push(failDetail);
                     errors.push(String(item.reason));
                 }
             }
         } else {
+            const singleKey = keys[0] || '';
+            const keyStart = Date.now();
             try {
                 await this.callProvider(provider, 'Respond with the single word "OK". Nothing else.', false, 15000);
                 validKeys = 1;
+                keysDetail.push({
+                    index: 1,
+                    masked: maskKeyPreview(singleKey),
+                    status: 'live',
+                    latency_ms: Date.now() - keyStart,
+                    error: 'Respons OK (Kunci Aktif)'
+                });
             } catch (e: any) {
-                errors.push(e?.message || String(e));
+                const errMsg = e?.message || String(e);
+                let status: 'rate_limited' | 'invalid' | 'error' = 'error';
+                let cleanMsg = errMsg;
+                let httpCode: number | undefined;
+
+                if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('rate')) {
+                    status = 'rate_limited';
+                    httpCode = 429;
+                    cleanMsg = '429 Rate Limit (Batas kuota/rate limit per menit terlewati, coba lagi nanti)';
+                } else if (errMsg.includes('401') || errMsg.toLowerCase().includes('invalid') || errMsg.toLowerCase().includes('auth')) {
+                    status = 'invalid';
+                    httpCode = 401;
+                    cleanMsg = '401 Unauthorized (Kunci API tidak valid atau kedaluwarsa)';
+                } else if (errMsg.includes('403')) {
+                    status = 'invalid';
+                    httpCode = 403;
+                    cleanMsg = '403 Forbidden (Akses ke model atau endpoint ditolak)';
+                }
+
+                errors.push(errMsg);
+                keysDetail.push({
+                    index: 1,
+                    masked: maskKeyPreview(singleKey),
+                    status,
+                    http_code: httpCode,
+                    error: cleanMsg
+                });
             }
         }
 
@@ -898,7 +993,8 @@ CRITICAL JSON RULES:
                 latency_ms: latency,
                 valid_keys: validKeys,
                 total_keys: totalKeys,
-                error: errorSummary || undefined
+                error: errorSummary || undefined,
+                keys_detail: keysDetail
             };
         } else {
             const errorSummary = errors.join(' | ').substring(0, 500) || 'Gagal merespons';
@@ -911,7 +1007,8 @@ CRITICAL JSON RULES:
                 latency_ms: latency,
                 valid_keys: 0,
                 total_keys: totalKeys,
-                error: errorSummary
+                error: errorSummary,
+                keys_detail: keysDetail
             };
         }
     }

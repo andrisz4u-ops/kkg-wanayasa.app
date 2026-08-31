@@ -17,8 +17,10 @@ kisi.post('/generate', async (c) => {
             namaSekolah, namaGuru, nipGuru, mataPelajaran, topik,
             jenjangKelas, semester, jenisUjian, capaianPembelajaran,
             jumlahPG, jumlahIsian, jumlahUraian,
-            hotsRatio, isianType, aiProvider
+            hotsRatio, isianType, aiProvider, useGambar
         } = body;
+
+        const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
 
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
@@ -93,6 +95,15 @@ kisi.post('/generate', async (c) => {
                 uraianRule = `\n                6. LARANGAN URAIAN: Pengguna TIDAK MEMBUTUHKAN soal uraian (jumlah = 0). DILARANG KERAS menyertakan field "uraian" dalam output JSON.`;
             }
 
+            let gambarRule = '';
+            if (isPG) {
+                if (isGambarEnabled) {
+                    gambarRule = `\n                7. GAMBAR (KONTEKSTUAL): HANYA jika topik/materi memang membutuhkan stimulus visual nyata (contoh: anatomi tubuh, siklus air/hewan, bangun ruang/datar, peta), Anda boleh membuat MAKSIMAL 1-2 soal yang memakai gambar dengan mengisi "gambar_keyword" (1-2 kata kunci objek spesifik dalam Bahasa Inggris, contoh: "water cycle", "food chain", "fraction diagram"). Untuk materi kalkulasi/angka murni (seperti KPK, FPB, perkalian, aritmatika) atau tata bahasa, DILARANG menggunakan gambar ("gambar_keyword": "").`;
+                } else {
+                    gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "" untuk semua soal).`;
+                }
+            }
+
             return `
                 Bertindaklah sebagai Profesor dan Pakar Penilaian Pendidikan berstandar Kurikulum Merdeka & PISA/AKM.
 
@@ -115,7 +126,7 @@ kisi.post('/generate', async (c) => {
                 3. TUGAS: ${taskDesc}
                 4. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
                 5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.${uraianRule}
-                ${isPG ? `7. GAMBAR (WAJIB): Anda HARUS membuat TEPAT 2 soal yang memakai gambar. Untuk 2 soal tersebut, isilah field "gambar_keyword" dengan 1-2 kata kunci objek spesifik dalam Bahasa Inggris (contoh: "water cycle", "food chain", "fraction diagram"). Untuk soal lainnya, isikan "gambar_keyword" dengan string kosong.` : ''}
+                6. ATURAN TABEL (STIMULUS): Jika membuat soal yang memuat data/tabel, gunakan format tabel Markdown standar yang rapi (contoh: | Kolom 1 | Kolom 2 |\\n|---|---|\\n| Data A | Data B |). Pastikan setiap baris diawali dan diakhiri dengan tanda pipa (|).${gambarRule}
                 ${isPG ? '8.' : '7.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
                 ${getKelasAdaptation(jenjangKelas)}
 
@@ -135,7 +146,7 @@ kisi.post('/generate', async (c) => {
         // Generate PG
         if (totalPG > 0) {
             const BATCH_SIZE = 20;
-            const unsplash = new UnsplashService(c.env);
+            const unsplash = isGambarEnabled ? new UnsplashService(c.env) : null;
             for (let i = 0; i < totalPG; i += BATCH_SIZE) {
                 const currentCount = Math.min(BATCH_SIZE, totalPG - i);
                 const prompt = buildPrompt('pg', i + 1, currentCount);
@@ -143,7 +154,7 @@ kisi.post('/generate', async (c) => {
                 if (result?._ai_meta) finalData._meta = result._ai_meta;
                 if (result?.pg && Array.isArray(result.pg)) {
                     for (const q of result.pg) {
-                        if (q.gambar_keyword && unsplash.isConfigured()) {
+                        if (unsplash && q.gambar_keyword && unsplash.isConfigured()) {
                             try {
                                 const img = await unsplash.searchImage(q.gambar_keyword, q.soal);
                                 if (img) {
@@ -237,7 +248,10 @@ kisi.post('/generate', async (c) => {
 
         // Record usage telemetry for school & teacher analytics
         try {
-            const sessionId = getCookie(c.req.header('Cookie'), 'session');
+            const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie') || c.req.raw?.headers?.get('Cookie');
+            const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+            const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+            const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
             const user = await getCurrentUser(c.env.DB, sessionId);
             await recordAIGeneration(c.env.DB, {
                 user_id: user?.id || 1,

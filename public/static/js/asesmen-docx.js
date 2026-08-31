@@ -191,6 +191,95 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
 }
 
 // ============================================================
+// HELPER: parse teks soal + markdown table menjadi Paragraphs & docx.Table
+// ============================================================
+function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
+  const { AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, TextRun } = window.docx;
+  const { left = CM(0.6), hanging = CM(0.6) } = indentOpts;
+  const items = [];
+  const lines = String(soalText || '').split('\n');
+
+  let tableLines = [];
+  let isFirstLine = true;
+
+  const flushTable = () => {
+    if (tableLines.length === 0) return;
+    const rows = tableLines
+      .map(l => l.trim())
+      .filter(l => l.startsWith('|'))
+      .map(l => {
+        const cells = l.split('|');
+        return cells.slice(1, l.endsWith('|') ? cells.length - 1 : cells.length).map(c => c.trim());
+      })
+      .filter(row => row.length > 0 && !row.every(c => /^[-: ]+$/.test(c)));
+
+    if (rows.length > 0) {
+      const header = rows[0];
+      const dataRows = rows.slice(1);
+      const BORDER_BLACK = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+
+      items.push(new Table({
+        width: { size: 75, type: WidthType.PERCENTAGE },
+        alignment: AlignmentType.LEFT,
+        margins: { left: left || CM(0.6) },
+        borders: {
+          top: BORDER_BLACK,
+          bottom: BORDER_BLACK,
+          left: BORDER_BLACK,
+          right: BORDER_BLACK,
+          insideHorizontal: BORDER_BLACK,
+          insideVertical: BORDER_BLACK,
+        },
+        rows: [
+          new TableRow({
+            tableHeader: true,
+            children: header.map(h => new TableCell({
+              shading: { fill: 'F1F5F9' },
+              margins: { top: PT(3), bottom: PT(3), left: PT(6), right: PT(6) },
+              children: [makePara(h, { bold: true, size: 20, align: AlignmentType.CENTER })]
+            }))
+          }),
+          ...dataRows.map(r => new TableRow({
+            children: r.map((c, colIdx) => new TableCell({
+              margins: { top: PT(3), bottom: PT(3), left: PT(6), right: PT(6) },
+              children: [makePara(c, { size: 20, align: colIdx === 0 ? AlignmentType.CENTER : AlignmentType.LEFT })]
+            }))
+          }))
+        ]
+      }));
+      items.push(makePara('', { spaceAfter: 4 }));
+    }
+    tableLines = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (trimmed.startsWith('|')) {
+      tableLines.push(trimmed);
+    } else {
+      flushTable();
+      if (trimmed.length > 0 || isFirstLine) {
+        const runs = (isFirstLine && noText)
+          ? [new TextRun({ text: `${noText} `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(line, { size: 22 })]
+          : [...makeRuns(line, { size: 22 })];
+        
+        items.push(makeParaRaw(runs, {
+          align: AlignmentType.JUSTIFIED,
+          spaceBefore: isFirstLine ? 4 : 0,
+          spaceAfter: 0,
+          indent: isFirstLine ? { left, hanging } : { left }
+        }));
+        isFirstLine = false;
+      }
+    }
+  }
+  flushTable();
+
+  return items;
+}
+
+// ============================================================
 // HELPER: Convert URL to Base64/Buffer 
 // ============================================================
 async function fetchSafeImageBuffer(url) {
@@ -318,13 +407,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           });
 
           const cell3Children = [];
-          const soalLines = String(q.soal || '').split('\n');
-          soalLines.forEach((line, li) => {
-             cell3Children.push(makeParaRaw([
-                new TextRun({ text: line, size: 22, font: FONT_LATIN })
-             ], { align: AlignmentType.JUSTIFIED, spaceBefore: 0, spaceAfter: 0 }));
-          });
-          
+          cell3Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
           cell3Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
 
           const cell3 = new window.docx.TableCell({
@@ -345,25 +428,11 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
         } catch (e) {
           console.error("Gagal load gambar PG docx", e);
           const INDENT_LEFT = CM(0.6);
-          const soalLines = String(q.soal || '').split('\n');
-          soalLines.forEach((line, li) => {
-            const isFirst = li === 0;
-            children.push(makeParaRaw([
-              isFirst ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }) : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
-              ...makeRuns(line, { size: 22 }),
-            ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
-          });
+          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
           children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
         }
       } else {
-        const soalLines = String(q.soal || '').split('\n');
-        soalLines.forEach((line, li) => {
-          const isFirst = li === 0;
-          children.push(makeParaRaw([
-            isFirst ? new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }) : new TextRun({ text: '', size: 22, font: FONT_LATIN }),
-            ...makeRuns(line, { size: 22 }),
-          ], { align: AlignmentType.JUSTIFIED, spaceBefore: isFirst ? 6 : 0, spaceAfter: 0, indent: isFirst ? { left: INDENT_LEFT, hanging: HANGING } : { left: INDENT_LEFT } }));
-        });
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
         children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
       }
     }
@@ -513,10 +582,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       }));
     } else {
       for (const q of data.isian.data) {
-        children.push(makeParaRaw([
-          new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }),
-          ...makeRuns(q.soal, { size: 22 }),
-        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 10, indent: { left: CM(0.5) } }));
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.5), hanging: CM(0.5) }));
       }
     }
   }
@@ -526,10 +592,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
     for (const q of data.uraian) {
-      children.push(makeParaRaw([
-        new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }),
-        ...makeRuns(q.soal, { size: 22 }),
-      ], { align: AlignmentType.JUSTIFIED, spaceAfter: 20, indent: { left: CM(0.5) } }));
+      children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.5), hanging: CM(0.5) }));
     }
   }
 

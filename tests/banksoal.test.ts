@@ -9,7 +9,8 @@ const mockUser = {
     sekolah: 'SDN 1 Wanayasa'
 };
 
-const createMockDb = (authenticated = true) => {
+const createMockDb = (authenticated = true, userOverride = {}) => {
+    const user = { ...mockUser, ...userOverride };
     return {
         prepare: vi.fn((query: string) => {
             const runner = {
@@ -45,7 +46,7 @@ const createMockDb = (authenticated = true) => {
                 }),
                 first: vi.fn(async () => {
                     if (query.toLowerCase().includes('sessions')) {
-                        return authenticated ? mockUser : null;
+                        return authenticated ? user : null;
                     }
                     if (query.includes('COUNT(*) as total FROM bank_soal')) {
                         return { total: 1 };
@@ -53,7 +54,7 @@ const createMockDb = (authenticated = true) => {
                     if (query.includes('bank_soal WHERE id = ?') || query.includes('bank_soal bs WHERE id = ?')) {
                         return {
                             id: 1,
-                            user_id: 2, // different user for testing reviews
+                            user_id: 2, // Question belongs to user 2
                             user_nama: 'Guru Lain',
                             mata_pelajaran: 'IPAS',
                             topik: 'Siklus Air',
@@ -171,5 +172,49 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         const data = await res.json();
         expect(data.success).toBe(true);
         expect(data.data.reviewed).toBe(true);
+    });
+
+    it('should allow owner (user_id 2) to delete their own question', async () => {
+        const mockDb = createMockDb(true, { id: 2, role: 'user' });
+        const res = await banksoal.request('/1', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer test-session-token'
+            }
+        }, { DB: mockDb } as any);
+
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.data.deleted).toBe(true);
+    });
+
+    it('should allow admin to delete any question', async () => {
+        const mockDb = createMockDb(true, { id: 1, role: 'admin' });
+        const res = await banksoal.request('/1', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer test-session-token'
+            }
+        }, { DB: mockDb } as any);
+
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.success).toBe(true);
+        expect(data.data.deleted).toBe(true);
+    });
+
+    it('should forbid non-owner non-admin user from deleting question', async () => {
+        const mockDb = createMockDb(true, { id: 3, role: 'user' });
+        const res = await banksoal.request('/1', {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer test-session-token'
+            }
+        }, { DB: mockDb } as any);
+
+        expect(res.status).toBe(403);
+        const data = await res.json();
+        expect(data.success).toBe(false);
     });
 });

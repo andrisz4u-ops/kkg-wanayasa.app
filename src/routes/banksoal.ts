@@ -103,19 +103,19 @@ banksoal.get('/', async (c) => {
     }
 
     if (mapel) {
-        where += ` AND bs.mata_pelajaran = ?`;
+        where += ` AND LOWER(bs.mata_pelajaran) = LOWER(?)`;
         params.push(mapel);
     }
     if (kelas) {
-        where += ` AND bs.jenjang_kelas = ?`;
+        where += ` AND LOWER(bs.jenjang_kelas) = LOWER(?)`;
         params.push(kelas);
     }
     if (topik) {
-        where += ` AND bs.topik LIKE ?`;
+        where += ` AND LOWER(bs.topik) LIKE LOWER(?)`;
         params.push(`%${topik}%`);
     }
     if (jenis) {
-        where += ` AND bs.jenis_ujian = ?`;
+        where += ` AND LOWER(bs.jenis_ujian) = LOWER(?)`;
         params.push(jenis);
     }
 

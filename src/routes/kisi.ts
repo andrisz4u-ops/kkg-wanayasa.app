@@ -47,21 +47,50 @@ kisi.post('/generate', async (c) => {
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) => {
             const isPG = type === 'pg';
-            const jsonStructure = isPG ?
-                `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (untuk soal HOTS: awali dengan stimulus/wacana singkat sebelum pertanyaan)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "keyword inggris ATAU kosongkan" } ]` :
-                `"isian": {
+
+            let jsonStructure = '';
+            if (isPG) {
+                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (untuk soal HOTS: awali dengan stimulus/wacana singkat sebelum pertanyaan)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "keyword inggris ATAU kosongkan" } ]`;
+            } else {
+                const parts: string[] = [];
+                if (totalIsian > 0) {
+                    parts.push(`"isian": {
                     "type": "${isianType || 'Standard'}",
                     "data": [ { "no": ${totalPrevPG + 1}, "soal": "...", "kunci": "..." } ]
-                 },
-                 "uraian": [ { "no": ${totalPrevPG + (totalIsian || 0) + 1}, "soal": "Soal uraian HOTS: sertakan stimulus/data/kasus, tuntut analisis atau evaluasi", "kunci": "Jawaban ideal lengkap dengan alasan/argumentasi", "rubrik_skor": { "Skor 4": "Analisis lengkap, argumen tepat & logis", "Skor 3": "Analisis cukup, argumen ada namun kurang lengkap", "Skor 2": "Menjawab namun tidak disertai analisis", "Skor 1": "Jawaban tidak relevan atau salah" } } ]`;
+                 }`);
+                }
+                if (totalUraian > 0) {
+                    const uraianStartNo = totalPrevPG + (totalIsian || 0) + 1;
+                    parts.push(`"uraian": [ { "no": ${uraianStartNo}, "soal": "Soal uraian HOTS: sertakan stimulus/data/kasus, tuntut analisis atau evaluasi", "kunci": "Jawaban ideal lengkap dengan alasan/argumentasi", "rubrik_skor": { "Skor 4": "Analisis lengkap, argumen tepat & logis", "Skor 3": "Analisis cukup, argumen ada namun kurang lengkap", "Skor 2": "Menjawab namun tidak disertai analisis", "Skor 1": "Jawaban tidak relevan atau salah" } } ]`);
+                }
+                jsonStructure = parts.join(',\n                 ');
+            }
 
             let isianRule = "";
-            if (!isPG) {
+            if (!isPG && totalIsian > 0) {
                 if (isianType === 'Crossword') {
                     isianRule = `\n                9. ATURAN ISIAN (TEKA-TEKI SILANG): Setiap "soal" isian HARUS diawali dengan kata "Mendatar:" atau "Menurun:". Kunci jawaban HARUS 1 kata tanpa spasi (huruf kapital).`;
                 } else if (isianType === 'Menjodohkan') {
                     isianRule = `\n                9. ATURAN ISIAN (MENJODOHKAN): Setiap "soal" isian berisi pernyataan logis. "kunci" berisi pasangan yang benar dan proporsional.`;
                 }
+            }
+
+            let taskDesc = '';
+            if (isPG) {
+                taskDesc = `Generate TEPAT ${count} soal PG (No. ${startNo} s.d. ${startNo + count - 1}).`;
+            } else if (totalIsian > 0 && totalUraian > 0) {
+                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN dan ${totalUraian} soal URAIAN.`;
+            } else if (totalIsian > 0 && totalUraian === 0) {
+                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN saja. JANGAN membuat soal uraian (uraian = 0)!`;
+            } else if (totalIsian === 0 && totalUraian > 0) {
+                taskDesc = `Generate TEPAT ${totalUraian} soal URAIAN saja. JANGAN membuat soal isian (isian = 0)!`;
+            }
+
+            let uraianRule = '';
+            if (!isPG && totalUraian > 0) {
+                uraianRule = `\n                6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis HOTS (C5/C6) yang menuntut murid: (a) menganalisis situasi/data, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`;
+            } else if (!isPG && totalUraian === 0) {
+                uraianRule = `\n                6. LARANGAN URAIAN: Pengguna TIDAK MEMBUTUHKAN soal uraian (jumlah = 0). DILARANG KERAS menyertakan field "uraian" dalam output JSON.`;
             }
 
             return `
@@ -83,15 +112,11 @@ kisi.post('/generate', async (c) => {
                 II. ATURAN WAJIB:
                 1. CP (Capaian Pembelajaran): ${capaianPembelajaran || 'Generasi otomatis sesuai topik & kelas'}
                 2. RASIO TARGET: ${hotsRatio || '30:40:30'} (LOTS : MOTS : HOTS). Hitung secara presisi dan patuhi!
-                3. TUGAS: ${isPG
-                    ? `Generate TEPAT ${count} soal PG (No. ${startNo} s.d. ${startNo + count - 1}).`
-                    : `Generate TEPAT ${totalIsian} soal ISIAN dan ${totalUraian} soal URAIAN.`
-                }
+                3. TUGAS: ${taskDesc}
                 4. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
-                5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.
-                ${isPG ? '' : `6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis HOTS (C5/C6) yang menuntut murid: (a) menganalisis situasi/data, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`}
-                ${isPG ? `6. GAMBAR (WAJIB): Anda HARUS membuat TEPAT 2 soal yang memakai gambar. Untuk 2 soal tersebut, isilah field "gambar_keyword" dengan 1-2 kata kunci objek spesifik dalam Bahasa Inggris (contoh: "water cycle", "food chain", "fraction diagram"). Untuk soal lainnya, isikan "gambar_keyword" dengan string kosong.` : ''}
-                ${isPG ? '7.' : '6.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
+                5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.${uraianRule}
+                ${isPG ? `7. GAMBAR (WAJIB): Anda HARUS membuat TEPAT 2 soal yang memakai gambar. Untuk 2 soal tersebut, isilah field "gambar_keyword" dengan 1-2 kata kunci objek spesifik dalam Bahasa Inggris (contoh: "water cycle", "food chain", "fraction diagram"). Untuk soal lainnya, isikan "gambar_keyword" dengan string kosong.` : ''}
+                ${isPG ? '8.' : '7.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
                 ${getKelasAdaptation(jenjangKelas)}
 
                 III. FORMAT OUTPUT JSON (berikan JSON valid saja, tanpa teks lain):
@@ -156,20 +181,22 @@ kisi.post('/generate', async (c) => {
             const result = await ai.generateJSON(prompt, preferredSlug);
             if (result?._ai_meta) finalData._meta = result._ai_meta;
 
-            if (result?.isian) {
+            // Handle Isian (hanya jika totalIsian > 0)
+            if (totalIsian > 0 && result?.isian) {
                 finalData.isian = result.isian;
                 finalData.isian.type = isianType || 'Standard';
 
                 // Pastikan tidak ada field gambar yang bocor dari AI ke soal isian
                 if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
+                    finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
                     finalData.isian.data.forEach((q: any) => {
                         delete q.gambar;
                         delete q.gambar_keyword;
                     });
                 }
 
-                if (isianType === 'Crossword' && result.isian.data) {
-                    const words = result.isian.data.map((q: any) => String(q.kunci));
+                if (isianType === 'Crossword' && finalData.isian.data) {
+                    const words = finalData.isian.data.map((q: any) => String(q.kunci));
                     const cw = generateCrossword(words, startNoIsian);
                     if (cw.success) {
                         finalData.isian.crossword = cw;
@@ -182,9 +209,13 @@ kisi.post('/generate', async (c) => {
                         }
                     }
                 }
+            } else {
+                finalData.isian = null;
             }
-            if (result?.uraian) {
-                finalData.uraian = result.uraian;
+
+            // Handle Uraian (hanya jika totalUraian > 0)
+            if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
+                finalData.uraian = result.uraian.slice(0, totalUraian);
                 // Pastikan tidak ada field gambar yang bocor dari AI ke soal uraian
                 finalData.uraian.forEach((q: any) => {
                     delete q.gambar;
@@ -199,6 +230,8 @@ kisi.post('/generate', async (c) => {
                         q.no = maxIsianNo + 1 + i;
                     });
                 }
+            } else {
+                finalData.uraian = [];
             }
         }
 

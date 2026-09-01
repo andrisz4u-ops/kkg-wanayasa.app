@@ -124,13 +124,18 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     c.res.headers.append('Set-Cookie', `session=${sessionId}; ${cookieOptions}`);
     c.res.headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`);
 
-    // Update last_login_at timestamp
+    // Update last_login_at timestamp (ISO-8601 UTC format with explicit 'Z')
+    const loginTimestamp = new Date().toISOString();
     try {
       await c.env.DB.prepare(
-        "UPDATE users SET last_login_at = datetime('now') WHERE id = ?"
-      ).bind(user.id).run();
+        'UPDATE users SET last_login_at = ? WHERE id = ?'
+      ).bind(loginTimestamp, user.id).run();
     } catch (err) {
-      // Non-fatal if column doesn't exist yet on un-migrated DB
+      try {
+        await c.env.DB.prepare(
+          "UPDATE users SET last_login_at = datetime('now') WHERE id = ?"
+        ).bind(user.id).run();
+      } catch (_) {}
       console.warn('Failed to update last_login_at:', err);
     }
 

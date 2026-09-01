@@ -1,6 +1,6 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
-import { debounce, escapeHtml, skeletonTable, formatRelativeTime, formatDateTime } from '../../utils.js';
+import { debounce, escapeHtml, skeletonTable, parseDate, formatRelativeTime, formatDateTime } from '../../utils.js';
 import {
   adminUsersPagination,
   pendingApprovalState,
@@ -162,7 +162,8 @@ function renderAdminUsersTable() {
   }
 
   container.innerHTML = users.map(u => {
-    const isRecent = u.last_login_at && (Date.now() - new Date(u.last_login_at).getTime() < 48 * 3600 * 1000);
+    const parsedLogin = parseDate(u.last_login_at);
+    const isRecent = parsedLogin && (Date.now() - parsedLogin.getTime() < 48 * 3600 * 1000);
     const lastLoginHtml = u.last_login_at ? `
       <div class="flex items-center gap-2" title="Waktu Login: ${escapeHtml(formatDateTime(u.last_login_at))}">
         <span class="w-2 h-2 rounded-full shrink-0 ${isRecent ? 'bg-emerald-500 animate-pulse ring-4 ring-emerald-500/20' : 'bg-slate-300 dark:bg-slate-600'}"></span>

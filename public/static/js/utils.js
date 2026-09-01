@@ -48,60 +48,122 @@ export function showToast(message, type = 'info', duration = 5000) {
 /**
  * Format date to Indonesian locale
  */
+/**
+ * Parse date string safely, ensuring UTC SQLite strings ("YYYY-MM-DD HH:MM:SS")
+ * are correctly recognized as UTC instead of shifting into local time.
+ */
+export function parseDate(dateStr) {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+  let s = String(dateStr).trim();
+  if (!s || s === '-' || s === 'null' || s === 'undefined') return null;
+
+  // If format is "YYYY-MM-DD HH:MM:SS" (SQLite datetime without timezone), treat as UTC
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) {
+    s = s + 'Z';
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Format date to Indonesian locale (WIB / Asia/Jakarta GMT+7)
+ */
 export function formatDate(dateStr) {
-  if (!dateStr) return '-';
+  const date = parseDate(dateStr);
+  if (!date) return '-';
   try {
-    const date = new Date(dateStr);
     return date.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 
 /**
- * Format date and time to Indonesian locale
+ * Format date and time to Indonesian locale (WIB / Asia/Jakarta GMT+7)
  */
 export function formatDateTime(dateStr) {
-  if (!dateStr) return '-';
+  const date = parseDate(dateStr);
+  if (!date) return '-';
   try {
-    const date = new Date(dateStr);
     return date.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      hour12: false
+    }).replace(/\./g, ':');
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 
 /**
- * Format relative time (e.g., "2 jam yang lalu")
+ * Format relative time in WIB / Asia/Jakarta context (e.g. "Baru saja", "5 menit yang lalu", "2 jam yang lalu", "Hari ini, 14:30", "Kemarin, 09:15")
  */
 export function formatRelativeTime(dateStr) {
-  if (!dateStr) return '-';
+  const date = parseDate(dateStr);
+  if (!date) return '-';
   try {
-    const date = new Date(dateStr);
     const now = new Date();
-    const diffMs = now - date;
+    const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit yang lalu`;
-    if (diffHours < 24) return `${diffHours} jam yang lalu`;
-    if (diffDays < 7) return `${diffDays} hari yang lalu`;
-    return formatDate(dateStr);
+    // Sangat baru (< 1 menit)
+    if (diffMins < 1 && diffMins >= -1) return 'Baru saja';
+    if (diffMins > 0 && diffMins < 60) return `${diffMins} menit yang lalu`;
+    if (diffHours >= 1 && diffHours < 12) return `${diffHours} jam yang lalu`;
+
+    // Tanggal dalam format YYYY-MM-DD zona waktu Asia/Jakarta (WIB)
+    const toJakartaDateStr = (d) => {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(d);
+      const year = parts.find(p => p.type === 'year')?.value;
+      const month = parts.find(p => p.type === 'month')?.value;
+      const day = parts.find(p => p.type === 'day')?.value;
+      return `${year}-${month}-${day}`;
+    };
+
+    const todayJakarta = toJakartaDateStr(now);
+    const dateJakarta = toJakartaDateStr(date);
+
+    // Format jam:menit WIB
+    const timeStr = date.toLocaleTimeString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(/\./g, ':');
+
+    if (todayJakarta === dateJakarta) {
+      return `Hari ini, ${timeStr}`;
+    }
+
+    // Hitung apakah kemarin di zona waktu Jakarta
+    const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
+    const yesterdayJakarta = toJakartaDateStr(yesterday);
+    if (dateJakarta === yesterdayJakarta) {
+      return `Kemarin, ${timeStr}`;
+    }
+
+    return formatDateTime(dateStr);
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 

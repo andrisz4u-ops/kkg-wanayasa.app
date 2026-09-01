@@ -1,6 +1,6 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
-import { debounce, escapeHtml, formatDate } from '../../utils.js';
+import { debounce, escapeHtml, formatDate, formatDateTime, formatRelativeTime } from '../../utils.js';
 import {
   dashboardRefreshInterval, setDashboardRefreshInterval,
   dashboardPeriodDays,
@@ -183,18 +183,7 @@ function getActionIcon(action) {
 }
 
 function formatActivityTime(dateStr) {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'Baru saja';
-  if (diffMins < 60) return `${diffMins} menit lalu`;
-  if (diffHours < 24) return `${diffHours} jam lalu`;
-  if (diffDays === 1) return 'Kemarin';
-  return formatDate(dateStr); // Util function
+  return formatRelativeTime(dateStr);
 }
 
 async function loadPendingUsersWidget() {

@@ -1,6 +1,6 @@
 // Document Archive & History Helper - KKG Wanayasa Digital
 import { state } from './state.js';
-import { showToast, escapeHtml } from './utils.js';
+import { showToast, escapeHtml, formatRelativeTime } from './utils.js';
 
 const MAX_ARCHIVE_ITEMS = 30;
 
@@ -91,27 +91,7 @@ export function clearDocArchives(module) {
 }
 
 function formatArchiveDate(isoString) {
-  if (!isoString) return '-';
-  try {
-    const d = new Date(isoString);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    
-    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    if (isToday) {
-      return `Hari ini, ${timeStr}`;
-    }
-    
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (d.toDateString() === yesterday.toDateString()) {
-      return `Kemarin, ${timeStr}`;
-    }
-
-    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ` ${timeStr}`;
-  } catch (_) {
-    return isoString;
-  }
+  return formatRelativeTime(isoString);
 }
 
 /**

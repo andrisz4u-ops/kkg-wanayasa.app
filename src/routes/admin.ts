@@ -111,16 +111,16 @@ admin.get('/dashboard', async (c) => {
 
       c.env.DB.prepare(`
         SELECT COUNT(DISTINCT user_id) as cnt FROM audit_logs 
-        WHERE DATE(created_at) = DATE('now')
+        WHERE DATE(created_at, '+7 hours') = DATE('now', '+7 hours')
         AND action = 'USER_LOGIN'
       `).first(),
 
       c.env.DB.prepare(`
-        SELECT DATE(created_at) as date, COUNT(*) as count 
+        SELECT DATE(created_at, '+7 hours') as date, COUNT(*) as count 
         FROM users 
-        WHERE created_at >= date('now', '-${periodDays} days')
+        WHERE created_at >= datetime('now', '-${periodDays} days')
         AND (is_active = 1 OR is_active IS NULL)
-        GROUP BY DATE(created_at)
+        GROUP BY DATE(created_at, '+7 hours')
         ORDER BY date
       `).all(),
 

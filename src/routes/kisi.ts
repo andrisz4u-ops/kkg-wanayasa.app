@@ -47,6 +47,44 @@ kisi.post('/generate', async (c) => {
             return `ADAPTASI KELAS ${kelas}: Bisa menggunakan data sederhana, tabel, atau kasus nyata sebagai stimulus. HOTS berupa analisis data, argumentasi berdasar fakta, atau merancang solusi dari permasalahan kontekstual.`;
         };
 
+        // Helper: normalisasi Markdown table agar terpisah rapi dari teks pembuka & pertanyaan
+        const normalizeSoalMarkdown = (text: string): string => {
+            if (!text) return '';
+            const clean = String(text)
+                .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+                .replace(/\[[^\]]*\]/g, '')
+                .trim();
+            const lines = clean.split(/\r?\n/);
+            const outLines: string[] = [];
+
+            for (const rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) continue;
+
+                const firstPipe = line.indexOf('|');
+                const lastPipe = line.lastIndexOf('|');
+
+                if (firstPipe !== -1 && lastPipe > firstPipe) {
+                    const beforeText = line.substring(0, firstPipe).trim();
+                    const tableContent = line.substring(firstPipe, lastPipe + 1).trim();
+                    const afterText = line.substring(lastPipe + 1).trim();
+
+                    if (beforeText) outLines.push(beforeText);
+
+                    const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
+                    for (const row of splitRows) {
+                        if (row.trim()) outLines.push(row.trim());
+                    }
+
+                    if (afterText) outLines.push(afterText);
+                } else {
+                    outLines.push(line);
+                }
+            }
+
+            return outLines.join('\n');
+        };
+
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) => {
             const isPG = type === 'pg';
 
@@ -134,7 +172,12 @@ kisi.post('/generate', async (c) => {
                 3. TUGAS: ${taskDesc}
                 4. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
                 5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.${uraianRule}
-                6. ATURAN TABEL (STIMULUS): Jika membuat soal yang memuat data/tabel, gunakan format tabel Markdown standar yang rapi (contoh: | Kolom 1 | Kolom 2 |\\n|---|---|\\n| Data A | Data B |). Pastikan setiap baris diawali dan diakhiri dengan tanda pipa (|).${gambarRule}
+                6. ATURAN FORMAT TABEL PADA SOAL (WAJIB DIPATUHI):
+                   - Jika menyajikan stimulus berupa tabel data/informasi/aksara/kosakata:
+                     * Kalimat pengantar WAJIB diakhiri baris baru (\\n) SEBELUM tabel (contoh: "Perhatikan tabel berikut:\\n").
+                     * Setiap baris tabel Markdown HARUS berada pada baris tersendiri (diawali '\\n|' dan diakhiri '|\\n') lengkap dengan header dan baris pemisah (contoh: "\\n| Aksara Sunda | Huruf Latin |\\n|---|---|\\n| ᮃ | a |\\n| ᮈ | é |\\n").
+                     * Kalimat pertanyaan WAJIB berada di baris baru (\\n) SETELAH tabel selesai (contoh: "\\nBerdasarkan tabel di atas, aksara Sunda yang berbunyi 'é' adalah...").
+                     * DILARANG KERAS menggabungkan teks pertanyaan ke dalam baris/sel tabel!${gambarRule}
                 ${isPG ? '8.' : '7.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
                 ${getKelasAdaptation(jenjangKelas)}
 
@@ -210,12 +253,8 @@ kisi.post('/generate', async (c) => {
                             bracketHint = bracketMatch[1].trim();
                         }
 
-                        // Clean bracketed text completely from the student's question
-                        q.soal = String(q.soal || '')
-                            .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-                            .replace(/\[[^\]]*\]/g, '')
-                            .replace(/\s{2,}/g, ' ')
-                            .trim();
+                        // Clean bracketed text completely from the student's question and normalize Markdown tables
+                        q.soal = normalizeSoalMarkdown(q.soal);
 
                         const searchKeyword = q.gambar_keyword || topik || 'diagram';
                         const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
@@ -234,11 +273,7 @@ kisi.post('/generate', async (c) => {
                         delete q.gambar;
                         delete q.gambar_keyword;
                         delete q.gambar_prompt_en;
-                        q.soal = String(q.soal || '')
-                            .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-                            .replace(/\[[^\]]*\]/g, '')
-                            .replace(/\s{2,}/g, ' ')
-                            .trim();
+                        q.soal = normalizeSoalMarkdown(q.soal);
                     }
                 }
             } else {
@@ -247,11 +282,7 @@ kisi.post('/generate', async (c) => {
                     delete q.gambar;
                     delete q.gambar_keyword;
                     delete q.gambar_prompt_en;
-                    q.soal = String(q.soal || '')
-                        .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-                        .replace(/\[[^\]]*\]/g, '')
-                        .replace(/\s{2,}/g, ' ')
-                        .trim();
+                    q.soal = normalizeSoalMarkdown(q.soal);
                 }
             }
         }
@@ -274,6 +305,7 @@ kisi.post('/generate', async (c) => {
                     finalData.isian.data.forEach((q: any) => {
                         delete q.gambar;
                         delete q.gambar_keyword;
+                        q.soal = normalizeSoalMarkdown(q.soal);
                     });
                 }
 
@@ -302,6 +334,7 @@ kisi.post('/generate', async (c) => {
                 finalData.uraian.forEach((q: any) => {
                     delete q.gambar;
                     delete q.gambar_keyword;
+                    q.soal = normalizeSoalMarkdown(q.soal);
                 });
 
                 // Renumber uraian to continue from the last isian number

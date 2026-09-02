@@ -190,6 +190,44 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
   }
 }
 
+// Helper: normalisasi teks soal agar tabel Markdown terpisah rapi dari kalimat pembuka/penutup
+function normalizeSoalMarkdown(text) {
+  if (!text) return '';
+  const clean = String(text)
+    .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .trim();
+  const lines = clean.split(/\r?\n/);
+  const outLines = [];
+
+  for (let rawLine of lines) {
+    let line = rawLine.trim();
+    if (!line) continue;
+
+    const firstPipe = line.indexOf('|');
+    const lastPipe = line.lastIndexOf('|');
+
+    if (firstPipe !== -1 && lastPipe > firstPipe) {
+      const beforeText = line.substring(0, firstPipe).trim();
+      const tableContent = line.substring(firstPipe, lastPipe + 1).trim();
+      const afterText = line.substring(lastPipe + 1).trim();
+
+      if (beforeText) outLines.push(beforeText);
+
+      const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
+      for (const row of splitRows) {
+        if (row.trim()) outLines.push(row.trim());
+      }
+
+      if (afterText) outLines.push(afterText);
+    } else {
+      outLines.push(line);
+    }
+  }
+
+  return outLines.join('\n');
+}
+
 // ============================================================
 // HELPER: parse teks soal + markdown table menjadi Paragraphs & docx.Table
 // ============================================================
@@ -197,7 +235,7 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   const { AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, TextRun } = window.docx;
   const { left = CM(0.6), hanging = CM(0.6) } = indentOpts;
   const items = [];
-  const cleanSoal = String(soalText || '').replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+  const cleanSoal = normalizeSoalMarkdown(soalText);
   const lines = cleanSoal.split('\n');
 
   let tableLines = [];

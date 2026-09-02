@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
@@ -513,11 +513,49 @@ function containsSundaneseScript(text) {
   return /[\u1B80-\u1BBF\u1CC0-\u1CCF]/.test(text);
 }
 
+// Helper: normalisasi teks soal agar tabel Markdown terpisah rapi dari kalimat pembuka/penutup
+function normalizeSoalMarkdown(text) {
+  if (!text) return '';
+  const clean = String(text)
+    .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .trim();
+  const lines = clean.split(/\r?\n/);
+  const outLines = [];
+
+  for (let rawLine of lines) {
+    let line = rawLine.trim();
+    if (!line) continue;
+
+    const firstPipe = line.indexOf('|');
+    const lastPipe = line.lastIndexOf('|');
+
+    if (firstPipe !== -1 && lastPipe > firstPipe) {
+      const beforeText = line.substring(0, firstPipe).trim();
+      const tableContent = line.substring(firstPipe, lastPipe + 1).trim();
+      const afterText = line.substring(lastPipe + 1).trim();
+
+      if (beforeText) outLines.push(beforeText);
+
+      const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
+      for (const row of splitRows) {
+        if (row.trim()) outLines.push(row.trim());
+      }
+
+      if (afterText) outLines.push(afterText);
+    } else {
+      outLines.push(line);
+    }
+  }
+
+  return outLines.join('\n');
+}
+
 // Helper: format teks soal dan render Markdown table secara rapi dan proporsional
 function formatSoalText(text) {
   if (!text) return '';
-  const cleanText = String(text).replace(/\[(?:gambar|ilustrasi|deskripsi)[^\]]*\]/gi, '').replace(/\s{2,}/g, ' ').trim();
-  const lines = cleanText.split('\n');
+  const normalizedText = normalizeSoalMarkdown(text);
+  const lines = normalizedText.split('\n');
   const resultBlocks = [];
   let tableLines = [];
 
@@ -535,17 +573,17 @@ function formatSoalText(text) {
     if (rows.length > 0) {
       const header = rows[0];
       const dataRows = rows.slice(1);
-      let tableHtml = `<table class="soal-inner-table" style="margin: 6px 0 8px 0; border-collapse: collapse; border: 1.5px solid #1e293b; font-size: 9.5pt; width: auto; min-width: 240px; max-width: 100%;">`;
+      let tableHtml = `<table class="soal-inner-table" style="margin: 8px 0 10px 0; border-collapse: collapse; border: 1.5px solid #334155; font-size: 10pt; width: auto; min-width: 220px; max-width: 100%;">`;
       tableHtml += `<thead style="background-color: #f1f5f9; font-weight: bold;"><tr>`;
       header.forEach(h => {
-        tableHtml += `<th style="border: 1px solid #334155; padding: 4px 10px; text-align: center;">${escBs(h)}</th>`;
+        tableHtml += `<th style="border: 1px solid #475569; padding: 4px 12px; text-align: center;">${escapeHtml(h)}</th>`;
       });
       tableHtml += `</tr></thead><tbody>`;
       dataRows.forEach(r => {
         tableHtml += `<tr>`;
         r.forEach((c, idx) => {
           const isNum = /^\d+([.,]\d+)?$/.test(c) || idx === 0;
-          tableHtml += `<td style="border: 1px solid #334155; padding: 3px 10px; text-align: ${isNum ? 'center' : 'left'};">${escBs(c)}</td>`;
+          tableHtml += `<td style="border: 1px solid #475569; padding: 4px 12px; text-align: ${isNum ? 'center' : 'left'}; vertical-align: middle;">${escapeHtml(c)}</td>`;
         });
         tableHtml += `</tr>`;
       });
@@ -562,14 +600,14 @@ function formatSoalText(text) {
       tableLines.push(trimmed);
     } else {
       flushTable();
-      if (trimmed.length > 0 || (i > 0 && i < lines.length - 1)) {
-        resultBlocks.push(line);
+      if (trimmed.length > 0) {
+        resultBlocks.push(`<div style="line-height:1.45; margin-bottom:4px;">${escapeHtml(line)}</div>`);
       }
     }
   }
   flushTable();
 
-  return resultBlocks.join('<br>').replace(/(<\/table>)<br>/g, '$1').replace(/<br>(<table)/g, '$1');
+  return resultBlocks.join('');
 }
 
 // Helper: cek seluruh canvas HTML apakah ada Aksara Sunda

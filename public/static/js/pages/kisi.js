@@ -377,29 +377,127 @@ export async function renderKisi() {
         border-radius: 12px;
         position: sticky; top: 16px; z-index: 50;
       }
+
       .asesmen-a4 {
-        max-width: 21cm; margin: 0 auto;
-        background: white; color: black;
-        padding: 1cm;
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 11pt; line-height: 1.3;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 21cm;
+        margin: 0 auto 40px auto;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 1.8cm 2cm;
+        font-family: 'Times New Roman', 'Noto Sans Sundanese', Times, serif;
+        font-size: 11pt;
+        line-height: 1.45;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
         border-radius: 4px;
         min-height: 29.7cm;
+        box-sizing: border-box;
       }
-      .asesmen-a4 h4 { font-weight: bold; font-size: 11pt; margin-bottom: 10px; }
-      .asesmen-a4 table { border-collapse: collapse; width: 100%; }
-      .asesmen-a4 .q-block { margin-bottom: 12px; display: flex; gap: 8px; }
-      .asesmen-a4 .q-num { font-weight: bold; min-width: 25px; }
-      .asesmen-a4 .q-body { flex: 1; }
-      .asesmen-a4 .q-options { display: grid; gap: 2px; margin-top: 4px; }
-      .asesmen-a4 .q-options.cols-4 { grid-template-columns: repeat(4, 1fr); }
-      .asesmen-a4 .q-options.cols-2 { grid-template-columns: repeat(2, 1fr); }
-      .asesmen-a4 .q-options.cols-1 { grid-template-columns: 1fr; }
+      .asesmen-a4 table { border-collapse: collapse; }
+      .asesmen-a4 .main-table { width: 100%; border-collapse: collapse; }
+      .asesmen-a4 .main-table td, .asesmen-a4 .main-table th { padding: 4px 6px; }
+      
+      .soal-item-row {
+        margin-bottom: 14px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .soal-text {
+        text-align: justify;
+        line-height: 1.45;
+        margin-bottom: 6px;
+      }
+      .soal-options-table {
+        width: 100%;
+        margin-top: 5px;
+        border-collapse: collapse;
+      }
+      .soal-options-table td {
+        vertical-align: top;
+        line-height: 1.35;
+      }
+      .section-title {
+        margin-top: 22px;
+        margin-bottom: 8px;
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+      .section-title h4 {
+        font-weight: bold;
+        font-size: 11.5pt;
+        margin: 0 0 3px 0;
+      }
+      .section-title p {
+        font-size: 9.5pt;
+        font-style: italic;
+        margin: 0;
+        color: #475569;
+      }
+      .kunci-page-break {
+        page-break-before: always;
+        break-before: page;
+        margin-top: 30px;
+        padding-top: 10px;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 1.5cm 1.8cm 1.5cm 1.8cm;
+      }
 
       @media print {
-        #asesmen-form-view, .asesmen-result-toolbar, .sidebar, .app-header { display: none !important; }
-        .asesmen-a4 { box-shadow: none; margin: 0; padding: 0; }
+        *, *::before, *::after {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        html, body {
+          background: #ffffff !important;
+          color: #000000 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          font-family: 'Times New Roman', 'Noto Sans Sundanese', Times, serif !important;
+        }
+        #asesmen-form-view,
+        .asesmen-result-toolbar,
+        .sidebar,
+        .app-header,
+        .btn-remove-soal-image,
+        #btn-launch-tts-game,
+        .print-hidden,
+        nav,
+        header {
+          display: none !important;
+        }
+        #asesmen-result-view {
+          display: block !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .asesmen-a4 {
+          box-shadow: none !important;
+          border: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: auto !important;
+          font-size: 10.5pt !important;
+          line-height: 1.4 !important;
+        }
+        .soal-item-row {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          margin-bottom: 12px !important;
+        }
+        .section-title {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          margin-top: 16px !important;
+          margin-bottom: 6px !important;
+        }
+        .kunci-page-break {
+          page-break-before: always !important;
+          break-before: page !important;
+        }
       }
     </style>
   `;
@@ -798,8 +896,12 @@ function renderResult(data, formData) {
 
   // PG Section
   if (data.pg && data.pg.length > 0) {
-    html += `<h4>I. PILIHAN GANDA</h4>`;
-    html += `<p style="font-size:9.5pt; font-style:italic; margin-bottom:10px">Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!</p>`;
+    html += `
+      <div class="section-title">
+        <h4>I. PILIHAN GANDA</h4>
+        <p>Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!</p>
+      </div>
+    `;
 
     data.pg.forEach(q => {
       const opts = q.opsi || {};
@@ -810,71 +912,68 @@ function renderResult(data, formData) {
       let optionsHTML = '';
       if (allShort) {
         optionsHTML = `
-          <table class="layout-table" style="width:100%; margin-top:2px;">
+          <table class="layout-table soal-options-table">
             <tr>
-              <td style="width:25%; padding:0 4px 1px 0;">A. ${opts.A || '-'}</td>
-              <td style="width:25%; padding:0 4px 1px 0;">B. ${opts.B || '-'}</td>
-              <td style="width:25%; padding:0 4px 1px 0;">C. ${opts.C || '-'}</td>
-              <td style="width:25%; padding:0 0 6px 0;">D. ${opts.D || '-'}</td>
+              <td style="width:25%; padding: 2px 8px 3px 0;">A. ${opts.A || '-'}</td>
+              <td style="width:25%; padding: 2px 8px 3px 0;">B. ${opts.B || '-'}</td>
+              <td style="width:25%; padding: 2px 8px 3px 0;">C. ${opts.C || '-'}</td>
+              <td style="width:25%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>
             </tr>
           </table>`;
       } else if (colClass === 'cols-2') {
         optionsHTML = `
-          <table class="layout-table" style="width:100%; margin-top:2px;">
+          <table class="layout-table soal-options-table">
             <tr>
-              <td style="width:50%; padding:0 4px 1px 0;">A. ${opts.A || '-'}</td>
-              <td style="width:50%; padding:0 0 1px 0;">C. ${opts.C || '-'}</td>
+              <td style="width:50%; padding: 2px 14px 4px 0;">A. ${opts.A || '-'}</td>
+              <td style="width:50%; padding: 2px 0 4px 0;">C. ${opts.C || '-'}</td>
             </tr>
             <tr>
-              <td style="width:50%; padding:0 4px 6px 0;">B. ${opts.B || '-'}</td>
-              <td style="width:50%; padding:0 0 6px 0;">D. ${opts.D || '-'}</td>
+              <td style="width:50%; padding: 2px 14px 3px 0;">B. ${opts.B || '-'}</td>
+              <td style="width:50%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>
             </tr>
           </table>`;
       } else {
         optionsHTML = `
-          <table class="layout-table" style="width:100%; margin-top:2px;">
-            <tr><td style="padding:0 0 1px 0;">A. ${opts.A || '-'}</td></tr>
-            <tr><td style="padding:0 0 1px 0;">B. ${opts.B || '-'}</td></tr>
-            <tr><td style="padding:0 0 1px 0;">C. ${opts.C || '-'}</td></tr>
-            <tr><td style="padding:0 0 6px 0;">D. ${opts.D || '-'}</td></tr>
+          <table class="layout-table soal-options-table">
+            <tr><td style="padding: 2px 0 3px 0;">A. ${opts.A || '-'}</td></tr>
+            <tr><td style="padding: 2px 0 3px 0;">B. ${opts.B || '-'}</td></tr>
+            <tr><td style="padding: 2px 0 3px 0;">C. ${opts.C || '-'}</td></tr>
+            <tr><td style="padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td></tr>
           </table>`;
       }
 
       if (q.gambar && q.gambar.url) {
-        // 2-column layout: thumbnail LEFT, soal+opsi RIGHT
         html += `
-                <table class="layout-table" style="margin-bottom:4px; width:100%;">
-                  <tr>
-                    <td style="width:30px; font-weight:bold; vertical-align:top;">${q.no}.</td>
-                    <td style="width:160px; vertical-align:top; padding-right:10px; text-align:center;">
-                      <div class="relative group" style="width:150px; height:150px; overflow:hidden; display:inline-block; border-radius:6px; border:1px solid #cbd5e1;">
-                        <img src="${q.gambar.url}" width="150" height="150"
-                             style="width:150px; height:150px; object-fit:cover;"
-                             crossorigin="anonymous" alt="Gambar Ilustrasi">
-                        <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${data.pg.indexOf(q)}">
-                          <i class="fas fa-trash-alt"></i>
-                        </button>
-                      </div>
-                    </td>
-                    <td style="vertical-align:top;">
-                      <div style="margin-bottom:4px; text-align:justify">${formatSoalText(q.soal)}</div>
-                      ${optionsHTML}
-                    </td>
-                  </tr>
-                </table>
-              `;
+          <table class="layout-table soal-item-row" style="width:100%;">
+            <tr>
+              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+              <td style="vertical-align:top; padding:1px 0;">
+                <div class="soal-text">${formatSoalText(q.soal)}</div>
+                <div style="margin: 6px 0 8px 0; text-align:left;">
+                  <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background:#fff;">
+                    <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
+                    <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${data.pg.indexOf(q)}">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </div>
+                ${optionsHTML}
+              </td>
+            </tr>
+          </table>
+        `;
       } else {
         html += `
-                <table class="layout-table" style="margin-bottom:4px; width:100%;">
-                  <tr>
-                    <td style="width:28px; font-weight:bold; vertical-align:top; white-space:nowrap;">${q.no}.</td>
-                    <td style="vertical-align:top;">
-                      <div style="margin-bottom:4px; text-align:justify">${formatSoalText(q.soal)}</div>
-                      ${optionsHTML}
-                    </td>
-                  </tr>
-                </table>
-              `;
+          <table class="layout-table soal-item-row" style="width:100%;">
+            <tr>
+              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+              <td style="vertical-align:top; padding:1px 0;">
+                <div class="soal-text">${formatSoalText(q.soal)}</div>
+                ${optionsHTML}
+              </td>
+            </tr>
+          </table>
+        `;
       }
     });
   }
@@ -893,21 +992,25 @@ function renderResult(data, formData) {
       isianDesc = 'Pasangkanlah pernyataan di sebelah kiri dengan jawaban yang tepat di sebelah kanan!';
     }
 
-    html += `<h4 style="margin-top:40px">${isianTitle}</h4>`;
-    html += `<p style="font-size:9.5pt; font-style:italic; margin-bottom:10px">${isianDesc}</p>`;
+    html += `
+      <div class="section-title">
+        <h4>${isianTitle}</h4>
+        <p>${isianDesc}</p>
+      </div>
+    `;
 
     if (isianType === 'Menjodohkan') {
       const rightCol = [...data.isian.data].map(q => q.kunci).sort(() => Math.random() - 0.5);
-      html += `<table class="layout-table" style="margin-bottom:12px; width:100%">`;
+      html += `<table class="layout-table soal-item-row" style="margin-bottom:14px; width:100%">`;
       data.isian.data.forEach((q, i) => {
         const optionLetter = String.fromCharCode(65 + i); // A, B, C...
         html += `
           <tr>
-            <td style="width:25px; font-weight:bold;">${q.no}.</td>
-            <td style="width:40%; padding-right:10px; text-align:justify;">${formatSoalText(q.soal)}</td>
-            <td style="width:25%; text-align:center;">....................</td>
-            <td style="width:5%; font-weight:bold; text-align:right;">${optionLetter}.</td>
-            <td style="width:30%; padding-left:10px;">${rightCol[i]}</td>
+            <td style="width:26px; font-weight:bold; vertical-align:top; padding:4px 0;">${q.no}.</td>
+            <td style="width:40%; padding:4px 10px 4px 0; text-align:justify; vertical-align:top;">${formatSoalText(q.soal)}</td>
+            <td style="width:25%; text-align:center; vertical-align:top; padding:4px 0;">....................</td>
+            <td style="width:5%; font-weight:bold; text-align:right; vertical-align:top; padding:4px 4px 4px 0;">${optionLetter}.</td>
+            <td style="width:30%; padding:4px 0 4px 10px; vertical-align:top;">${rightCol[i]}</td>
           </tr>
         `;
       });
@@ -987,38 +1090,46 @@ function renderResult(data, formData) {
     } else {
       data.isian.data.forEach(q => {
         html += `
-                <table class="layout-table" style="margin-bottom:6px">
-                  <tr>
-                    <td style="width:25px; font-weight:bold;">${q.no}.</td>
-                    <td><div style="text-align:justify; margin-bottom:8px;">${formatSoalText(q.soal)}</div></td>
-                  </tr>
-                </table>
-              `;
+          <table class="layout-table soal-item-row" style="width:100%;">
+            <tr>
+              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+              <td style="vertical-align:top; padding:1px 0;">
+                <div class="soal-text">${formatSoalText(q.soal)}</div>
+              </td>
+            </tr>
+          </table>
+        `;
       });
     }
   }
 
   // Uraian Section
   if (data.uraian && data.uraian.length > 0) {
-    html += `<h4 style="margin-top:40px">III. URAIAN</h4>`;
-    html += `<p style="font-size:9.5pt; font-style:italic; margin-bottom:10px">Jawablah pertanyaan di bawah ini dengan jelas dan tepat!</p>`;
+    html += `
+      <div class="section-title">
+        <h4>III. URAIAN</h4>
+        <p>Jawablah pertanyaan di bawah ini dengan jelas dan tepat!</p>
+      </div>
+    `;
 
     data.uraian.forEach(q => {
       html += `
-              <table class="layout-table" style="margin-bottom:8px">
-                <tr>
-                  <td style="width:25px; font-weight:bold;">${q.no}.</td>
-                  <td><div style="text-align:justify; margin-bottom:20px;">${formatSoalText(q.soal)}</div></td>
-                </tr>
-              </table>
-            `;
+        <table class="layout-table soal-item-row" style="width:100%; margin-bottom:16px;">
+          <tr>
+            <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+            <td style="vertical-align:top; padding:1px 0;">
+              <div class="soal-text" style="margin-bottom:14px;">${formatSoalText(q.soal)}</div>
+            </td>
+          </tr>
+        </table>
+      `;
     });
   }
 
   // Kunci Jawaban
-  html += `<br clear="all" style="mso-special-character:line-break; page-break-before:always" />`;
-  html += `<h4 style="text-align:center; text-decoration:underline;">KUNCI JAWABAN & PEDOMAN PENSKORAN</h4>`;
-  html += `<p style="text-align:center; font-weight:bold; margin-bottom:20px;">${formData.mataPelajaran} - ${formData.jenjangKelas} / ${formData.semester}</p>`;
+  html += `<div class="kunci-page-break">`;
+  html += `<h4 style="text-align:center; text-decoration:underline; font-weight:bold; font-size:12pt; margin-bottom:3px;">KUNCI JAWABAN & PEDOMAN PENSKORAN</h4>`;
+  html += `<p style="text-align:center; font-weight:bold; font-size:10.5pt; margin-bottom:20px;">${formData.mataPelajaran} - ${formData.jenjangKelas} / ${formData.semester}</p>`;
 
   if (data.pg && data.pg.length > 0) {
     html += `<h4>I. KUNCI JAWABAN PILIHAN GANDA</h4>`;
@@ -1086,7 +1197,7 @@ function renderResult(data, formData) {
           <p>NIP. ${formData.nipGuru || '..............................'}</p>
         </td>
       </tr>
-    </table>`;
+    </table></div>`;
 
   canvas.innerHTML = html;
   window.scrollTo(0, 0);

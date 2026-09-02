@@ -400,6 +400,7 @@ export async function renderKisi() {
         margin-bottom: 14px;
         page-break-inside: avoid;
         break-inside: avoid;
+        position: relative;
       }
       .soal-text {
         text-align: justify;
@@ -414,6 +415,147 @@ export async function renderKisi() {
       .soal-options-table td {
         vertical-align: top;
         line-height: 1.35;
+      }
+      .soal-actions {
+        position: absolute;
+        top: -4px;
+        right: -6px;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+      }
+      .soal-item-row:hover .soal-actions {
+        opacity: 1;
+      }
+      .soal-actions button {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .soal-actions .btn-edit-soal {
+        background: #eff6ff;
+        color: #2563eb;
+        border-color: #bfdbfe;
+      }
+      .soal-actions .btn-edit-soal:hover {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+      }
+      .soal-actions .btn-delete-soal {
+        background: #fef2f2;
+        color: #dc2626;
+        border-color: #fecaca;
+      }
+      .soal-actions .btn-delete-soal:hover {
+        background: #dc2626;
+        color: #fff;
+        border-color: #dc2626;
+      }
+      .soal-editor-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+      .soal-editor-modal {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        width: 90%;
+        max-width: 600px;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 28px;
+        animation: soalEditorIn 0.2s ease-out;
+      }
+      @keyframes soalEditorIn {
+        from { opacity: 0; transform: scale(0.95) translateY(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      .soal-editor-modal h3 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .soal-editor-modal label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .soal-editor-modal textarea,
+      .soal-editor-modal input[type="text"],
+      .soal-editor-modal select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 13px;
+        font-family: inherit;
+        margin-bottom: 12px;
+        transition: border-color 0.15s;
+        box-sizing: border-box;
+      }
+      .soal-editor-modal textarea:focus,
+      .soal-editor-modal input[type="text"]:focus,
+      .soal-editor-modal select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+      }
+      .soal-editor-modal textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .soal-editor-modal .editor-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+      .soal-editor-modal .editor-actions button {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+      }
+      .soal-editor-modal .btn-editor-cancel {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .soal-editor-modal .btn-editor-cancel:hover {
+        background: #e2e8f0;
+      }
+      .soal-editor-modal .btn-editor-save {
+        background: #2563eb;
+        color: #fff;
+      }
+      .soal-editor-modal .btn-editor-save:hover {
+        background: #1d4ed8;
       }
       .section-title {
         margin-top: 22px;
@@ -461,6 +603,8 @@ export async function renderKisi() {
         .sidebar,
         .app-header,
         .btn-remove-soal-image,
+        .soal-actions,
+        .soal-editor-overlay,
         #btn-launch-tts-game,
         .print-hidden,
         nav,
@@ -980,9 +1124,16 @@ function renderResult(data, formData) {
           </table>`;
       }
 
+      const pgIdx = data.pg.indexOf(q);
+      const actionsHTML = `<div class="soal-actions">
+        <button type="button" class="btn-edit-soal" data-type="pg" data-index="${pgIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
+        <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+      </div>`;
+
       if (q.gambar && q.gambar.url) {
         html += `
           <table class="layout-table soal-item-row" style="width:100%;">
+            ${actionsHTML}
             <tr>
               <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
               <td style="vertical-align:top; padding:1px 0;">
@@ -990,7 +1141,7 @@ function renderResult(data, formData) {
                 <div style="margin: 6px 0 8px 0; text-align:left;">
                   <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background:#fff;">
                     <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
-                    <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${data.pg.indexOf(q)}">
+                    <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${pgIdx}">
                       <i class="fas fa-trash-alt"></i>
                     </button>
                   </div>
@@ -1003,6 +1154,7 @@ function renderResult(data, formData) {
       } else {
         html += `
           <table class="layout-table soal-item-row" style="width:100%;">
+            ${actionsHTML}
             <tr>
               <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
               <td style="vertical-align:top; padding:1px 0;">
@@ -1126,9 +1278,14 @@ function renderResult(data, formData) {
                 </table>`;
       }
     } else {
-      data.isian.data.forEach(q => {
+      data.isian.data.forEach((q, isianIdx) => {
+        const isianActionsHTML = `<div class="soal-actions">
+          <button type="button" class="btn-edit-soal" data-type="isian" data-index="${isianIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
+          <button type="button" class="btn-delete-soal" data-type="isian" data-index="${isianIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+        </div>`;
         html += `
           <table class="layout-table soal-item-row" style="width:100%;">
+            ${isianActionsHTML}
             <tr>
               <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
               <td style="vertical-align:top; padding:1px 0;">
@@ -1150,9 +1307,14 @@ function renderResult(data, formData) {
       </div>
     `;
 
-    data.uraian.forEach(q => {
+    data.uraian.forEach((q, uraianIdx) => {
+      const uraianActionsHTML = `<div class="soal-actions">
+        <button type="button" class="btn-edit-soal" data-type="uraian" data-index="${uraianIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
+        <button type="button" class="btn-delete-soal" data-type="uraian" data-index="${uraianIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+      </div>`;
       html += `
         <table class="layout-table soal-item-row" style="width:100%; margin-bottom:16px;">
+          ${uraianActionsHTML}
           <tr>
             <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
             <td style="vertical-align:top; padding:1px 0;">
@@ -1253,12 +1415,186 @@ function renderResult(data, formData) {
     });
   });
 
+  // Attach edit soal listener
+  canvas.querySelectorAll('.btn-edit-soal').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const index = parseInt(btn.dataset.index, 10);
+      openSoalEditor(type, index, data, formData);
+    });
+  });
+
+  // Attach delete soal listener
+  canvas.querySelectorAll('.btn-delete-soal').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const index = parseInt(btn.dataset.index, 10);
+      deleteSoal(type, index, data, formData);
+    });
+  });
+
   // Attach interactive crossword game player listener
   if (isianType === 'Crossword' && data.isian?.crossword?.success) {
     document.getElementById('btn-launch-tts-game')?.addEventListener('click', () => {
       openInteractiveCrosswordGame(data.isian.crossword, data, formData);
     });
   }
+}
+
+// ============================================================
+// INLINE SOAL EDITOR MODAL
+// ============================================================
+function openSoalEditor(type, index, data, formData) {
+  const existing = document.querySelector('.soal-editor-overlay');
+  if (existing) existing.remove();
+
+  let q;
+  if (type === 'pg') q = data.pg?.[index];
+  else if (type === 'isian') q = data.isian?.data?.[index];
+  else if (type === 'uraian') q = data.uraian?.[index];
+  if (!q) return;
+
+  const isPG = type === 'pg';
+  const isUraian = type === 'uraian';
+  const typeLabel = isPG ? 'Pilihan Ganda' : type === 'isian' ? 'Isian' : 'Uraian';
+
+  let opsiFieldsHTML = '';
+  if (isPG) {
+    const opts = q.opsi || {};
+    opsiFieldsHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 12px;">
+        <div><label>Opsi A</label><input type="text" id="edit-opsi-a" value="${escapeHtml(opts.A || '')}"></div>
+        <div><label>Opsi B</label><input type="text" id="edit-opsi-b" value="${escapeHtml(opts.B || '')}"></div>
+        <div><label>Opsi C</label><input type="text" id="edit-opsi-c" value="${escapeHtml(opts.C || '')}"></div>
+        <div><label>Opsi D</label><input type="text" id="edit-opsi-d" value="${escapeHtml(opts.D || '')}"></div>
+      </div>
+      <label>Kunci Jawaban</label>
+      <select id="edit-kunci">
+        <option value="A" ${q.kunci === 'A' ? 'selected' : ''}>A</option>
+        <option value="B" ${q.kunci === 'B' ? 'selected' : ''}>B</option>
+        <option value="C" ${q.kunci === 'C' ? 'selected' : ''}>C</option>
+        <option value="D" ${q.kunci === 'D' ? 'selected' : ''}>D</option>
+      </select>
+    `;
+  } else {
+    opsiFieldsHTML = `
+      <label>Kunci Jawaban</label>
+      <textarea id="edit-kunci" rows="2">${escapeHtml(q.kunci || '')}</textarea>
+    `;
+  }
+
+  let rubrikHTML = '';
+  if (isUraian && q.rubrik_skor && typeof q.rubrik_skor === 'object') {
+    rubrikHTML = `
+      <label>Rubrik Penskoran</label>
+      <textarea id="edit-rubrik" rows="3">${escapeHtml(Object.entries(q.rubrik_skor).map(([k, v]) => `${k}: ${v}`).join('\n'))}</textarea>
+    `;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'soal-editor-overlay';
+  overlay.innerHTML = `
+    <div class="soal-editor-modal">
+      <h3><i class="fas fa-pencil-alt" style="color:#2563eb"></i> Edit Soal ${typeLabel} No. ${q.no}</h3>
+      <label>Teks Soal</label>
+      <textarea id="edit-soal-text" rows="4">${escapeHtml(q.soal || '')}</textarea>
+      ${opsiFieldsHTML}
+      ${rubrikHTML}
+      <div class="editor-actions">
+        <button type="button" class="btn-editor-cancel">Batal</button>
+        <button type="button" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Simpan</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Focus textarea
+  setTimeout(() => overlay.querySelector('#edit-soal-text')?.focus(), 100);
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // Close on Escape
+  const escHandler = (e) => {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); }
+  };
+  document.addEventListener('keydown', escHandler);
+
+  // Cancel
+  overlay.querySelector('.btn-editor-cancel').addEventListener('click', () => overlay.remove());
+
+  // Save
+  overlay.querySelector('.btn-editor-save').addEventListener('click', () => {
+    const newSoal = overlay.querySelector('#edit-soal-text').value.trim();
+    if (!newSoal) { showToast('Teks soal tidak boleh kosong.', 'error'); return; }
+
+    q.soal = newSoal;
+
+    if (isPG) {
+      q.opsi = {
+        A: overlay.querySelector('#edit-opsi-a').value.trim(),
+        B: overlay.querySelector('#edit-opsi-b').value.trim(),
+        C: overlay.querySelector('#edit-opsi-c').value.trim(),
+        D: overlay.querySelector('#edit-opsi-d').value.trim(),
+      };
+      q.kunci = overlay.querySelector('#edit-kunci').value;
+    } else {
+      q.kunci = overlay.querySelector('#edit-kunci').value.trim();
+    }
+
+    if (isUraian && overlay.querySelector('#edit-rubrik')) {
+      const rubrikText = overlay.querySelector('#edit-rubrik').value.trim();
+      if (rubrikText) {
+        q.rubrik_skor = {};
+        rubrikText.split('\n').forEach(line => {
+          const [k, ...rest] = line.split(':');
+          if (k && rest.length) q.rubrik_skor[k.trim()] = rest.join(':').trim();
+        });
+      }
+    }
+
+    overlay.remove();
+    document.removeEventListener('keydown', escHandler);
+    renderResult(data, formData);
+    showToast(`Soal ${typeLabel} No. ${q.no} berhasil diperbarui.`, 'success');
+  });
+}
+
+// ============================================================
+// DELETE SOAL WITH AUTO-RENUMBER
+// ============================================================
+function deleteSoal(type, index, data, formData) {
+  let arr;
+  let typeLabel;
+  if (type === 'pg') { arr = data.pg; typeLabel = 'PG'; }
+  else if (type === 'isian') { arr = data.isian?.data; typeLabel = 'Isian'; }
+  else if (type === 'uraian') { arr = data.uraian; typeLabel = 'Uraian'; }
+  if (!arr || !arr[index]) return;
+
+  const qNo = arr[index].no;
+
+  // Minimum check: at least 1 question must remain per active section
+  if (arr.length <= 1) {
+    showToast(`Tidak dapat menghapus — minimal harus ada 1 soal ${typeLabel}.`, 'error');
+    return;
+  }
+
+  // Remove
+  arr.splice(index, 1);
+
+  // Renumber all questions
+  let runNo = 1;
+  if (data.pg) data.pg.forEach((q, i) => { q.no = runNo++; });
+  if (data.isian?.data) data.isian.data.forEach(q => { q.no = runNo++; });
+  if (data.uraian) data.uraian.forEach(q => { q.no = runNo++; });
+
+  renderResult(data, formData);
+  showToast(`Soal ${typeLabel} No. ${qNo} berhasil dihapus. Nomor soal diperbarui otomatis.`, 'info');
 }
 
 /**

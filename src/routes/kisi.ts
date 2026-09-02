@@ -85,12 +85,70 @@ kisi.post('/generate', async (c) => {
             return outLines.join('\n');
         };
 
+        // Helper: panduan stimulus visual spesifik per rumpun mata pelajaran
+        const getSubjectImagePromptGuideline = (mapel: string): string => {
+            const m = (mapel || '').toLowerCase();
+            if (m.includes('pancasila') || m.includes('pkn') || m.includes('sejarah') || m.includes('ips')) {
+                return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
+                  * Prioritas: Foto resmi tokoh pahlawan nasional, lambang Garuda Pancasila/lembaga negara, gedung bersejarah, piagam proklamasi, atau peta kepulauan.
+                  * "gambar_keyword": Nama tokoh/tempat resmi Bahasa Indonesia (contoh: "Ir. Soekarno", "Garuda Pancasila", "Rumah Laksamana Maeda", "Candi Borobudur").
+                  * "gambar_prompt_en": "historic photograph or official emblem of [topic], clean background, high resolution, authentic national archive style"`;
+            }
+            if (m.includes('sunda') || m.includes('seni') || m.includes('budaya')) {
+                return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
+                  * Prioritas: Alat musik tradisional (angklung, gamelan, suling), pakaian adat (pangsi, kebaya), rumah adat (Julang Ngapak, Joglo), wayang golek, motif batik Nusantara, karya seni rupa.
+                  * "gambar_keyword": Nama alat/benda budaya spesifik (contoh: "Angklung", "Wayang Golek", "Pakaian Adat Sunda", "Batik Megamendung").
+                  * "gambar_prompt_en": "traditional Indonesian cultural artifact of [topic], museum photography, clean background, authentic detail"`;
+            }
+            if (m.includes('agama') || m.includes('budi pekerti')) {
+                return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
+                  * Prioritas: Tempat ibadah resmi 6 agama (Masjid Istiqlal, Gereja Katedral, Pura Besakih, Vihara, Klenteng), kitab suci, atau simbol keagamaan.
+                  * "gambar_keyword": Nama tempat ibadah/objek keagamaan resmi (contoh: "Masjid Istiqlal", "Pura Besakih Bali", "Candi Mendut").
+                  * "gambar_prompt_en": "architecture photograph of [religious place/symbol], respectful and peaceful lighting, clean background"`;
+            }
+            if (m.includes('matematika')) {
+                return `PANDUAN VISUAL MAPEL MATEMATIKA:
+                  * Prioritas: Bangun ruang 3D (kubus, balok, tabung, kerucut, bola, prisma), jaring-jaring bangun ruang, sudut (siku-siku, lancip, tumpul), diagram pecahan lingkaran, bangun datar bersudut.
+                  * "gambar_keyword": Istilah geometri bahasa Inggris (contoh: "geometric cube net", "cylinder 3d geometry", "right angle triangle", "fraction circle diagram").
+                  * "gambar_prompt_en": "clean 2D geometric vector drawing of [geometry shape], pure white background, crisp black outlines, mathematical textbook illustration, no distortion, no text labels"`;
+            }
+            if (m.includes('pjok') || m.includes('jasmani') || m.includes('olahraga')) {
+                return `PANDUAN VISUAL MAPEL PJOK:
+                  * Prioritas: Peragaan teknik gerak olahraga (passing bawah bola voli, servis bulutangkis, posisi kaki menendang bola, start lari, sikap lilin senam lantai, gerakan renang).
+                  * "gambar_keyword": Istilah olahraga/gerakan (contoh: "Volleyball underhand pass", "Football kicking technique", "Floor gymnastics posture", "Badminton grip").
+                  * "gambar_prompt_en": "2D clean vector illustration demonstrating the physical movement posture of [sport technique], side view, sports education diagram, white background, athletic anatomy"`;
+            }
+            if (m.includes('inggris') || m.includes('bahasa indonesia')) {
+                return `PANDUAN VISUAL MAPEL BAHASA:
+                  * Prioritas: Benda konkret, hewan, profesi/pekerjaan, aktivitas sehari-hari, rambu lalu lintas, atau fasilitas umum.
+                  * "gambar_keyword": Nama objek/hewan/profesi (contoh: "Dentist profession", "Traffic sign", "Zebra animal", "Public library").
+                  * "gambar_prompt_en": "clear photograph of [object/profession/animal], isolated on clean white background, educational textbook style"`;
+            }
+            if (m.includes('koding') || m.includes('kecerdasan') || m.includes('ai') || m.includes('informatika')) {
+                return `PANDUAN VISUAL MAPEL KODING & AI:
+                  * Prioritas: Perangkat keras komputer (CPU processor, Motherboard, Mouse, Keyboard, RAM memory, Monitor), robotika, ikon Scratch visual blocks.
+                  * "gambar_keyword": Nama perangkat/konsep IT (contoh: "Computer CPU processor", "Computer RAM memory", "Educational robot", "Scratch visual blocks").
+                  * "gambar_prompt_en": "clean 2D tech icon vector illustration of [hardware component/robot], modern flat design, white background"`;
+            }
+            if (m.includes('tatanen') || m.includes('tdba') || m.includes('akpk')) {
+                return `PANDUAN VISUAL MAPEL TDBA / LINGKUNGAN HIDUP:
+                  * Prioritas: Tanaman pangan (padi, jagung, bayam), sistem hidroponik pipa, pembuatan pupuk kompos, bibit tanaman, kebun sekolah organik.
+                  * "gambar_keyword": Nama tanaman/metode pertanian (contoh: "Tanaman Bayam", "Hidroponik pipa", "Pupuk Kompos organik", "Kebun Sekolah").
+                  * "gambar_prompt_en": "clean botanical photograph of [plant/organic farming method], isolated on white background, sharp agricultural education photo"`;
+            }
+            // Default IPAS / Sains
+            return `PANDUAN VISUAL MAPEL SAINS / IPAS:
+              * Prioritas: Siklus alam (siklus air, metamorfosis), penampang organ tubuh (paru-paru, jantung), penampang sel/daun, fotosintesis, tata surya, rantai makanan ekosistem.
+              * "gambar_keyword": Istilah sains (contoh: "Siklus air", "Fotosintesis", "Metamorfosis kupu-kupu", "Sistem pernapasan manusia", "Rantai makanan").
+              * "gambar_prompt_en": "detailed 2D scientific textbook illustration of [topic], labeled vector diagram, clean white background, educational biology/physics style"`;
+        };
+
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) => {
             const isPG = type === 'pg';
 
             let jsonStructure = '';
             if (isPG) {
-                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "kata kunci ringkas 1-3 kata (contoh: Siklus air / Sayuti Melik / Fotosintesis)", "gambar_prompt_en": "detailed English visual description for AI image generator (contoh: clean 2D scientific textbook diagram of the water cycle showing evaporation from sea, cloud condensation, rain precipitation over mountains, clean white background, vector art)" } ]`;
+                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "kata kunci ringkas 1-3 kata sesuai panduan visual mapel", "gambar_prompt_en": "detailed English visual description sesuai panduan visual mapel (15-25 kata)" } ]`;
             } else {
                 const parts: string[] = [];
                 if (totalIsian > 0) {
@@ -139,8 +197,7 @@ kisi.post('/generate', async (c) => {
                     const exactImages = Math.max(1, Math.round(count * 0.2));
                     gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
                 - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
-                  * Field "gambar_keyword": Isi dengan 1-3 kata kunci topik Bahasa Indonesia atau nama entitas resmi untuk pencarian Wikipedia/Wikimedia (contoh: "Siklus air", "Fotosintesis", "Rumah Laksamana Maeda", "Sayuti Melik", "Sistem pernapasan manusia", "Candi Borobudur").
-                  * Field "gambar_prompt_en": Isi dengan deskripsi adegan visual yang sangat rinci dalam BAHASA INGGRIS (15-25 kata) untuk AI Image Generator (contoh: "clear 2D scientific textbook illustration of the water cycle showing ocean evaporation, cloud formation, rain precipitation over green hills, white background, vector diagram").
+                  * ${getSubjectImagePromptGuideline(mataPelajaran)}
                 - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
                   * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks (seperti "kotak berlabel Proklamasi pada diagram alur") atau diagram pohon faktor angka. Jika membutuhkan bagan alur teks atau data angka, sajikan langsung sebagai teks soal atau tabel Markdown yang dapat dibaca jelas oleh murid!
                   * DILARANG KERAS menuliskan teks deskripsi seperti "[Diagram menunjukkan...]" atau "[Foto menunjukkan...]" di dalam teks soal! Tulis langsung pertanyaan ujian yang bersih.

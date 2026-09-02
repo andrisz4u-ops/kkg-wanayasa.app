@@ -208,6 +208,22 @@ export async function renderKisi() {
           </div>
         </div>
 
+        <!-- Informative Live Edit Banner -->
+        <div class="asesmen-edit-banner max-w-[210mm] mx-auto mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-teal-500/10 border border-blue-500/20 text-[var(--color-text-primary)] flex items-center justify-between shadow-sm text-xs font-medium print:hidden">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+              <i class="fas fa-pencil-alt text-xs"></i>
+            </div>
+            <div>
+              <span class="font-bold text-blue-600 dark:text-blue-400">Mode Live Edit Aktif:</span>
+              <span class="text-slate-600 dark:text-slate-300 ml-1">Arahkan kursor mouse ke setiap butir soal di bawah untuk memunculkan tombol <b>Edit</b> & <b>Hapus</b>.</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-3 py-1.5 rounded-lg font-semibold border border-blue-200 dark:border-blue-800 hidden md:flex items-center gap-1.5">
+            <i class="fas fa-check-circle text-emerald-500"></i> Otomatis update Word (.docx) & PDF
+          </div>
+        </div>
+
         <!-- A4 Canvas -->
         <div id="asesmen-canvas" class="asesmen-a4">
           <!-- Content will be rendered here -->
@@ -396,11 +412,25 @@ export async function renderKisi() {
       .asesmen-a4 .main-table { width: 100%; border-collapse: collapse; }
       .asesmen-a4 .main-table td, .asesmen-a4 .main-table th { padding: 4px 6px; }
       
-      .soal-item-row {
-        margin-bottom: 14px;
+      .soal-item-wrapper {
+        position: relative;
+        margin-bottom: 12px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
         page-break-inside: avoid;
         break-inside: avoid;
-        position: relative;
+      }
+      .soal-item-wrapper:hover {
+        background: rgba(241, 245, 249, 0.7);
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      }
+      .soal-item-row {
+        margin-bottom: 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
       .soal-text {
         text-align: justify;
@@ -418,49 +448,55 @@ export async function renderKisi() {
       }
       .soal-actions {
         position: absolute;
-        top: -4px;
-        right: -6px;
+        top: 4px;
+        right: 8px;
         display: flex;
-        gap: 4px;
+        gap: 6px;
         opacity: 0;
-        transition: opacity 0.2s ease;
-        z-index: 10;
+        pointer-events: none;
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+        z-index: 30;
       }
-      .soal-item-row:hover .soal-actions {
+      .soal-item-wrapper:hover .soal-actions {
         opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
       }
       .soal-actions button {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        border: 1px solid #e2e8f0;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 6px;
         font-size: 11px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+        line-height: 1;
       }
       .soal-actions .btn-edit-soal {
-        background: #eff6ff;
-        color: #2563eb;
-        border-color: #bfdbfe;
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #1d4ed8;
       }
       .soal-actions .btn-edit-soal:hover {
-        background: #2563eb;
-        color: #fff;
-        border-color: #2563eb;
+        background: #1d4ed8;
+        transform: scale(1.03);
       }
       .soal-actions .btn-delete-soal {
-        background: #fef2f2;
+        background: #fee2e2;
         color: #dc2626;
-        border-color: #fecaca;
+        border-color: #fca5a5;
+        padding: 4px 8px;
       }
       .soal-actions .btn-delete-soal:hover {
         background: #dc2626;
-        color: #fff;
+        color: #ffffff;
         border-color: #dc2626;
+        transform: scale(1.03);
       }
       .soal-editor-overlay {
         position: fixed;
@@ -600,6 +636,7 @@ export async function renderKisi() {
         }
         #asesmen-form-view,
         .asesmen-result-toolbar,
+        .asesmen-edit-banner,
         .sidebar,
         .app-header,
         .btn-remove-soal-image,
@@ -627,10 +664,19 @@ export async function renderKisi() {
           font-size: 10.5pt !important;
           line-height: 1.4 !important;
         }
+        .soal-item-wrapper {
+          margin-bottom: 12px !important;
+          padding: 0 !important;
+          border: none !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
         .soal-item-row {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
-          margin-bottom: 12px !important;
+          margin-bottom: 0 !important;
         }
         .section-title {
           page-break-after: avoid !important;
@@ -1125,44 +1171,48 @@ function renderResult(data, formData) {
       }
 
       const pgIdx = data.pg.indexOf(q);
-      const actionsHTML = `<div class="soal-actions">
-        <button type="button" class="btn-edit-soal" data-type="pg" data-index="${pgIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
-        <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+      const actionsHTML = `<div class="soal-actions print:hidden">
+        <button type="button" class="btn-edit-soal" data-type="pg" data-index="${pgIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
+        <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
 
       if (q.gambar && q.gambar.url) {
         html += `
-          <table class="layout-table soal-item-row" style="width:100%;">
+          <div class="soal-item-wrapper">
             ${actionsHTML}
-            <tr>
-              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
-              <td style="vertical-align:top; padding:1px 0;">
-                <div class="soal-text">${formatSoalText(q.soal)}</div>
-                <div style="margin: 6px 0 8px 0; text-align:left;">
-                  <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background:#fff;">
-                    <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
-                    <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${pgIdx}">
-                      <i class="fas fa-trash-alt"></i>
-                    </button>
+            <table class="layout-table soal-item-row" style="width:100%;">
+              <tr>
+                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="vertical-align:top; padding:1px 0;">
+                  <div class="soal-text">${formatSoalText(q.soal)}</div>
+                  <div style="margin: 6px 0 8px 0; text-align:left;">
+                    <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background:#fff;">
+                      <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
+                      <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${pgIdx}">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
                   </div>
-                </div>
-                ${optionsHTML}
-              </td>
-            </tr>
-          </table>
+                  ${optionsHTML}
+                </td>
+              </tr>
+            </table>
+          </div>
         `;
       } else {
         html += `
-          <table class="layout-table soal-item-row" style="width:100%;">
+          <div class="soal-item-wrapper">
             ${actionsHTML}
-            <tr>
-              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
-              <td style="vertical-align:top; padding:1px 0;">
-                <div class="soal-text">${formatSoalText(q.soal)}</div>
-                ${optionsHTML}
-              </td>
-            </tr>
-          </table>
+            <table class="layout-table soal-item-row" style="width:100%;">
+              <tr>
+                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="vertical-align:top; padding:1px 0;">
+                  <div class="soal-text">${formatSoalText(q.soal)}</div>
+                  ${optionsHTML}
+                </td>
+              </tr>
+            </table>
+          </div>
         `;
       }
     });
@@ -1279,20 +1329,22 @@ function renderResult(data, formData) {
       }
     } else {
       data.isian.data.forEach((q, isianIdx) => {
-        const isianActionsHTML = `<div class="soal-actions">
-          <button type="button" class="btn-edit-soal" data-type="isian" data-index="${isianIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
-          <button type="button" class="btn-delete-soal" data-type="isian" data-index="${isianIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+        const isianActionsHTML = `<div class="soal-actions print:hidden">
+          <button type="button" class="btn-edit-soal" data-type="isian" data-index="${isianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
+          <button type="button" class="btn-delete-soal" data-type="isian" data-index="${isianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
         </div>`;
         html += `
-          <table class="layout-table soal-item-row" style="width:100%;">
+          <div class="soal-item-wrapper">
             ${isianActionsHTML}
-            <tr>
-              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
-              <td style="vertical-align:top; padding:1px 0;">
-                <div class="soal-text">${formatSoalText(q.soal)}</div>
-              </td>
-            </tr>
-          </table>
+            <table class="layout-table soal-item-row" style="width:100%;">
+              <tr>
+                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="vertical-align:top; padding:1px 0;">
+                  <div class="soal-text">${formatSoalText(q.soal)}</div>
+                </td>
+              </tr>
+            </table>
+          </div>
         `;
       });
     }
@@ -1308,20 +1360,22 @@ function renderResult(data, formData) {
     `;
 
     data.uraian.forEach((q, uraianIdx) => {
-      const uraianActionsHTML = `<div class="soal-actions">
-        <button type="button" class="btn-edit-soal" data-type="uraian" data-index="${uraianIdx}" title="Edit soal"><i class="fas fa-pencil-alt"></i></button>
-        <button type="button" class="btn-delete-soal" data-type="uraian" data-index="${uraianIdx}" title="Hapus soal"><i class="fas fa-trash-alt"></i></button>
+      const uraianActionsHTML = `<div class="soal-actions print:hidden">
+        <button type="button" class="btn-edit-soal" data-type="uraian" data-index="${uraianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
+        <button type="button" class="btn-delete-soal" data-type="uraian" data-index="${uraianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
       html += `
-        <table class="layout-table soal-item-row" style="width:100%; margin-bottom:16px;">
+        <div class="soal-item-wrapper" style="margin-bottom:16px;">
           ${uraianActionsHTML}
-          <tr>
-            <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
-            <td style="vertical-align:top; padding:1px 0;">
-              <div class="soal-text" style="margin-bottom:14px;">${formatSoalText(q.soal)}</div>
-            </td>
-          </tr>
-        </table>
+          <table class="layout-table soal-item-row" style="width:100%;">
+            <tr>
+              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+              <td style="vertical-align:top; padding:1px 0;">
+                <div class="soal-text" style="margin-bottom:14px;">${formatSoalText(q.soal)}</div>
+              </td>
+            </tr>
+          </table>
+        </div>
       `;
     });
   }

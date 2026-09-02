@@ -202,6 +202,7 @@ export async function renderKisi() {
         <div class="asesmen-result-toolbar">
           <button id="btn-back-form" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors cursor-pointer"><i class="fas fa-arrow-left mr-2"></i>Kembali ke Form</button>
           <div class="flex gap-2 sm:gap-3 flex-wrap">
+            <button id="btn-toggle-edit-mode" class="px-4 py-2.5 rounded-full text-sm font-medium border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-pencil-alt text-blue-500"></i>Mode Edit: <span id="edit-mode-status" class="font-bold text-emerald-600">Aktif</span></button>
             <button id="btn-kisi-history" class="px-4 py-2.5 rounded-full text-sm font-medium border border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1.5 text-amber-500"></i>Riwayat</button>
             <button id="btn-download-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer"><i class="fas fa-download mr-2"></i>Unduh .docx</button>
             <button id="btn-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
@@ -414,18 +415,18 @@ export async function renderKisi() {
       
       .soal-item-wrapper {
         position: relative;
-        margin-bottom: 12px;
-        padding: 4px 8px;
-        border-radius: 8px;
-        border: 1px solid transparent;
+        margin-bottom: 14px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1.5px solid transparent;
         transition: all 0.2s ease;
         page-break-inside: avoid;
         break-inside: avoid;
       }
       .soal-item-wrapper:hover {
-        background: rgba(241, 245, 249, 0.7);
+        background: #f8fafc;
         border-color: #cbd5e1;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
       }
       .soal-item-row {
         margin-bottom: 0;
@@ -448,20 +449,25 @@ export async function renderKisi() {
       }
       .soal-actions {
         position: absolute;
-        top: 4px;
+        top: 6px;
         right: 8px;
         display: flex;
         gap: 6px;
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(-2px);
+        opacity: 0.85;
         transition: all 0.2s ease;
         z-index: 30;
       }
       .soal-item-wrapper:hover .soal-actions {
         opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0);
+        transform: scale(1.02);
+      }
+      #asesmen-canvas.preview-only .soal-actions {
+        display: none !important;
+      }
+      #asesmen-canvas.preview-only .soal-item-wrapper:hover {
+        background: transparent !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
       }
       .soal-actions button {
         display: inline-flex;
@@ -1026,6 +1032,29 @@ export function initKisi() {
 
   // Print
   document.getElementById('btn-print')?.addEventListener('click', () => window.print());
+
+  // Toggle Edit Mode in Result View
+  let _editModeActive = true;
+  document.getElementById('btn-toggle-edit-mode')?.addEventListener('click', () => {
+    _editModeActive = !_editModeActive;
+    const canvas = document.getElementById('asesmen-canvas');
+    const statusText = document.getElementById('edit-mode-status');
+    if (_editModeActive) {
+      canvas?.classList.remove('preview-only');
+      if (statusText) {
+        statusText.textContent = 'Aktif';
+        statusText.className = 'font-bold text-emerald-600';
+      }
+      showToast('Mode Edit Aktif: Tombol edit muncul pada soal.', 'info');
+    } else {
+      canvas?.classList.add('preview-only');
+      if (statusText) {
+        statusText.textContent = 'Nonaktif';
+        statusText.className = 'font-bold text-slate-500';
+      }
+      showToast('Mode Pratinjau Bersih: Tombol edit disembunyikan.', 'info');
+    }
+  });
 
   // Download .docx (ASLI - menggunakan docx.js)
   document.getElementById('btn-download-doc')?.addEventListener('click', async () => {

@@ -1,7 +1,5 @@
-// Generate a version hash at server start time for cache-busting
-const APP_VERSION = Date.now().toString(36);
-
 export function renderHTML(): string {
+  const APP_VERSION = Date.now().toString(36);
   return `<!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
 <head>

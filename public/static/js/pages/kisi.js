@@ -437,6 +437,7 @@ export async function renderKisi() {
         text-align: justify;
         line-height: 1.45;
         margin-bottom: 6px;
+        padding-right: 90px;
       }
       .soal-options-table {
         width: 100%;
@@ -683,6 +684,9 @@ export async function renderKisi() {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
           margin-bottom: 0 !important;
+        }
+        .soal-text {
+          padding-right: 0 !important;
         }
         .section-title {
           page-break-after: avoid !important;
@@ -1215,11 +1219,16 @@ function renderResult(data, formData) {
                 <td style="vertical-align:top; padding:1px 0;">
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 6px 0 8px 0; text-align:left;">
-                    <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background:#fff;">
+                    <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
                       <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
-                      <button type="button" class="btn-remove-soal-image absolute top-1 right-1 bg-rose-600/90 hover:bg-rose-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow print:hidden opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Hapus gambar dari butir soal ini" data-qindex="${pgIdx}">
-                        <i class="fas fa-trash-alt"></i>
-                      </button>
+                      <div class="absolute top-1.5 right-1.5 flex items-center gap-1 print:hidden opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button type="button" class="btn-change-soal-image bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 text-[10px] font-bold shadow cursor-pointer" title="Ganti gambar ini (upload / link URL)" data-type="pg" data-qindex="${pgIdx}">
+                          <i class="fas fa-camera"></i> Ganti
+                        </button>
+                        <button type="button" class="btn-remove-soal-image bg-rose-600 hover:bg-rose-700 text-white w-6 h-6 rounded flex items-center justify-center text-[10px] shadow cursor-pointer" title="Hapus gambar dari butir soal ini" data-type="pg" data-qindex="${pgIdx}">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
                     </div>
                   </div>
                   ${optionsHTML}
@@ -1489,12 +1498,28 @@ function renderResult(data, formData) {
   canvas.querySelectorAll('.btn-remove-soal-image').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      const type = btn.dataset.type || 'pg';
       const qIdx = parseInt(btn.dataset.qindex, 10);
-      if (!isNaN(qIdx) && data.pg && data.pg[qIdx]) {
-        delete data.pg[qIdx].gambar;
+      let targetQ;
+      if (type === 'pg') targetQ = data.pg?.[qIdx];
+      else if (type === 'isian') targetQ = data.isian?.data?.[qIdx];
+      else if (type === 'uraian') targetQ = data.uraian?.[qIdx];
+
+      if (targetQ) {
+        delete targetQ.gambar;
         renderResult(data, formData);
-        showToast(`Gambar pada nomor ${data.pg[qIdx].no} berhasil dihapus.`, 'info');
+        showToast(`Gambar pada nomor ${targetQ.no} berhasil dihapus.`, 'info');
       }
+    });
+  });
+
+  // Attach quick change image listener
+  canvas.querySelectorAll('.btn-change-soal-image').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type || 'pg';
+      const qIdx = parseInt(btn.dataset.qindex, 10);
+      openChangeImageModal(type, qIdx, data, formData);
     });
   });
 
@@ -1576,18 +1601,58 @@ function openSoalEditor(type, index, data, formData) {
     `;
   }
 
+  // Gambar Section
+  let currentGambarUrl = q.gambar?.url || '';
+  const gambarSectionHTML = `
+    <div style="margin-bottom:14px; padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <label style="margin:0; font-size:12px; font-weight:700; color:#334155; display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-image text-blue-600"></i> Gambar Ilustrasi Soal
+        </label>
+        <span id="editor-img-status" class="text-xs font-semibold ${currentGambarUrl ? 'text-emerald-600' : 'text-slate-400'}">
+          ${currentGambarUrl ? '✓ Ada Gambar' : 'Tanpa Gambar'}
+        </span>
+      </div>
+
+      <div id="editor-image-preview-box" style="margin-bottom:10px; ${currentGambarUrl ? 'display:flex;' : 'display:none;'} align-items:center; gap:12px; background:#fff; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+        <img id="editor-img-thumb" src="${escapeHtml(currentGambarUrl)}" style="max-width:140px; max-height:85px; width:auto; height:auto; object-fit:contain; border-radius:6px; background:#f1f5f9; padding:2px;" alt="Pratinjau">
+        <div style="flex:1;">
+          <p class="text-[11px] text-slate-500 m-0 mb-1">Gambar aktif untuk soal ini.</p>
+          <button type="button" id="btn-editor-remove-img" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-md text-[11px] font-semibold cursor-pointer inline-flex items-center gap-1">
+            <i class="fas fa-trash-alt"></i> Hapus Gambar
+          </button>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:11px; text-transform:none; margin-bottom:3px; color:#64748b;"><i class="fas fa-upload text-indigo-500 mr-1"></i> Upload dari Komputer:</label>
+          <input type="file" id="editor-file-upload" accept="image/*" class="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-[11px] cursor-pointer">
+        </div>
+        <div>
+          <label style="font-size:11px; text-transform:none; margin-bottom:3px; color:#64748b;"><i class="fas fa-link text-emerald-500 mr-1"></i> Tempel Link / URL Internet:</label>
+          <div style="display:flex; gap:4px;">
+            <input type="text" id="editor-url-input" placeholder="https://..." value="${escapeHtml(currentGambarUrl.startsWith('data:') ? '' : currentGambarUrl)}" style="font-size:11px; padding:6px 8px; margin-bottom:0;" class="flex-1">
+            <button type="button" id="btn-editor-apply-url" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-[11px] font-semibold cursor-pointer">Pasang</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   const overlay = document.createElement('div');
   overlay.className = 'soal-editor-overlay';
   overlay.innerHTML = `
-    <div class="soal-editor-modal">
+    <div class="soal-editor-modal" style="max-width: 640px;">
       <h3><i class="fas fa-pencil-alt" style="color:#2563eb"></i> Edit Soal ${typeLabel} No. ${q.no}</h3>
       <label>Teks Soal</label>
-      <textarea id="edit-soal-text" rows="4">${escapeHtml(q.soal || '')}</textarea>
+      <textarea id="edit-soal-text" rows="3">${escapeHtml(q.soal || '')}</textarea>
+      ${gambarSectionHTML}
       ${opsiFieldsHTML}
       ${rubrikHTML}
       <div class="editor-actions">
         <button type="button" class="btn-editor-cancel">Batal</button>
-        <button type="button" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Simpan</button>
+        <button type="button" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Simpan Perubahan</button>
       </div>
     </div>
   `;
@@ -1596,6 +1661,61 @@ function openSoalEditor(type, index, data, formData) {
 
   // Focus textarea
   setTimeout(() => overlay.querySelector('#edit-soal-text')?.focus(), 100);
+
+  // Gambar state & event bindings in modal editor
+  let modalSelectedImageUrl = currentGambarUrl;
+  const imgPreviewBox = overlay.querySelector('#editor-image-preview-box');
+  const imgThumb = overlay.querySelector('#editor-img-thumb');
+  const imgStatus = overlay.querySelector('#editor-img-status');
+  const fileUpload = overlay.querySelector('#editor-file-upload');
+  const urlInput = overlay.querySelector('#editor-url-input');
+
+  const updateModalImagePreview = (url) => {
+    modalSelectedImageUrl = url;
+    if (url) {
+      imgThumb.src = url;
+      imgPreviewBox.style.display = 'flex';
+      imgStatus.textContent = '✓ Ada Gambar';
+      imgStatus.className = 'text-xs font-semibold text-emerald-600';
+    } else {
+      imgThumb.src = '';
+      imgPreviewBox.style.display = 'none';
+      imgStatus.textContent = 'Tanpa Gambar';
+      imgStatus.className = 'text-xs font-semibold text-slate-400';
+    }
+  };
+
+  fileUpload?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Ukuran file maksimal 5MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        updateModalImagePreview(re.target.result);
+        if (urlInput) urlInput.value = '';
+        showToast('Gambar lokal berhasil dipilih.', 'info');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  overlay.querySelector('#btn-editor-apply-url')?.addEventListener('click', () => {
+    const url = urlInput?.value.trim();
+    if (!url) { showToast('Masukkan link URL gambar.', 'error'); return; }
+    updateModalImagePreview(url);
+    if (fileUpload) fileUpload.value = '';
+    showToast('Link gambar dipasang.', 'info');
+  });
+
+  overlay.querySelector('#btn-editor-remove-img')?.addEventListener('click', () => {
+    updateModalImagePreview('');
+    if (urlInput) urlInput.value = '';
+    if (fileUpload) fileUpload.value = '';
+    showToast('Gambar dilepas dari soal ini.', 'info');
+  });
 
   // Close on overlay click
   overlay.addEventListener('click', (e) => {
@@ -1617,6 +1737,16 @@ function openSoalEditor(type, index, data, formData) {
     if (!newSoal) { showToast('Teks soal tidak boleh kosong.', 'error'); return; }
 
     q.soal = newSoal;
+
+    // Update gambar
+    if (modalSelectedImageUrl) {
+      q.gambar = {
+        url: modalSelectedImageUrl,
+        deskripsi: q.gambar?.deskripsi || 'Gambar Ilustrasi'
+      };
+    } else {
+      delete q.gambar;
+    }
 
     if (isPG) {
       q.opsi = {
@@ -1645,6 +1775,147 @@ function openSoalEditor(type, index, data, formData) {
     document.removeEventListener('keydown', escHandler);
     renderResult(data, formData);
     showToast(`Soal ${typeLabel} No. ${q.no} berhasil diperbarui.`, 'success');
+  });
+}
+
+// ============================================================
+// DEDICATED QUICK CHANGE IMAGE MODAL
+// ============================================================
+function openChangeImageModal(type, qIdx, data, formData) {
+  const existing = document.querySelector('.soal-image-modal-overlay');
+  if (existing) existing.remove();
+
+  let q;
+  if (type === 'pg') q = data.pg?.[qIdx];
+  else if (type === 'isian') q = data.isian?.data?.[qIdx];
+  else if (type === 'uraian') q = data.uraian?.[qIdx];
+  if (!q) return;
+
+  let selectedImageUrl = q.gambar?.url || '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'soal-editor-overlay soal-image-modal-overlay';
+  overlay.innerHTML = `
+    <div class="soal-editor-modal" style="max-width: 520px;">
+      <h3><i class="fas fa-image" style="color:#2563eb"></i> Ganti Gambar Soal No. ${q.no}</h3>
+      
+      <div style="text-align:center; margin-bottom:16px; background:#f8fafc; padding:12px; border-radius:10px; border:1px dashed #cbd5e1;">
+        <label style="margin-bottom:8px; display:block; font-size:11px; font-weight:600; color:#64748b;">Pratinjau Gambar:</label>
+        <div style="display:flex; justify-content:center; align-items:center; min-height:110px;">
+          <img id="img-change-preview" src="${selectedImageUrl || ''}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; border-radius:6px; border:1px solid #e2e8f0; background:#fff; ${selectedImageUrl ? '' : 'display:none;'}" alt="Pratinjau">
+          <p id="img-change-empty" style="color:#94a3b8; font-size:12px; margin:0; ${selectedImageUrl ? 'display:none;' : ''}">Belum ada gambar yang dipilih</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label><i class="fas fa-upload mr-1 text-indigo-500"></i> 1. Upload dari Komputer / Laptop</label>
+        <input type="file" id="modal-file-input" accept="image/*" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs cursor-pointer">
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label><i class="fas fa-link mr-1 text-emerald-500"></i> 2. Atau Tempel Link Gambar dari Internet</label>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="modal-url-input" placeholder="https://..." value="${selectedImageUrl.startsWith('data:') ? '' : selectedImageUrl}" style="margin-bottom:0;" class="flex-1 text-xs">
+          <button type="button" id="modal-btn-apply-url" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap">Cek Link</button>
+        </div>
+      </div>
+
+      <div class="editor-actions" style="justify-content:space-between; align-items:center;">
+        <button type="button" id="modal-btn-remove-this-img" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-semibold cursor-pointer">
+          <i class="fas fa-trash-alt mr-1"></i> Hapus Gambar
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-editor-cancel">Batal</button>
+          <button type="button" id="modal-btn-save-image" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Terapkan Gambar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const previewImg = overlay.querySelector('#img-change-preview');
+  const emptyText = overlay.querySelector('#img-change-empty');
+  const fileInput = overlay.querySelector('#modal-file-input');
+  const urlInput = overlay.querySelector('#modal-url-input');
+
+  const updatePreview = (url) => {
+    selectedImageUrl = url;
+    if (url) {
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+      emptyText.style.display = 'none';
+    } else {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      emptyText.style.display = 'block';
+    }
+  };
+
+  // File input change
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Ukuran file gambar maksimal 5MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        updatePreview(re.target.result);
+        urlInput.value = '';
+        showToast('Gambar dari komputer berhasil dipilih.', 'info');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // URL apply
+  overlay.querySelector('#modal-btn-apply-url').addEventListener('click', () => {
+    const url = urlInput.value.trim();
+    if (!url) {
+      showToast('Masukkan link gambar yang valid.', 'error');
+      return;
+    }
+    updatePreview(url);
+    fileInput.value = '';
+    showToast('Link gambar berhasil dimuat.', 'info');
+  });
+
+  // Remove image
+  overlay.querySelector('#modal-btn-remove-this-img').addEventListener('click', () => {
+    updatePreview('');
+    urlInput.value = '';
+    fileInput.value = '';
+    showToast('Gambar dilepas dari pratinjau.', 'info');
+  });
+
+  // Cancel
+  overlay.querySelector('.btn-editor-cancel').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // Escape
+  const escImgHandler = (e) => {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escImgHandler); }
+  };
+  document.addEventListener('keydown', escImgHandler);
+
+  // Save
+  overlay.querySelector('#modal-btn-save-image').addEventListener('click', () => {
+    if (selectedImageUrl) {
+      q.gambar = {
+        url: selectedImageUrl,
+        deskripsi: q.gambar?.deskripsi || 'Gambar Ilustrasi'
+      };
+    } else {
+      delete q.gambar;
+    }
+    overlay.remove();
+    document.removeEventListener('keydown', escImgHandler);
+    renderResult(data, formData);
+    showToast(selectedImageUrl ? `Gambar pada nomor ${q.no} berhasil diganti.` : `Gambar pada nomor ${q.no} berhasil dihapus.`, 'success');
   });
 }
 

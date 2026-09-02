@@ -196,6 +196,7 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
 function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   const { AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, TextRun } = window.docx;
   const { left = CM(0.6), hanging = CM(0.6) } = indentOpts;
+  const items = [];
   const cleanSoal = String(soalText || '').replace(/\[[^\]]*\]/g, '').replace(/\s{2,}/g, ' ').trim();
   const lines = cleanSoal.split('\n');
 

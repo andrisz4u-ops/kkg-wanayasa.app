@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
-import { cpData } from '../lib/cp-data';
+import { cpData, getOfficialCP } from '../lib/cp-data';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { type AppBindings } from '../types/env';
@@ -49,40 +49,15 @@ rpp.post('/generate', async (c) => {
       clo: `${breakdown.penutup} Menit`
     };
 
-    // Logika pemilihan CP berdasarkan Fase dan Mata Pelajaran
+    // Logika pemilihan CP berdasarkan Fase dan Mata Pelajaran (Resmi BSKAP No. 046 Tahun 2025)
     const getMatchedCP = () => {
-      if (capaianPembelajaran) return capaianPembelajaran; // Prioritas input manual user
-
-      const normalizedSubject = (mataPelajaran || '').toLowerCase();
-      const fase = (() => {
-        const k = (jenjangKelas || '').toLowerCase();
-        if (k.includes('1') || k.includes('2')) return 'Fase A';
-        if (k.includes('3') || k.includes('4')) return 'Fase B';
-        if (k.includes('5') || k.includes('6')) return 'Fase C';
-        return null;
-      })();
-
-      if (fase) {
-        const subjectKeys = Object.keys(cpData);
-        const matchedKey = subjectKeys.find(key => {
-          const lowerKey = key.toLowerCase();
-          return normalizedSubject.includes(lowerKey) || lowerKey.includes(normalizedSubject) ||
-                 (lowerKey.includes('agama') && normalizedSubject.includes('agama')) ||
-                 (lowerKey.includes('pancasila') && normalizedSubject.includes('pancasila')) ||
-                 (lowerKey.includes('ipas') && normalizedSubject.includes('ipas')) ||
-                 (lowerKey.includes('seni') && normalizedSubject.includes('seni'));
-        });
-
-        if (matchedKey && cpData[matchedKey][fase]) {
-          return cpData[matchedKey][fase];
-        }
-      }
-      return null;
+      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran; // Prioritas input manual user
+      return getOfficialCP(mataPelajaran, jenjangKelas);
     };
 
     const baseCP = getMatchedCP();
     const userCP = baseCP
-      ? `Gunakan Capaian Pembelajaran Fase ${ (jenjangKelas || '').includes('1') || (jenjangKelas || '').includes('2') ? 'A' : (jenjangKelas || '').includes('3') || (jenjangKelas || '').includes('4') ? 'B' : 'C' } berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
+      ? `Gunakan Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025 berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
       : "Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka secara otomatis untuk mata pelajaran dan topik ini.";
 
     const profileDimensions = Array.isArray(profilLulusan)

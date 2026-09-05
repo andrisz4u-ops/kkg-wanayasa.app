@@ -155,8 +155,13 @@ export async function renderRpp() {
               <option value="Ya" selected>Ya (Otomatis)</option>
             </select>
 
-            <label class="rpp-label">CAPAIAN PEMBELAJARAN (OPSIONAL)</label>
-            <textarea name="capaianPembelajaran" rows="3" placeholder="Tulis CP di sini..." class="rpp-input rpp-textarea"></textarea>
+            <div class="flex items-center justify-between mb-1 mt-2">
+              <label class="rpp-label mb-0">CAPAIAN PEMBELAJARAN (OPSIONAL)</label>
+              <button type="button" id="btn-rpp-auto-cp" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer transition-colors" title="Muat rumusan CP resmi BSKAP No. 046 Tahun 2025">
+                <i class="fas fa-book-reader text-indigo-500"></i> Muat CP BSKAP 2025
+              </button>
+            </div>
+            <textarea name="capaianPembelajaran" id="input-rpp-cp" rows="3" placeholder="Kosongkan untuk otomatisasi cerdas AI, atau klik 'Muat CP BSKAP 2025'..." class="rpp-input rpp-textarea"></textarea>
 
             <label class="rpp-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="rpp-input">
@@ -510,6 +515,42 @@ export function initRpp() {
       selLKPD.classList.toggle('rpp-input-highlight', selLKPD.value === 'Ya');
     });
   }
+
+  // Listener Muat CP Resmi BSKAP 2025 di Form RPP
+  document.getElementById('btn-rpp-auto-cp')?.addEventListener('click', async () => {
+    const mapel = form.querySelector('select[name="mataPelajaran"]')?.value;
+    const kelas = form.querySelector('select[name="jenjangKelas"]')?.value;
+
+    if (!mapel || !kelas) {
+      showToast('Pilih Mata Pelajaran dan Jenjang Kelas terlebih dahulu!', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-rpp-auto-cp');
+    const oldHtml = btn.innerHTML;
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Memuat...';
+      const resp = await api(`/kisi/cp-reference?mataPelajaran=${encodeURIComponent(mapel)}&jenjangKelas=${encodeURIComponent(kelas)}`);
+      const cpVal = resp?.data?.cp;
+      if (cpVal) {
+        const cpInput = document.getElementById('input-rpp-cp');
+        if (cpInput) {
+          cpInput.value = cpVal;
+          cpInput.focus();
+        }
+        showToast(`CP resmi ${resp.data.fase} (BSKAP No. 046/2025) berhasil dimuat!`, 'success');
+      } else {
+        showToast('Rumusan CP resmi belum tersedia untuk kombinasi ini. AI akan memformulasikannya otomatis.', 'info');
+      }
+    } catch (e) {
+      console.error('Failed to load CP reference:', e);
+      showToast('Gagal memuat referensi CP: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = oldHtml;
+    }
+  });
 
   // Generate button
   document.getElementById('btn-generate-rpp')?.addEventListener('click', async () => {

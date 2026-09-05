@@ -227,32 +227,48 @@ const adminPages = ['admin'];
 (function() {
   try {
     const saved = localStorage.getItem('kkg_nav_section_state');
-    if (saved) window.__navSectionState = JSON.parse(saved);
-    else window.__navSectionState = {};
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        window.__navSectionState = parsed;
+      } else {
+        window.__navSectionState = {};
+      }
+    } else {
+      window.__navSectionState = {};
+    }
   } catch(_) {
     window.__navSectionState = {};
   }
 })();
 
 window.toggleNavSection = function(sectionId) {
+  if (!window.__navSectionState || typeof window.__navSectionState !== 'object') {
+    window.__navSectionState = {};
+  }
   const isCurrentlyOpen = window.__navSectionState[sectionId] !== false;
   window.__navSectionState[sectionId] = !isCurrentlyOpen;
   
   // Persist to localStorage
-  try { localStorage.setItem('kkg_nav_section_state', JSON.stringify(window.__navSectionState)); } catch(_) {}
+  try { 
+    localStorage.setItem('kkg_nav_section_state', JSON.stringify(window.__navSectionState)); 
+  } catch(_) {}
 
   // Toggle all matching sections (supports both desktop sidebar & mobile drawer)
   document.querySelectorAll(`.nav-section-content-${sectionId}`).forEach(el => {
     if (window.__navSectionState[sectionId]) {
-      el.classList.remove('nav-section-collapsed');
+      el.classList.remove('hidden');
     } else {
-      el.classList.add('nav-section-collapsed');
+      el.classList.add('hidden');
     }
   });
+
   // Update aria-expanded on toggle buttons
   document.querySelectorAll(`.nav-section-toggle-${sectionId}`).forEach(btn => {
     btn.setAttribute('aria-expanded', String(window.__navSectionState[sectionId]));
   });
+
+  // Rotate chevron icon smoothly
   document.querySelectorAll(`.nav-section-chevron-${sectionId}`).forEach(el => {
     if (window.__navSectionState[sectionId]) {
       el.classList.add('rotate-180');
@@ -327,15 +343,13 @@ function renderNavLinks(activePage) {
     if (section.admin && !isAdminPanelUser) return false;
     return true;
   }).map((section) => {
-    // Automatically keep the active page's section open
-    const hasActiveChild = section.items.some(it => it.page === activePage);
-    if (hasActiveChild) {
-      window.__navSectionState[section.id] = true;
+    // Initialize section state if not yet set by user or storage
+    if (window.__navSectionState[section.id] === undefined) {
+      const hasActiveChild = section.items.some(it => it.page === activePage);
+      window.__navSectionState[section.id] = hasActiveChild || section.defaultOpen;
     }
 
-    const isExpanded = window.__navSectionState[section.id] !== undefined
-      ? window.__navSectionState[section.id]
-      : section.defaultOpen;
+    const isExpanded = !!window.__navSectionState[section.id];
 
     const visibleItems = section.items.filter(item => {
       if (item.public) return true;
@@ -368,7 +382,7 @@ function renderNavLinks(activePage) {
         </button>
 
         <!-- Section Items (Proportional, comfortable sizing) -->
-        <div id="nav-section-${section.id}" class="nav-section-content-${section.id} nav-section-content space-y-1.5 pt-1.5 ${isExpanded ? '' : 'nav-section-collapsed'}" role="group" aria-label="${section.title}">
+        <div id="nav-section-${section.id}" class="nav-section-content-${section.id} space-y-1.5 pt-1.5 ${isExpanded ? '' : 'hidden'}" role="group" aria-label="${section.title}">
           ${visibleItems.map(item => {
             const isActive = activePage === item.page;
             const isAI = item.ai;
@@ -768,7 +782,7 @@ async function render() {
           </div>
 
           <nav class="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-1 flex flex-col justify-between">
-            <div class="space-y-1">
+            <div id="sidebar-nav-links" class="space-y-1">
               ${renderNavLinks(page)}
             </div>
 
@@ -1018,7 +1032,7 @@ async function render() {
               </div>
               <button onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <nav class="flex-1 overflow-y-auto custom-scrollbar">
+            <nav id="mobile-nav-links" class="flex-1 overflow-y-auto custom-scrollbar">
               ${renderNavLinks(page)}
             </nav>
             <div class="pt-6 mt-8">
@@ -1228,10 +1242,10 @@ async function init() {
   }
 
   document.addEventListener('notifications-updated', () => {
-    const sidebarNav = document.querySelector('aside nav');
+    const sidebarNav = document.getElementById('sidebar-nav-links') || document.querySelector('aside nav .space-y-1');
     if (sidebarNav) sidebarNav.innerHTML = renderNavLinks(state.currentPage);
 
-    const mobileNav = document.querySelector('#mobile-menu nav');
+    const mobileNav = document.getElementById('mobile-nav-links') || document.querySelector('#mobile-menu nav');
     if (mobileNav) mobileNav.innerHTML = renderNavLinks(state.currentPage);
   });
 

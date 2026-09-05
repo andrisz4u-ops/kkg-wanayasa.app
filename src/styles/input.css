@@ -620,3 +620,29 @@
 .text-primary { color: #269494 !important; }
 .border-primary { border-color: #269494 !important; }
 .ring-primary { --tw-ring-color: #269494 !important; }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Sidebar Navigation Architecture Styles
+   ═════════════════════════════════════════════════════════════════════════ */
+.nav-item-active {
+    position: relative;
+}
+
+.nav-item-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3.5px;
+    height: 55%;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(to bottom, #0d9488, #14b8a6);
+    box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
+}
+
+.nav-item-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.4);
+    border-radius: 1rem;
+}

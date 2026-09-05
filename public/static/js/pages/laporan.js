@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, escapeHtml, getActiveTahunAjaran } from '../utils.js';
+import { showToast, showLoading, hideLoading, escapeHtml, getActiveTahunAjaran, populateAiModelSelect, getActiveAiProviders } from '../utils.js';
 import { state } from '../state.js';
 import { renderAdminLayout } from '../layouts/admin.js';
 
@@ -174,73 +174,52 @@ export async function renderLaporan() {
                     </div>
                 </div>
 
-                <!-- Card 2: Pemilihan AI Engine Modern -->
+                <!-- Card 2: Pemilihan AI Provider Dinamis (Dikelola Administrator) -->
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
-                    <div class="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                        <div class="p-2.5 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-xl">
-                            <i class="fas fa-brain text-lg"></i>
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-xl">
+                                <i class="fas fa-brain text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Pilih AI Provider (Dikelola Administrator)</h3>
+                                <p class="text-xs text-gray-500">Pilihan model AI disinkronkan secara dinamis dari database penyedia AI yang dikonfigurasi oleh Admin</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="text-base font-bold text-gray-900 dark:text-white">Pilih Engine AI Penyusun Laporan</h3>
-                            <p class="text-xs text-gray-500">Pilih model kecerdasan buatan terbaik untuk menyusun draf narasi LPJ Anda</p>
+                        <div class="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 self-start sm:self-auto">
+                            <i class="fas fa-server text-[10px]"></i>
+                            <span>Admin AI Gateway</span>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
-                        <label class="relative flex items-center gap-3.5 p-4 rounded-xl border-2 border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30 cursor-pointer transition-all hover:shadow-sm">
-                            <input type="radio" name="ai_model" value="bedrock" checked class="w-4 h-4 text-indigo-600 focus:ring-indigo-500">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">Claude Sonnet 4.6</span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-600 text-white uppercase tracking-wider">Terbaik</span>
+                    <div class="space-y-4 pt-1">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Model / Engine AI Aktif <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <select id="input-ai_model" name="ai_model" class="w-full px-4 py-3.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white font-semibold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm cursor-pointer">
+                                    <option value="">Memuat daftar provider AI admin...</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                    <i class="fas fa-chevron-down text-xs"></i>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">AWS Bedrock · Narasi formal dinas paling terstruktur</p>
                             </div>
-                        </label>
+                        </div>
 
-                        <label class="relative flex items-center gap-3.5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-all">
-                            <input type="radio" name="ai_model" value="vertex" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">Gemini 3 Flash</span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 uppercase tracking-wider">Terbaru</span>
+                        <!-- Live Selected Provider Details Banner -->
+                        <div id="ai-provider-detail-box" class="p-3.5 rounded-xl bg-gradient-to-r from-indigo-50/70 to-purple-50/70 dark:from-indigo-950/30 dark:to-purple-950/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-4 text-xs">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                                <div>
+                                    <span class="font-bold text-gray-800 dark:text-gray-200" id="ai-detail-name">Memuat Provider AI...</span>
+                                    <span class="text-gray-500 dark:text-gray-400 text-[11px] ml-1.5" id="ai-detail-model"></span>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Vertex AI · Analisis mendalam & cepat</p>
                             </div>
-                        </label>
-
-                        <label class="relative flex items-center gap-3.5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-all">
-                            <input type="radio" name="ai_model" value="gemini" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">Gemini 2.0 Flash</span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 uppercase tracking-wider">Gratis</span>
-                                </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Google AI Studio · Cepat & tanpa kuota token</p>
-                            </div>
-                        </label>
-
-                        <label class="relative flex items-center gap-3.5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-all">
-                            <input type="radio" name="ai_model" value="mistral" class="w-4 h-4 text-amber-600 focus:ring-amber-500">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">Mistral Large</span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 uppercase tracking-wider">Detail</span>
-                                </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Mistral AI · Bahasa baku & gaya akademis</p>
-                            </div>
-                        </label>
-
-                        <label class="relative flex items-center gap-3.5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-all">
-                            <input type="radio" name="ai_model" value="z_ai" class="w-4 h-4 text-violet-600 focus:ring-violet-500">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-bold text-gray-900 dark:text-white">GLM-4.7 Flash</span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 uppercase tracking-wider">Cerdas</span>
-                                </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Zhipu AI · Cepat & respon kaya analogi</p>
-                            </div>
-                        </label>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800 shrink-0 uppercase tracking-wider" id="ai-detail-type">
+                                Siap Digunakan
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -580,9 +559,40 @@ function renderDrawerItems() {
     `).join('');
 }
 
-function initLaporanEvents() {
+async function initLaporanEvents() {
     renderFotoGallery();
     syncFormToPreview();
+    await initLaporanAiProviders();
+}
+
+async function initLaporanAiProviders() {
+    const selectEl = document.getElementById('input-ai_model');
+    if (!selectEl) return;
+
+    await populateAiModelSelect(selectEl);
+
+    const updateDetailBanner = async () => {
+        const providers = await getActiveAiProviders();
+        const selectedSlug = selectEl.value;
+        const currentP = providers.find(p => p.slug === selectedSlug);
+
+        const nameEl = document.getElementById('ai-detail-name');
+        const modelEl = document.getElementById('ai-detail-model');
+        const typeEl = document.getElementById('ai-detail-type');
+
+        if (currentP) {
+            if (nameEl) nameEl.textContent = currentP.name;
+            if (modelEl) modelEl.textContent = `· Model: ${currentP.model}`;
+            if (typeEl) typeEl.textContent = `${(currentP.api_type || 'AI').toUpperCase()} · Aktif`;
+        } else if (providers.length === 0) {
+            if (nameEl) nameEl.textContent = 'Belum ada provider AI aktif';
+            if (modelEl) modelEl.textContent = '· Atur di menu Admin AI Provider';
+            if (typeEl) typeEl.textContent = 'Nonaktif';
+        }
+    };
+
+    selectEl.addEventListener('change', updateDetailBanner);
+    await updateDetailBanner();
 }
 
 function syncFormToPreview() {
@@ -839,7 +849,7 @@ window.generateAIContent = async () => {
         return;
     }
 
-    const model = document.querySelector('input[name="ai_model"]:checked')?.value || 'bedrock';
+    const model = document.getElementById('input-ai_model')?.value || 'mistral-medium';
     const tema = document.getElementById('input-tema')?.value?.trim() || '';
     const tempat = document.getElementById('input-tempat')?.value?.trim() || '';
     const narasumber = document.getElementById('input-narasumber')?.value?.trim() || '';

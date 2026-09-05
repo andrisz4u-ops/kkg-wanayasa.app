@@ -490,20 +490,30 @@ export function getQueryParams() {
  */
 let cachedActiveAiProviders = null;
 
-export async function populateAiModelSelect(selector, preferredDefault) {
-  const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
-  if (!el) return;
-
-  try {
-    if (!cachedActiveAiProviders) {
+/**
+ * Fetch list of active AI providers configured by administrator
+ */
+export async function getActiveAiProviders(forceRefresh = false) {
+  if (!cachedActiveAiProviders || forceRefresh) {
+    try {
       const res = await fetch('/api/ai-providers/active');
       const json = await res.json();
       if (json.success && json.data && json.data.length > 0) {
         cachedActiveAiProviders = json.data;
       }
+    } catch (e) {
+      console.warn('Failed to fetch active AI providers:', e);
     }
+  }
+  return cachedActiveAiProviders || [];
+}
 
-    const providers = cachedActiveAiProviders || [];
+export async function populateAiModelSelect(selector, preferredDefault) {
+  const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+  if (!el) return;
+
+  try {
+    const providers = await getActiveAiProviders();
     if (providers.length === 0) return;
 
     const currentVal = el.value || preferredDefault;

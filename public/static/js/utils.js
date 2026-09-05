@@ -521,3 +521,44 @@ export async function populateAiModelSelect(selector, preferredDefault) {
   }
 }
 
+/**
+ * Get active academic year from application settings with fallback
+ */
+export function getActiveTahunAjaran(fallback = '2026/2027') {
+  if (typeof window !== 'undefined' && window.state?.settings?.tahun_ajaran) {
+    return window.state.settings.tahun_ajaran;
+  }
+  return fallback;
+}
+
+/**
+ * Generate HTML <option> list for academic year select dropdowns,
+ * dynamically centered around the active academic year configured in admin settings.
+ */
+export function renderTahunAjaranOptions(selectedVal) {
+  const activeTa = getActiveTahunAjaran();
+  const selected = selectedVal || activeTa;
+  
+  const match = String(activeTa).match(/^(\d{4})\/(\d{4})$/);
+  const years = [];
+  if (match) {
+    const startYear = parseInt(match[1], 10);
+    for (let y = startYear - 2; y <= startYear + 2; y++) {
+      years.push(`${y}/${y + 1}`);
+    }
+  } else {
+    years.push(activeTa);
+    if (!years.includes('2025/2026')) years.push('2025/2026');
+    if (!years.includes('2026/2027')) years.push('2026/2027');
+    if (!years.includes('2027/2028')) years.push('2027/2028');
+  }
+
+  if (selected && !years.includes(selected)) {
+    years.unshift(selected);
+  }
+
+  return years.map(ta => `
+    <option value="${escapeHtml(ta)}" ${ta === selected ? 'selected' : ''}>${escapeHtml(ta)}</option>
+  `).join('');
+}
+

@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
@@ -1133,7 +1133,7 @@ function renderResult(data, formData) {
         formData.jenisUjian === 'ASAT' ? 'ASESMEN SUMATIF AKHIR TAHUN' :
           formData.jenisUjian}
         </h4>
-        <p style="font-weight:bold; font-size:11pt; margin:0">TAHUN PELAJARAN 2026/2027</p>
+        <p style="font-weight:bold; font-size:11pt; margin:0">TAHUN PELAJARAN ${escapeHtml(getActiveTahunAjaran())}</p>
       </div>
     `;
 

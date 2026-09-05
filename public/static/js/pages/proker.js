@@ -1,7 +1,7 @@
 
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { formatDate, formatDateTime, escapeHtml, showToast, populateAiModelSelect } from '../utils.js';
+import { formatDate, formatDateTime, escapeHtml, showToast, populateAiModelSelect, renderTahunAjaranOptions } from '../utils.js';
 import { navigate } from '../router.js';
 import { renderAdminLayout } from '../layouts/admin.js';
 
@@ -28,9 +28,7 @@ export function renderProker() {
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Tahun Ajaran *</label>
             <select name="tahun_ajaran" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 transition">
-              <option value="2025/2026" selected>2025/2026</option>
-              <option value="2026/2027">2026/2027</option>
-              <option value="2024/2025">2024/2025</option>
+              ${renderTahunAjaranOptions()}
             </select>
           </div>
           <div>

@@ -119,7 +119,7 @@ async function renderEducatorDashboard() {
                 <span class="text-teal-400/50">•</span>
                 <span>${escapeHtml(userNip)}</span>
                 <span class="text-teal-400/50">•</span>
-                <span class="text-teal-200/90 font-medium">T.A. 2025/2026</span>
+                <span class="text-teal-200/90 font-medium current-tahun-ajaran-display">T.A ${escapeHtml(state.settings?.tahun_ajaran || '2026/2027')}</span>
               </p>
             </div>
 

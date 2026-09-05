@@ -11,6 +11,8 @@
  *  - Ini adalah satu-satunya cara yang pasti bekerja di Word
  */
 
+import { getActiveTahunAjaran } from './utils.js';
+
 const FONT_LATIN  = 'Times New Roman';
 const FONT_SUNDA  = 'Noto Sans Sundanese';
 
@@ -397,7 +399,8 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
   const judulMap = { STS: 'SUMATIF TENGAH SEMESTER', SAS: 'SUMATIF AKHIR SEMESTER', ASAT: 'ASESMEN SUMATIF AKHIR TAHUN' };
   const judul = judulMap[formData.jenisUjian] || (formData.jenisUjian || 'PENILAIAN').toUpperCase();
   children.push(makePara(judul, { bold: true, size: 24, align: AlignmentType.CENTER, spaceBefore: 4, spaceAfter: 2 }));
-  children.push(makePara('TAHUN PELAJARAN 2026/2027', { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 8 }));
+  const activeTapel = (typeof getActiveTahunAjaran === 'function') ? getActiveTahunAjaran() : (window.state?.settings?.tahun_ajaran || '2026/2027');
+  children.push(makePara(`TAHUN PELAJARAN ${activeTapel}`, { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 8 }));
 
   // ── TABEL IDENTITAS ────────────────────────────────────────
   children.push(new Table({

@@ -10,7 +10,7 @@ const settings = new Hono<{ Bindings: Bindings }>();
 settings.get('/public', async (c) => {
     try {
         const keys = [
-            'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten'
+            'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten', 'tahun_ajaran', 'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk'
         ];
 
         const placeholders = keys.map(() => '?').join(',');

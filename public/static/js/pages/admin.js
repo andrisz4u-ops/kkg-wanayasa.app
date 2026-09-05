@@ -402,7 +402,7 @@ export async function renderAdmin() {
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <label class="label">Tahun Ajaran Aktif</label>
-                <input type="text" id="profil-tahun_ajaran" class="input-field" placeholder="2025/2026">
+                <input type="text" id="profil-tahun_ajaran" class="input-field" placeholder="2026/2027">
               </div>
               <div>
                 <label class="label">NPSN Sekolah Induk</label>

@@ -95,6 +95,12 @@ window.saveProfilKKG = async function () {
 
     await api('/admin/settings', { method: 'PUT', body: data });
 
+    // Update global state and dispatch settings-updated event
+    if (window.state) {
+      window.state.settings = { ...window.state.settings, ...data };
+    }
+    document.dispatchEvent(new CustomEvent('settings-updated', { detail: data }));
+
     // Also sync to active tenant metadata
     try {
       await api('/tenants/current', {

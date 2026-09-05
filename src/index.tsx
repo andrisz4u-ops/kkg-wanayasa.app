@@ -611,7 +611,7 @@ CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('nama_ketua', 'Admin KKG Gugus 3')`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('logo_url', '/static/img/logo-kkg.png')`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('alamat_sekretariat', 'SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta')`).run();
-    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('tahun_ajaran', '2025/2026')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('tahun_ajaran', '2026/2027')`).run();
 
     // Seed sample users with secure password hash
     const userPasswordHash = await hashPassword('admin123');

@@ -35,7 +35,7 @@ VALUES
   ('nama_ketua', 'Admin KKG Gugus 3'),
   ('nip_ketua', '198501012010011001'),
   ('alamat_sekretariat', 'SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta'),
-  ('tahun_ajaran', '2025/2026');
+  ('tahun_ajaran', '2026/2027');
 
 -- Data Kalender Pendidikan SDN 2 Nangerang 2026-2027
 

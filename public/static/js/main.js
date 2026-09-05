@@ -800,7 +800,7 @@ async function render() {
                     </div>
                   </div>
                   <div class="flex items-center justify-between text-[10.5px] text-slate-500 pt-1.5 border-t border-slate-200/60">
-                    <span class="font-medium">T.A 2025/2026</span>
+                    <span class="font-medium current-tahun-ajaran-display">T.A ${escapeHtml(state.settings?.tahun_ajaran || '2026/2027')}</span>
                     <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
                       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                       Aktif
@@ -1247,6 +1247,13 @@ async function init() {
 
     const mobileNav = document.getElementById('mobile-nav-links') || document.querySelector('#mobile-menu nav');
     if (mobileNav) mobileNav.innerHTML = renderNavLinks(state.currentPage);
+  });
+
+  document.addEventListener('settings-updated', (e) => {
+    const newTa = e.detail?.tahun_ajaran || state.settings?.tahun_ajaran || '2026/2027';
+    document.querySelectorAll('.current-tahun-ajaran-display').forEach(el => {
+      el.textContent = `T.A ${newTa}`;
+    });
   });
 
   console.log('✅ KKG Portal initialized');

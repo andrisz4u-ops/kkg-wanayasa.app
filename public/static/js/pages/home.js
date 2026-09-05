@@ -922,7 +922,7 @@ async function renderPublicHome() {
               <p class="text-xs text-slate-500 leading-relaxed">RPP Berdiferensiasi, Kisi-Kisi HOTS, dan LKPD instan terverifikasi.</p>
               <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-[10.5px] font-bold text-teal-700">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Standar BSKAP 033/H/KR</span>
+                <span>Standar BSKAP 046/H/KR/2025</span>
               </div>
             </div>
 
@@ -1014,7 +1014,7 @@ async function renderPublicHome() {
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto shrink-0">
               <div class="p-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md text-center">
                 <i class="fas fa-certificate text-teal-400 text-2xl mb-2 block"></i>
-                <h5 class="font-bold text-xs text-white">BSKAP 033/H/KR</h5>
+                <h5 class="font-bold text-xs text-white">BSKAP 046/H/KR/2025</h5>
                 <p class="text-[10px] text-slate-300">Kurikulum Merdeka</p>
               </div>
 
@@ -1273,7 +1273,7 @@ async function renderPublicHome() {
                 <i id="faq-icon-1" class="fas fa-chevron-down text-xs text-slate-400 transition-transform"></i>
               </button>
               <div id="faq-ans-1" class="hidden px-6 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-white">
-                Ya, seluruh generator perangkat ajar telah diselaraskan dengan Keputusan Kepala BSKAP Kemendikbudristek No. 033/H/KR/2024 dan memuat komponen wajib: Capaian Pembelajaran (CP), Alur Tujuan Pembelajaran (ATP), Pembelajaran Berdiferensiasi, serta Asesmen Formatif & Sumatif.
+                Ya, seluruh generator perangkat ajar telah diselaraskan dengan Keputusan Kepala BSKAP Nomor 046/H/KR/2025 tentang Capaian Pembelajaran Kurikulum Merdeka terbaru dan memuat komponen wajib: Capaian Pembelajaran (CP), Alur Tujuan Pembelajaran (ATP), Pembelajaran Berdiferensiasi, serta Asesmen Formatif & Sumatif.
               </div>
             </div>
 

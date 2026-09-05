@@ -815,7 +815,7 @@ async function render() {
                     </span>
                     <div>
                       <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight">Kurikulum Merdeka</p>
-                      <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Standar BSKAP 2024</p>
+                      <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Standar BSKAP 2025</p>
                     </div>
                   </div>
                   <p class="text-[11px] text-slate-500 leading-relaxed font-normal mb-2.5">Platform resmi KKG Gugus 3 Kecamatan Wanayasa.</p>

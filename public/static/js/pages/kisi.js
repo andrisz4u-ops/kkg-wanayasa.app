@@ -117,8 +117,13 @@ export async function renderKisi() {
             <label class="asesmen-label">RUANG LINGKUP / TOPIK</label>
             <textarea name="topik" rows="3" placeholder="Tuliskan topik bahasan di sini..." class="asesmen-input asesmen-textarea" required></textarea>
 
-            <label class="asesmen-label">CAPAIAN PEMBELAJARAN (OPSIONAL)</label>
-            <textarea name="capaianPembelajaran" rows="3" placeholder="Pelajari CP untuk lebih terfokus..." class="asesmen-input asesmen-textarea"></textarea>
+            <div class="flex items-center justify-between mb-1 mt-3">
+              <label class="asesmen-label mb-0">CAPAIAN PEMBELAJARAN (OPSIONAL)</label>
+              <button type="button" id="btn-auto-cp" class="text-[11px] text-cyan-600 dark:text-cyan-400 font-bold hover:underline flex items-center gap-1 cursor-pointer transition-colors" title="Muat rumusan CP resmi BSKAP No. 046 Tahun 2025">
+                <i class="fas fa-book-reader text-cyan-500"></i> Muat CP BSKAP 2025
+              </button>
+            </div>
+            <textarea name="capaianPembelajaran" id="input-cp-text" rows="3" placeholder="Kosongkan untuk otomatisasi cerdas AI, atau klik 'Muat CP BSKAP 2025'..." class="asesmen-input asesmen-textarea"></textarea>
           </div>
 
           <!-- Column 3: KARAKTERISTIK -->
@@ -160,11 +165,11 @@ export async function renderKisi() {
               <option value="Menjodohkan">Menjodohkan</option>
             </select>
 
-            <label class="asesmen-label">KOMPLEKSITAS AUTO</label>
+            <label class="asesmen-label">KOMPLEKSITAS LEVEL KOGNITIF</label>
             <select name="hotsRatio" class="asesmen-input">
-              <option value="30:40:30">Balanced (30:40:30)</option>
-              <option value="50:30:20">Easy (50:30:20)</option>
-              <option value="20:30:50">Hard (20:30:50)</option>
+              <option value="30:40:30">Balanced (30% L1 : 40% L2 : 30% L3)</option>
+              <option value="50:30:20">Dasar / Pemahaman (50% L1 : 30% L2 : 20% L3)</option>
+              <option value="20:30:50">Tinggi / Penalaran (20% L1 : 30% L2 : 50% L3)</option>
             </select>
 
             <label class="asesmen-label">AI NEURAL ENGINE</label>
@@ -196,13 +201,32 @@ export async function renderKisi() {
 
       <!-- RESULT VIEW (Hidden by default) -->
       <div id="asesmen-result-view" class="hidden">
-        <div class="asesmen-result-toolbar">
-          <button id="btn-back-form" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[var(--color-border-subtle)] bg-white text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors cursor-pointer"><i class="fas fa-arrow-left mr-2"></i>Kembali ke Form</button>
-          <div class="flex gap-2 sm:gap-3 flex-wrap">
-            <button id="btn-toggle-edit-mode" class="px-4 py-2.5 rounded-full text-sm font-medium border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-pencil-alt text-blue-500"></i>Mode Edit: <span id="edit-mode-status" class="font-bold text-emerald-600">Aktif</span></button>
-            <button id="btn-kisi-history" class="px-4 py-2.5 rounded-full text-sm font-medium border border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1.5 text-amber-500"></i>Riwayat</button>
-            <button id="btn-download-doc" class="px-5 py-2.5 rounded-full text-sm font-medium border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer"><i class="fas fa-download mr-2"></i>Unduh .docx</button>
-            <button id="btn-print" class="px-5 py-2.5 bg-[#111111] text-white rounded-full font-medium text-sm shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"><i class="fas fa-print mr-2"></i>Cetak / PDF</button>
+        <div class="asesmen-result-toolbar flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
+          <div class="flex items-center gap-2 flex-wrap justify-between xl:justify-start">
+            <button id="btn-back-form" class="px-4 py-2 rounded-full text-xs font-semibold border border-[var(--color-border-subtle)] bg-white dark:bg-slate-800 text-[var(--color-text-secondary)] hover:bg-[#f8f9fa] hover:text-[#111111] transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-arrow-left"></i> Form</button>
+
+            <!-- View Switcher Tabs -->
+            <div class="flex bg-slate-100 dark:bg-slate-800/90 p-1 rounded-full border border-slate-200/80 dark:border-slate-700/60 shadow-inner print:hidden" id="kisi-view-tabs">
+              <button type="button" class="kisi-tab-btn active px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm" data-tab="soal">
+                <i class="fas fa-file-alt mr-1"></i>Naskah Soal
+              </button>
+              <button type="button" class="kisi-tab-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer text-slate-600 dark:text-slate-300 hover:text-cyan-600" data-tab="kisi">
+                <i class="fas fa-th-list mr-1 text-teal-600"></i>Kisi-Kisi
+              </button>
+              <button type="button" class="kisi-tab-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer text-slate-600 dark:text-slate-300 hover:text-cyan-600" data-tab="kunci">
+                <i class="fas fa-key mr-1 text-amber-500"></i>Kunci & Rubrik
+              </button>
+              <button type="button" class="kisi-tab-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer text-slate-600 dark:text-slate-300 hover:text-cyan-600" data-tab="all">
+                <i class="fas fa-layer-group mr-1 text-indigo-500"></i>Paket Lengkap
+              </button>
+            </div>
+          </div>
+
+          <div class="flex gap-2 sm:gap-2.5 flex-wrap justify-end">
+            <button id="btn-toggle-edit-mode" class="px-3.5 py-2 rounded-full text-xs font-semibold border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-pencil-alt text-blue-500"></i>Edit: <span id="edit-mode-status" class="font-bold text-emerald-600">Aktif</span></button>
+            <button id="btn-kisi-history" class="px-3.5 py-2 rounded-full text-xs font-semibold border border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1 text-amber-500"></i>Riwayat</button>
+            <button id="btn-download-doc" class="px-4 py-2 rounded-full text-xs font-bold border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-download"></i>Unduh .docx</button>
+            <button id="btn-print" class="px-4 py-2 bg-[#111111] text-white rounded-full font-bold text-xs shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer flex items-center gap-1.5"><i class="fas fa-print"></i>Cetak / PDF</button>
           </div>
         </div>
 
@@ -620,6 +644,63 @@ export async function renderKisi() {
         margin-top: 30px;
         padding-top: 10px;
       }
+      .kisi-page-break {
+        page-break-before: always;
+        break-before: page;
+        margin-top: 30px;
+        padding-top: 10px;
+      }
+
+      /* View Mode Tab Filtering */
+      #asesmen-canvas.view-tab-soal #section-kisi-view,
+      #asesmen-canvas.view-tab-soal #section-kunci-view {
+        display: none !important;
+      }
+      #asesmen-canvas.view-tab-kisi #section-soal-view,
+      #asesmen-canvas.view-tab-kisi #section-kunci-view {
+        display: none !important;
+      }
+      #asesmen-canvas.view-tab-kunci #section-soal-view,
+      #asesmen-canvas.view-tab-kunci #section-kisi-view {
+        display: none !important;
+      }
+      #asesmen-canvas.view-tab-all #section-soal-view,
+      #asesmen-canvas.view-tab-all #section-kunci-view,
+      #asesmen-canvas.view-tab-all #section-kisi-view {
+        display: block !important;
+      }
+
+      /* Level badges in matrix table */
+      .badge-level-l1 {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 8.5pt;
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+      }
+      .badge-level-l2 {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 8.5pt;
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+      }
+      .badge-level-l3 {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 8.5pt;
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+      }
 
       @page {
         size: A4 portrait;
@@ -695,6 +776,28 @@ export async function renderKisi() {
           page-break-before: always !important;
           break-before: page !important;
         }
+        .kisi-page-break {
+          page-break-before: always !important;
+          break-before: page !important;
+        }
+
+        #asesmen-canvas.view-tab-soal #section-kisi-view,
+        #asesmen-canvas.view-tab-soal #section-kunci-view {
+          display: none !important;
+        }
+        #asesmen-canvas.view-tab-kisi #section-soal-view,
+        #asesmen-canvas.view-tab-kisi #section-kunci-view {
+          display: none !important;
+        }
+        #asesmen-canvas.view-tab-kunci #section-soal-view,
+        #asesmen-canvas.view-tab-kunci #section-kisi-view {
+          display: none !important;
+        }
+        #asesmen-canvas.view-tab-all #section-soal-view,
+        #asesmen-canvas.view-tab-all #section-kunci-view,
+        #asesmen-canvas.view-tab-all #section-kisi-view {
+          display: block !important;
+        }
       }
     </style>
   `;
@@ -703,6 +806,64 @@ export async function renderKisi() {
 // Module-level: simpan formData dan raw data terakhir
 let _lastFormData = {};
 let _lastGeneratedData = {};
+let _currentActiveTab = 'soal';
+
+// Helper: pastikan setiap butir soal memiliki metadata kisi-kisi (CP, Materi, Indikator, Level L1/L2/L3, Bentuk)
+function ensureClientKisiMetadata(data, formData = {}) {
+  if (!data) return;
+  const fallbackCP = (formData.capaianPembelajaran && String(formData.capaianPembelajaran).trim()) || 
+                     `Peserta didik dapat memahami dan menerapkan konsep dasar ${formData.topik || 'materi pembelajaran'}.`;
+  const fallbackMateri = (formData.topik && String(formData.topik).trim()) || 'Materi Pokok';
+
+  const normalizeLevel = (raw) => {
+    const s = String(raw || '').toUpperCase();
+    if (s.includes('L3') || s.includes('HOTS') || s.includes('C4') || s.includes('C5') || s.includes('C6')) return 'L3';
+    if (s.includes('L2') || s.includes('MOTS') || s.includes('C3')) return 'L2';
+    return 'L1';
+  };
+
+  if (data.pg && Array.isArray(data.pg)) {
+    data.pg.forEach((q, idx) => {
+      q.no = q.no || (idx + 1);
+      q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
+      q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
+      if (!q.indikator || !String(q.indikator).trim()) {
+        q.indikator = `Disajikan pertanyaan mengenai ${q.materi}, peserta didik dapat menentukan jawaban yang tepat.`;
+      }
+      q.level = normalizeLevel(q.level);
+      q.bentuk = q.bentuk || 'Pilihan Ganda';
+    });
+  }
+
+  if (data.isian?.data && Array.isArray(data.isian.data)) {
+    const isianType = data.isian.type || formData.isianType || 'Standard';
+    const isianBentuk = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
+    data.isian.data.forEach((q, idx) => {
+      q.no = q.no || ((data.pg?.length || 0) + idx + 1);
+      q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
+      q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
+      if (!q.indikator || !String(q.indikator).trim()) {
+        q.indikator = `Disajikan stimulus mengenai ${q.materi}, peserta didik dapat melengkapi pernyataan dengan tepat.`;
+      }
+      q.level = normalizeLevel(q.level);
+      q.bentuk = q.bentuk || isianBentuk;
+    });
+  }
+
+  if (data.uraian && Array.isArray(data.uraian)) {
+    data.uraian.forEach((q, idx) => {
+      const maxIsian = data.isian?.data?.length ? Math.max(...data.isian.data.map(x => x.no || 0)) : (data.pg?.length || 0);
+      q.no = q.no || (maxIsian + idx + 1);
+      q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
+      q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
+      if (!q.indikator || !String(q.indikator).trim()) {
+        q.indikator = `Disajikan masalah/wacana mengenai ${q.materi}, peserta didik dapat menganalisis dan menyajikan pemecahan yang logis.`;
+      }
+      q.level = normalizeLevel(q.level || 'L3');
+      q.bentuk = q.bentuk || 'Uraian';
+    });
+  }
+}
 
 // Helper: deteksi apakah teks mengandung karakter Aksara Sunda (Unicode blok U+1B80–U+1BBF)
 function containsSundaneseScript(text) {
@@ -891,6 +1052,42 @@ export function initKisi() {
     });
   });
 
+  // Listener Muat CP Resmi BSKAP No. 046 Tahun 2025
+  document.getElementById('btn-auto-cp')?.addEventListener('click', async () => {
+    const mapel = form.querySelector('select[name="mataPelajaran"]')?.value;
+    const kelas = form.querySelector('select[name="jenjangKelas"]')?.value;
+
+    if (!mapel || !kelas) {
+      showToast('Pilih Mata Pelajaran dan Jenjang Kelas terlebih dahulu!', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-auto-cp');
+    const oldHtml = btn.innerHTML;
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Memuat...';
+      const resp = await api(`/kisi/cp-reference?mataPelajaran=${encodeURIComponent(mapel)}&jenjangKelas=${encodeURIComponent(kelas)}`);
+      const cpVal = resp?.data?.cp;
+      if (cpVal) {
+        const cpInput = document.getElementById('input-cp-text');
+        if (cpInput) {
+          cpInput.value = cpVal;
+          cpInput.focus();
+        }
+        showToast(`CP resmi ${resp.data.fase} (BSKAP No. 046/2025) berhasil dimuat!`, 'success');
+      } else {
+        showToast('Rumusan CP resmi belum tersedia untuk kombinasi ini. AI akan memformulasikannya otomatis.', 'info');
+      }
+    } catch (e) {
+      console.error('Failed to load CP reference:', e);
+      showToast('Gagal memuat referensi CP: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = oldHtml;
+    }
+  });
+
   // Submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1028,6 +1225,34 @@ export function initKisi() {
   // Print
   document.getElementById('btn-print')?.addEventListener('click', () => window.print());
 
+  // View Switcher Tabs (Naskah Soal, Matriks Kisi-Kisi, Kunci & Rubrik, Paket Lengkap)
+  const applyTabSelection = (tabKey) => {
+    _currentActiveTab = tabKey;
+    const tabBtns = document.querySelectorAll('.kisi-tab-btn');
+    tabBtns.forEach(btn => {
+      const isTarget = btn.dataset.tab === tabKey;
+      if (isTarget) {
+        btn.classList.add('active', 'bg-white', 'dark:bg-slate-700', 'text-cyan-700', 'dark:text-cyan-300', 'shadow-sm');
+        btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+      } else {
+        btn.classList.remove('active', 'bg-white', 'dark:bg-slate-700', 'text-cyan-700', 'dark:text-cyan-300', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'dark:text-slate-300');
+      }
+    });
+
+    const canvas = document.getElementById('asesmen-canvas');
+    if (canvas) {
+      canvas.classList.remove('view-tab-soal', 'view-tab-kisi', 'view-tab-kunci', 'view-tab-all');
+      canvas.classList.add(`view-tab-${tabKey}`);
+    }
+  };
+
+  document.querySelectorAll('.kisi-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyTabSelection(btn.dataset.tab);
+    });
+  });
+
   // Toggle Edit Mode in Result View
   let _editModeActive = true;
   document.getElementById('btn-toggle-edit-mode')?.addEventListener('click', () => {
@@ -1097,6 +1322,9 @@ function renderResult(data, formData) {
   _lastFormData = formData;
   _lastGeneratedData = data;
 
+  // Pastikan setiap butir soal memiliki metadata kisi-kisi terstandarisasi (CP, Materi, Indikator, Level L1/L2/L3, Bentuk)
+  ensureClientKisiMetadata(data, formData);
+
   const isianType = data.isian?.type || formData.isianType || 'Standard';
 
   // Show result view, hide form
@@ -1104,42 +1332,69 @@ function renderResult(data, formData) {
   document.getElementById('asesmen-result-view').classList.remove('hidden');
 
   const canvas = document.getElementById('asesmen-canvas');
-  let html = '';
 
   const origin = window.location.origin;
-
-  // KOP Surat (Dinamis per Sekolah)
   const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
-  html += `
+  const activeTA = escapeHtml(getActiveTahunAjaran());
+  const jenisUjianTitle = formData.jenisUjian === 'STS' ? 'SUMATIF TENGAH SEMESTER' :
+                          formData.jenisUjian === 'SAS' ? 'SUMATIF AKHIR SEMESTER' :
+                          formData.jenisUjian === 'ASAT' ? 'ASESMEN SUMATIF AKHIR TAHUN' :
+                          (formData.jenisUjian || 'ASESMEN PEMBELAJARAN');
+
+  // Lembar Pengesahan Template
+  const renderPengesahanHTML = () => `
+    <table class="layout-table" style="width:100%; margin-top:40px; text-align:center; font-size:10.5pt; page-break-inside:avoid; break-inside:avoid;">
+      <tr>
+        <td style="width:50%; vertical-align:bottom;">
+          <p style="margin:0 0 4px 0;">Mengetahui,</p>
+          <p style="margin:0 0 4px 0;">Kepala Sekolah</p>
+          <br><br><br><br>
+          <p style="text-decoration:underline; font-weight:bold; margin:0 0 2px 0;">${escapeHtml(formData.namaKepalaSekolah || '..............................')}</p>
+          <p style="margin:0;">NIP. ${escapeHtml(formData.nipKepalaSekolah || '..............................')}</p>
+        </td>
+        <td style="width:50%; vertical-align:bottom;">
+          <p style="margin:0 0 4px 0;">&nbsp;</p>
+          <p style="margin:0 0 4px 0;">Guru Pengampu</p>
+          <br><br><br><br>
+          <p style="text-decoration:underline; font-weight:bold; margin:0 0 2px 0;">${escapeHtml(formData.namaGuru || '..............................')}</p>
+          <p style="margin:0;">NIP. ${escapeHtml(formData.nipGuru || '..............................')}</p>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  // Helper render badge level kognitif resmi
+  const renderLevelBadge = (level) => {
+    const l = String(level || 'L1').toUpperCase();
+    if (l.includes('3')) return `<span class="badge-level-l3">L3</span>`;
+    if (l.includes('2')) return `<span class="badge-level-l2">L2</span>`;
+    return `<span class="badge-level-l1">L1</span>`;
+  };
+
+  // -------------------------------------------------------------
+  // 1. SECTION: NASKAH SOAL SISWA
+  // -------------------------------------------------------------
+  let htmlSoal = `<div id="section-soal-view" class="asesmen-view-section">`;
+  htmlSoal += `
       <div style="text-align:center; margin-bottom: 20px;">
         <img src="${kopSuratUrl}" style="width:100%; height:auto; object-fit:contain;" alt="Kop Surat" crossorigin="anonymous">
       </div>
-    `;
-
-  html += `
       <div style="text-align:center; margin-bottom:15px; text-transform:uppercase;">
         <h4 style="text-decoration:underline; font-weight:bold; font-size:12pt; margin-bottom:2px;">
-          ${formData.jenisUjian === 'STS' ? 'SUMATIF TENGAH SEMESTER' :
-      formData.jenisUjian === 'SAS' ? 'SUMATIF AKHIR SEMESTER' :
-        formData.jenisUjian === 'ASAT' ? 'ASESMEN SUMATIF AKHIR TAHUN' :
-          formData.jenisUjian}
+          ${jenisUjianTitle}
         </h4>
-        <p style="font-weight:bold; font-size:11pt; margin:0">TAHUN PELAJARAN ${escapeHtml(getActiveTahunAjaran())}</p>
+        <p style="font-weight:bold; font-size:11pt; margin:0">TAHUN PELAJARAN ${activeTA}</p>
       </div>
-    `;
-
-  // Identity Table
-  html += `
       <table class="main-table" style="margin-bottom:20px; font-size:10.5pt">
         <tr>
           <td style="width:15%">Mata Pelajaran</td>
-          <td style="width:30%">: ${formData.mataPelajaran}</td>
+          <td style="width:30%">: ${escapeHtml(formData.mataPelajaran || '-')}</td>
           <td style="width:15%">Nama Murid</td>
           <td style="width:40%">: ............................................................</td>
         </tr>
         <tr>
           <td>Kelas / Smt</td>
-          <td>: ${formData.jenjangKelas} / ${formData.semester}</td>
+          <td>: ${escapeHtml(formData.jenjangKelas || '-')} / ${escapeHtml(formData.semester || '-')}</td>
           <td>Hari / Tgl</td>
           <td>: .................. / .......................</td>
         </tr>
@@ -1148,7 +1403,7 @@ function renderResult(data, formData) {
 
   // PG Section
   if (data.pg && data.pg.length > 0) {
-    html += `
+    htmlSoal += `
       <div class="section-title">
         <h4>I. PILIHAN GANDA</h4>
         <p>Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!</p>
@@ -1201,7 +1456,7 @@ function renderResult(data, formData) {
       </div>`;
 
       if (q.gambar && q.gambar.url) {
-        html += `
+        htmlSoal += `
           <div class="soal-item-wrapper">
             ${actionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
@@ -1229,7 +1484,7 @@ function renderResult(data, formData) {
           </div>
         `;
       } else {
-        html += `
+        htmlSoal += `
           <div class="soal-item-wrapper">
             ${actionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
@@ -1261,7 +1516,7 @@ function renderResult(data, formData) {
       isianDesc = 'Pasangkanlah pernyataan di sebelah kiri dengan jawaban yang tepat di sebelah kanan!';
     }
 
-    html += `
+    htmlSoal += `
       <div class="section-title">
         <h4>${isianTitle}</h4>
         <p>${isianDesc}</p>
@@ -1270,10 +1525,10 @@ function renderResult(data, formData) {
 
     if (isianType === 'Menjodohkan') {
       const rightCol = [...data.isian.data].map(q => q.kunci).sort(() => Math.random() - 0.5);
-      html += `<table class="layout-table soal-item-row" style="margin-bottom:14px; width:100%">`;
+      htmlSoal += `<table class="layout-table soal-item-row" style="margin-bottom:14px; width:100%">`;
       data.isian.data.forEach((q, i) => {
         const optionLetter = String.fromCharCode(65 + i); // A, B, C...
-        html += `
+        htmlSoal += `
           <tr>
             <td style="width:26px; font-weight:bold; vertical-align:top; padding:4px 0;">${q.no}.</td>
             <td style="width:40%; padding:4px 10px 4px 0; text-align:justify; vertical-align:top;">${formatSoalText(q.soal)}</td>
@@ -1283,11 +1538,11 @@ function renderResult(data, formData) {
           </tr>
         `;
       });
-      html += `</table>`;
+      htmlSoal += `</table>`;
     } else if (isianType === 'Crossword' && data.isian.crossword) {
       const cw = data.isian.crossword;
       if (cw.success && cw.grid) {
-        html += `
+        htmlSoal += `
           <div class="my-5 p-4 rounded-2xl bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-purple-950 text-white flex flex-col sm:flex-row items-center justify-between gap-4 border border-purple-500/30 shadow-lg print:hidden">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 text-lg">
@@ -1304,10 +1559,10 @@ function renderResult(data, formData) {
           </div>
         `;
 
-        html += `<div style="margin: 20px 0;">`;
-        html += `<table style="border-collapse:collapse; display:block; margin:0 auto; table-layout:fixed; width:auto;">`;
+        htmlSoal += `<div style="margin: 20px 0;">`;
+        htmlSoal += `<table style="border-collapse:collapse; display:block; margin:0 auto; table-layout:fixed; width:auto;">`;
         for (let r = 0; r < cw.grid.length; r++) {
-          html += `<tr>`;
+          htmlSoal += `<tr>`;
           for (let c = 0; c < cw.grid[r].length; c++) {
             const char = cw.grid[r][c];
 
@@ -1319,14 +1574,14 @@ function renderResult(data, formData) {
             }
 
             if (char !== ' ') {
-              html += `<td style="width:28px; height:28px; border:1px solid black; background:white; text-align:left; vertical-align:top; border-collapse:collapse; padding:0;">${num}</td>`;
+              htmlSoal += `<td style="width:28px; height:28px; border:1px solid black; background:white; text-align:left; vertical-align:top; border-collapse:collapse; padding:0;">${num}</td>`;
             } else {
-              html += `<td style="width:28px; height:28px; border:none; border-collapse:collapse; padding:0;"></td>`;
+              htmlSoal += `<td style="width:28px; height:28px; border:none; border-collapse:collapse; padding:0;"></td>`;
             }
           }
-          html += `</tr>`;
+          htmlSoal += `</tr>`;
         }
-        html += `</table></div>`;
+        htmlSoal += `</table></div>`;
 
         // Render Mendatar & Menurun Clues list
         const mendatar = [];
@@ -1343,7 +1598,7 @@ function renderResult(data, formData) {
         mendatar.sort((a, b) => a.num - b.num);
         menurun.sort((a, b) => a.num - b.num);
 
-        html += `<table class="layout-table" style="width:100%; margin-top:20px;">
+        htmlSoal += `<table class="layout-table" style="width:100%; margin-top:20px;">
                   <tr>
                     <td style="width:50%; padding-right:15px; vertical-align:top;">
                       <h4 style="margin-bottom:8px; font-weight:bold; text-decoration:underline;">MENDATAR</h4>
@@ -1362,7 +1617,7 @@ function renderResult(data, formData) {
           <button type="button" class="btn-edit-soal" data-type="isian" data-index="${isianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
           <button type="button" class="btn-delete-soal" data-type="isian" data-index="${isianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
         </div>`;
-        html += `
+        htmlSoal += `
           <div class="soal-item-wrapper">
             ${isianActionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
@@ -1381,7 +1636,7 @@ function renderResult(data, formData) {
 
   // Uraian Section
   if (data.uraian && data.uraian.length > 0) {
-    html += `
+    htmlSoal += `
       <div class="section-title">
         <h4>III. URAIAN</h4>
         <p>Jawablah pertanyaan di bawah ini dengan jelas dan tepat!</p>
@@ -1393,7 +1648,7 @@ function renderResult(data, formData) {
         <button type="button" class="btn-edit-soal" data-type="uraian" data-index="${uraianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
         <button type="button" class="btn-delete-soal" data-type="uraian" data-index="${uraianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
-      html += `
+      htmlSoal += `
         <div class="soal-item-wrapper" style="margin-bottom:16px;">
           ${uraianActionsHTML}
           <table class="layout-table soal-item-row" style="width:100%;">
@@ -1409,81 +1664,172 @@ function renderResult(data, formData) {
     });
   }
 
-  // Kunci Jawaban
-  html += `<div class="kunci-page-break">`;
-  html += `<h4 style="text-align:center; text-decoration:underline; font-weight:bold; font-size:12pt; margin-bottom:3px;">KUNCI JAWABAN & PEDOMAN PENSKORAN</h4>`;
-  html += `<p style="text-align:center; font-weight:bold; font-size:10.5pt; margin-bottom:20px;">${formData.mataPelajaran} - ${formData.jenjangKelas} / ${formData.semester}</p>`;
+  htmlSoal += `</div>`; // End of #section-soal-view
+
+  // -------------------------------------------------------------
+  // 2. SECTION: KUNCI JAWABAN & PEDOMAN PENSKORAN
+  // -------------------------------------------------------------
+  let htmlKunci = `<div id="section-kunci-view" class="asesmen-view-section kunci-page-break">`;
+  htmlKunci += `<h4 style="text-align:center; text-decoration:underline; font-weight:bold; font-size:12pt; margin-bottom:3px;">KUNCI JAWABAN & PEDOMAN PENSKORAN</h4>`;
+  htmlKunci += `<p style="text-align:center; font-weight:bold; font-size:10.5pt; margin-bottom:20px;">${escapeHtml(formData.mataPelajaran || '-')} - ${escapeHtml(formData.jenjangKelas || '-')} / ${escapeHtml(formData.semester || '-')}</p>`;
 
   if (data.pg && data.pg.length > 0) {
-    html += `<h4>I. KUNCI JAWABAN PILIHAN GANDA</h4>`;
-    html += `<table class="layout-table" style="margin-bottom:15px; width:auto;"><tr>`;
+    htmlKunci += `<h4>I. KUNCI JAWABAN PILIHAN GANDA</h4>`;
+    htmlKunci += `<table class="layout-table" style="margin-bottom:15px; width:auto;"><tr>`;
     const rows = Math.ceil(data.pg.length / 5);
     for (let c = 0; c < 5; c++) {
-      html += `<td style="width:80px">`;
+      htmlKunci += `<td style="width:80px">`;
       for (let r = 0; r < rows; r++) {
         const idx = (r * 5) + c;
         if (data.pg[idx]) {
-          html += `<div style="margin-bottom:2px"><b>${data.pg[idx].no}.</b> &nbsp;${data.pg[idx].kunci}</div>`;
+          htmlKunci += `<div style="margin-bottom:2px"><b>${data.pg[idx].no}.</b> &nbsp;${data.pg[idx].kunci}</div>`;
         }
       }
-      html += `</td>`;
+      htmlKunci += `</td>`;
     }
-    html += `</tr></table>`;
+    htmlKunci += `</tr></table>`;
   }
 
   if (data.isian && data.isian.data && data.isian.data.length > 0) {
     const kunciIsianType = data.isian.type || formData.isianType || 'Standard';
     const kunciIsianTitle = kunciIsianType === 'Crossword' ? 'II. KUNCI JAWABAN TEKA-TEKI SILANG' : 'II. KUNCI JAWABAN ISIAN SINGKAT';
-    html += `<h4>${kunciIsianTitle}</h4>`;
-    html += `<table class="main-table" style="margin-bottom:15px;">`;
-    html += `<tr style="background:#f0f0f0"><th>No</th><th>Kunci Jawaban</th></tr>`;
+    htmlKunci += `<h4>${kunciIsianTitle}</h4>`;
+    htmlKunci += `<table class="main-table" style="margin-bottom:15px;">`;
+    htmlKunci += `<tr style="background:#f0f0f0"><th>No</th><th>Kunci Jawaban</th></tr>`;
     const sortedIsianKunci = [...data.isian.data].sort((a, b) => (a.no || 0) - (b.no || 0));
     sortedIsianKunci.forEach(q => {
-      html += `<tr><td style="text-align:center">${q.no}</td><td>${q.kunci}</td></tr>`;
+      htmlKunci += `<tr><td style="text-align:center">${q.no}</td><td>${q.kunci}</td></tr>`;
     });
-    html += `</table>`;
+    htmlKunci += `</table>`;
   }
 
   if (data.uraian && data.uraian.length > 0) {
-    html += `<h4>III. PEDOMAN PENSKORAN URAIAN</h4>`;
-    html += `<table class="main-table" style="margin-bottom:25px;">`;
-    html += `<tr style="background:#f0f0f0"><th style="width:5%">No</th><th style="width:50%">Kriteria Jawaban</th><th style="width:15%">Skor Maksimal</th></tr>`;
+    htmlKunci += `<h4>III. PEDOMAN PENSKORAN URAIAN</h4>`;
+    htmlKunci += `<table class="main-table" style="margin-bottom:25px;">`;
+    htmlKunci += `<tr style="background:#f0f0f0"><th style="width:5%">No</th><th style="width:50%">Kriteria Jawaban</th><th style="width:15%">Skor Maksimal</th></tr>`;
     data.uraian.forEach(q => {
       let rubrikHtml = '';
       if (q.rubrik_skor && typeof q.rubrik_skor === 'object') {
         rubrikHtml = Object.entries(q.rubrik_skor).map(([k, v]) => `- ${k}: ${v}`).join('<br>');
       }
-      html += `<tr>
+      htmlKunci += `<tr>
                 <td style="text-align:center">${q.no}</td>
                 <td><b>Jawaban:</b><br>${q.kunci}<br><br><b>Rubrik:</b><br>${rubrikHtml || '-'}</td>
                 <td style="text-align:center; vertical-align:middle; font-weight:bold;">TBD</td>
                </tr>`;
     });
-    html += `</table>`;
+    htmlKunci += `</table>`;
   }
 
-  // Lembar Pengesahan
-  html += `<table class="layout-table" style="width:100%; margin-top:50px; text-align:center;">
-      <tr>
-        <td style="width:50%; vertical-align:bottom;">
-          <p>Mengetahui,</p>
-          <p>Kepala Sekolah</p>
-          <br><br><br><br>
-          <p style="text-decoration:underline; font-weight:bold">${formData.namaKepalaSekolah || '..............................'}</p>
-          <p>NIP. ${formData.nipKepalaSekolah || '..............................'}</p>
-        </td>
-        <td style="width:50%; vertical-align:bottom;">
-          <p>&nbsp;</p>
-          <p>Guru Pengampu</p>
-          <br><br><br><br>
-          <p style="text-decoration:underline; font-weight:bold">${formData.namaGuru || '..............................'}</p>
-          <p>NIP. ${formData.nipGuru || '..............................'}</p>
-        </td>
-      </tr>
-    </table></div>`;
+  htmlKunci += renderPengesahanHTML();
+  htmlKunci += `</div>`; // End of #section-kunci-view
 
-  canvas.innerHTML = html;
+  // -------------------------------------------------------------
+  // 3. SECTION: MATRIKS KISI-KISI PENULISAN SOAL (8 KOLOM RESMI)
+  // -------------------------------------------------------------
+  const allItems = [
+    ...(data.pg || []),
+    ...(data.isian?.data || []),
+    ...(data.uraian || [])
+  ];
+  // Urutkan berdasarkan nomor soal
+  allItems.sort((a, b) => (a.no || 0) - (b.no || 0));
+
+  const countL1 = allItems.filter(q => q.level === 'L1').length;
+  const countL2 = allItems.filter(q => q.level === 'L2').length;
+  const countL3 = allItems.filter(q => q.level === 'L3').length;
+  const totalItems = allItems.length || 1;
+  const pctL1 = Math.round((countL1 / totalItems) * 100);
+  const pctL2 = Math.round((countL2 / totalItems) * 100);
+  const pctL3 = Math.round((countL3 / totalItems) * 100);
+
+  let htmlKisi = `<div id="section-kisi-view" class="asesmen-view-section kisi-page-break">`;
+  htmlKisi += `
+      <div style="text-align:center; margin-bottom: 18px;">
+        <img src="${kopSuratUrl}" style="width:100%; height:auto; object-fit:contain;" alt="Kop Surat" crossorigin="anonymous">
+      </div>
+      <div style="text-align:center; margin-bottom:15px; text-transform:uppercase;">
+        <h4 style="text-decoration:underline; font-weight:bold; font-size:12pt; margin-bottom:2px;">
+          KISI-KISI PENULISAN SOAL ${jenisUjianTitle}
+        </h4>
+        <p style="font-weight:bold; font-size:11pt; margin:0">TAHUN PELAJARAN ${activeTA}</p>
+      </div>
+
+      <table class="main-table" style="margin-bottom:14px; font-size:10pt;">
+        <tr>
+          <td style="width:18%;">Satuan Pendidikan</td>
+          <td style="width:32%;">: ${escapeHtml(formData.namaSekolah || state.user?.sekolah_nama || state.user?.sekolah || 'SD')}</td>
+          <td style="width:18%;">Alokasi Waktu</td>
+          <td style="width:32%;">: 90 Menit</td>
+        </tr>
+        <tr>
+          <td>Mata Pelajaran</td>
+          <td>: ${escapeHtml(formData.mataPelajaran || '-')}</td>
+          <td>Jumlah Soal</td>
+          <td>: ${totalItems} Butir</td>
+        </tr>
+        <tr>
+          <td>Kelas / Semester</td>
+          <td>: ${escapeHtml(formData.jenjangKelas || '-')} / ${escapeHtml(formData.semester || '-')}</td>
+          <td>Penyusun</td>
+          <td>: ${escapeHtml(formData.namaGuru || state.user?.nama || 'Guru Pengampu')}</td>
+        </tr>
+      </table>
+
+      <!-- Ringkasan Distribusi Level Kognitif -->
+      <div class="print:hidden" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:6px 12px; margin-bottom:12px; font-size:9.5pt;">
+        <div>
+          <b>Distribusi Level Kognitif:</b>
+          <span style="color:#047857; margin-left:6px;"><i class="fas fa-circle text-[8px] mr-1"></i><b>L1 (Pemahaman):</b> ${countL1} (${pctL1}%)</span> &nbsp;|&nbsp;
+          <span style="color:#b45309;"><i class="fas fa-circle text-[8px] mr-1"></i><b>L2 (Aplikasi):</b> ${countL2} (${pctL2}%)</span> &nbsp;|&nbsp;
+          <span style="color:#6d28d9;"><i class="fas fa-circle text-[8px] mr-1"></i><b>L3 (Penalaran):</b> ${countL3} (${pctL3}%)</span>
+        </div>
+        <div><b>Total:</b> ${totalItems} Soal</div>
+      </div>
+
+      <!-- Tabel Matriks 8 Kolom Standar Dinas Pendidikan -->
+      <table class="main-table" style="width:100%; border-collapse:collapse; font-size:9pt; line-height:1.35; border:1.5px solid #334155; margin-bottom:20px;">
+        <thead style="background:#f1f5f9; text-align:center;">
+          <tr style="border-bottom:1.5px solid #334155;">
+            <th style="border:1px solid #475569; padding:6px 4px; width:4%;">No</th>
+            <th style="border:1px solid #475569; padding:6px 8px; width:22%;">Capaian Pembelajaran (CP)</th>
+            <th style="border:1px solid #475569; padding:6px 8px; width:15%;">Materi Pokok</th>
+            <th style="border:1px solid #475569; padding:6px 8px; width:26%;">Indikator Soal</th>
+            <th style="border:1px solid #475569; padding:6px 4px; width:7%;">Level</th>
+            <th style="border:1px solid #475569; padding:6px 4px; width:9%;">Bentuk</th>
+            <th style="border:1px solid #475569; padding:6px 4px; width:5%;">No.</th>
+            <th style="border:1px solid #475569; padding:6px 6px; width:12%;">Kunci</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allItems.map((item, idx) => `
+            <tr style="border-bottom:1px solid #cbd5e1; page-break-inside:avoid; break-inside:avoid;">
+              <td style="border:1px solid #475569; padding:5px 4px; text-align:center; font-weight:600;">${idx + 1}</td>
+              <td style="border:1px solid #475569; padding:5px 8px; text-align:justify;">${escapeHtml(item.cp || '-')}</td>
+              <td style="border:1px solid #475569; padding:5px 8px;">${escapeHtml(item.materi || '-')}</td>
+              <td style="border:1px solid #475569; padding:5px 8px; text-align:justify;">${escapeHtml(item.indikator || '-')}</td>
+              <td style="border:1px solid #475569; padding:5px 4px; text-align:center;">${renderLevelBadge(item.level)}</td>
+              <td style="border:1px solid #475569; padding:5px 4px; text-align:center; font-size:8.5pt;">${escapeHtml(item.bentuk || 'PG')}</td>
+              <td style="border:1px solid #475569; padding:5px 4px; text-align:center; font-weight:bold;">${item.no}</td>
+              <td style="border:1px solid #475569; padding:5px 6px; text-align:center; font-weight:600;">${escapeHtml(item.kunci || '-')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      ${renderPengesahanHTML()}
+    </div>
+  `;
+
+  canvas.innerHTML = htmlSoal + htmlKunci + htmlKisi;
   window.scrollTo(0, 0);
+
+  // Apply active tab filtering to canvas
+  const canvasEl = document.getElementById('asesmen-canvas');
+  if (canvasEl) {
+    canvasEl.classList.remove('view-tab-soal', 'view-tab-kisi', 'view-tab-kunci', 'view-tab-all');
+    canvasEl.classList.add(`view-tab-${_currentActiveTab || 'soal'}`);
+  }
 
   // Attach quick remove image listener
   canvas.querySelectorAll('.btn-remove-soal-image').forEach(btn => {
@@ -1634,8 +1980,38 @@ function openSoalEditor(type, index, data, formData) {
   const overlay = document.createElement('div');
   overlay.className = 'soal-editor-overlay';
   overlay.innerHTML = `
-    <div class="soal-editor-modal" style="max-width: 640px;">
-      <h3><i class="fas fa-pencil-alt" style="color:#2563eb"></i> Edit Soal ${typeLabel} No. ${q.no}</h3>
+    <div class="soal-editor-modal" style="max-width: 660px;">
+      <h3><i class="fas fa-pencil-alt" style="color:#2563eb"></i> Edit Soal & Kisi-Kisi ${typeLabel} No. ${q.no}</h3>
+      
+      <!-- Kisi-kisi metadata fields -->
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; margin-bottom:14px;">
+        <h4 style="font-size:11px; font-weight:800; color:#334155; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.5px;">
+          <i class="fas fa-th-list text-teal-600 mr-1"></i> Data Kisi-Kisi Soal (Standar Puspendik)
+        </h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+          <div>
+            <label style="font-size:10.5px;">Materi Pokok</label>
+            <input type="text" id="edit-materi" value="${escapeHtml(q.materi || '')}" style="margin-bottom:0; font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:10.5px;">Level Kognitif</label>
+            <select id="edit-level" style="margin-bottom:0; font-size:12px;">
+              <option value="L1" ${q.level === 'L1' ? 'selected' : ''}>L1 - Pengetahuan & Pemahaman</option>
+              <option value="L2" ${q.level === 'L2' ? 'selected' : ''}>L2 - Aplikasi / Penerapan</option>
+              <option value="L3" ${q.level === 'L3' ? 'selected' : ''}>L3 - Penalaran / HOTS</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10.5px;">Capaian Pembelajaran (CP)</label>
+          <textarea id="edit-cp" rows="2" style="margin-bottom:0; font-size:12px; min-height:55px;">${escapeHtml(q.cp || '')}</textarea>
+        </div>
+        <div>
+          <label style="font-size:10.5px;">Indikator Soal</label>
+          <textarea id="edit-indikator" rows="2" style="margin-bottom:0; font-size:12px; min-height:55px;">${escapeHtml(q.indikator || '')}</textarea>
+        </div>
+      </div>
+
       <label>Teks Soal</label>
       <textarea id="edit-soal-text" rows="3">${escapeHtml(q.soal || '')}</textarea>
       ${gambarSectionHTML}
@@ -1729,6 +2105,17 @@ function openSoalEditor(type, index, data, formData) {
 
     q.soal = newSoal;
 
+    // Update kisi-kisi attributes
+    const newCP = overlay.querySelector('#edit-cp')?.value.trim();
+    const newMateri = overlay.querySelector('#edit-materi')?.value.trim();
+    const newIndikator = overlay.querySelector('#edit-indikator')?.value.trim();
+    const newLevel = overlay.querySelector('#edit-level')?.value;
+
+    if (newCP) q.cp = newCP;
+    if (newMateri) q.materi = newMateri;
+    if (newIndikator) q.indikator = newIndikator;
+    if (newLevel) q.level = newLevel;
+
     // Update gambar
     if (modalSelectedImageUrl) {
       q.gambar = {
@@ -1765,7 +2152,7 @@ function openSoalEditor(type, index, data, formData) {
     overlay.remove();
     document.removeEventListener('keydown', escHandler);
     renderResult(data, formData);
-    showToast(`Soal ${typeLabel} No. ${q.no} berhasil diperbarui.`, 'success');
+    showToast(`Soal & Kisi-Kisi ${typeLabel} No. ${q.no} berhasil diperbarui.`, 'success');
   });
 }
 

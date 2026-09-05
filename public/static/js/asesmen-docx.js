@@ -376,16 +376,18 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
   const children = [];
 
   // ── KOP SURAT ──────────────────────────────────────────────
+  let kopSuratBuf = null;
+  let kopSuratType = 'png';
   if (kopSuratUrl) {
     try {
       const resp = await fetch(kopSuratUrl);
       if (!resp.ok) throw new Error('fetch failed');
-      const buf  = await resp.arrayBuffer();
-      const type = kopSuratUrl.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      kopSuratBuf  = await resp.arrayBuffer();
+      kopSuratType = kopSuratUrl.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
       children.push(new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: PT(6) },
-        children: [new ImageRun({ data: buf, transformation: { width: 580, height: 95 }, type })],
+        children: [new ImageRun({ data: kopSuratBuf, transformation: { width: 580, height: 95 }, type: kopSuratType })],
       }));
     } catch {
       // fallback teks
@@ -757,6 +759,148 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       ],
     }));
   }
+
+  // ── LEMBAR PENGESAHAN KUNCI JAWABAN ───────────────────────
+  children.push(makePara('', { spaceBefore: 20 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: NO_BORDERS,
+    rows: [new TableRow({ children: [
+      makeCell([
+        makePara('Mengetahui,', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Kepala Sekolah', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 50 }),
+        makeParaRaw(makeRuns(formData.namaKepalaSekolah || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipKepalaSekolah || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+      makeCell([
+        makePara('\u00a0', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Guru Pengampu', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 50 }),
+        makeParaRaw(makeRuns(formData.namaGuru || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipGuru || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+    ]})],
+  }));
+
+  // ── PAGE BREAK: KISI-KISI PENULISAN SOAL ──────────────────
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // Kop Surat Kisi-Kisi
+  if (kopSuratBuf) {
+    children.push(new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: PT(6) },
+      children: [new ImageRun({ data: kopSuratBuf, transformation: { width: 580, height: 95 }, type: kopSuratType })],
+    }));
+  } else if (formData.namaSekolah) {
+    children.push(makePara(formData.namaSekolah, {
+      bold: true, size: 24, align: AlignmentType.CENTER, spaceAfter: 4,
+    }));
+  }
+
+  // Judul Kisi-Kisi
+  children.push(makePara(`KISI-KISI PENULISAN SOAL ${judul}`, {
+    bold: true, size: 24, align: AlignmentType.CENTER, spaceBefore: 4, spaceAfter: 2,
+  }));
+  children.push(makePara(`TAHUN PELAJARAN ${activeTapel} \u2014 KURIKULUM MERDEKA`, {
+    bold: true, size: 20, align: AlignmentType.CENTER, spaceAfter: 8,
+  }));
+
+  // Matriks Data Soal (Semua butir PG, Isian, Uraian)
+  const allItems = [
+    ...(data.pg || []),
+    ...(data.isian?.data || []),
+    ...(data.uraian || []),
+  ];
+  allItems.sort((a, b) => (a.no || 0) - (b.no || 0));
+  const totalItems = allItems.length;
+
+  // Tabel Identitas Kisi-Kisi
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: LINE_BORDERS,
+    rows: [
+      new TableRow({ children: [
+        makeCell(makePara('Satuan Pendidikan', { size: 19 }), { borders: true, width: { size: 18, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara(`: ${formData.namaSekolah || 'SD'}`, { size: 19 }), { borders: true, width: { size: 32, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara('Alokasi Waktu', { size: 19 }), { borders: true, width: { size: 18, type: WidthType.PERCENTAGE } }),
+        makeCell(makePara(': 90 Menit', { size: 19 }), { borders: true, width: { size: 32, type: WidthType.PERCENTAGE } }),
+      ]}),
+      new TableRow({ children: [
+        makeCell(makePara('Mata Pelajaran', { size: 19 }), { borders: true }),
+        makeCell(makeParaRaw([new TextRun({ text: ': ', size: 19, font: FONT_LATIN }), ...makeRuns(formData.mataPelajaran || '', { size: 19 })]), { borders: true }),
+        makeCell(makePara('Jumlah Soal', { size: 19 }), { borders: true }),
+        makeCell(makePara(`: ${totalItems} Butir`, { size: 19 }), { borders: true }),
+      ]}),
+      new TableRow({ children: [
+        makeCell(makePara('Kelas / Semester', { size: 19 }), { borders: true }),
+        makeCell(makePara(`: ${formData.jenjangKelas || ''} / ${formData.semester || ''}`, { size: 19 }), { borders: true }),
+        makeCell(makePara('Penyusun', { size: 19 }), { borders: true }),
+        makeCell(makeParaRaw([new TextRun({ text: ': ', size: 19, font: FONT_LATIN }), ...makeRuns(formData.namaGuru || 'Guru Pengampu', { size: 19 })]), { borders: true }),
+      ]}),
+    ],
+  }));
+  children.push(makePara('', { spaceAfter: 8 }));
+
+  // Tabel 8 Kolom Kisi-Kisi
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: LINE_BORDERS,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          makeCell(makePara('No', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 4, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Capaian Pembelajaran (CP)', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 22, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Materi Pokok', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 15, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Indikator Soal', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 27, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Level', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 8, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Bentuk', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 9, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('No.', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 5, type: WidthType.PERCENTAGE } }),
+          makeCell(makePara('Kunci', { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true, shading: { fill: 'E8E8E8' }, width: { size: 10, type: WidthType.PERCENTAGE } }),
+        ],
+      }),
+      ...allItems.map((item, idx) => {
+        const lvl = String(item.level || 'L1').toUpperCase();
+        return new TableRow({
+          children: [
+            makeCell(makePara(String(idx + 1), { size: 18, align: AlignmentType.CENTER }), { borders: true }),
+            makeCell(makeParaRaw(makeRuns(item.cp || '-', { size: 18 })), { borders: true }),
+            makeCell(makeParaRaw(makeRuns(item.materi || '-', { size: 18 })), { borders: true }),
+            makeCell(makeParaRaw(makeRuns(item.indikator || '-', { size: 18 })), { borders: true }),
+            makeCell(makePara(lvl, { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true }),
+            makeCell(makePara(item.bentuk || 'PG', { size: 18, align: AlignmentType.CENTER }), { borders: true }),
+            makeCell(makePara(String(item.no), { bold: true, size: 18, align: AlignmentType.CENTER }), { borders: true }),
+            makeCell(makeParaRaw(makeRuns(item.kunci || '-', { bold: true, size: 18 }), { align: AlignmentType.CENTER }), { borders: true }),
+          ],
+        });
+      }),
+    ],
+  }));
+
+  // Lembar Pengesahan Kisi-Kisi
+  children.push(makePara('', { spaceBefore: 20 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: NO_BORDERS,
+    rows: [new TableRow({ children: [
+      makeCell([
+        makePara('Mengetahui,', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Kepala Sekolah', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 50 }),
+        makeParaRaw(makeRuns(formData.namaKepalaSekolah || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipKepalaSekolah || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+      makeCell([
+        makePara('\u00a0', { size: 22, align: AlignmentType.CENTER }),
+        makePara('Guru Pengampu', { size: 22, align: AlignmentType.CENTER }),
+        makePara('', { spaceAfter: 50 }),
+        makeParaRaw(makeRuns(formData.namaGuru || '..............................', { bold: true, size: 22 }), { align: AlignmentType.CENTER }),
+        makePara(`NIP. ${formData.nipGuru || '..............................'}`, { size: 22, align: AlignmentType.CENTER }),
+      ]),
+    ]})],
+  }));
 
   // ── BUILD DOCUMENT ─────────────────────────────────────────
   const { Header, Footer, PageNumber, TabStopPosition, TabStopType } = window.docx;

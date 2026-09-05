@@ -5,9 +5,72 @@ import { UnsplashService } from '../services/unsplash';
 import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
+import { getOfficialCP, cpElementsData } from '../lib/cp-data';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
+
+// Endpoint referensi Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025
+kisi.get('/cp-reference', async (c) => {
+    const mapel = c.req.query('mataPelajaran') || c.req.query('mapel') || '';
+    const kelas = c.req.query('jenjangKelas') || c.req.query('kelas') || '';
+    const officialCP = getOfficialCP(mapel, kelas);
+
+    const k = kelas.toLowerCase();
+    const fase = (k.includes('1') || k.includes('2')) ? 'Fase A'
+               : (k.includes('3') || k.includes('4')) ? 'Fase B'
+               : (k.includes('5') || k.includes('6')) ? 'Fase C'
+               : null;
+
+    let elements: Record<string, string> | null = null;
+    if (fase) {
+        const normalizedSubject = mapel.toLowerCase();
+        const subjectKeys = Object.keys(cpElementsData);
+        const matchedKey = subjectKeys.find(key => {
+            const lowerKey = key.toLowerCase();
+            return normalizedSubject.includes(lowerKey) || lowerKey.includes(normalizedSubject) ||
+                   (lowerKey.includes('agama') && normalizedSubject.includes('agama')) ||
+                   (lowerKey.includes('pancasila') && normalizedSubject.includes('pancasila')) ||
+                   (lowerKey.includes('ipas') && normalizedSubject.includes('ipas')) ||
+                   (lowerKey.includes('koding') && normalizedSubject.includes('koding')) ||
+                   (lowerKey.includes('seni') && normalizedSubject.includes('seni'));
+        });
+        if (matchedKey && cpElementsData[matchedKey]?.[fase]) {
+            elements = cpElementsData[matchedKey][fase];
+        }
+    }
+
+    return successResponse(c, {
+        mataPelajaran: mapel,
+        jenjangKelas: kelas,
+        fase,
+        cp: officialCP || '',
+        elements: elements || {},
+        source: 'Keputusan Kepala BSKAP No. 046 Tahun 2025'
+    });
+});
+
+// Helper: normalisasi metadata kisi-kisi untuk setiap butir soal
+export const normalizeItemKisiMetadata = (item: any, defaultBentuk: string, defaultNo: number, fallbackCP: string, fallbackMateri: string) => {
+    if (!item) return item;
+    item.no = item.no || defaultNo;
+    item.cp = (item.cp && String(item.cp).trim()) || (fallbackCP && String(fallbackCP).trim()) || `Peserta didik dapat memahami dan menerapkan konsep dasar ${fallbackMateri || 'materi terkait'}.`;
+    item.materi = (item.materi && String(item.materi).trim()) || fallbackMateri || 'Materi Pokok';
+    if (!item.indikator || !String(item.indikator).trim()) {
+        item.indikator = `Disajikan pertanyaan mengenai ${item.materi}, peserta didik dapat menentukan jawaban yang tepat.`;
+    }
+    // Standardisasi Level Kognitif ke L1, L2, L3 (Puspendik / BSKAP)
+    const rawLevel = String(item.level || '').toUpperCase();
+    if (rawLevel.includes('L3') || rawLevel.includes('HOTS') || rawLevel.includes('C4') || rawLevel.includes('C5') || rawLevel.includes('C6')) {
+        item.level = 'L3';
+    } else if (rawLevel.includes('L2') || rawLevel.includes('MOTS') || rawLevel.includes('C3')) {
+        item.level = 'L2';
+    } else {
+        item.level = 'L1';
+    }
+    item.bentuk = item.bentuk || defaultBentuk;
+    return item;
+};
 
 // Generate Asesmen (Soal) via AI
 kisi.post('/generate', async (c) => {
@@ -21,6 +84,10 @@ kisi.post('/generate', async (c) => {
         } = body;
 
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
+
+        // Dapatkan rujukan resmi Capaian Pembelajaran BSKAP No. 046 Tahun 2025
+        const officialCP = getOfficialCP(mataPelajaran, jenjangKelas);
+        const resolvedCP = (capaianPembelajaran && String(capaianPembelajaran).trim()) || officialCP || '';
 
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
@@ -143,23 +210,56 @@ kisi.post('/generate', async (c) => {
               * "gambar_prompt_en": "detailed 2D scientific textbook illustration of [topic], labeled vector diagram, clean white background, educational biology/physics style"`;
         };
 
+
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) => {
             const isPG = type === 'pg';
 
             let jsonStructure = '';
             if (isPG) {
-                jsonStructure = `"pg": [ { "no": ${startNo}, "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)", "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." }, "kunci": "A/B/C/D", "level": "LOTS/MOTS/HOTS", "gambar_keyword": "kata kunci ringkas 1-3 kata sesuai panduan visual mapel", "gambar_prompt_en": "detailed English visual description sesuai panduan visual mapel (15-25 kata)" } ]`;
+                jsonStructure = `"pg": [ {
+                    "no": ${startNo},
+                    "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
+                    "materi": "Materi / Sub-topik spesifik butir soal ini",
+                    "indikator": "Indikator Soal baku (contoh: Disajikan wacana/stimulus ..., peserta didik dapat ...)",
+                    "level": "L1/L2/L3 (Pilih salah satu sesuai standar Puspendik)",
+                    "bentuk": "Pilihan Ganda",
+                    "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)",
+                    "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." },
+                    "kunci": "A/B/C/D",
+                    "gambar_keyword": "kata kunci ringkas 1-3 kata sesuai panduan visual mapel",
+                    "gambar_prompt_en": "detailed English visual description sesuai panduan visual mapel (15-25 kata)"
+                } ]`;
             } else {
                 const parts: string[] = [];
                 if (totalIsian > 0) {
+                    const isianBentukLabel = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
                     parts.push(`"isian": {
                     "type": "${isianType || 'Standard'}",
-                    "data": [ { "no": ${totalPrevPG + 1}, "soal": "...", "kunci": "..." } ]
+                    "data": [ {
+                        "no": ${totalPrevPG + 1},
+                        "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
+                        "materi": "Materi / Sub-topik spesifik butir soal ini",
+                        "indikator": "Indikator Soal baku (Disajikan ..., peserta didik dapat ...)",
+                        "level": "L1/L2/L3",
+                        "bentuk": "${isianBentukLabel}",
+                        "soal": "...",
+                        "kunci": "..."
+                    } ]
                  }`);
                 }
                 if (totalUraian > 0) {
                     const uraianStartNo = totalPrevPG + (totalIsian || 0) + 1;
-                    parts.push(`"uraian": [ { "no": ${uraianStartNo}, "soal": "Soal uraian HOTS: sertakan stimulus/data/kasus, tuntut analisis atau evaluasi", "kunci": "Jawaban ideal lengkap dengan alasan/argumentasi", "rubrik_skor": { "Skor 4": "Analisis lengkap, argumen tepat & logis", "Skor 3": "Analisis cukup, argumen ada namun kurang lengkap", "Skor 2": "Menjawab namun tidak disertai analisis", "Skor 1": "Jawaban tidak relevan atau salah" } } ]`);
+                    parts.push(`"uraian": [ {
+                        "no": ${uraianStartNo},
+                        "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
+                        "materi": "Materi / Sub-topik spesifik butir soal ini",
+                        "indikator": "Indikator Soal baku (Disajikan stimulus kasus/data ..., peserta didik dapat menganalisis/merancang ...)",
+                        "level": "L3",
+                        "bentuk": "Uraian",
+                        "soal": "Soal uraian L3 (Penalaran): sertakan stimulus/data/kasus nyata, tuntut penalaran analitis atau evaluasi",
+                        "kunci": "Jawaban ideal lengkap dengan alasan/argumentasi",
+                        "rubrik_skor": { "Skor 4": "Analisis lengkap, argumen tepat & logis", "Skor 3": "Analisis cukup, argumen ada namun kurang lengkap", "Skor 2": "Menjawab namun tidak disertai analisis", "Skor 1": "Jawaban tidak relevan atau salah" }
+                    } ]`);
                 }
                 jsonStructure = parts.join(',\n                 ');
             }
@@ -175,18 +275,18 @@ kisi.post('/generate', async (c) => {
 
             let taskDesc = '';
             if (isPG) {
-                taskDesc = `Generate TEPAT ${count} soal PG (No. ${startNo} s.d. ${startNo + count - 1}).`;
+                taskDesc = `Generate TEPAT ${count} soal PG (No. ${startNo} s.d. ${startNo + count - 1}) berserta atribut kisi-kisinya secara lengkap.`;
             } else if (totalIsian > 0 && totalUraian > 0) {
-                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN dan ${totalUraian} soal URAIAN.`;
+                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN dan ${totalUraian} soal URAIAN beserta atribut kisi-kisinya secara lengkap.`;
             } else if (totalIsian > 0 && totalUraian === 0) {
-                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN saja. JANGAN membuat soal uraian (uraian = 0)!`;
+                taskDesc = `Generate TEPAT ${totalIsian} soal ISIAN saja beserta atribut kisi-kisinya secara lengkap. JANGAN membuat soal uraian (uraian = 0)!`;
             } else if (totalIsian === 0 && totalUraian > 0) {
-                taskDesc = `Generate TEPAT ${totalUraian} soal URAIAN saja. JANGAN membuat soal isian (isian = 0)!`;
+                taskDesc = `Generate TEPAT ${totalUraian} soal URAIAN saja beserta atribut kisi-kisinya secara lengkap. JANGAN membuat soal isian (isian = 0)!`;
             }
 
             let uraianRule = '';
             if (!isPG && totalUraian > 0) {
-                uraianRule = `\n                6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis HOTS (C5/C6) yang menuntut murid: (a) menganalisis situasi/data, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`;
+                uraianRule = `\n                6. ATURAN SOAL URAIAN: Minimal 1 soal uraian HARUS berjenis Level L3 (Penalaran) yang menuntut murid: (a) menganalisis situasi/data wacana, (b) memberikan penilaian/argumen berdasar fakta, atau (c) merancang solusi kreatif. Rubrik WAJIB menggunakan 4 level skor.`;
             } else if (!isPG && totalUraian === 0) {
                 uraianRule = `\n                6. LARANGAN URAIAN: Pengguna TIDAK MEMBUTUHKAN soal uraian (jumlah = 0). DILARANG KERAS menyertakan field "uraian" dalam output JSON.`;
             }
@@ -208,37 +308,43 @@ kisi.post('/generate', async (c) => {
             }
 
             return `
-                Bertindaklah sebagai Profesor dan Pakar Penilaian Pendidikan berstandar Kurikulum Merdeka & PISA/AKM.
+                Bertindaklah sebagai Profesor dan Pakar Penilaian Pendidikan Berstandar Kurikulum Merdeka & Puspendik Kemendikbudristek.
 
-                I. TAKSONOMI BLOOM REVISI — PANDUAN LEVEL KOGNITIF:
-                Gunakan panduan Kata Kerja Operasional (KKO) berikut untuk menentukan level soal:
-                ┌─ LOTS ──────────────────────────────────────────────────────────────────
-                │  C1 Mengingat   : sebutkan, tuliskan, definisikan, identifikasi, hafal
-                │  C2 Memahami    : jelaskan, uraikan, klasifikasikan, ringkas, parafrase
-                │  C3 Menerapkan  : hitung, gunakan, terapkan, selesaikan, demonstrasikan
-                ├─ MOTS ──────────────────────────────────────────────────────────────────
-                │  C4 Menganalisis: analisis, bandingkan, bedakan, hubungkan, simpulkan, kategorikan
-                ├─ HOTS ──────────────────────────────────────────────────────────────────
-                │  C5 Mengevaluasi: nilai, justifikasi, kritisi, putuskan, pertahankan, rekomendasikan
-                │  C6 Mencipta    : rancang, buat, susun, kembangkan, formulasikan, rencanakan
-                └─────────────────────────────────────────────────────────────────────────
+                I. STANDAR RESMI LEVEL KOGNITIF (PUSPENDIK / BSKAP KEMENDIKBUDRISTEK):
+                Setiap butir soal HARUS diberi label level kognitif resmi:
+                ┌─ L1 (Level 1 - Pengetahuan dan Pemahaman) ──────────────────────────────
+                │  C1 Mengingat   : sebutkan, tuliskan, definisikan, identifikasi, jodohkan
+                │  C2 Memahami    : jelaskan, uraikan, klasifikasikan, ringkas, bedakan
+                │  Fokus          : Mengukur kemampuan mengingat fakta, definisi, konsep dasar.
+                ├─ L2 (Level 2 - Aplikasi / Penerapan) ────────────────────────────────────
+                │  C3 Menerapkan  : hitung, gunakan, tentukan, selesaikan, demonstrasikan
+                │  Fokus          : Mengukur kemampuan menerapkan konsep pada situasi rutin/konkret.
+                ├─ L3 (Level 3 - Penalaran / Higher Order Thinking Skills - HOTS) ─────────
+                │  C4 Menganalisis: analisis, bandingkan, simpulkan, periksa hubungan sebab-akibat
+                │  C5 Mengevaluasi: nilai, justifikasi, kritisi, putuskan, rekomendasikan
+                │  C6 Mencipta    : rancang, buat, susun, formulasikan solusi atas masalah kontekstual
+                │  Fokus          : Mengukur penalaran tingkat tinggi, analisis stimulus, pemecahan masalah non-rutin.
+                └──────────────────────────────────────────────────────────────────────────
 
-                II. ATURAN WAJIB:
-                1. CP (Capaian Pembelajaran): ${capaianPembelajaran || 'Generasi otomatis sesuai topik & kelas'}
-                2. RASIO TARGET: ${hotsRatio || '30:40:30'} (LOTS : MOTS : HOTS). Hitung secara presisi dan patuhi!
-                3. TUGAS: ${taskDesc}
-                4. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
-                5. ATURAN SOAL HOTS (WAJIB): Setiap soal yang diberi label HOTS WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kontradiktif, atau situasi masalah nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan HOTS tidak boleh bisa dijawab tanpa membaca & memikirkan stimulusnya.${uraianRule}
-                6. ATURAN FORMAT TABEL PADA SOAL (WAJIB DIPATUHI):
+                II. ATURAN WAJIB KISI-KISI & PENYUSUNAN SOAL:
+                1. CP (Capaian Pembelajaran): ${resolvedCP ? `Berdasarkan rujukan resmi BSKAP No. 046 Tahun 2025: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : 'Formulasikan otomatis sesuai capaian pembelajaran resmi BSKAP No. 046 Tahun 2025 untuk topik ini'}
+                2. LINGKUP MATERI: ${topik}
+                3. PROPORSI TARGET LEVEL: ${hotsRatio || '30:40:30'} (L1 : L2 : L3). Terapkan secara presisi!
+                4. TUGAS: ${taskDesc}
+                5. ATURAN INDIKATOR SOAL: Setiap butir soal WAJIB memiliki indikator soal baku:
+                   "Disajikan [stimulus/konteks], peserta didik dapat [kata kerja operasional] [materi]".
+                6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
+                7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
+                8. ATURAN FORMAT TABEL PADA SOAL (WAJIB DIPATUHI):
                    - Jika menyajikan stimulus berupa tabel data/informasi/aksara/kosakata:
                      * Kalimat pengantar WAJIB diakhiri baris baru (\\n) SEBELUM tabel (contoh: "Perhatikan tabel berikut:\\n").
                      * Setiap baris tabel Markdown HARUS berada pada baris tersendiri (diawali '\\n|' dan diakhiri '|\\n') lengkap dengan header dan baris pemisah (contoh: "\\n| Aksara Sunda | Huruf Latin |\\n|---|---|\\n| ᮃ | a |\\n| ᮈ | é |\\n").
                      * Kalimat pertanyaan WAJIB berada di baris baru (\\n) SETELAH tabel selesai (contoh: "\\nBerdasarkan tabel di atas, aksara Sunda yang berbunyi 'é' adalah...").
                      * DILARANG KERAS menggabungkan teks pertanyaan ke dalam baris/sel tabel!${gambarRule}
-                ${isPG ? '8.' : '7.'} LARANGAN: JANGAN menulis label "LOTS", "MOTS", atau "HOTS" di dalam teks soal yang terlihat murid. JANGAN menambahkan field "gambar" atau "gambar_keyword" ke soal isian maupun uraian.${isianRule}
+                ${isPG ? '9.' : '8.'} LARANGAN: JANGAN menulis teks label "L1", "L2", "L3" di dalam teks pertanyaan yang dibaca murid. Label disimpan pada field "level". JANGAN menambahkan field "gambar" ke soal isian maupun uraian.${isianRule}
                 ${getKelasAdaptation(jenjangKelas)}
 
-                III. FORMAT OUTPUT JSON (berikan JSON valid saja, tanpa teks lain):
+                III. FORMAT OUTPUT JSON (berikan JSON valid saja, tanpa teks pengantar):
                 {
                    ${jsonStructure}
                 }
@@ -405,6 +511,27 @@ kisi.post('/generate', async (c) => {
             } else {
                 finalData.uraian = [];
             }
+        }
+
+        // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
+        if (finalData.pg && Array.isArray(finalData.pg)) {
+            finalData.pg.forEach((q: any, i: number) => {
+                normalizeItemKisiMetadata(q, 'Pilihan Ganda', i + 1, resolvedCP, topik);
+            });
+        }
+
+        if (finalData.isian?.data && Array.isArray(finalData.isian.data)) {
+            const isianBentukLabel = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
+            finalData.isian.data.forEach((q: any, i: number) => {
+                normalizeItemKisiMetadata(q, isianBentukLabel, (q.no || (totalPG + i + 1)), resolvedCP, topik);
+            });
+        }
+
+        if (finalData.uraian && Array.isArray(finalData.uraian)) {
+            finalData.uraian.forEach((q: any, i: number) => {
+                const defaultUraianNo = (finalData.isian?.data?.length ? Math.max(...finalData.isian.data.map((x: any) => x.no || 0)) : totalPG) + i + 1;
+                normalizeItemKisiMetadata(q, 'Uraian', (q.no || defaultUraianNo), resolvedCP, topik);
+            });
         }
 
         // Record usage telemetry for school & teacher analytics

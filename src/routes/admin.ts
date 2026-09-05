@@ -20,7 +20,7 @@ import type { AppBindings, AppVariables } from '../types/env';
 
 const admin = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
 
-const ADMIN_PANEL_ROLES = ['admin', 'operator'] as const;
+const ADMIN_PANEL_ROLES = ['super_admin', 'admin', 'operator'] as const;
 
 // Middleware: Check admin panel access role
 const requireAdminPanelAccess = async (c: any, next: () => Promise<void>) => {
@@ -42,7 +42,7 @@ const requireAdminPanelAccess = async (c: any, next: () => Promise<void>) => {
 const requireStrictAdmin = async (c: any, next: () => Promise<void>) => {
   const currentUser: any = c.get('user');
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
     return Errors.forbidden(c, 'Aksi ini hanya dapat dilakukan oleh admin');
   }
 
@@ -586,7 +586,7 @@ admin.post('/users', requireStrictAdmin, userCreateRateLimit, async (c) => {
     }
 
     const { nama, email, password, role, sekolah, nip } = validation.data;
-    const dbRole = role === 'operator' ? 'admin' : role;
+    const dbRole = (role === 'operator' || role === 'super_admin') ? 'admin' : 'user';
 
     // Check if email exists
     const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first();
@@ -760,7 +760,7 @@ admin.put('/users/:id', requireStrictAdmin, writeRateLimit, async (c) => {
     }
 
     const { nama, sekolah, email, role, nip } = validation.data;
-    const dbRole = role === 'operator' ? 'admin' : role;
+    const dbRole = (role === 'operator' || role === 'super_admin') ? 'admin' : 'user';
 
     // Check user exists
     const user: any = await c.env.DB.prepare(

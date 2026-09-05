@@ -24,6 +24,53 @@ window.confirm = confirm;
 window.toggleTheme = toggleTheme;
 window.state = state; // Expose state for inline onclick handlers
 
+// User Profile Dropdown Menu Handlers
+window.toggleUserDropdown = function(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('user-dropdown-menu');
+  const arrow = document.getElementById('user-dropdown-arrow');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  if (isHidden) {
+    menu.classList.remove('hidden');
+    if (arrow) arrow.classList.add('rotate-180');
+  } else {
+    menu.classList.add('hidden');
+    if (arrow) arrow.classList.remove('rotate-180');
+  }
+};
+
+window.closeUserDropdown = function() {
+  const menu = document.getElementById('user-dropdown-menu');
+  const arrow = document.getElementById('user-dropdown-arrow');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+    if (arrow) arrow.classList.remove('rotate-180');
+  }
+};
+
+if (!window.__userDropdownListenerAttached) {
+  window.__userDropdownListenerAttached = true;
+  document.addEventListener('click', (e) => {
+    const container = document.getElementById('user-profile-menu-container');
+    if (container && !container.contains(e.target)) {
+      window.closeUserDropdown();
+    }
+  });
+}
+
+// Mobile AI Bottom Sheet Modal Handlers
+window.toggleMobileAiSheet = function() {
+  const sheet = document.getElementById('mobile-ai-action-sheet');
+  if (!sheet) return;
+  sheet.classList.toggle('hidden');
+};
+
+window.closeMobileAiSheet = function() {
+  const sheet = document.getElementById('mobile-ai-action-sheet');
+  if (sheet) sheet.classList.add('hidden');
+};
+
 // Register Service Worker for PWA (Progressive Web App)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -176,100 +223,349 @@ const customLayoutPages = ['admin', 'surat', 'proker', 'laporan'];
 const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications'];
 const adminPages = ['admin'];
 
-// Navigation Links Configuration
-// Navigation Links Configuration (Reordered for Professional Layout)
-const navLinks = [
-  // MENU UTAMA
-  { page: 'home', label: 'Beranda', icon: 'fa-home', public: true, section: 'Menu Utama' },
-  { page: 'pengumuman', label: 'Pengumuman', icon: 'fa-bullhorn', public: true, section: 'Menu Utama' },
-  { page: 'kalender', label: 'Kalender', icon: 'fa-calendar-alt', public: true, section: 'Menu Utama' },
+// Accordion state tracking for sidebar categories
+window.__navSectionState = window.__navSectionState || {};
 
-  // AKADEMIK & PERANGKAT
-  { page: 'materi', label: 'Materi & Bahan Ajar', icon: 'fa-book-open', public: true, section: 'Menu Utama' },
-  { page: 'forum', label: 'Forum Diskusi', icon: 'fa-comments', public: true, section: 'Menu Utama' },
-  { page: 'guru', label: 'Direktori Guru', icon: 'fa-users', public: true, section: 'Menu Utama' },
+window.toggleNavSection = function(sectionId) {
+  const isCurrentlyOpen = window.__navSectionState[sectionId] !== false;
+  window.__navSectionState[sectionId] = !isCurrentlyOpen;
+  
+  // Toggle all matching sections (supports both desktop sidebar & mobile drawer)
+  document.querySelectorAll(`.nav-section-content-${sectionId}`).forEach(el => {
+    if (window.__navSectionState[sectionId]) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  });
+  document.querySelectorAll(`.nav-section-chevron-${sectionId}`).forEach(el => {
+    if (window.__navSectionState[sectionId]) {
+      el.classList.add('rotate-180');
+    } else {
+      el.classList.remove('rotate-180');
+    }
+  });
+};
 
-  // AI ASSISTANT
-  { page: 'rpp', label: 'Buat RPP', icon: 'fa-magic', public: true, section: 'AI Assistant', ai: true },
-  { page: 'slide', label: 'Buat Slide', icon: 'fa-file-powerpoint', public: true, section: 'AI Assistant', ai: true },
-  { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, section: 'AI Assistant', ai: true },
-  { page: 'tts', label: 'Teka-Teki Silang', icon: 'fa-puzzle-piece', public: true, section: 'AI Assistant', ai: true },
-
-  // KEGIATAN (Auth)
-  { page: 'absensi', label: 'Absensi Kegiatan', icon: 'fa-clipboard-check', auth: true, section: 'Kegiatan' },
-
-  // ADMINISTRASI (Admin Only)
-  { page: 'admin', label: 'Panel Kontrol', icon: 'fa-cog', admin: true, section: 'Administrasi' },
-
-  // AKUN SAYA
-  { page: 'notifications', label: 'Notifikasi', icon: 'fa-bell', auth: true, section: 'Akun Saya' },
-  { page: 'profile', label: 'Pengaturan Akun', icon: 'fa-user-cog', auth: true, section: 'Akun Saya' },
+// Navigation Structure - Collapsible Accordion Architecture
+const navSections = [
+  {
+    id: 'ruang-kerja',
+    title: 'Ruang Kerja',
+    icon: 'fa-briefcase',
+    defaultOpen: true,
+    items: [
+      { page: 'home', label: 'Beranda', icon: 'fa-home', public: true },
+      { page: 'pengumuman', label: 'Pengumuman', icon: 'fa-bullhorn', public: true },
+      { page: 'kalender', label: 'Kalender & Agenda', icon: 'fa-calendar-alt', public: true },
+    ]
+  },
+  {
+    id: 'asisten-ai',
+    title: 'Asisten AI',
+    icon: 'fa-wand-magic-sparkles',
+    isAI: true,
+    badgeText: '4 Modul',
+    defaultOpen: true,
+    items: [
+      { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
+      { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
+      { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
+      { page: 'tts', label: 'Teka-Teki Silang', icon: 'fa-puzzle-piece', public: true, ai: true },
+    ]
+  },
+  {
+    id: 'komunitas',
+    title: 'Kegiatan & Komunitas',
+    icon: 'fa-users',
+    defaultOpen: false,
+    items: [
+      { page: 'materi', label: 'Bank Materi Ajar', icon: 'fa-book-open', public: true },
+      { page: 'absensi', label: 'Presensi Kegiatan', icon: 'fa-clipboard-check', auth: true },
+      { page: 'forum', label: 'Forum Diskusi', icon: 'fa-comments', public: true },
+      { page: 'guru', label: 'Direktori Guru', icon: 'fa-users', public: true },
+    ]
+  },
+  {
+    id: 'administrasi',
+    title: 'Administrasi',
+    icon: 'fa-shield-halved',
+    admin: true,
+    defaultOpen: false,
+    items: [
+      { page: 'admin', label: 'Panel Kontrol Admin', icon: 'fa-cog', admin: true },
+    ]
+  }
 ];
+
+// Flat navLinks export for legacy compatibility if referenced
+const navLinks = navSections.flatMap(s => s.items.map(it => ({ ...it, section: s.title })));
 
 function renderNavLinks(activePage) {
   const isLoggedIn = !!state.user;
-  const isAdminPanelUser = ['admin', 'operator'].includes(state.user?.role || '');
-  let lastSection = null;
+  const isAdminPanelUser = ['super_admin', 'admin', 'operator'].includes(state.user?.role || '');
 
-  return navLinks.filter(link => {
-    if (link.public) return true;
-    if (link.auth && isLoggedIn) return true;
-    if (link.admin && isAdminPanelUser) return true;
-    return false;
-  }).map(link => {
-    let sectionHtml = '';
-    if (link.section !== lastSection) {
-      lastSection = link.section;
-      const isFirst = link.section === 'Menu Utama';
-      const isAI = link.section === 'AI Assistant';
-      sectionHtml = `<div class="px-2 ${isFirst ? 'mb-3' : 'mt-8 mb-3'} text-[10px] font-bold ${isAI ? 'text-teal-500' : 'text-[var(--color-text-tertiary)]'} uppercase tracking-widest">${link.section}</div>`;
+  return navSections.filter(section => {
+    if (section.admin && !isAdminPanelUser) return false;
+    return true;
+  }).map((section) => {
+    // Automatically keep the active page's section open
+    const hasActiveChild = section.items.some(it => it.page === activePage);
+    if (hasActiveChild) {
+      window.__navSectionState[section.id] = true;
     }
 
-    const isActive = activePage === link.page;
-    const isAI = link.ai;
+    const isExpanded = window.__navSectionState[section.id] !== undefined
+      ? window.__navSectionState[section.id]
+      : section.defaultOpen;
 
-    // AI items get a special style
-    const buttonHtml = isAI ? `
-      <button 
-        onclick="navigate('${link.page}'); if(window.innerWidth < 768) document.getElementById('mobile-menu')?.classList.add('hidden');"
-        class="w-full text-left px-4 py-4 rounded-3xl mb-3 flex items-center transition-all duration-500 ease-out group shadow-sm bg-gradient-to-r hover:scale-[1.02] hover:shadow-md hover:shadow-teal-500/20 animate-teal-glow ${isActive
-        ? 'from-[rgba(38,148,148,0.15)] to-[rgba(38,148,148,0.05)] border border-[rgba(38,148,148,0.25)] text-teal-600 font-bold'
-        : 'from-[rgba(38,148,148,0.05)] to-transparent border border-[rgba(38,148,148,0.1)] text-teal-600 hover:border-[rgba(38,148,148,0.25)] font-bold'
-      }"
-      >
-        <div class="relative flex items-center justify-center mr-3 w-10 h-10 rounded-2xl bg-teal-500/10 group-hover:bg-teal-500/20 transition-all duration-300">
-            <i class="fas ${link.icon} text-lg text-teal-600 group-hover:scale-110 transition-transform shadow-sm"></i>
+    const visibleItems = section.items.filter(item => {
+      if (item.public) return true;
+      if (item.auth && isLoggedIn) return true;
+      if (item.admin && isAdminPanelUser) return true;
+      return false;
+    });
+
+    if (visibleItems.length === 0) return '';
+
+    return `
+      <div class="mb-2">
+        <!-- Section Header Toggle Button -->
+        <button 
+          type="button"
+          onclick="window.toggleNavSection('${section.id}')"
+          class="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors group cursor-pointer select-none rounded-xl hover:bg-slate-100/60"
+          title="Klik untuk buka/tutup kategori ${section.title}"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <i class="fas ${section.icon} text-[10.5px] ${section.isAI ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}"></i>
+            <span class="${section.isAI ? 'text-teal-700 font-black' : 'text-slate-500 font-bold'} truncate">${section.title}</span>
+            ${section.badgeText ? `
+              <span class="text-[8.5px] font-extrabold px-1.5 py-0.2 rounded-full bg-teal-500/10 text-teal-700 border border-teal-500/20">${section.badgeText}</span>
+            ` : ''}
+          </div>
+          <i class="nav-section-chevron-${section.id} fas fa-chevron-down text-[9.5px] text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+        </button>
+
+        <!-- Section Items (Normal comfortable sizing) -->
+        <div class="nav-section-content-${section.id} space-y-1 pt-1 ${isExpanded ? '' : 'hidden'}">
+          ${visibleItems.map(item => {
+            const isActive = activePage === item.page;
+            const isAI = item.ai;
+            return `
+              <button 
+                onclick="navigate('${item.page}'); if(window.innerWidth < 768) document.getElementById('mobile-menu')?.classList.add('hidden');"
+                class="w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center transition-all duration-200 group relative cursor-pointer ${isActive
+                  ? (isAI
+                      ? 'bg-teal-500/15 text-teal-800 font-bold border border-teal-500/30 shadow-2xs'
+                      : 'bg-teal-500/10 text-teal-800 font-bold border border-teal-500/25 shadow-2xs')
+                  : (isAI
+                      ? 'text-slate-700 hover:text-teal-700 hover:bg-teal-50/70 font-semibold'
+                      : 'text-slate-600 hover:text-teal-700 hover:bg-slate-100/80 font-medium')
+                }"
+              >
+                <span class="w-8.5 h-8.5 rounded-xl flex items-center justify-center mr-3 shrink-0 transition-all ${isActive
+                  ? 'bg-teal-600 text-white shadow-2xs'
+                  : (isAI 
+                      ? 'bg-teal-500/10 text-teal-600 group-hover:bg-teal-500/20' 
+                      : 'bg-slate-100 text-slate-500 group-hover:bg-teal-50 group-hover:text-teal-600')
+                }">
+                  <i class="fas ${item.icon} text-sm"></i>
+                </span>
+                <span class="text-xs sm:text-[13.5px] tracking-tight truncate flex-1 leading-snug">${item.label}</span>
+                ${isAI ? '<span class="text-[9.5px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-teal-500/10 text-teal-700 border border-teal-500/20 ml-auto shrink-0">AI</span>' : ''}
+                ${item.page === 'pengumuman' ? '<span class="w-2 h-2 bg-amber-500 rounded-full ml-auto shrink-0 animate-pulse"></span>' : ''}
+              </button>
+            `;
+          }).join('')}
         </div>
-        <span class="text-[13px] tracking-wide relative z-10 font-black">${link.label}</span>
-      </button>
-    ` : `
-      <button 
-        onclick="navigate('${link.page}'); if(window.innerWidth < 768) document.getElementById('mobile-menu')?.classList.add('hidden');"
-        class="w-full text-left px-4 py-3 rounded-2xl mb-1 flex items-center transition-all duration-300 group relative ${isActive
-      ? 'text-teal-600 bg-[rgba(38,148,148,0.05)]'
-      : 'text-slate-600 hover:text-teal-600 hover:bg-[rgba(38,148,148,0.05)]'
-    }"
-      >
-        <span class="flex items-center justify-center mr-3 ${isActive
-      ? 'text-teal-500'
-      : 'opacity-50 group-hover:opacity-100 text-slate-400 group-hover:text-teal-500'
-    } transition-opacity">
-            <i class="fas ${link.icon} text-[15px]"></i>
-        </span>
-        <span class="${isActive ? 'font-bold' : 'font-semibold'} text-[13px]">${link.label}</span>
-        ${(link.page === 'notifications' && state.unreadNotifications > 0) ? `
-          <span class="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-md shadow-red-500/30">
-            ${state.unreadNotifications > 99 ? '99+' : state.unreadNotifications}
-          </span>
-        ` : (link.page === 'pengumuman' ? '<span class="absolute top-[18px] right-4 w-1.5 h-1.5 bg-red-500 rounded-full"></span>' : '')}
-      </button>
+      </div>
     `;
-    return sectionHtml + buttonHtml;
   }).join('');
+}
+
+// Mobile Bottom Navigation Bar (App Bar Bawah untuk HP)
+function renderMobileBottomNav(activePage) {
+  const isLoggedIn = !!state.user;
+  const isAIActive = ['rpp', 'kisi', 'slide', 'tts'].includes(activePage);
+
+  return `
+    <!-- Mobile Bottom Navigation Bar (Fixed Ergonomic Thumb Bar) -->
+    <nav 
+      class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around select-none"
+      aria-label="Navigasi Bawah Mobile"
+    >
+      <!-- 1. Beranda -->
+      <button 
+        onclick="navigate('home')" 
+        class="flex-1 py-1 flex flex-col items-center justify-center transition-all active:scale-90 cursor-pointer ${activePage === 'home' ? 'text-teal-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'}"
+      >
+        <div class="relative flex items-center justify-center w-6 h-6">
+          <i class="fas fa-home text-lg"></i>
+          ${activePage === 'home' ? '<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-teal-600 rounded-full"></span>' : ''}
+        </div>
+        <span class="text-[10px] mt-1 tracking-tight leading-none">Beranda</span>
+      </button>
+
+      <!-- 2. Presensi / Kegiatan -->
+      <button 
+        onclick="${isLoggedIn ? `navigate('absensi')` : `navigate('login')`}" 
+        class="flex-1 py-1 flex flex-col items-center justify-center transition-all active:scale-90 cursor-pointer ${activePage === 'absensi' ? 'text-teal-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'}"
+      >
+        <div class="relative flex items-center justify-center w-6 h-6">
+          <i class="fas fa-qrcode text-lg"></i>
+          ${activePage === 'absensi' ? '<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-teal-600 rounded-full"></span>' : ''}
+        </div>
+        <span class="text-[10px] mt-1 tracking-tight leading-none">Presensi</span>
+      </button>
+
+      <!-- 3. Elevated Floating Action: Asisten AI Hub -->
+      <div class="flex-1 flex flex-col items-center justify-center relative -top-3.5">
+        <button 
+          id="btn-mobile-ai-sheet"
+          onclick="window.toggleMobileAiSheet()" 
+          class="w-13 h-13 rounded-2xl bg-gradient-to-tr from-teal-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-teal-500/35 border-4 border-[#f8fdfd] active:scale-90 transition-transform duration-200 cursor-pointer group relative ${isAIActive ? 'ring-2 ring-teal-500 ring-offset-2' : ''}"
+          title="Buka Asisten AI Pendidik"
+          aria-label="Asisten AI Pendidik"
+        >
+          <i class="fas fa-wand-magic-sparkles text-lg group-hover:rotate-12 transition-transform duration-300"></i>
+          <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full"></span>
+        </button>
+        <span class="text-[9.5px] font-extrabold text-teal-700 tracking-tight leading-none mt-0.5">Asisten AI</span>
+      </div>
+
+      <!-- 4. Bank Materi -->
+      <button 
+        onclick="navigate('materi')" 
+        class="flex-1 py-1 flex flex-col items-center justify-center transition-all active:scale-90 cursor-pointer ${activePage === 'materi' ? 'text-teal-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'}"
+      >
+        <div class="relative flex items-center justify-center w-6 h-6">
+          <i class="fas fa-book-open text-lg"></i>
+          ${activePage === 'materi' ? '<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-teal-600 rounded-full"></span>' : ''}
+        </div>
+        <span class="text-[10px] mt-1 tracking-tight leading-none">Materi</span>
+      </button>
+
+      <!-- 5. Profil / Akun -->
+      <button 
+        onclick="${isLoggedIn ? `navigate('profile')` : `navigate('login')`}" 
+        class="flex-1 py-1 flex flex-col items-center justify-center transition-all active:scale-90 cursor-pointer ${activePage === 'profile' ? 'text-teal-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'}"
+      >
+        <div class="relative flex items-center justify-center w-6 h-6">
+          ${isLoggedIn && state.user?.foto_url ? `
+            <img src="${state.user.foto_url}" class="w-5 h-5 rounded-full object-cover border ${activePage === 'profile' ? 'border-teal-600' : 'border-slate-300'}" alt="Foto">
+          ` : `
+            <i class="fas fa-user-circle text-lg"></i>
+          `}
+          ${activePage === 'profile' ? '<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-teal-600 rounded-full"></span>' : ''}
+        </div>
+        <span class="text-[10px] mt-1 tracking-tight leading-none">${isLoggedIn ? 'Profil' : 'Masuk'}</span>
+      </button>
+    </nav>
+  `;
+}
+
+// Mobile AI Bottom Sheet (Lembar Aksi Cepat 4 Modul AI di HP)
+function renderMobileAiSheet(activePage) {
+  return `
+    <!-- Mobile AI Action Sheet Modal Overlay -->
+    <div 
+      id="mobile-ai-action-sheet" 
+      class="hidden md:hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+      onclick="window.closeMobileAiSheet()"
+    >
+      <div 
+        class="absolute bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-2xl p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-slide-up border-t border-slate-200/80 max-h-[85vh] overflow-y-auto"
+        onclick="event.stopPropagation()"
+      >
+        <!-- Pull Handle -->
+        <div class="w-12 h-1.5 rounded-full bg-slate-200 mx-auto mb-4"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4 px-1">
+          <div class="flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-700 flex items-center justify-center text-sm">
+              <i class="fas fa-wand-magic-sparkles"></i>
+            </span>
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">Asisten AI Pendidik</h3>
+              <p class="text-[10.5px] text-slate-400 font-medium leading-tight">Pilih modul otomatisasi Kurikulum Merdeka</p>
+            </div>
+          </div>
+          <button 
+            onclick="window.closeMobileAiSheet()" 
+            class="w-7 h-7 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer"
+          >
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <!-- 4 AI Generator Cards Grid -->
+        <div class="grid grid-cols-2 gap-2.5 mb-4">
+          <!-- 1. RPP & Modul Ajar -->
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('rpp');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'rpp' ? 'bg-teal-50/90 border-teal-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-teal-50/40 hover:border-teal-300'}"
+          >
+            <div class="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
+              <i class="fas fa-magic"></i>
+            </div>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Buat RPP</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Modul Ajar Berdiferensiasi</span>
+          </button>
+
+          <!-- 2. Asesmen & Kisi-Kisi -->
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('kisi');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'kisi' ? 'bg-emerald-50/90 border-emerald-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-emerald-50/40 hover:border-emerald-300'}"
+          >
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
+              <i class="fas fa-list-check"></i>
+            </div>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Buat Asesmen</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Soal HOTS & Kisi-Kisi</span>
+          </button>
+
+          <!-- 3. Slide Studio -->
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('slide');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'slide' ? 'bg-sky-50/90 border-sky-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-sky-50/40 hover:border-sky-300'}"
+          >
+            <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
+              <i class="fas fa-file-powerpoint"></i>
+            </div>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Slide Presentasi</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Slide Mengajar Interaktif</span>
+          </button>
+
+          <!-- 4. TTS Edukatif -->
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('tts');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'tts' ? 'bg-purple-50/90 border-purple-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-purple-50/40 hover:border-purple-300'}"
+          >
+            <div class="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
+              <i class="fas fa-puzzle-piece"></i>
+            </div>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Teka-Teki Silang</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Game & LKPD Cetak Siswa</span>
+          </button>
+        </div>
+
+        <!-- Quick Close Button -->
+        <button 
+          onclick="window.closeMobileAiSheet()" 
+          class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 // Main Render Function
 async function render() {
+  window.renderApp = render;
   const app = document.getElementById('app');
   if (!app) return;
 
@@ -286,7 +582,7 @@ async function render() {
     }
 
     // Check admin panel role for admin pages
-    if (adminPages.includes(page) && !['admin', 'operator'].includes(state.user?.role || '')) {
+    if (adminPages.includes(page) && !['super_admin', 'admin', 'operator'].includes(state.user?.role || '')) {
       showToast('Halaman ini hanya untuk admin atau operator', 'error');
       // announce disabled
       navigate('home');
@@ -400,6 +696,29 @@ async function render() {
   const isAuthPage = page === 'login' || page === 'reset-password';
   const isCustomLayout = customLayoutPages.includes(page);
 
+  const pageMetadata = {
+    home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : 'Beranda Utama', icon: 'fa-home', category: 'Dasbor' },
+    rpp: { title: 'AI RPP & Modul Ajar Generator', icon: 'fa-magic', category: 'Asisten AI' },
+    kisi: { title: 'Asesmen & Kisi-Kisi HOTS/AKM', icon: 'fa-list-check', category: 'Asisten AI' },
+    slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },
+    tts: { title: 'Teka-Teki Silang Edukatif', icon: 'fa-puzzle-piece', category: 'Asisten AI' },
+    absensi: { title: 'Presensi & Absensi Kegiatan', icon: 'fa-clipboard-check', category: 'Kegiatan' },
+    materi: { title: 'Bank Materi & Modul Ajar', icon: 'fa-book-open', category: 'Akademik' },
+    guru: { title: 'Direktori Pendidik Gugus 3', icon: 'fa-users', category: 'Komunitas' },
+    forum: { title: 'Forum Kolaborasi Guru', icon: 'fa-comments', category: 'Komunitas' },
+    pengumuman: { title: 'Papan Pengumuman Resmi', icon: 'fa-bullhorn', category: 'Warta' },
+    kalender: { title: 'Kalender Kegiatan KKG', icon: 'fa-calendar-alt', category: 'Agenda' },
+    profile: { title: 'Profil & Data Pendidik', icon: 'fa-user-cog', category: 'Akun' },
+    notifications: { title: 'Pusat Notifikasi', icon: 'fa-bell', category: 'Akun' },
+    admin: { title: 'Control Center Admin', icon: 'fa-cog', category: 'Administrasi' },
+    surat: { title: 'Generator Surat Dinas KKG', icon: 'fa-envelope-open-text', category: 'Administrasi' },
+    proker: { title: 'Program Kerja KKG', icon: 'fa-tasks', category: 'Administrasi' },
+    laporan: { title: 'Laporan Kegiatan KKG', icon: 'fa-file-contract', category: 'Administrasi' },
+    'reset-password': { title: 'Atur Ulang Password', icon: 'fa-key', category: 'Akun' },
+    login: { title: 'Masuk Portal', icon: 'fa-sign-in-alt', category: 'Autentikasi' },
+  };
+  const currentMeta = pageMetadata[page] || { title: 'Portal KKG Gugus 3', icon: 'fa-graduation-cap', category: 'Aplikasi' };
+
   if (isAuthPage || isCustomLayout) {
     // Auth pages and Admin pages handle their own full layout
     app.innerHTML = content;
@@ -412,44 +731,38 @@ async function render() {
         <div class="fixed -bottom-20 -left-20 w-[40%] h-[60%] bg-teal-500/5 -z-10 rounded-tr-[100px] blur-3xl pointer-events-none"></div>
 
         <!-- Sidebar (Desktop) -->
-        <aside class="hidden md:flex flex-col w-[280px] bg-white border-r border-slate-100 z-[100] shadow-2xl shadow-teal-500/5">
-          <div class="flex items-center gap-3 mb-10 p-6 pb-2">
-             <div class="w-12 h-12 flex items-center justify-center transition-transform duration-500 hover:scale-105">
+        <aside class="hidden md:flex flex-col w-[260px] bg-white border-r border-slate-200/80 z-[100] shadow-sm shrink-0 h-screen">
+          <div class="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 shrink-0">
+             <div class="w-9 h-9 flex items-center justify-center transition-transform duration-300 hover:scale-105">
                 <img 
                   src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" 
                   alt="Logo KKG" 
-                  class="w-full h-full object-contain drop-shadow-sm"
+                  class="w-full h-full object-contain drop-shadow-xs"
                 >
              </div>
              <div>
-                <h1 class="text-sm font-black text-teal-500 uppercase tracking-tighter leading-none">KKG Gugus 3</h1>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Wanayasa</span>
+                <h1 class="text-xs font-black text-teal-600 uppercase tracking-tight leading-none">KKG Gugus 3</h1>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Wanayasa</span>
              </div>
           </div>
 
-          <nav class="flex-1 space-y-2 overflow-y-auto custom-scrollbar pb-6 pl-2 pr-4">
+          <nav class="flex-1 overflow-y-auto custom-scrollbar px-2.5 py-2 space-y-0.5">
             ${renderNavLinks(page)}
           </nav>
 
-          <div class="px-4 py-6 border-t border-slate-50">
+          <div class="p-3 border-t border-slate-100/80 shrink-0 bg-slate-50/40">
             ${state.user ? `
-              <div onclick="navigate('profile')" class="group relative bg-[var(--color-bg-tertiary)] border border-[var(--color-border-subtle)] rounded-2xl p-4 mb-4 cursor-pointer hover:border-[rgba(38,148,148,0.2)] transition-all hover:shadow-ambient hover:-translate-y-0.5">
-                  <div class="flex items-center gap-3">
-                    ${avatar(state.user.nama, 'sm', state.user.foto_url)}
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold text-[var(--color-text-primary)] truncate group-hover:text-teal-500 transition-colors">${escapeHtml(state.user.nama)}</p>
-                        <p class="text-xs text-[var(--color-text-tertiary)] font-medium truncate capitalize">${escapeHtml(state.user.role)}</p>
-                    </div>
-                  </div>
+              <div class="flex items-center justify-between px-2 text-slate-400">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-2xs"></span>
+                  <span class="text-[10.5px] font-bold text-slate-500 tracking-tight">KKG Gugus 3</span>
+                </div>
+                <span class="text-[9.5px] font-mono text-slate-400">v2.6</span>
               </div>
-              <button onclick="logout()" class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-2xl transition-all duration-300 group">
-                <i class="fas fa-sign-out-alt w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform"></i>
-                <span>Keluar Aplikasi</span>
-              </button>
             ` : `
-              <button onclick="navigate('login')" class="w-full px-6 py-4 bg-slate-900 text-white rounded-[24px] font-bold text-sm hover:bg-teal-500 transition-all shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Login Akun</span>
+              <button onclick="navigate('login')" class="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-teal-600 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fas fa-sign-in-alt text-xs"></i>
+                <span>Masuk Akun</span>
               </button>
             `}
           </div>
@@ -457,20 +770,155 @@ async function render() {
 
         <!-- Mobile Header & Main Content -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          <!-- Mobile Header -->
-          <header class="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3">
-            <div class="bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-[24px] px-5 py-3 flex items-center justify-between">
-               <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 flex items-center justify-center"><img src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" class="w-full h-full object-contain"></div>
-                  <h1 class="text-xs font-black text-teal-500 uppercase tracking-tighter">KKG Gugus 3</h1>
-               </div>
-               <div class="flex items-center gap-2">
-                  ${state.user ? renderNotificationBell() : ''}
-                  <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="p-2 text-slate-600 bg-slate-50 rounded-xl active:scale-95 transition-transform">
-                    <i class="fas fa-bars text-lg"></i>
-                  </button>
-               </div>
+          <!-- Desktop Top Navigation Header -->
+          <header class="hidden md:flex items-center justify-between h-20 px-8 lg:px-10 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 z-30 shrink-0 shadow-2xs">
+            <!-- Left: Breadcrumb / Active Page context -->
+            <div class="flex items-center gap-3.5">
+              <span class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center justify-center text-sm shadow-2xs">
+                <i class="fas ${currentMeta.icon}"></i>
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">${currentMeta.category}</span>
+                  <span class="text-slate-300">•</span>
+                  <span class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">KKG Gugus 3 Wanayasa</span>
+                </div>
+                <h2 class="text-base font-black text-slate-900 tracking-tight leading-tight">${currentMeta.title}</h2>
+              </div>
             </div>
+
+            <!-- Right: Context chips & User Profile Quick Actions -->
+            <div class="flex items-center gap-4">
+              <!-- Date Chip -->
+              <div class="hidden xl:flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100/90 text-slate-600 text-xs font-semibold border border-slate-200/60">
+                <i class="far fa-calendar-alt text-teal-600"></i>
+                <span>${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              </div>
+
+              <!-- AI Assistant Status Chip -->
+              <div class="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50/90 text-teal-800 text-xs font-bold border border-teal-200/60 shadow-2xs">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>AI Perangkat Ajar</span>
+              </div>
+
+              <!-- Notifications Bell -->
+              ${state.user ? `
+                <div class="p-1 rounded-2xl bg-slate-50 border border-slate-200/70 hover:border-teal-400/50 transition-colors">
+                  ${renderNotificationBell()}
+                </div>
+              ` : ''}
+
+              <!-- User Profile Chip with Dropdown -->
+              ${state.user ? `
+                <div class="relative" id="user-profile-menu-container">
+                  <button 
+                    id="user-profile-btn"
+                    onclick="window.toggleUserDropdown && window.toggleUserDropdown(event)" 
+                    class="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/40 hover:shadow-md transition-all cursor-pointer group shadow-2xs focus:outline-none"
+                    title="Menu Akun & Profil Pendidik"
+                  >
+                    ${avatar(state.user.nama, 'sm', state.user.foto_url)}
+                    <div class="hidden sm:block text-left min-w-0">
+                      <p class="text-xs font-bold text-slate-800 group-hover:text-teal-600 transition-colors leading-tight truncate max-w-[130px]">${escapeHtml(state.user.nama)}</p>
+                      <p class="text-[9.5px] text-slate-400 font-semibold capitalize leading-tight">${escapeHtml(state.user.role === 'super_admin' ? 'Super Admin' : (state.user.role === 'admin' ? 'Administrator' : (state.user.role === 'operator' ? 'Operator' : 'Pendidik')))}</p>
+                    </div>
+                    <i id="user-dropdown-arrow" class="fas fa-chevron-down text-[9px] text-slate-400 group-hover:text-teal-600 transition-transform duration-200"></i>
+                  </button>
+
+                  <!-- Popover Dropdown Menu -->
+                  <div 
+                    id="user-dropdown-menu" 
+                    class="hidden absolute right-0 mt-2.5 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2 z-50 animate-fade-in divide-y divide-slate-100"
+                  >
+                    <!-- User Header -->
+                    <div class="px-4 py-2.5">
+                      <div class="flex items-center gap-3">
+                        ${avatar(state.user.nama, 'md', state.user.foto_url)}
+                        <div class="min-w-0 flex-1">
+                          <p class="text-xs font-bold text-slate-900 truncate leading-snug">${escapeHtml(state.user.nama)}</p>
+                          <p class="text-[10.5px] text-slate-400 truncate leading-tight">${escapeHtml(state.user.email || 'Pendidik KKG')}</p>
+                          <span class="inline-block mt-1 text-[8.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200/80">${escapeHtml(state.user.role === 'super_admin' ? 'Super Admin' : (state.user.role === 'admin' ? 'Administrator' : (state.user.role === 'operator' ? 'Operator' : 'Pendidik')))}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Navigation Items -->
+                    <div class="p-1.5 space-y-0.5">
+                      <button 
+                        onclick="window.closeUserDropdown(); navigate('profile');" 
+                        class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <span class="w-6 h-6 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0"><i class="fas fa-id-card text-xs"></i></span>
+                        <div class="flex-1 min-w-0">
+                          <span class="block text-xs font-bold text-slate-800">Profil & Data Pendidik</span>
+                          <span class="block text-[10px] text-slate-400 font-normal truncate">Identitas, NIP & Unit Sekolah</span>
+                        </div>
+                      </button>
+
+                      ${['super_admin', 'admin', 'operator'].includes(state.user?.role || '') ? `
+                        <button 
+                          onclick="window.closeUserDropdown(); navigate('admin');" 
+                          class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        >
+                          <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><i class="fas fa-cog text-xs"></i></span>
+                          <div class="flex-1 min-w-0">
+                            <span class="block text-xs font-bold text-slate-800">Panel Kontrol Admin</span>
+                            <span class="block text-[10px] text-slate-400 font-normal truncate">Kelola guru, sekolah & log</span>
+                          </div>
+                        </button>
+                      ` : ''}
+                    </div>
+
+                    <!-- Logout -->
+                    <div class="pt-1 px-1.5">
+                      <button 
+                        onclick="window.closeUserDropdown(); logout();" 
+                        class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <span class="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0"><i class="fas fa-sign-out-alt text-xs"></i></span>
+                        <span>Keluar Aplikasi</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ` : `
+                <button onclick="navigate('login')" class="px-5 py-2.5 bg-slate-900 hover:bg-teal-600 text-white rounded-2xl font-bold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer">
+                  <i class="fas fa-sign-in-alt text-xs"></i>
+                  <span>Masuk</span>
+                </button>
+              `}
+            </div>
+          </header>
+
+          <!-- Mobile Top App Bar -->
+          <header class="md:hidden sticky top-0 left-0 right-0 z-30 px-4 py-2.5 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between shadow-2xs pt-[max(0.6rem,env(safe-area-inset-top))]">
+             <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigate('home')">
+                <div class="w-8 h-8 flex items-center justify-center shrink-0">
+                   <img src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" class="w-full h-full object-contain drop-shadow-2xs" alt="Logo">
+                </div>
+                <div>
+                   <h1 class="text-xs font-black text-teal-600 uppercase tracking-tight leading-none">KKG Gugus 3</h1>
+                   <span class="text-[9px] font-bold text-slate-400 leading-none block truncate max-w-[140px] mt-0.5">${currentMeta.title}</span>
+                </div>
+             </div>
+             <div class="flex items-center gap-2">
+                ${state.user ? `
+                  <div class="p-1 rounded-xl bg-slate-50 border border-slate-200/60">
+                    ${renderNotificationBell()}
+                  </div>
+                ` : ''}
+                <button 
+                  onclick="document.getElementById('mobile-menu').classList.remove('hidden')" 
+                  class="w-9 h-9 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl active:scale-95 transition-all flex items-center justify-center cursor-pointer"
+                  title="Buka Menu Lengkap"
+                  aria-label="Menu Lengkap"
+                >
+                  <i class="fas fa-bars text-sm"></i>
+                </button>
+             </div>
           </header>
 
           <!-- Main Content Area -->
@@ -478,10 +926,16 @@ async function render() {
             <!-- Background Decoration -->
             <div class="absolute top-0 right-0 w-[60%] h-[500px] bg-gradient-to-bl from-[rgba(38,148,148,0.04)] to-transparent rounded-bl-[100px] pointer-events-none z-0"></div>
             
-            <div class="${page === 'home' ? 'w-full animate-fade-in flex-1 z-10 relative pt-20 md:pt-0' : 'max-w-7xl mx-auto w-full p-6 md:p-10 pt-20 md:pt-10 animate-fade-in flex-1 z-10 relative'}">
+            <div class="${page === 'home' && (!state.user || state.showPublicLanding) ? 'w-full animate-fade-in flex-1 z-10 relative pb-28 md:pb-8' : 'max-w-7xl mx-auto w-full px-3.5 py-4 sm:px-6 sm:py-6 md:p-10 pb-28 md:pb-8 animate-fade-in flex-1 z-10 relative'}">
               ${content}
             </div>
           </main>
+
+          <!-- Mobile Bottom Navigation Bar -->
+          ${renderMobileBottomNav(page)}
+
+          <!-- Mobile AI Action Sheet Modal -->
+          ${renderMobileAiSheet(page)}
         </div>
 
         <!-- Mobile Menu Overlay -->
@@ -673,6 +1127,17 @@ async function init() {
       console.warn('⚠️ Settings load failed');
     });
 
+  const tenantPromise = api('/tenants/current', { timeout: 4000 })
+    .then((resTenant) => {
+      if (resTenant.success && resTenant.data) {
+        state.tenant = resTenant.data;
+        console.log('✅ Tenant loaded:', state.tenant.nama);
+      }
+    })
+    .catch(() => {
+      console.warn('ℹ️ Tenant fallback active');
+    });
+
   const csrfPromise = (async () => {
     const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('csrf_token='));
     if (csrfCookie) return;
@@ -685,7 +1150,7 @@ async function init() {
   // Wait for all critical background data before first render
   // This prevents the "3x spinner" flicker
   updateStatus('Memuat konten...');
-  await Promise.allSettled([sessionPromise, settingsPromise, csrfPromise]);
+  await Promise.allSettled([sessionPromise, settingsPromise, tenantPromise, csrfPromise]);
 
   // Finally, render once with all data ready
   await render();

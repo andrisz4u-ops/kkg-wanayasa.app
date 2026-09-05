@@ -94,6 +94,22 @@ window.saveProfilKKG = async function () {
     };
 
     await api('/admin/settings', { method: 'PUT', body: data });
+
+    // Also sync to active tenant metadata
+    try {
+      await api('/tenants/current', {
+        method: 'PUT',
+        body: {
+          nama: data.nama_kkg,
+          kecamatan: data.kecamatan,
+          kabupaten: data.kabupaten,
+          alamat_sekretariat: data.alamat_sekretariat,
+          email: data.email_kkg,
+          no_kontak: data.telepon_kkg
+        }
+      });
+    } catch (_) { }
+
     moduleToast('Profil', 'Konfigurasi berhasil disimpan', 'success');
   } catch (e) { moduleToast('Profil', e.message || 'Gagal menyimpan konfigurasi', 'error'); }
 }

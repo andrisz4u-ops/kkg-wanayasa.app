@@ -7,7 +7,12 @@ export default defineConfig({
   server: { port: 5173 },
   plugins: [
     devServer({
-      adapter, // Enable Cloudflare bindings in Vite
+      adapter: () =>
+        adapter({
+          proxy: {
+            remoteBindings: false,
+          },
+        }), // Enable Cloudflare bindings in Vite locally
       entry: 'src/index.tsx', // The file path of your application.
     }),
     pages(),

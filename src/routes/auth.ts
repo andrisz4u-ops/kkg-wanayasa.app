@@ -6,7 +6,8 @@ import {
   getSessionExpiry,
   getCurrentUser,
   getCookie,
-  generateCSRFToken
+  generateCSRFToken,
+  invalidateSessionUserCache
 } from '../lib/auth';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
@@ -293,6 +294,7 @@ auth.post('/logout', async (c) => {
       ).bind(sessionId).first();
 
       await c.env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
+      invalidateSessionUserCache(sessionId);
 
       if (session) {
         logger.auth('logout', session.user_id);

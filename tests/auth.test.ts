@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { hashPassword, verifyPassword, generateSessionId, generateCSRFToken, getSessionExpiry } from '../src/lib/auth';
+import { hashPassword, verifyPassword, generateSessionId, generateCSRFToken, getSessionExpiry, invalidateSessionUserCache } from '../src/lib/auth';
 
 describe('Password Hashing', () => {
     it('should hash password with salt', async () => {
@@ -109,5 +109,10 @@ describe('Session Management', () => {
 
         // Should be valid ISO string
         expect(new Date(expiry).toISOString()).toBe(expiry);
+    });
+
+    it('should invalidate session user cache without throwing errors', () => {
+        expect(() => invalidateSessionUserCache('dummy-session-id')).not.toThrow();
+        expect(() => invalidateSessionUserCache()).not.toThrow();
     });
 });

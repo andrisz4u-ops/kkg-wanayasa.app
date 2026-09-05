@@ -17,7 +17,7 @@ import './admin-modules/ai-providers.js';
 export async function renderAdmin() {
   const { renderAdminLayout } = await import('../layouts/admin.js');
 
-  if (!state.user || !['admin', 'operator'].includes(state.user.role)) {
+  if (!state.user || !['super_admin', 'admin', 'operator'].includes(state.user.role)) {
     return renderAdminLayout('', 'access-denied');
   }
 

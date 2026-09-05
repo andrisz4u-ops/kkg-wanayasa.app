@@ -67,9 +67,12 @@ export async function api(path, options = {}) {
         credentials: 'include', // Important for cookies
     };
 
-    // Add CSRF token for state-changing methods
+    // Add CSRF token for state-changing methods with auto-fetch if missing
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase())) {
-        const csrfToken = getCsrfToken();
+        let csrfToken = getCsrfToken();
+        if (!csrfToken && !path.includes('/auth/login') && !path.includes('/auth/register') && !path.includes('/auth/csrf-token')) {
+            csrfToken = await refreshCsrfToken();
+        }
         if (csrfToken) {
             defaultOptions.headers['X-CSRF-Token'] = csrfToken;
         }

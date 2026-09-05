@@ -17,7 +17,7 @@ export function renderAdminLayout(content, activePage = 'dashboard') {
     minute: '2-digit'
   });
 
-  if (!user || !['admin', 'operator'].includes(user.role)) {
+  if (!user || !['super_admin', 'admin', 'operator'].includes(user.role)) {
     return `
       <div class="fade-in max-w-4xl mx-auto py-16 px-4 text-center">
         <div class="bg-[var(--color-bg-elevated)] border border-red-200 dark:border-red-900/50 rounded-3xl p-10 max-w-lg mx-auto shadow-xl">
@@ -35,7 +35,6 @@ export function renderAdminLayout(content, activePage = 'dashboard') {
     { id: 'surat', label: 'Generator Surat', icon: 'fa-envelope-open-text', section: 'Aplikasi' },
     { id: 'proker', label: 'Program Kerja', icon: 'fa-tasks', section: 'Aplikasi' },
     { id: 'laporan', label: 'Laporan KKG', icon: 'fa-file-contract', section: 'Aplikasi' },
-    { id: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', section: 'Aplikasi' },
 
     { id: 'users', label: 'Manajemen User', icon: 'fa-users-cog', section: 'Data Master' },
     { id: 'sekolah', label: 'Data Sekolah', icon: 'fa-school', section: 'Data Master' },
@@ -62,24 +61,24 @@ export function renderAdminLayout(content, activePage = 'dashboard') {
   /* Sidebar HTML Generator */
   const renderSidebar = () => {
     return Object.entries(groups).map(([section, items]) => `
-      <div class="mb-8">
-        <h3 class="px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider opacity-90 mb-3">${section}</h3>
-        <div class="space-y-1">
+      <div class="mb-3.5">
+        <h3 class="px-3 text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">${section}</h3>
+        <div class="space-y-0.5">
           ${items.map(item => `
             <button 
               id="tab-${item.id}"
-onclick="${['surat', 'proker', 'laporan', 'slide'].includes(item.id)
-        ? `navigate('${item.id}')`
-        : `window.handleAdminTabClick && window.handleAdminTabClick('${item.id}')`}"
-              class="w-full text-left px-4 py-3 rounded-2xl flex items-center transition-all duration-300 group relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 ${activePage === item.id
-        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-transparent shadow-[0_8px_16px_rgba(99,102,241,0.25)]'
-        : 'text-slate-600 hover:bg-white/80 hover:text-slate-800 border border-transparent hover:border-slate-200'
-      }"
+              onclick="${['surat', 'proker', 'laporan'].includes(item.id)
+                ? `navigate('${item.id}')`
+                : `window.handleAdminTabClick && window.handleAdminTabClick('${item.id}')`}"
+              class="w-full text-left px-3 py-2 rounded-xl flex items-center transition-all duration-200 group relative focus:outline-none ${activePage === item.id
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 font-medium'
+              }"
             >
-              <span class="w-8 h-8 flex items-center justify-center rounded-xl mr-3 transition-colors duration-300 relative z-10 ${activePage === item.id ? 'bg-white/20 text-white border-white/20' : 'bg-slate-800 border border-slate-200 shadow-sm group-hover:border-cyan-300/40 text-slate-500 group-hover:text-indigo-600'}">
-                  <i class="fas ${item.icon} text-sm"></i>
+              <span class="w-6 h-6 flex items-center justify-center rounded-lg mr-2.5 transition-colors shrink-0 ${activePage === item.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 group-hover:text-indigo-700'}">
+                  <i class="fas ${item.icon} text-xs"></i>
               </span>
-              <span class="font-medium text-sm relative z-10 tracking-tight transition-transform duration-300 group-hover:translate-x-0.5">${item.label}</span>
+              <span class="text-xs tracking-tight truncate flex-1">${item.label}</span>
             </button>
           `).join('')}
         </div>
@@ -90,37 +89,35 @@ onclick="${['surat', 'proker', 'laporan', 'slide'].includes(item.id)
   return `
     <div class="relative flex min-h-screen bg-[#f8fafc] text-slate-800 overflow-hidden">
       <div class="pointer-events-none absolute inset-0">
-        <div class="absolute -top-32 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-indigo-400/20 blur-3xl"></div>
-        <div class="absolute top-24 -left-24 h-80 w-80 rounded-full bg-purple-400/20 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-sky-400/20 blur-3xl"></div>
+        <div class="absolute -top-32 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-indigo-400/15 blur-3xl"></div>
+        <div class="absolute top-24 -left-24 h-80 w-80 rounded-full bg-purple-400/15 blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-sky-400/15 blur-3xl"></div>
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.15)_1px,transparent_0)] [background-size:28px_28px]"></div>
       </div>
       <!-- Admin Sidebar -->
-      <aside class="hidden md:flex flex-col w-72 bg-white/70 border-r border-slate-200/60 z-20 backdrop-blur-xl">
-        <div class="h-24 px-8 flex items-center border-b border-slate-200/60 bg-white/40">
-            <button onclick="navigate('home')" class="flex items-center gap-4 text-slate-800 hover:text-indigo-600 transition-colors group">
-                <span class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-200 shadow-sm text-cyan-200 flex items-center justify-center group-hover:border-indigo-300 group-hover:text-indigo-700 transition-all">
-                  <i class="fas fa-arrow-left text-sm group-hover:-translate-x-1 transition-transform"></i>
+      <aside class="hidden md:flex flex-col w-64 bg-white/80 border-r border-slate-200/70 z-20 backdrop-blur-xl h-screen shrink-0">
+        <div class="h-16 px-5 flex items-center border-b border-slate-200/60 shrink-0">
+            <button onclick="navigate('home')" class="flex items-center gap-3 text-slate-800 hover:text-indigo-600 transition-colors group">
+                <span class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-2xs shrink-0">
+                  <i class="fas fa-arrow-left text-xs group-hover:-translate-x-0.5 transition-transform"></i>
                 </span>
-                <span class="text-left">
-                  <span class="block font-semibold tracking-tight text-base text-slate-800">Kembali</span>
-                  <span class="block text-[10px] uppercase tracking-wider text-slate-500">Keluar Admin</span>
-                </span>
+                <div class="text-left">
+                  <span class="block font-bold tracking-tight text-xs text-slate-800 group-hover:text-indigo-600">Portal Utama</span>
+                  <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Keluar Admin</span>
+                </div>
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
+        <div class="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
             ${renderSidebar()}
         </div>
 
-        <div class="p-6 border-t border-slate-200/60 bg-white/40">
-             <div class="flex flex-col gap-3 px-4 py-4 rounded-2xl border border-white/60 bg-white/80 shadow-sm">
-                 <div class="flex items-center gap-3">
-                   ${avatar(user.nama, 'sm', user.foto_url)}
-                   <div class="overflow-hidden">
-                      <p class="text-sm font-semibold tracking-tight text-slate-800 truncate">${escapeHtml(user.nama)}</p>
-                      <p class="text-xs font-light text-slate-500 truncate">${user.role === 'operator' ? 'Operator' : 'Administrator'}</p>
-                   </div>
+        <div class="p-3 border-t border-slate-200/60 shrink-0 bg-slate-50/50">
+             <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-slate-200/70 bg-white shadow-2xs">
+                 ${avatar(user.nama, 'sm', user.foto_url)}
+                 <div class="overflow-hidden min-w-0 flex-1">
+                    <p class="text-xs font-bold tracking-tight text-slate-800 truncate">${escapeHtml(user.nama)}</p>
+                    <p class="text-[9.5px] font-medium text-indigo-600 capitalize truncate">${user.role === 'super_admin' ? 'Super Admin' : (user.role === 'operator' ? 'Operator' : 'Administrator')}</p>
                  </div>
              </div>
         </div>

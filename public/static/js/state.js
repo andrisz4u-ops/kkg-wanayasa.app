@@ -1,6 +1,7 @@
 
 export const state = {
     user: null,
+    tenant: null,
     currentPage: 'home',
     loading: false,
     mobileMenuOpen: false,

@@ -354,8 +354,8 @@ export const updateProfileSchema = z.object({
 // ============================================
 
 export const updateRoleSchema = z.object({
-    role: z.enum(['admin', 'operator', 'user'], {
-        message: 'Role harus admin, operator, atau user'
+    role: z.enum(['super_admin', 'admin', 'operator', 'kepala_sekolah', 'user'], {
+        message: 'Role harus super_admin, admin, operator, kepala_sekolah, atau user'
     }),
 });
 
@@ -383,7 +383,7 @@ export const createUserAdminSchema = z.object({
     nama: namaSchema,
     email: emailSchema,
     password: passwordSchema,
-    role: z.enum(['admin', 'operator', 'user']).default('user'),
+    role: z.enum(['super_admin', 'admin', 'operator', 'kepala_sekolah', 'user']).default('user'),
     sekolah: z.string().max(100).optional().nullable(),
     nip: z.string().max(20).optional().nullable(),
 });
@@ -392,7 +392,7 @@ export const updateUserAdminSchema = z.object({
     nama: namaSchema.optional(),
     email: emailSchema.optional(),
     sekolah: z.string().max(100).optional().nullable(),
-    role: z.enum(['admin', 'operator', 'user']).optional(),
+    role: z.enum(['super_admin', 'admin', 'operator', 'kepala_sekolah', 'user']).optional(),
     nip: z.string().max(30).optional().nullable(),
 });
 

@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
-import { getCurrentUser, getCookie, hashPassword, verifyPassword, validatePassword } from '../lib/auth';
+import { getCurrentUser, getCookie, hashPassword, verifyPassword, validatePassword, invalidateSessionUserCache } from '../lib/auth';
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import { logger } from '../lib/logger';
+import { createAuditLog } from '../lib/audit';
 
 type Bindings = { DB: D1Database };
 
@@ -62,7 +63,18 @@ profile.put('/', async (c) => {
             user.id
         ).run();
 
+        invalidateSessionUserCache(sessionId);
         logger.info('Profile updated', { userId: user.id });
+
+        await createAuditLog(c.env.DB, {
+            user_id: user.id,
+            action: 'USER_PROFILE_UPDATE',
+            entity_type: 'users',
+            entity_id: user.id,
+            details: { nama, nip, sekolah },
+            ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown',
+            user_agent: c.req.header('User-Agent') || 'unknown'
+        });
 
         return successResponse(c, {
             id: user.id,
@@ -122,9 +134,18 @@ profile.put('/password', async (c) => {
         await c.env.DB.prepare('UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?')
             .bind(newHash, user.id).run();
 
+        invalidateSessionUserCache(sessionId);
         logger.info('Password changed', { userId: user.id });
 
-        // Optional: Invalidate other sessions? For now we keep them active.
+        await createAuditLog(c.env.DB, {
+            user_id: user.id,
+            action: 'USER_PASSWORD_RESET',
+            entity_type: 'users',
+            entity_id: user.id,
+            details: 'Perubahan kata sandi mandiri pengguna',
+            ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown',
+            user_agent: c.req.header('User-Agent') || 'unknown'
+        });
 
         return successResponse(c, null, 'Password berhasil diubah');
     } catch (e: any) {
@@ -153,7 +174,18 @@ profile.post('/photo', async (c) => {
         await c.env.DB.prepare('UPDATE users SET foto_url = ?, updated_at = datetime("now") WHERE id = ?')
             .bind(photo_url, user.id).run();
 
+        invalidateSessionUserCache(sessionId);
         logger.info('Profile photo updated', { userId: user.id, photo_url });
+
+        await createAuditLog(c.env.DB, {
+            user_id: user.id,
+            action: 'USER_PROFILE_UPDATE',
+            entity_type: 'users',
+            entity_id: user.id,
+            details: 'Pembaruan foto profil pengguna',
+            ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown',
+            user_agent: c.req.header('User-Agent') || 'unknown'
+        });
 
         return successResponse(c, { photo_url }, 'Foto profil berhasil diperbarui');
     } catch (e: any) {

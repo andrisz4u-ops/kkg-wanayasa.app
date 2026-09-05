@@ -10,7 +10,7 @@ export { avatar, badge };
  */
 export function renderNavbar() {
   const isLoggedIn = !!state.user;
-  const isAdminPanelUser = ['admin', 'operator'].includes(state.user?.role || '');
+  const isAdminPanelUser = ['super_admin', 'admin', 'operator'].includes(state.user?.role || '');
 
   const navLinks = [
     { page: 'home', label: 'Beranda', icon: 'fa-home', public: true },

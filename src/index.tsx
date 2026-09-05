@@ -24,6 +24,7 @@ import kisiRoutes from './routes/kisi';
 import presentationRoutes from './routes/presentation';
 import ttsRoutes from './routes/tts';
 import banksoalRoutes from './routes/banksoal';
+import tenantRoutes from './routes/tenants';
 import { renderHTML } from './templates/layout';
 import { rateLimitMiddleware, RATE_LIMITS } from './lib/ratelimit';
 import { successResponse, Errors } from './lib/response';
@@ -130,6 +131,7 @@ app.route('/api/kisi', kisiRoutes);
 app.route('/api/presentation', presentationRoutes);
 app.route('/api/tts', ttsRoutes);
 app.route('/api/banksoal', banksoalRoutes);
+app.route('/api/tenants', tenantRoutes);
 
 // Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)
 app.get('/api/ai-providers/active', async (c) => {
@@ -148,7 +150,7 @@ app.get('/api/ai-providers/active', async (c) => {
 const requireAdminOnly = async (c: any, next: () => Promise<void>) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
-  if (!user || (user.role !== 'admin' && user.role !== 'operator')) {
+  if (!user || (user.role !== 'admin' && user.role !== 'operator' && user.role !== 'super_admin')) {
     return Errors.forbidden(c, 'Endpoint ini hanya untuk administrator');
   }
   await next();
@@ -522,6 +524,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+
+CREATE TABLE IF NOT EXISTS tenants (
+  id TEXT PRIMARY KEY,
+  nama TEXT NOT NULL,
+  jenjang TEXT DEFAULT 'SD',
+  kecamatan TEXT NOT NULL,
+  kabupaten TEXT NOT NULL,
+  provinsi TEXT DEFAULT 'Jawa Barat',
+  alamat_sekretariat TEXT,
+  email TEXT,
+  no_kontak TEXT,
+  logo_url TEXT,
+  kop_surat_url TEXT,
+  is_active INTEGER DEFAULT 1,
+  max_users INTEGER DEFAULT 500,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
 `;
     const stmts = schema.split(';').filter(s => s.trim());
     for (const stmt of stmts) {
@@ -562,6 +583,21 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
     try {
       await c.env.DB.prepare("ALTER TABLE users ADD COLUMN last_login_at DATETIME").run();
     } catch (e) { /* ignore if already exists */ }
+
+    // Migration: Multi-Tenancy support columns
+    try {
+      await c.env.DB.prepare("ALTER TABLE sekolah ADD COLUMN tenant_id TEXT DEFAULT 'kkg-gugus-3-wanayasa'").run();
+    } catch (e) { /* ignore if already exists */ }
+    try {
+      await c.env.DB.prepare("ALTER TABLE users ADD COLUMN tenant_id TEXT DEFAULT 'kkg-gugus-3-wanayasa'").run();
+    } catch (e) { /* ignore if already exists */ }
+    try {
+      await c.env.DB.prepare("ALTER TABLE audit_logs ADD COLUMN tenant_id TEXT DEFAULT 'kkg-gugus-3-wanayasa'").run();
+    } catch (e) { /* ignore if already exists */ }
+
+    // Seed default tenant (KKG Gugus 3 Wanayasa)
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO tenants (id, nama, jenjang, kecamatan, kabupaten, provinsi, alamat_sekretariat, email, is_active)
+      VALUES ('kkg-gugus-3-wanayasa', 'KKG Gugus 3 Wanayasa', 'SD', 'Wanayasa', 'Purwakarta', 'Jawa Barat', 'SDN 1 Wanayasa, Kec. Wanayasa, Kab. Purwakarta', 'admin@kkg-wanayasa.id', 1)`).run();
 
     // Hash password with new PBKDF2 method
     const adminPasswordHash = await hashPassword('admin123');

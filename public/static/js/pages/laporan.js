@@ -77,9 +77,9 @@ export async function renderLaporan() {
                         ${laporanList.length}
                     </span>
                 </button>
-                <button type="button" onclick="resetLaporanForm()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95">
-                    <i class="fas fa-plus"></i>
-                    <span>Buat Laporan Baru</span>
+                <button type="button" onclick="resetLaporanForm()" class="px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-semibold border border-gray-200 dark:border-gray-600 transition-all flex items-center gap-2 cursor-pointer shadow-sm" title="Kosongkan form untuk membuat laporan baru">
+                    <i class="fas fa-redo-alt text-gray-500"></i>
+                    <span>Reset Form</span>
                 </button>
             </div>
         </div>
@@ -220,10 +220,22 @@ export async function renderLaporan() {
                                 Siap Digunakan
                             </span>
                         </div>
+
+                        <!-- TOMBOL UTAMA: BUAT / GENERATE LAPORAN DENGAN AI (LANGSUNG SETELAH PILIH AI) -->
+                        <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center gap-3">
+                            <button type="button" onclick="generateAIContent()" class="btn-generate-ai-trigger w-full sm:flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-extrabold text-base shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-98">
+                                <i class="fas fa-magic text-amber-300 text-lg"></i>
+                                <span>Buat / Generate Laporan dengan AI</span>
+                            </button>
+                            <button type="button" onclick="switchStudioTab('preview')" class="w-full sm:w-auto py-4 px-5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fas fa-eye text-indigo-500"></i>
+                                <span>Lihat Pratinjau Manual</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Card 3: Lampiran Foto Dokumentasi Kegiatan -->
+                <!-- Card 3: Lampiran Foto Dokumentasi Kegiatan (Opsional) -->
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
                         <div class="flex items-center gap-3">
@@ -231,8 +243,11 @@ export async function renderLaporan() {
                                 <i class="fas fa-camera text-lg"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Lampiran Foto Dokumentasi Kegiatan</h3>
-                                <p class="text-xs text-gray-500">Foto dokumentasi akan otomatis dimasukkan ke lampiran laporan dan file Word (.docx)</p>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-base font-bold text-gray-900 dark:text-white">Lampiran Foto Dokumentasi Kegiatan</h3>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Opsional</span>
+                                </div>
+                                <p class="text-xs text-gray-500">Dapat diunggah sekarang atau nanti setelah draf laporan selesai dibuat</p>
                             </div>
                         </div>
                         <button type="button" onclick="triggerFotoUpload()" class="px-4 py-2 rounded-xl bg-pink-50 dark:bg-pink-950/50 hover:bg-pink-100 dark:hover:bg-pink-900/50 text-pink-700 dark:text-pink-300 text-xs font-bold border border-pink-200 dark:border-pink-800 transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto">
@@ -247,12 +262,12 @@ export async function renderLaporan() {
                     
                     <div id="foto-empty-state" class="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                         <i class="fas fa-images text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
-                        <p class="text-sm font-medium text-gray-500">Belum ada foto dokumentasi yang dilampirkan.</p>
-                        <p class="text-xs text-gray-400 mt-1">Klik tombol 'Unggah Foto Kegiatan' di atas untuk melampirkan foto acara.</p>
+                        <p class="text-sm font-medium text-gray-500">Belum ada foto dokumentasi yang dilampirkan (Opsional).</p>
+                        <p class="text-xs text-gray-400 mt-1">Anda dapat langsung membuat laporan dengan tombol di atas, atau melampirkan foto terlebih dahulu.</p>
                     </div>
                 </div>
 
-                <!-- 4. GENERATE BANNER ACTION -->
+                <!-- 4. GENERATE BANNER ACTION (Cadangan di Bawah) -->
                 <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                     <div class="relative z-10 space-y-1 text-center md:text-left">
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold mb-2">
@@ -265,13 +280,13 @@ export async function renderLaporan() {
                     </div>
 
                     <div class="relative z-10 flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                        <button type="button" id="btn-generate-ai" onclick="generateAIContent()" class="w-full sm:w-auto px-8 py-4 bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer active:scale-95 whitespace-nowrap">
+                        <button type="button" onclick="generateAIContent()" class="btn-generate-ai-trigger w-full sm:w-auto px-8 py-4 bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer active:scale-95 whitespace-nowrap">
                             <i class="fas fa-magic text-indigo-600"></i>
-                            <span>Generate Draf dengan AI</span>
+                            <span>Buat / Generate Laporan dengan AI</span>
                         </button>
                         <button type="button" onclick="switchStudioTab('preview')" class="w-full sm:w-auto px-5 py-4 bg-indigo-700/60 hover:bg-indigo-700 text-white font-semibold rounded-xl border border-indigo-400/40 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                             <i class="fas fa-eye"></i>
-                            <span>Buka Pratinjau Langsung</span>
+                            <span>Buka Pratinjau</span>
                         </button>
                     </div>
                 </div>
@@ -854,10 +869,12 @@ window.generateAIContent = async () => {
     const tempat = document.getElementById('input-tempat')?.value?.trim() || '';
     const narasumber = document.getElementById('input-narasumber')?.value?.trim() || '';
 
-    const btn = document.getElementById('btn-generate-ai');
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-lg"></i><span>Menyusun Laporan Lengkap...</span>';
-    btn.disabled = true;
+    const btns = document.querySelectorAll('.btn-generate-ai-trigger');
+    btns.forEach(b => {
+        b.dataset.origHtml = b.innerHTML;
+        b.innerHTML = '<i class="fas fa-circle-notch fa-spin text-lg"></i><span>Menyusun Laporan Lengkap...</span>';
+        b.disabled = true;
+    });
 
     showLoading('AI sedang menyusun draf Laporan Kegiatan KKG (LPJ) lengkap...');
 
@@ -911,8 +928,10 @@ window.generateAIContent = async () => {
         showToast('Gagal generate AI: ' + (e.message || 'Koneksi timeout'), 'error');
     } finally {
         hideLoading();
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
+        btns.forEach(b => {
+            if (b.dataset.origHtml) b.innerHTML = b.dataset.origHtml;
+            b.disabled = false;
+        });
     }
 };
 

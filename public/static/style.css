@@ -7886,6 +7886,11 @@ h1,
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.hover\:via-indigo-700:hover {
+  --tw-gradient-to: rgb(67 56 202 / 0)  var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), #4338ca var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
 .hover\:to-emerald-400:hover {
   --tw-gradient-to: #34d399 var(--tw-gradient-to-position);
 }
@@ -7904,6 +7909,10 @@ h1,
 
 .hover\:to-teal-700:hover {
   --tw-gradient-to: #155e5e var(--tw-gradient-to-position);
+}
+
+.hover\:to-purple-700:hover {
+  --tw-gradient-to: #7e22ce var(--tw-gradient-to-position);
 }
 
 .hover\:text-\[\#111111\]:hover {
@@ -9807,6 +9816,10 @@ h1,
 
   .sm\:flex-none {
     flex: none;
+  }
+
+  .sm\:flex-1 {
+    flex: 1 1 0%;
   }
 
   .sm\:grid-cols-2 {

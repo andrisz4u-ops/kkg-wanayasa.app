@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
@@ -13,6 +13,8 @@ export async function renderKisi() {
       ['Paket Soal Lengkap (PG, Isian, Uraian)', 'Kisi-kisi Otomatis', 'Analisis Tingkat Kesulitan (HOTS)', 'Download Format MS Word Siap Cetak']
     );
   }
+
+  const defaultK = detectUserDefaultKelas(state.user);
 
   return `
     <div class="animate-fade-in" id="asesmen-page">
@@ -70,12 +72,7 @@ export async function renderKisi() {
                 <label class="asesmen-label">KELAS</label>
                 <select name="jenjangKelas" class="asesmen-input">
                   ${[1, 2, 3, 4, 5, 6].map(k => `
-                    <option value="Kelas ${k}" ${
-                      (state.user?.mata_pelajaran || '').includes(String(k)) || 
-                      (state.user?.role_label || '').includes(String(k)) ||
-                      (!state.user?.mata_pelajaran?.match(/[1-6]/) && k === 5) 
-                      ? 'selected' : ''
-                    }>Kelas ${k}</option>
+                    <option value="Kelas ${k}" ${k === defaultK ? 'selected' : ''}>Kelas ${k}</option>
                   `).join('')}
                 </select>
               </div>
@@ -1011,13 +1008,7 @@ export function initKisi() {
     setVal('hotsRatio', '30:40:30');
     setVal('jenisUjian', 'Ulangan Harian');
     // Hitung default kelas dari profil user
-    let defaultKelas = 'Kelas 5';
-    for (let k = 1; k <= 6; k++) {
-      if ((state.user?.mata_pelajaran || '').includes(String(k)) || (state.user?.role_label || '').includes(String(k))) {
-        defaultKelas = `Kelas ${k}`;
-        break;
-      }
-    }
+    const defaultKelas = `Kelas ${detectUserDefaultKelas(state.user)}`;
     setVal('jenjangKelas', defaultKelas);
     setVal('semester', 'Ganjil');
 

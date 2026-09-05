@@ -572,3 +572,28 @@ export function renderTahunAjaranOptions(selectedVal) {
   `).join('');
 }
 
+/**
+ * Detect default class level (1-6) from user profile (mata_pelajaran, role_label, or role)
+ * Correctly parses Arabic numerals (1-6) and Roman numerals (I-VI).
+ * Defaults to 5 if no class is specified.
+ */
+export function detectUserDefaultKelas(user) {
+  if (!user) return 5;
+  const str = `${user.mata_pelajaran || ''} ${user.role_label || ''} ${user.role || ''}`.trim();
+  if (!str) return 5;
+
+  // Check Roman numerals first
+  if (/\b(VI|6)\b/i.test(str)) return 6;
+  if (/\b(IV|4)\b/i.test(str)) return 4;
+  if (/\b(V|5)\b/i.test(str)) return 5;
+  if (/\b(III|3)\b/i.test(str)) return 3;
+  if (/\b(II|2)\b/i.test(str)) return 2;
+  if (/\b(I|1)\b/i.test(str)) return 1;
+
+  // Check Arabic digits
+  const match = str.match(/[1-6]/);
+  if (match) return parseInt(match[0], 10);
+
+  return 5;
+}
+

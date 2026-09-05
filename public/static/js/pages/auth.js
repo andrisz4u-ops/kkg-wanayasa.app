@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { api, validators, validateForm, showFormErrors, clearFormErrors } from '../api.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { navigate } from '../router.js';
+import { fetchUnreadCount } from '../notifications.js';
 
 /**
  * Render Login/Register page
@@ -344,6 +345,7 @@ window.handleLogin = async function (e) {
     });
 
     state.user = response.data.user;
+    try { fetchUnreadCount(); } catch (_) {}
     showToast('Login berhasil! Selamat datang kembali.', 'success');
     navigate('home');
   } catch (error) {

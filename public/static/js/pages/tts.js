@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect } from '../utils.js';
+import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect, detectUserDefaultKelas } from '../utils.js';
 import { state } from '../state.js';
 import { generateTtsDocx } from '../tts-docx.js';
 import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
@@ -8,14 +8,7 @@ let _lastTtsData = null;
 let _lastTtsFormData = {};
 
 export function renderTts() {
-  const userRole = state.user?.role_label || state.user?.role || '';
-  let defaultKelas = 'Kelas 5';
-  for (let k = 1; k <= 6; k++) {
-    if ((state.user?.mata_pelajaran || '').includes(String(k)) || userRole.includes(String(k))) {
-      defaultKelas = `Kelas ${k}`;
-      break;
-    }
-  }
+  const defaultKelas = `Kelas ${detectUserDefaultKelas(state.user)}`;
 
   return `
     <div class="max-w-6xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">

@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
@@ -13,6 +13,8 @@ export async function renderRpp() {
       ['RPP Kurikulum Merdeka Otomatis', 'AI Deep Learning (Gemini, Mistral)', 'Ekspor ke Word & PDF', 'Tanpa Batas Penggunaan']
     );
   }
+
+  const defaultK = detectUserDefaultKelas(state.user);
 
   return `
     <div class="animate-fade-in" id="rpp-page">
@@ -85,12 +87,7 @@ export async function renderRpp() {
                 <label class="rpp-label">KELAS</label>
                 <select name="jenjangKelas" class="rpp-input">
                   ${[1, 2, 3, 4, 5, 6].map(k => `
-                    <option value="Kelas ${k}" ${
-                      (state.user?.mata_pelajaran || '').includes(String(k)) || 
-                      (state.user?.role_label || '').includes(String(k)) ||
-                      (!state.user?.mata_pelajaran?.match(/[1-6]/) && k === 5) 
-                      ? 'selected' : ''
-                    }>Kelas ${k}</option>
+                    <option value="Kelas ${k}" ${k === defaultK ? 'selected' : ''}>Kelas ${k}</option>
                   `).join('')}
                 </select>
               </div>

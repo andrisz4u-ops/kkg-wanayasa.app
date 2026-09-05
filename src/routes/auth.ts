@@ -71,7 +71,7 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
 
     // Find user with school information
     const user: any = await c.env.DB.prepare(`
-      SELECT u.id, u.email, u.password_hash, u.nama, COALESCE(u.role_label, u.role) as role, 
+      SELECT u.id, u.email, u.password_hash, u.nama, COALESCE(u.role_label, u.role) as role, u.role_label,
              u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.is_approved, u.sekolah_id,
              s.nama as sekolah_nama, s.kepala_sekolah, s.nip_kepala_sekolah, s.kop_surat_url
       FROM users u
@@ -174,12 +174,16 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
         nama: user.nama,
         email: user.email,
         role: user.role,
+        role_label: user.role_label || user.role,
         nip: user.nip,
         sekolah: user.sekolah,
         sekolah_id: resolvedSekolahId,
+        sekolah_nama: user.sekolah_nama || user.sekolah,
         kepala_sekolah: kepalaSekolah,
         nip_kepala_sekolah: nipKepalaSekolah,
         kop_surat_url: kopSuratUrl,
+        mata_pelajaran: user.mata_pelajaran,
+        no_hp: user.no_hp,
         foto_url: user.foto_url,
       }
     }, 'Login berhasil');
@@ -359,6 +363,7 @@ auth.get('/me', async (c) => {
         nama: user.nama,
         email: user.email,
         role: user.role,
+        role_label: user.role_label || user.role,
         nip: user.nip,
         sekolah: user.sekolah,
         sekolah_id: resolvedSekolahId,

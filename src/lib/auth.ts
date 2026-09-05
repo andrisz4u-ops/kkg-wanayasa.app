@@ -178,7 +178,7 @@ export async function getCurrentUser(db: D1Database, sessionId: string | undefin
   }
 
   const result = await db.prepare(`
-    SELECT u.id, u.nama, u.email, COALESCE(u.role_label, u.role) as role, u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.sekolah_id,
+    SELECT u.id, u.nama, u.email, COALESCE(u.role_label, u.role) as role, u.role_label, u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.sekolah_id,
            s.nama as sekolah_nama, s.kepala_sekolah, s.nip_kepala_sekolah, s.kop_surat_url, s.npsn, s.alamat as sekolah_alamat
     FROM sessions sess 
     JOIN users u ON sess.user_id = u.id 

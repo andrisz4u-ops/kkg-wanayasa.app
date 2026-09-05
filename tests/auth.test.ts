@@ -116,3 +116,29 @@ describe('Session Management', () => {
         expect(() => invalidateSessionUserCache()).not.toThrow();
     });
 });
+
+describe('User Class Auto-Detection', () => {
+    // @ts-ignore - importing ES module helper
+    it('should correctly detect class levels from user profile', async () => {
+        const { detectUserDefaultKelas } = await import('../public/static/js/utils.js');
+        
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 6' })).toBe(6);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 2' })).toBe(2);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 1' })).toBe(1);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 3' })).toBe(3);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 4' })).toBe(4);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas 5' })).toBe(5);
+
+        // Roman numerals
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru Kelas VI' })).toBe(6);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Kelas IV' })).toBe(4);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Kelas II SD' })).toBe(2);
+
+        // Role fallback or custom subject
+        expect(detectUserDefaultKelas({ role_label: 'Guru Kelas 6' })).toBe(6);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru PAI' })).toBe(5);
+        expect(detectUserDefaultKelas({ mata_pelajaran: 'Guru PJOK' })).toBe(5);
+        expect(detectUserDefaultKelas(null)).toBe(5);
+        expect(detectUserDefaultKelas({})).toBe(5);
+    });
+});

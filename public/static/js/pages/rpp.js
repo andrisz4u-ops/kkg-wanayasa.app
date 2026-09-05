@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
@@ -172,6 +172,15 @@ export async function renderRpp() {
               <option value="mistral">Mistral Medium</option>
               <option value="z_ai">GLM-4.7</option>
             </select>
+
+            <!-- Streaming Mode Toggle Switch -->
+            <div class="mt-3 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-500/30">
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none" title="Aktifkan untuk memantau proses berpikir & penyusunan skenario RPP secara realtime">
+                <input type="checkbox" id="toggle-rpp-stream" class="rounded accent-indigo-600 w-4 h-4 cursor-pointer">
+                <span><i class="fas fa-satellite-dish text-indigo-600 dark:text-indigo-400 mr-1 animate-pulse"></i>Live AI Streaming Monitor</span>
+              </label>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Live</span>
+            </div>
           </div>
         </form>
 
@@ -552,6 +561,17 @@ export function initRpp() {
     }
   });
 
+  // Synchronize AI Streaming Mode toggle preference
+  const toggleRppStreamEl = document.getElementById('toggle-rpp-stream');
+  if (toggleRppStreamEl) {
+    const isStreamOn = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
+    toggleRppStreamEl.checked = isStreamOn;
+    toggleRppStreamEl.addEventListener('change', () => {
+      localStorage.setItem('kkg_ai_streaming_mode', toggleRppStreamEl.checked ? 'true' : 'false');
+      showToast(toggleRppStreamEl.checked ? '📡 Mode Streaming AI Aktif: Proses berpikir AI akan terpantau realtime.' : 'Mode Streaming AI Dinonaktifkan.', 'info');
+    });
+  }
+
   // Generate button
   document.getElementById('btn-generate-rpp')?.addEventListener('click', async () => {
     const fd = new FormData(form);
@@ -565,52 +585,117 @@ export function initRpp() {
       showToast('Harap isi Topik/Materi terlebih dahulu.', 'error'); return;
     }
 
+    const isStreaming = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
     const btn = document.getElementById('btn-generate-rpp');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang Menyusun RPP...';
-    showLoading('AI sedang menyusun RPP Deep Learning...', 'Proses ini membutuhkan 30-60 detik');
 
-    try {
-      const result = await api('/rpp/generate', {
-        method: 'POST',
-        body: data,
-        timeout: 300000 // 5 menit untuk AI generation agar tidak timeout
+    if (isStreaming) {
+      btn.innerHTML = '<i class="fas fa-satellite-dish animate-pulse"></i> Streaming RPP...';
+
+      const monitor = openAiLiveMonitor({
+        title: 'RPP Merdeka Deep Learning',
+        subtitle: `Menyusun modul ajar ${data.mataPelajaran || ''} (${data.jenjangKelas || 'SD'}) - "${data.topik}"`,
+        modelName: data.aiProvider || 'AI Engine',
+        steps: [
+          { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
+          { id: 2, label: 'Mindful/Joyful', icon: 'fa-lightbulb' },
+          { id: 3, label: 'Asesmen & LKPD', icon: 'fa-clipboard-check' },
+          { id: 4, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
+        ]
       });
 
-      if (result.success) {
-        const aiMeta = result.data?._ai_meta;
-        const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
-        currentRppFormData = data;
-        currentRppContent = result.data;
-        currentLampiran = null;
-        renderResult(result.data, data);
+      let finalResultData = null;
 
-        // Auto-archive document
-        saveDocArchive({
-          module: 'rpp',
-          title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
-          subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
-          inputData: data,
-          content: result.data
+      try {
+        await streamPost('/rpp/generate-stream', data, (event, payload) => {
+          if (event === 'step') {
+            monitor.updateStep(payload.step, payload.title, payload.message, payload.percent);
+          } else if (event === 'token') {
+            monitor.appendToken(payload.text);
+          } else if (event === 'done') {
+            finalResultData = payload.data;
+          } else if (event === 'error') {
+            throw new Error(payload.message || 'Gagal generate stream RPP');
+          }
         });
 
-        showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
-        // Log failover details for debugging
-        if (aiMeta?.failover_from) {
-          console.warn('[AI Failover]', aiMeta.failover_from, '→', aiMeta.provider);
-          console.warn('[AI Failover Errors]', aiMeta.failover_errors);
-          showToast(`⚠️ ${aiMeta.failover_from} gagal: ${(aiMeta.failover_errors || []).join(' | ')}`, 'error');
+        if (finalResultData) {
+          monitor.complete(() => {
+            currentRppFormData = data;
+            currentRppContent = finalResultData;
+            currentLampiran = null;
+            renderResult(finalResultData, data);
+
+            saveDocArchive({
+              module: 'rpp',
+              title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+              subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
+              inputData: data,
+              content: finalResultData
+            });
+
+            const aiMeta = finalResultData?._ai_meta;
+            const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
+            showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
+          });
+        } else {
+          monitor.close();
+          showToast('Gagal memuat hasil dari streaming RPP.', 'error');
         }
-      } else {
-        showToast(result.error?.message || 'Gagal generate RPP', 'error');
+      } catch (err) {
+        console.error('Streaming RPP error:', err);
+        monitor.close();
+        showToast('Error Streaming: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Error: ' + err.message, 'error');
-    } finally {
-      hideLoading();
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
+    } else {
+      // Non-streaming fallback with Smart Dynamic Loader
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang Menyusun RPP...';
+      showLoading('AI sedang menyusun RPP Deep Learning...', 'Merancang skenario pembelajaran bermakna (BSKAP 046/2025)');
+
+      try {
+        const result = await api('/rpp/generate', {
+          method: 'POST',
+          body: data,
+          timeout: 300000 // 5 menit untuk AI generation agar tidak timeout
+        });
+
+        if (result.success) {
+          const aiMeta = result.data?._ai_meta;
+          const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
+          currentRppFormData = data;
+          currentRppContent = result.data;
+          currentLampiran = null;
+          renderResult(result.data, data);
+
+          // Auto-archive document
+          saveDocArchive({
+            module: 'rpp',
+            title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+            subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
+            inputData: data,
+            content: result.data
+          });
+
+          showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
+          if (aiMeta?.failover_from) {
+            console.warn('[AI Failover]', aiMeta.failover_from, '→', aiMeta.provider);
+            console.warn('[AI Failover Errors]', aiMeta.failover_errors);
+            showToast(`⚠️ ${aiMeta.failover_from} gagal: ${(aiMeta.failover_errors || []).join(' | ')}`, 'error');
+          }
+        } else {
+          showToast(result.error?.message || 'Gagal generate RPP', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
+      }
     }
   });
 

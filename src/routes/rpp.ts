@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
@@ -9,66 +10,54 @@ import { type AppBindings } from '../types/env';
 
 const rpp = new Hono<{ Bindings: AppBindings }>();
 
-// Generate RPP
-rpp.post('/generate', async (c) => {
-  try {
-    const body = await c.req.json();
-    const {
-      namaSekolah, namaKepalaSekolah, nipKepalaSekolah,
-      namaGuru, nipGuru, mataPelajaran, topik, jenjangKelas,
-      semester, alokasiWaktu, strategi, jumlahPertemuan,
-      profilLulusan, capaianPembelajaran, lampirkanLKPD, aiProvider
-    } = body;
+// Helper kalkulasi distribusi waktu RPP Deep Learning
+export function calculateTimeDistribution(alokasiWaktu?: string) {
+  const timeStr = alokasiWaktu || '';
+  const match = timeStr.match(/(\d+)\s*[xX]\s*(\d+)/);
+  const totalMinutes = match ? parseInt(match[1]) * parseInt(match[2]) : (parseInt(timeStr.replace(/\D/g, '')) || 70);
 
-    const ai = new AIService(c.env);
-    await ai.loadProviders(c.env.DB);
+  const breakdown = {
+    pendahuluan: Math.round(totalMinutes * (5 / 70)),
+    mindful: Math.round(totalMinutes * (15 / 70)),
+    meaningful: Math.round(totalMinutes * (30 / 70)),
+    joyful: Math.round(totalMinutes * (15 / 70)),
+    penutup: Math.round(totalMinutes * (5 / 70))
+  };
+  const currentSum = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  breakdown.meaningful += (totalMinutes - currentSum);
 
-    // Time distribution logic
-    const totalMinutes = (() => {
-      const timeStr = alokasiWaktu || '';
-      const match = timeStr.match(/(\d+)\s*[xX]\s*(\d+)/);
-      if (match) return parseInt(match[1]) * parseInt(match[2]);
-      return parseInt(timeStr.replace(/\D/g, '')) || 70;
-    })();
+  const timeDist = {
+    pen: `${breakdown.pendahuluan} Menit`,
+    min: `${breakdown.mindful} Menit`,
+    mea: `${breakdown.meaningful} Menit`,
+    joy: `${breakdown.joyful} Menit`,
+    clo: `${breakdown.penutup} Menit`
+  };
 
-    const breakdown = {
-      pendahuluan: Math.round(totalMinutes * (5 / 70)),
-      mindful: Math.round(totalMinutes * (15 / 70)),
-      meaningful: Math.round(totalMinutes * (30 / 70)),
-      joyful: Math.round(totalMinutes * (15 / 70)),
-      penutup: Math.round(totalMinutes * (5 / 70))
-    };
-    const currentSum = Object.values(breakdown).reduce((a, b) => a + b, 0);
-    breakdown.meaningful += (totalMinutes - currentSum);
+  return { totalMinutes, timeDist, breakdown };
+}
 
-    const timeDist = {
-      pen: `${breakdown.pendahuluan} Menit`,
-      min: `${breakdown.mindful} Menit`,
-      mea: `${breakdown.meaningful} Menit`,
-      joy: `${breakdown.joyful} Menit`,
-      clo: `${breakdown.penutup} Menit`
-    };
+// Helper perumusan prompt RPP Deep Learning
+export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, totalMinutes: number) {
+  const {
+    namaSekolah, namaGuru, mataPelajaran, topik, jenjangKelas,
+    semester, alokasiWaktu, strategi, jumlahPertemuan,
+    profilLulusan, lampirkanLKPD, aiProvider
+  } = body;
 
-    // Logika pemilihan CP berdasarkan Fase dan Mata Pelajaran (Resmi BSKAP No. 046 Tahun 2025)
-    const getMatchedCP = () => {
-      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran; // Prioritas input manual user
-      return getOfficialCP(mataPelajaran, jenjangKelas);
-    };
+  const userCP = baseCP
+    ? `Gunakan Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025 berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
+    : "Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka secara otomatis untuk mata pelajaran dan topik ini.";
 
-    const baseCP = getMatchedCP();
-    const userCP = baseCP
-      ? `Gunakan Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025 berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
-      : "Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka secara otomatis untuk mata pelajaran dan topik ini.";
+  const profileDimensions = Array.isArray(profilLulusan)
+    ? profilLulusan.join(', ')
+    : (profilLulusan || '');
 
-    const profileDimensions = Array.isArray(profilLulusan)
-      ? profilLulusan.join(', ')
-      : (profilLulusan || '');
+  const bedrockWarning = aiProvider === 'bedrock'
+    ? "\n\n      PERINGATAN KRITIS LIMITASI TOKEN:\n      Anda sedang berjalan di sistem Bedrock dengan batas keras 4000 output token. Jika teks terlalu panjang, JSON akan terpotong (rusak)! Untuk mencegah ini:\n      1. WAJIB menggunakan poin-poin sangat singkat (maksimal 5-7 kata per poin).\n      2. JANGAN menulis narasi paragraf panjang.\n      3. Hapus semua kalimat pengantar/penutup basa-basi.\n      4. Jadikan setiap aktivitas sesingkat mungkin tapi tetap jelas."
+    : "";
 
-    const bedrockWarning = aiProvider === 'bedrock' 
-      ? "\n\n      PERINGATAN KRITIS LIMITASI TOKEN:\n      Anda sedang berjalan di sistem Bedrock dengan batas keras 4000 output token. Jika teks terlalu panjang, JSON akan terpotong (rusak)! Untuk mencegah ini:\n      1. WAJIB menggunakan poin-poin sangat singkat (maksimal 5-7 kata per poin).\n      2. JANGAN menulis narasi paragraf panjang.\n      3. Hapus semua kalimat pengantar/penutup basa-basi.\n      4. Jadikan setiap aktivitas sesingkat mungkin tapi tetap jelas."
-      : "";
-
-    const prompt = `
+  return `
       Bertindaklah sebagai ahli kurikulum Deep Learning & Understanding by Design (UbD).
       Tugas Anda adalah menyusun RPP (Rencana Pelaksanaan Pembelajaran) yang MENDALAM, TERSTRUKTUR, dan SIAP AJAR.${bedrockWarning}
       
@@ -200,6 +189,29 @@ rpp.post('/generate', async (c) => {
       - hasil_kerja: Berikan panduan apa yang harus ditulis di lembar jawaban.
       - penilaian: Wajib berikan minimal 5 soal (pilihan ganda atau esai).
     `;
+}
+
+// Generate RPP (Standar / Non-Streaming)
+rpp.post('/generate', async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      namaSekolah, namaGuru, mataPelajaran, topik, jenjangKelas,
+      capaianPembelajaran, lampirkanLKPD, aiProvider
+    } = body;
+
+    const ai = new AIService(c.env);
+    await ai.loadProviders(c.env.DB);
+
+    const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
+
+    const getMatchedCP = () => {
+      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
+      return getOfficialCP(mataPelajaran, jenjangKelas);
+    };
+
+    const baseCP = getMatchedCP();
+    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
 
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
@@ -211,12 +223,10 @@ rpp.post('/generate', async (c) => {
     const preferredSlug = slugMap[aiProvider] || aiProvider;
     const result = await ai.generateJSON(prompt, preferredSlug);
 
-    // Remove LKPD if user selected 'Tidak'
     if (lampirkanLKPD !== 'Ya' && result?.pertemuan) {
       result.pertemuan.forEach((p: any) => delete p.lkpd);
     }
 
-    // Record usage telemetry for school & teacher analytics
     try {
       const sessionId = getCookie(c.req.header('Cookie'), 'session');
       const user = await getCurrentUser(c.env.DB, sessionId);
@@ -235,6 +245,138 @@ rpp.post('/generate', async (c) => {
     return successResponse(c, result);
   } catch (e: any) {
     console.error('RPP Gen Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// Generate RPP Stream (SSE - Live Monitor)
+rpp.post('/generate-stream', async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      namaSekolah, namaGuru, mataPelajaran, topik, jenjangKelas,
+      capaianPembelajaran, lampirkanLKPD, aiProvider
+    } = body;
+
+    if (!topik || !String(topik).trim()) {
+      return Errors.badRequest(c, 'Topik/Materi wajib diisi');
+    }
+
+    const ai = new AIService(c.env);
+    await ai.loadProviders(c.env.DB);
+
+    const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
+
+    const getMatchedCP = () => {
+      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
+      return getOfficialCP(mataPelajaran, jenjangKelas);
+    };
+
+    const baseCP = getMatchedCP();
+    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
+
+    const slugMap: Record<string, string> = {
+      vertex: 'vertex-proxy',
+      gemini: 'gemini-flash',
+      bedrock: 'bedrock-claude',
+      mistral: 'mistral-large',
+      z_ai: 'glm4-flash'
+    };
+    const preferredSlug = slugMap[aiProvider] || aiProvider;
+
+    return streamSSE(c, async (stream) => {
+      try {
+        await stream.writeSSE({
+          event: 'step',
+          data: JSON.stringify({
+            step: 1,
+            totalSteps: 4,
+            title: 'Analisis CP BSKAP 046/2025',
+            message: `Menelaah kesiapan murid & CP resmi BSKAP No. 046/2025 untuk topik "${topik}"...`,
+            percent: 20
+          })
+        });
+
+        await stream.writeSSE({
+          event: 'step',
+          data: JSON.stringify({
+            step: 2,
+            totalSteps: 4,
+            title: 'Skenario Mindful, Meaningful, Joyful',
+            message: `Menghubungkan Engine AI [${preferredSlug}] & merancang langkah bermakna...`,
+            percent: 45
+          })
+        });
+
+        const onToken = async (token: string) => {
+          await stream.writeSSE({
+            event: 'token',
+            data: JSON.stringify({ text: token })
+          });
+        };
+
+        const result = await ai.generateJSONStream(prompt, preferredSlug, onToken);
+
+        await stream.writeSSE({
+          event: 'step',
+          data: JSON.stringify({
+            step: 3,
+            totalSteps: 4,
+            title: 'Asesmen & Instrumen LKPD',
+            message: 'Menyusun rubrik asesmen formatif-sumatif dan lembar kerja peserta didik...',
+            percent: 80
+          })
+        });
+
+        if (lampirkanLKPD !== 'Ya' && result?.pertemuan) {
+          result.pertemuan.forEach((p: any) => delete p.lkpd);
+        }
+
+        try {
+          const sessionId = getCookie(c.req.header('Cookie'), 'session');
+          const user = await getCurrentUser(c.env.DB, sessionId);
+          await recordAIGeneration(c.env.DB, {
+            user_id: user?.id || 1,
+            user_nama: user?.nama || (namaGuru || 'Guru'),
+            sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
+            feature_type: 'RPP',
+            mata_pelajaran: mataPelajaran,
+            topik: topik,
+            jenjang_kelas: jenjangKelas,
+            ai_provider: preferredSlug,
+          });
+        } catch (_) {}
+
+        await stream.writeSSE({
+          event: 'step',
+          data: JSON.stringify({
+            step: 4,
+            totalSteps: 4,
+            title: 'Finalisasi Dokumen RPP',
+            message: 'Dokumen RPP Deep Learning siap ajar berhasil dirakit!',
+            percent: 100
+          })
+        });
+
+        await stream.writeSSE({
+          event: 'done',
+          data: JSON.stringify({
+            success: true,
+            data: result
+          })
+        });
+      } catch (err: any) {
+        console.error('RPP Stream Error:', err);
+        await stream.writeSSE({
+          event: 'error',
+          data: JSON.stringify({
+            message: err.message || 'Gagal menghasilkan RPP secara streaming'
+          })
+        });
+      }
+    });
+  } catch (e: any) {
+    console.error('RPP Route Stream Error:', e);
     return Errors.internal(c, e.message);
   }
 });

@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx } from '../asesmen-docx.js';
@@ -187,6 +187,15 @@ export async function renderKisi() {
                 <input type="checkbox" name="useGambar" value="1" checked class="rounded accent-cyan-600 w-4 h-4 cursor-pointer">
                 <span><i class="fas fa-image text-cyan-500 mr-1"></i>Sertakan Ilustrasi Gambar (Jika Relevan)</span>
               </label>
+            </div>
+
+            <!-- Streaming Mode Toggle Switch -->
+            <div class="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-500/30">
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none" title="Aktifkan untuk memantau proses berpikir & naskah soal AI secara realtime">
+                <input type="checkbox" id="toggle-kisi-stream" class="rounded accent-cyan-600 w-4 h-4 cursor-pointer">
+                <span><i class="fas fa-satellite-dish text-cyan-600 dark:text-cyan-400 mr-1 animate-pulse"></i>Live AI Streaming Monitor</span>
+              </label>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300">Live</span>
             </div>
           </div>
           </div>
@@ -1088,6 +1097,17 @@ export function initKisi() {
     }
   });
 
+  // Synchronize AI Streaming Mode toggle preference
+  const toggleStreamEl = document.getElementById('toggle-kisi-stream');
+  if (toggleStreamEl) {
+    const isStreamOn = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
+    toggleStreamEl.checked = isStreamOn;
+    toggleStreamEl.addEventListener('change', () => {
+      localStorage.setItem('kkg_ai_streaming_mode', toggleStreamEl.checked ? 'true' : 'false');
+      showToast(toggleStreamEl.checked ? '📡 Mode Streaming AI Aktif: Proses berpikir AI akan terpantau realtime.' : 'Mode Streaming AI Dinonaktifkan.', 'info');
+    });
+  }
+
   // Submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1100,37 +1120,95 @@ export function initKisi() {
       return;
     }
 
-    showLoading('AI sedang membuat soal...');
+    const isStreaming = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
 
-    try {
-      const result = await api('/kisi/generate', {
-        method: 'POST',
-        body: data,
-        timeout: 300000 // 5 menit untuk AI generation agar tidak timeout
+    if (isStreaming) {
+      const monitor = openAiLiveMonitor({
+        title: 'Asesmen Neural Architect',
+        subtitle: `Menyusun soal ${data.mataPelajaran || ''} (${data.jenjangKelas || 'SD'}) - "${data.topik}"`,
+        modelName: data.aiProvider || 'AI Engine',
+        steps: [
+          { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
+          { id: 2, label: 'Naskah PG', icon: 'fa-list-ol' },
+          { id: 3, label: 'Isian & Uraian', icon: 'fa-pen-fancy' },
+          { id: 4, label: 'Matriks Kisi', icon: 'fa-table-cells' },
+          { id: 5, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
+        ]
       });
 
-      if (result.success) {
-        renderResult(result.data, data);
-        const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
+      let finalResultData = null;
 
-        // Auto-archive document
-        saveDocArchive({
-          module: 'kisi',
-          title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
-          subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
-          inputData: data,
-          content: result.data
+      try {
+        await streamPost('/kisi/generate-stream', data, (event, payload) => {
+          if (event === 'step') {
+            monitor.updateStep(payload.step, payload.title, payload.message, payload.percent);
+          } else if (event === 'token') {
+            monitor.appendToken(payload.text);
+          } else if (event === 'done') {
+            finalResultData = payload.data;
+          } else if (event === 'error') {
+            throw new Error(payload.message || 'Gagal generate stream');
+          }
         });
 
-        showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
-      } else {
-        showToast(result.error?.message || 'Gagal generate', 'error');
+        if (finalResultData) {
+          monitor.complete(() => {
+            renderResult(finalResultData, data);
+            const modelInfo = finalResultData?._meta?.model ? ` (${finalResultData._meta.model})` : '';
+
+            saveDocArchive({
+              module: 'kisi',
+              title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+              subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
+              inputData: data,
+              content: finalResultData
+            });
+
+            showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
+          });
+        } else {
+          monitor.close();
+          showToast('Gagal memuat hasil dari streaming AI.', 'error');
+        }
+      } catch (err) {
+        console.error('Streaming Asesmen error:', err);
+        monitor.close();
+        showToast('Error Streaming: ' + err.message, 'error');
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Error: ' + err.message, 'error');
-    } finally {
-      hideLoading();
+    } else {
+      // Non-streaming fallback with Smart Dynamic Loader
+      showLoading('AI sedang membuat soal...', 'Menyusun naskah & kisi-kisi terstandar BSKAP 046/2025');
+
+      try {
+        const result = await api('/kisi/generate', {
+          method: 'POST',
+          body: data,
+          timeout: 300000 // 5 menit untuk AI generation agar tidak timeout
+        });
+
+        if (result.success) {
+          renderResult(result.data, data);
+          const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
+
+          // Auto-archive document
+          saveDocArchive({
+            module: 'kisi',
+            title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
+            subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
+            inputData: data,
+            content: result.data
+          });
+
+          showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
+        } else {
+          showToast(result.error?.message || 'Gagal generate', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
     }
   });
 

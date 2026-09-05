@@ -1,4 +1,5 @@
 // Utility functions for the KKG Portal
+import { getCsrfToken } from './api.js';
 
 /**
  * Show toast notification
@@ -225,31 +226,331 @@ export function createSpinner(size = 'md') {
   `;
 }
 
+let activeLoadingTimer = null;
+
 /**
- * Full page loading overlay
+ * Full page smart loading overlay with dynamic timer & pedagogical tips
  */
-export function showLoading(message = 'Memuat...') {
-  // Remove existing overlay
+export function showLoading(message = 'Memuat...', subtitle = '') {
   hideLoading();
 
   const overlay = document.createElement('div');
   overlay.id = 'loading-overlay';
-  overlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center';
+  overlay.className = 'fixed inset-0 bg-slate-950/75 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fade-in';
+
+  const tips = [
+    '💡 Soal Level L3 (Penalaran) menuntut murid menganalisis stimulus kontekstual, bukan sekadar mengingat rumus.',
+    '💡 BSKAP No. 046 Tahun 2025 menyederhanakan capaian pembelajaran agar lebih mendalam dan esensial.',
+    '💡 RPP Deep Learning membagi kegiatan ke dalam alur Berkesadaran (Mindful), Bermakna (Meaningful), & Menggembirakan (Joyful).',
+    '💡 Sistem secara otomatis merotasi kunci API AI untuk memastikan kestabilan dan kecepatan respons.'
+  ];
+  const initialTip = tips[Math.floor(Math.random() * tips.length)];
+
   overlay.innerHTML = `
-    <div class="bg-white rounded-2xl p-8 shadow-2xl text-center">
-      <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-      <p class="text-gray-600 font-medium">${escapeHtml(message)}</p>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden">
+      <div class="absolute -top-12 -left-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="relative w-16 h-16 mx-auto mb-5 flex items-center justify-center">
+        <div class="w-16 h-16 rounded-full border-4 border-indigo-100 dark:border-indigo-950 border-t-indigo-600 dark:border-t-indigo-400 animate-spin"></div>
+        <i class="fas fa-brain text-indigo-600 dark:text-indigo-400 text-xl absolute"></i>
+      </div>
+
+      <h3 id="loading-msg" class="text-base font-bold text-slate-800 dark:text-slate-100 mb-1.5">${escapeHtml(message)}</h3>
+      <p id="loading-sub" class="text-xs text-slate-500 dark:text-slate-400 mb-4">${subtitle ? escapeHtml(subtitle) : 'Sedang meracik konten cerdas Kurikulum Merdeka...'}</p>
+
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 text-[11px] font-mono text-slate-600 dark:text-slate-300 mb-4 border border-slate-200 dark:border-slate-700/60">
+        <i class="fas fa-stopwatch text-indigo-500"></i>
+        <span>Waktu berjalan: <strong id="loading-seconds">0</strong>s</span>
+      </div>
+
+      <div class="text-[11px] text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/60 text-left">
+        ${initialTip}
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
+
+  let sec = 0;
+  const secEl = document.getElementById('loading-seconds');
+  activeLoadingTimer = setInterval(() => {
+    sec++;
+    if (secEl) secEl.textContent = sec;
+  }, 1000);
 }
 
 /**
  * Hide loading overlay
  */
 export function hideLoading() {
+  if (activeLoadingTimer) {
+    clearInterval(activeLoadingTimer);
+    activeLoadingTimer = null;
+  }
   const overlay = document.getElementById('loading-overlay');
   if (overlay) overlay.remove();
+}
+
+/**
+ * AI Live Stream Monitor Modal (Glassmorphic real-time terminal & step tracker)
+ */
+export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 'Sedang menyusun dokumen...', modelName = 'AI Engine', steps = [], onCancel }) {
+  closeAiLiveMonitor();
+
+  const defaultSteps = steps.length > 0 ? steps : [
+    { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
+    { id: 2, label: 'Matriks L1-L3', icon: 'fa-table-cells' },
+    { id: 3, label: 'Naskah Soal', icon: 'fa-file-lines' },
+    { id: 4, label: 'Rubrik & Kunci', icon: 'fa-circle-check' },
+    { id: 5, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-live-monitor-modal';
+  overlay.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-6 animate-fade-in';
+
+  overlay.innerHTML = `
+    <div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl w-full max-w-3xl shadow-2xl shadow-indigo-950/60 overflow-hidden flex flex-col text-slate-100 transition-all">
+      <!-- Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25">
+            <i class="fas fa-brain text-base animate-pulse"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm sm:text-base font-bold text-white tracking-wide">${escapeHtml(title)}</h3>
+              <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                LIVE
+              </span>
+            </div>
+            <p id="monitor-subtitle" class="text-xs text-slate-400 truncate max-w-xs sm:max-w-md">${escapeHtml(subtitle)}</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs font-mono text-indigo-300">
+            <i class="fas fa-microchip text-indigo-400"></i>
+            <span id="monitor-model-badge">${escapeHtml(modelName)}</span>
+          </div>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700/60 text-xs font-mono text-amber-300">
+            <i class="fas fa-stopwatch text-amber-400"></i>
+            <span id="monitor-timer">00:00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline Progress Steps -->
+      <div class="p-4 sm:p-5 bg-slate-900/50 border-b border-slate-800/80">
+        <div class="flex items-center justify-between mb-2">
+          <span id="monitor-step-desc" class="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+            <i class="fas fa-spinner fa-spin text-indigo-400"></i>
+            <span id="monitor-step-title">Memulai analisis instruksi...</span>
+          </span>
+          <span id="monitor-percent" class="text-xs font-mono font-bold text-indigo-400">15%</span>
+        </div>
+        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-4 border border-slate-700/40">
+          <div id="monitor-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full transition-all duration-500 ease-out" style="width: 15%"></div>
+        </div>
+
+        <!-- Steps Nodes -->
+        <div class="grid grid-cols-5 gap-1 text-center">
+          ${defaultSteps.map((s, idx) => `
+            <div id="step-node-${s.id}" class="flex flex-col items-center step-node transition-all ${idx === 0 ? 'text-indigo-400 font-bold' : 'text-slate-500'}">
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border transition-all ${idx === 0 ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400'}">
+                <i class="fas ${s.icon}"></i>
+              </div>
+              <span class="text-[10px] leading-tight truncate w-full px-1">${s.label}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Live Terminal Body -->
+      <div class="p-4 flex-1 flex flex-col bg-slate-950/70">
+        <div class="rounded-2xl border border-slate-800 bg-slate-950/90 overflow-hidden shadow-inner flex flex-col flex-1">
+          <!-- Terminal Titlebar -->
+          <div class="px-3.5 py-2 bg-slate-900/80 border-b border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
+              <span class="ml-2 text-slate-400">ai-stream@kkg-wanayasa:~ $</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="monitor-token-count" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">0 token</span>
+            </div>
+          </div>
+
+          <!-- Terminal Content Stream -->
+          <div id="monitor-terminal" class="p-4 h-56 overflow-y-auto font-mono text-[11px] text-emerald-300/90 leading-relaxed whitespace-pre-wrap break-all scroll-smooth">
+            <span class="text-slate-500">// Menghubungkan ke Neural Engine...</span>\n
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="px-4 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-shield-alt text-emerald-400"></i>
+          <span>Validasi Standar BSKAP No. 046 Tahun 2025</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500">Auto-render Canvas setelah selesai</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Live Timer
+  const startTime = Date.now();
+  const timerEl = document.getElementById('monitor-timer');
+  const timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${m}:${s}`;
+  }, 1000);
+
+  let tokenCount = 0;
+  const terminalEl = document.getElementById('monitor-terminal');
+  const tokenCountEl = document.getElementById('monitor-token-count');
+  const progressBar = document.getElementById('monitor-progress-bar');
+  const percentEl = document.getElementById('monitor-percent');
+  const stepTitleEl = document.getElementById('monitor-step-title');
+
+  return {
+    updateStep(stepNum, title, message, percent) {
+      if (percent != null) {
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (percentEl) percentEl.textContent = `${percent}%`;
+      }
+      if (stepTitleEl && (title || message)) {
+        stepTitleEl.textContent = title || message;
+      }
+      if (stepNum) {
+        for (let i = 1; i <= 5; i++) {
+          const node = document.getElementById(`step-node-${i}`);
+          if (!node) continue;
+          const circle = node.querySelector('div');
+          if (i < stepNum) {
+            node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
+            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
+          } else if (i === stepNum) {
+            node.className = 'flex flex-col items-center step-node text-indigo-400 font-bold animate-pulse';
+            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-indigo-500/30 border-indigo-400 text-indigo-300';
+          } else {
+            node.className = 'flex flex-col items-center step-node text-slate-500';
+            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-slate-800 border-slate-700 text-slate-400';
+          }
+        }
+      }
+    },
+
+    appendToken(text) {
+      if (!text) return;
+      tokenCount += Math.max(1, Math.round(text.length / 4));
+      if (tokenCountEl) tokenCountEl.textContent = `${tokenCount} token`;
+      if (terminalEl) {
+        terminalEl.appendChild(document.createTextNode(text));
+        terminalEl.scrollTop = terminalEl.scrollHeight;
+      }
+    },
+
+    complete(callback) {
+      clearInterval(timerInterval);
+      if (progressBar) progressBar.style.width = '100%';
+      if (percentEl) percentEl.textContent = '100%';
+      if (stepTitleEl) stepTitleEl.textContent = 'Dokumen selesai disusun!';
+
+      for (let i = 1; i <= 5; i++) {
+        const node = document.getElementById(`step-node-${i}`);
+        if (!node) continue;
+        node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
+        const circle = node.querySelector('div');
+        if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
+      }
+
+      setTimeout(() => {
+        closeAiLiveMonitor();
+        if (typeof callback === 'function') callback();
+      }, 700);
+    },
+
+    close() {
+      clearInterval(timerInterval);
+      closeAiLiveMonitor();
+    }
+  };
+}
+
+export function closeAiLiveMonitor() {
+  const overlay = document.getElementById('ai-live-monitor-modal');
+  if (overlay) overlay.remove();
+}
+
+/**
+ * Stream a POST request with SSE events
+ */
+export async function streamPost(endpoint, data, onEvent) {
+  const response = await fetch(endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': getCsrfToken() || ''
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || errData?.message || `HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('ReadableStream tidak didukung pada browser ini.');
+  }
+
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split('\n\n');
+    buffer = chunks.pop() || '';
+
+    for (const rawChunk of chunks) {
+      const trimmed = rawChunk.trim();
+      if (!trimmed) continue;
+
+      let eventType = 'message';
+      let dataText = '';
+
+      for (const line of trimmed.split('\n')) {
+        if (line.startsWith('event: ')) {
+          eventType = line.substring(7).trim();
+        } else if (line.startsWith('data: ')) {
+          dataText += line.substring(6);
+        }
+      }
+
+      if (dataText) {
+        try {
+          const parsed = JSON.parse(dataText);
+          onEvent(eventType, parsed);
+        } catch {
+          onEvent(eventType, dataText);
+        }
+      }
+    }
+  }
 }
 
 /**

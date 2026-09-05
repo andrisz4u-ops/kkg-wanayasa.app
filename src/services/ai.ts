@@ -253,54 +253,31 @@ export class AIService {
         return this.providers.find(p => p.name.toLowerCase().includes(lower) || p.model.toLowerCase().includes(lower));
     }
 
-    // ─── generateJSON ─────────────────────────────────────────────
+    // ─── parseAIJson (Battle-tested 7-layer repair) ───────────────
 
-    async generateJSON(prompt: string, preferredSlug?: string): Promise<any> {
-        const jsonPrompt = `${prompt}
-
-CRITICAL JSON RULES:
-1. Output MUST be pure valid JSON - no markdown, no code blocks, no explanation text
-2. All string values must properly escape: quotes with \\", newlines with \\n, tabs with \\t
-3. Do NOT truncate the output - complete the ENTIRE JSON structure
-4. Every opened { must have a closing }, every [ must have a ]
-5. No trailing commas before } or ]`;
-
-        let result = await this.generateText(jsonPrompt, preferredSlug, true);
-        let content = result.content.trim();
-
-        const aiMeta: any = {
-            provider: result.provider,
-            model: result.model,
-            usage: result.usage,
-            used_key_index: result.used_key_index,
-            total_keys_in_pool: result.total_keys_in_pool,
-        };
-        if ((result as any).failover_from) {
-            aiMeta.failover_from = (result as any).failover_from;
-            aiMeta.failover_errors = (result as any).failover_errors;
-        }
-        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.total_keys_in_pool > 1 ? ` [Key Pool: #${aiMeta.used_key_index + 1}/${aiMeta.total_keys_in_pool}]` : ''}${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
+    public parseAIJson(content: string, aiMeta?: any): any {
+        let clean = content.trim();
 
         // ── Layer 1: Strip markdown code fences
-        content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+        clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
         // ── Layer 2: Extract between first { and last }
-        const firstBrace = content.indexOf('{');
-        const lastBrace = content.lastIndexOf('}');
+        const firstBrace = clean.indexOf('{');
+        const lastBrace = clean.lastIndexOf('}');
 
         if (firstBrace === -1) {
-            console.error('No JSON object found in response:', content.substring(0, 500));
+            console.error('No JSON object found in response:', clean.substring(0, 500));
             throw new Error('Respons AI tidak mengandung JSON. Coba generate ulang.');
         }
 
         if (lastBrace !== -1 && lastBrace > firstBrace) {
-            content = content.substring(firstBrace, lastBrace + 1);
+            clean = clean.substring(firstBrace, lastBrace + 1);
         } else {
-            content = content.substring(firstBrace);
+            clean = clean.substring(firstBrace);
         }
 
         const attachMeta = (parsed: any) => {
-            if (typeof parsed === 'object' && parsed !== null) {
+            if (aiMeta && typeof parsed === 'object' && parsed !== null) {
                 parsed._ai_meta = aiMeta;
             }
             return parsed;
@@ -310,14 +287,14 @@ CRITICAL JSON RULES:
 
         // ── Layer 3: Direct parse
         try {
-            return attachMeta(JSON.parse(content));
+            return attachMeta(JSON.parse(clean));
         } catch (e: any) {
             parseErrors.push(`Layer 3 (Direct): ${e.message}`);
         }
 
         // ── Layer 4: Fix unescaped newlines/tabs inside string values
         try {
-            const cleaned = content.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, '\\n');
+            const cleaned = clean.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, '\\n');
             return attachMeta(JSON.parse(cleaned));
         } catch (e: any) {
             parseErrors.push(`Layer 4 (Newlines): ${e.message}`);
@@ -325,7 +302,7 @@ CRITICAL JSON RULES:
 
         // ── Layer 5: Fix trailing commas
         try {
-            const trailingFixed = content.replace(/,\s*([}\]])/g, '$1');
+            const trailingFixed = clean.replace(/,\s*([}\]])/g, '$1');
             return attachMeta(JSON.parse(trailingFixed));
         } catch (e: any) {
             parseErrors.push(`Layer 5 (Trailing commas): ${e.message}`);
@@ -333,7 +310,7 @@ CRITICAL JSON RULES:
 
         // ── Layer 6: Truncated JSON repair (balance brackets)
         try {
-            const repaired = repairTruncatedJSON(content);
+            const repaired = repairTruncatedJSON(clean);
             const trailingFixed = repaired.replace(/,\s*([}\]])/g, '$1');
             return attachMeta(JSON.parse(trailingFixed));
         } catch (e: any) {
@@ -342,7 +319,7 @@ CRITICAL JSON RULES:
 
         // ── Layer 7: Aggressive regex JSON repair
         try {
-            let fixed = content
+            let fixed = clean
                 .replace(/,\s*([}\]])/g, '$1')
                 .replace(/([^\\])"/g, '$1\\"')
                 .replace(/^\\"/, '"')
@@ -360,8 +337,68 @@ CRITICAL JSON RULES:
 
         console.error('All 7 JSON parse layers failed.');
         console.error('Parse errors:', parseErrors);
-        console.error('Raw content preview:', content.substring(0, 1000));
+        console.error('Raw content preview:', clean.substring(0, 1000));
         throw new Error(`Gagal memproses format JSON dari AI. Silakan coba lagi.`);
+    }
+
+    // ─── generateJSON ─────────────────────────────────────────────
+
+    async generateJSON(prompt: string, preferredSlug?: string): Promise<any> {
+        const jsonPrompt = `${prompt}
+
+CRITICAL JSON RULES:
+1. Output MUST be pure valid JSON - no markdown, no code blocks, no explanation text
+2. All string values must properly escape: quotes with \\", newlines with \\n, tabs with \\t
+3. Do NOT truncate the output - complete the ENTIRE JSON structure
+4. Every opened { must have a closing }, every [ must have a ]
+5. No trailing commas before } or ]`;
+
+        let result = await this.generateText(jsonPrompt, preferredSlug, true);
+
+        const aiMeta: any = {
+            provider: result.provider,
+            model: result.model,
+            usage: result.usage,
+            used_key_index: result.used_key_index,
+            total_keys_in_pool: result.total_keys_in_pool,
+        };
+        if ((result as any).failover_from) {
+            aiMeta.failover_from = (result as any).failover_from;
+            aiMeta.failover_errors = (result as any).failover_errors;
+        }
+        console.log(`[AI] Request processed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.total_keys_in_pool > 1 ? ` [Key Pool: #${aiMeta.used_key_index + 1}/${aiMeta.total_keys_in_pool}]` : ''}${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
+
+        return this.parseAIJson(result.content, aiMeta);
+    }
+
+    // ─── generateJSONStream (Live Token Output with JSON Validation) ─
+
+    async generateJSONStream(prompt: string, preferredSlug?: string, onToken?: (token: string) => void): Promise<any> {
+        const jsonPrompt = `${prompt}
+
+CRITICAL JSON RULES:
+1. Output MUST be pure valid JSON - no markdown, no code blocks, no explanation text
+2. All string values must properly escape: quotes with \\", newlines with \\n, tabs with \\t
+3. Do NOT truncate the output - complete the ENTIRE JSON structure
+4. Every opened { must have a closing }, every [ must have a ]
+5. No trailing commas before } or ]`;
+
+        let result = await this.generateTextStream(jsonPrompt, preferredSlug, true, onToken);
+
+        const aiMeta: any = {
+            provider: result.provider,
+            model: result.model,
+            usage: result.usage,
+            used_key_index: result.used_key_index,
+            total_keys_in_pool: result.total_keys_in_pool,
+        };
+        if ((result as any).failover_from) {
+            aiMeta.failover_from = (result as any).failover_from;
+            aiMeta.failover_errors = (result as any).failover_errors;
+        }
+        console.log(`[AI-STREAM] Request completed by: ${aiMeta.provider} (${aiMeta.model})${aiMeta.total_keys_in_pool > 1 ? ` [Key Pool: #${aiMeta.used_key_index + 1}/${aiMeta.total_keys_in_pool}]` : ''}${aiMeta.failover_from ? ` [FAILOVER from ${aiMeta.failover_from}]` : ''}`);
+
+        return this.parseAIJson(result.content, aiMeta);
     }
 
     // ─── generateText (Auto-Failover with Circuit Breaker) ─────────
@@ -420,6 +457,64 @@ CRITICAL JSON RULES:
             } catch (e: any) {
                 const errMsg = e?.message || String(e);
                 console.error(`[AI-FAILOVER] ${provider.slug} FAILED:`, errMsg);
+                failoverLog.push(`${provider.slug}: ${errMsg.substring(0, 200)}`);
+                previousFailedSlug = provider.slug;
+            }
+        }
+
+        throw new Error(`Semua provider AI gagal dipanggil. Detail: ${failoverLog.join(' | ')}`);
+    }
+
+    // ─── generateTextStream (Streaming with Auto-Failover) ─────────
+
+    async generateTextStream(prompt: string, preferredSlug?: string, jsonMode = false, onToken?: (token: string) => void): Promise<AIResponse> {
+        if (this.providers.length === 0) {
+            throw new Error('Tidak ada provider AI aktif yang terdaftar di sistem. Hubungi administrator.');
+        }
+
+        if (preferredSlug) {
+            const specificProvider = this.getProviderBySlug(preferredSlug);
+            if (specificProvider) {
+                try {
+                    const response = await this.callProviderStream(specificProvider, prompt, jsonMode, onToken);
+                    if (response.usage?.total_tokens && this.db) {
+                        this.recordUsage(specificProvider.id, response.usage.total_tokens).catch(e => {
+                            console.warn('[AI-USAGE] Failed to record usage:', e);
+                        });
+                    }
+                    return response;
+                } catch (err: any) {
+                    const errMsg = err?.message || String(err);
+                    console.error(`[AI-LOCKED] Provider "${specificProvider.name}" (${specificProvider.slug}) failed in stream:`, errMsg);
+                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons (kuota API Key habis / timeout / server sibuk). Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
+                }
+            }
+        }
+
+        const ordered = this.buildProviderOrder(preferredSlug);
+        const failoverLog: string[] = [];
+        let previousFailedSlug: string | undefined;
+
+        for (let i = 0; i < ordered.length; i++) {
+            const provider = ordered[i];
+            try {
+                const response = await this.callProviderStream(provider, prompt, jsonMode, onToken);
+
+                if (i > 0) {
+                    (response as any).failover_from = previousFailedSlug;
+                    (response as any).failover_errors = failoverLog;
+                }
+
+                if (response.usage?.total_tokens && this.db) {
+                    this.recordUsage(provider.id, response.usage.total_tokens).catch(e => {
+                        console.warn('[AI-USAGE] Failed to record usage:', e);
+                    });
+                }
+
+                return response;
+            } catch (e: any) {
+                const errMsg = e?.message || String(e);
+                console.error(`[AI-FAILOVER] ${provider.slug} FAILED in stream:`, errMsg);
                 failoverLog.push(`${provider.slug}: ${errMsg.substring(0, 200)}`);
                 previousFailedSlug = provider.slug;
             }
@@ -565,6 +660,231 @@ CRITICAL JSON RULES:
         }
 
         throw new Error(`${provider.name} (Semua ${keyCount} key di pool gagal): ${keyErrors.join(' | ')}`);
+    }
+
+    // ─── Provider Stream Dispatcher (Key Pooling & Round-Robin) ───
+
+    private async callProviderStream(provider: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+        const keys = (provider.api_keys && provider.api_keys.length > 0)
+            ? provider.api_keys
+            : (provider.api_key ? [provider.api_key] : []);
+
+        if (keys.length === 0 && provider.api_type !== 'custom_proxy') {
+            throw new Error(`API key tidak tersedia untuk provider "${provider.name}".`);
+        }
+
+        if (provider.api_type === 'custom_proxy') {
+            const res = await this.callCustomProxy(provider, prompt, jsonMode, timeoutMs);
+            if (onToken && res.content) {
+                onToken(res.content);
+            }
+            return res;
+        }
+
+        const keyCount = keys.length;
+        let startIndex = keyRotationIndexMap.get(provider.slug);
+        if (startIndex === undefined || startIndex >= keyCount) {
+            startIndex = Math.floor(Math.random() * keyCount);
+        }
+
+        const now = Date.now();
+        const keyErrors: string[] = [];
+
+        for (let attempt = 0; attempt < keyCount; attempt++) {
+            const currentIndex = (startIndex + attempt) % keyCount;
+            const currentKey = keys[currentIndex];
+            const cooldownKey = `${provider.slug}:${currentIndex}`;
+            const cooldownUntil = keyCooldownMap.get(cooldownKey) || 0;
+
+            if (keyCount > 1 && cooldownUntil > now && attempt < keyCount - 1) {
+                continue;
+            }
+
+            const pWithKey: DBProvider = {
+                ...provider,
+                api_key: currentKey,
+            };
+
+            try {
+                let res: AIResponse;
+                switch (provider.api_type) {
+                    case 'openai_compat':
+                        res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken, timeoutMs);
+                        break;
+                    case 'gemini_sdk':
+                        res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken, timeoutMs);
+                        break;
+                    case 'anthropic':
+                    case 'bedrock':
+                    default: {
+                        res = await this.callProvider(pWithKey, prompt, jsonMode, timeoutMs);
+                        if (onToken && res.content) {
+                            onToken(res.content);
+                        }
+                        break;
+                    }
+                }
+
+                keyRotationIndexMap.set(provider.slug, (currentIndex + 1) % keyCount);
+                keyCooldownMap.delete(cooldownKey);
+
+                res.used_key_index = currentIndex;
+                res.total_keys_in_pool = keyCount;
+                return res;
+            } catch (err: any) {
+                const errMsg = err?.message || String(err);
+                keyErrors.push(`Key #${currentIndex + 1}: ${errMsg.substring(0, 150)}`);
+
+                const isRotatableError = /429|402|529|rate[_\s-]?limit|quota|unauthorized|401|invalid_api_key/i.test(errMsg);
+
+                if (isRotatableError && keyCount > 1) {
+                    keyCooldownMap.set(cooldownKey, now + 60000);
+                    console.warn(`[AI-KEY-POOL] ${provider.slug} key #${currentIndex + 1} hit rate limit in stream. Auto-rotating to next key in pool...`);
+                    continue;
+                }
+
+                throw err;
+            }
+        }
+
+        throw new Error(`${provider.name} (Semua ${keyCount} key di pool gagal): ${keyErrors.join(' | ')}`);
+    }
+
+    // ─── OpenAI Compatible Stream ─────────────────────────────────
+
+    private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+        const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
+        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
+
+        const body: any = {
+            model: p.model,
+            stream: true,
+            messages: isReasoningModel
+                ? [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + prompt }]
+                : [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: prompt }
+                ],
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
+        };
+
+        if (isReasoningModel) {
+            body.max_completion_tokens = p.max_tokens;
+        } else {
+            body.temperature = p.temperature;
+            body.max_tokens = p.max_tokens;
+            if (jsonMode) {
+                body.response_format = { type: 'json_object' };
+            }
+        }
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${p.api_key}`,
+            ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(timeoutMs),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error(`${p.name}: Response body reader is not available`);
+        }
+
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let content = '';
+        let promptTokens = 0;
+        let completionTokens = 0;
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith(':')) continue;
+                    if (trimmed === 'data: [DONE]') continue;
+                    if (trimmed.startsWith('data: ')) {
+                        try {
+                            const chunk = JSON.parse(trimmed.substring(6));
+                            const delta = chunk.choices?.[0]?.delta?.content || '';
+                            if (delta) {
+                                content += delta;
+                                onToken?.(delta);
+                            }
+                            if (chunk.usage) {
+                                promptTokens = chunk.usage.prompt_tokens || promptTokens;
+                                completionTokens = chunk.usage.completion_tokens || completionTokens;
+                            }
+                        } catch {
+                            // Skip invalid partial chunk line
+                        }
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+
+        const totalTokens = promptTokens + completionTokens || Math.round(content.length / 4);
+        const usage: AIUsage = {
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            total_tokens: totalTokens,
+        };
+
+        return { content, provider: p.slug, model: p.model, usage };
+    }
+
+    // ─── Google Gemini SDK Stream ─────────────────────────────────
+
+    private async callGeminiSDKStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+        const genAI = new GoogleGenerativeAI(p.api_key);
+        const model = genAI.getGenerativeModel({
+            model: p.model,
+            generationConfig: {
+                responseMimeType: jsonMode ? 'application/json' : 'text/plain',
+                maxOutputTokens: p.max_tokens,
+                temperature: p.temperature,
+            }
+        });
+
+        const streamResult = await model.generateContentStream(SYSTEM_PROMPT + '\n\n' + prompt);
+        let content = '';
+
+        for await (const chunk of streamResult.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+                content += chunkText;
+                onToken?.(chunkText);
+            }
+        }
+
+        const response = await streamResult.response;
+        const meta = (response as any).usageMetadata;
+        const usage: AIUsage = {
+            prompt_tokens: meta?.promptTokenCount || 0,
+            completion_tokens: meta?.candidatesTokenCount || 0,
+            total_tokens: meta?.totalTokenCount || (Math.round(content.length / 4)),
+        };
+
+        return { content, provider: p.slug, model: p.model, usage };
     }
 
     // ─── OpenAI Compatible ────────────────────────────────────────

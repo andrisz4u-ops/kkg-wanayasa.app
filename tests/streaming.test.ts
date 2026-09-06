@@ -105,9 +105,18 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
             expect(parsed.title).toBe('Asesmen Soal');
             expect(parsed.items.length).toBe(1);
         });
+        it('should strip <think> blocks from reasoning models before parsing JSON', () => {
+            const ai = new AIService({} as any);
+            const reasoningOutput = '<think>\nAnalisis materi IPAS Kelas 5:\n1. Kita buat soal PG dengan format JSON { "pg": [...] }\n2. Pastikan HOTS.\n</think>\n```json\n{"pg": [{"no": 1, "soal": "Apa itu ekosistem?"}]}\n```';
+            const parsed = ai.parseAIJson(reasoningOutput);
+
+            expect(parsed).toBeDefined();
+            expect(parsed.pg).toHaveLength(1);
+            expect(parsed.pg[0].soal).toBe('Apa itu ekosistem?');
+        });
 
         it('should configure resilient Sliding Idle Timeout parameters', () => {
-            expect(STREAM_INITIAL_TIMEOUT_MS).toBe(25000); // 25s initial response fail-fast
+            expect(STREAM_INITIAL_TIMEOUT_MS).toBe(30000); // 30s initial response fail-fast
             expect(STREAM_IDLE_TIMEOUT_MS).toBe(60000);    // 60s idle sliding per token
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBe(600000); // 10 minutes max ceiling
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBeGreaterThan(STREAM_IDLE_TIMEOUT_MS);

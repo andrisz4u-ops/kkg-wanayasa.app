@@ -66,7 +66,7 @@ export interface CheckResult {
 const DEFAULT_SUBREQUEST_TIMEOUT_MS = 180000;
 
 // Streaming timeout settings (Sliding Idle Timeout / berbasis aktivitas aliran data):
-export const STREAM_INITIAL_TIMEOUT_MS = 25000;    // 25 detik batas waktu tunggu respon awal (TTFT agar tidak lama menunggu jika provider mati)
+export const STREAM_INITIAL_TIMEOUT_MS = 30000;    // 30 detik batas waktu tunggu token pertama (TTFT fail-fast jika server antre/mati)
 export const STREAM_IDLE_TIMEOUT_MS = 60000;       // 60 detik jeda maksimal tanpa adanya token/chunk baru (sliding saat AI aktif menulis)
 export const STREAM_MAX_TOTAL_TIMEOUT_MS = 600000; // 10 menit batas pengaman global absolut
 
@@ -264,7 +264,8 @@ export class AIService {
     public parseAIJson(content: string, aiMeta?: any): any {
         let clean = content.trim();
 
-        // ── Layer 1: Strip markdown code fences
+        // ── Layer 1: Strip thinking blocks & markdown code fences
+        clean = clean.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
         clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
         // ── Layer 2: Extract between first { and last }
@@ -432,7 +433,7 @@ CRITICAL JSON RULES:
                 } catch (err: any) {
                     const errMsg = err?.message || String(err);
                     console.error(`[AI-LOCKED] Provider "${specificProvider.name}" (${specificProvider.slug}) failed:`, errMsg);
-                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons (kuota API Key habis / timeout / server sibuk). Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
+                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons: ${errMsg}. Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
                 }
             }
         }
@@ -492,7 +493,7 @@ CRITICAL JSON RULES:
                 } catch (err: any) {
                     const errMsg = err?.message || String(err);
                     console.error(`[AI-LOCKED] Provider "${specificProvider.name}" (${specificProvider.slug}) failed in stream:`, errMsg);
-                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons (kuota API Key habis / timeout / server sibuk). Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
+                    throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons: ${errMsg}. Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
                 }
             }
         }
@@ -795,9 +796,9 @@ CRITICAL JSON RULES:
         let idleTimer: any = null;
         let maxTotalTimer: any = null;
 
-        // 1. Timer awal: batas menunggu respon awal/antrean server (TTFT)
+        // 1. Timer awal: batas menunggu token pertama dari server (TTFT fail-fast)
         initialTimer = setTimeout(() => {
-            controller.abort(new Error(`Timeout: Provider "${p.name}" (${p.slug}) tidak memberikan respon awal dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`));
+            controller.abort(new Error(`Timeout: Provider "${p.name}" (${p.slug}) tidak memberikan token pertama dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik. Server provider kemungkinan sedang antre atau tidak merespons.`));
         }, STREAM_INITIAL_TIMEOUT_MS);
 
         // 2. Batas pengaman absolut (10 menit) untuk mencegah infinite loop
@@ -805,7 +806,7 @@ CRITICAL JSON RULES:
             controller.abort(new Error(`Timeout: Batas waktu maksimal generasi (${STREAM_MAX_TOTAL_TIMEOUT_MS / 60000} menit) terlampaui.`));
         }, STREAM_MAX_TOTAL_TIMEOUT_MS);
 
-        // 3. Sliding Idle Timer: di-reset setiap kali ada chunk/token baru masuk
+        // 3. Sliding Idle Timer: di-reset HANYA saat ada token teks/reasoning baru masuk
         const resetIdleTimer = () => {
             if (initialTimer) {
                 clearTimeout(initialTimer);
@@ -840,6 +841,7 @@ CRITICAL JSON RULES:
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
             let content = '';
+            let reasoningAccumulator = '';
             let promptTokens = 0;
             let completionTokens = 0;
 
@@ -848,8 +850,9 @@ CRITICAL JSON RULES:
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    // Reset idle timer setiap kali data chunk masuk (Sliding Timeout)
-                    resetIdleTimer();
+                    // CATATAN: resetIdleTimer() sengaja TIDAK dipanggil di sini!
+                    // Pings/keep-alive (: keep-alive) atau raw byte kosong tidak boleh mereset initialTimer,
+                    // sehingga jika server tidak mengirim token apapun, timer TTFT akan tetap membatalkan request.
 
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
@@ -863,10 +866,22 @@ CRITICAL JSON RULES:
                             try {
                                 const chunk = JSON.parse(trimmed.substring(6));
                                 const delta = chunk.choices?.[0]?.delta?.content || '';
-                                if (delta) {
-                                    content += delta;
-                                    onToken?.(delta);
+                                const reasoning = chunk.choices?.[0]?.delta?.reasoning_content || chunk.choices?.[0]?.delta?.reasoning || '';
+                                const streamToken = (reasoning && delta) ? (reasoning + delta) : (reasoning || delta);
+
+                                if (streamToken) {
+                                    // Reset idle timer HANYA ketika benar-benar ada token/teks yang masuk!
+                                    resetIdleTimer();
+
+                                    if (delta) {
+                                        content += delta;
+                                    }
+                                    if (reasoning) {
+                                        reasoningAccumulator += reasoning;
+                                    }
+                                    onToken?.(streamToken);
                                 }
+
                                 if (chunk.usage) {
                                     promptTokens = chunk.usage.prompt_tokens || promptTokens;
                                     completionTokens = chunk.usage.completion_tokens || completionTokens;
@@ -881,6 +896,15 @@ CRITICAL JSON RULES:
                 reader.releaseLock();
             }
 
+            if (!content.trim() && reasoningAccumulator.trim()) {
+                // Cadangan jika model/proxy mengirimkan jawaban dalam reasoning_content
+                content = reasoningAccumulator;
+            }
+
+            if (!content.trim()) {
+                throw new Error(`Provider "${p.name}" (${p.slug}) menyelesaikan koneksi tanpa menghasilkan teks/jawaban.`);
+            }
+
             const totalTokens = promptTokens + completionTokens || Math.round(content.length / 4);
             const usage: AIUsage = {
                 prompt_tokens: promptTokens,
@@ -890,9 +914,9 @@ CRITICAL JSON RULES:
 
             return { content, provider: p.slug, model: p.model, usage };
         } catch (err: any) {
-            if (controller.signal.aborted && controller.signal.reason) {
+            if (controller.signal.aborted) {
                 const reason = controller.signal.reason;
-                const message = reason instanceof Error ? reason.message : String(reason);
+                const message = reason instanceof Error ? reason.message : (reason ? String(reason) : `Permintaan ke provider "${p.name}" (${p.slug}) dibatalkan karena batas waktu timeout terlampaui.`);
                 throw new Error(message);
             }
             throw err;
@@ -952,15 +976,20 @@ CRITICAL JSON RULES:
 
                 for await (const chunk of streamResult.stream) {
                     if (timeoutError) throw timeoutError;
-                    resetIdleTimer();
                     const chunkText = chunk.text();
                     if (chunkText) {
+                        resetIdleTimer();
                         content += chunkText;
                         onToken?.(chunkText);
                     }
                 }
 
                 if (timeoutError) throw timeoutError;
+
+                if (!content.trim()) {
+                    throw new Error(`Gemini (${p.slug}) tidak menghasilkan konten jawaban.`);
+                }
+
                 const response = await streamResult.response;
                 const meta = (response as any).usageMetadata;
                 const usage: AIUsage = {

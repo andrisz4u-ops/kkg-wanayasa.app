@@ -338,6 +338,9 @@ export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 
             <i class="fas fa-stopwatch text-amber-400"></i>
             <span id="monitor-timer">00:00</span>
           </div>
+          <button id="monitor-close-btn" type="button" title="Batal / Tutup" class="flex items-center justify-center w-7 h-7 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700/60 hover:border-rose-500/40 transition">
+            <i class="fas fa-times text-xs"></i>
+          </button>
         </div>
       </div>
 
@@ -414,6 +417,15 @@ export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 
     const s = String(elapsed % 60).padStart(2, '0');
     if (timerEl) timerEl.textContent = `${m}:${s}`;
   }, 1000);
+
+  const closeBtn = document.getElementById('monitor-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      closeAiLiveMonitor();
+      if (typeof onCancel === 'function') onCancel();
+    });
+  }
 
   let tokenCount = 0;
   const terminalEl = document.getElementById('monitor-terminal');

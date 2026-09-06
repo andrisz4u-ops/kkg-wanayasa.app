@@ -102,21 +102,63 @@ function generateQuestion(op, diff) {
     a = b * correct; // bilangan yang dibagi
   }
 
-  // Generate 3 distractors cerdas
+  // Generate 3 distractors cerdas berbasis kesalahan umum siswa
   const options = new Set([correct]);
-  let tries = 0;
-  while (options.size < 4 && tries < 30) {
-    tries++;
-    const deltas = [-1, 1, -2, 2, -3, 3, -10, 10, -5, 5];
-    const delta = deltas[Math.floor(Math.random() * deltas.length)];
-    const wrong = correct + delta;
-    if (wrong >= 0 && wrong !== correct) {
-      options.add(wrong);
+  
+  // Kandidat distractor berdasarkan jenis operasi (kesalahan kognitif umum)
+  const candidates = new Set();
+  
+  if (activeOp === 'add') {
+    // Kesalahan: lupa carry → salah 10
+    candidates.add(correct - 10);
+    candidates.add(correct + 10);
+    // Kesalahan: off-by-one salah satu operand
+    candidates.add((a + 1) + b);
+    candidates.add(a + (b - 1));
+    // Kesalahan: salah tulis digit (swap)
+    const s = String(correct);
+    if (s.length === 2) candidates.add(parseInt(s[1] + s[0], 10));
+    candidates.add(correct - 1);
+    candidates.add(correct + 1);
+  } else if (activeOp === 'sub') {
+    // Kesalahan: terbalik (b - a bukan a - b)
+    candidates.add(b - (correct > 0 ? 0 : correct));
+    candidates.add(correct + b); // malah tambah bukan kurang
+    candidates.add(correct - 1);
+    candidates.add(correct + 1);
+    candidates.add(correct + 10);
+  } else if (activeOp === 'mul') {
+    // Kesalahan: penjumlahan bukan perkalian
+    candidates.add(a + b);
+    // Kesalahan: salah satu operand ±1
+    candidates.add((a - 1) * b);
+    candidates.add(a * (b + 1));
+    candidates.add(correct - a); // lupa 1 baris perkalian bersusun
+    candidates.add(correct + a);
+    const s = String(correct);
+    if (s.length === 2) candidates.add(parseInt(s[1] + s[0], 10));
+  } else if (activeOp === 'div') {
+    // Kesalahan: perkalian bukan pembagian
+    candidates.add(a * b);
+    // Kesalahan: off-by-one hasil
+    candidates.add(correct - 1);
+    candidates.add(correct + 1);
+    // Kesalahan: pembagi dan hasil tertukar
+    candidates.add(b);
+    candidates.add(correct + b);
+  }
+
+  // Tambahkan kandidat yang valid dan berbeda dari correct
+  for (const c of candidates) {
+    if (options.size >= 4) break;
+    const val = Math.round(c);
+    if (val > 0 && val !== correct && !options.has(val)) {
+      options.add(val);
     }
   }
 
   // Fallback jika belum 4 opsi
-  let fallback = 1;
+  let fallback = 2;
   while (options.size < 4) {
     if (!options.has(correct + fallback)) options.add(correct + fallback);
     fallback++;

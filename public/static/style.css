@@ -969,6 +969,11 @@ h1,
   bottom: 0px;
 }
 
+.inset-x-0 {
+  left: 0px;
+  right: 0px;
+}
+
 .-bottom-1 {
   bottom: -0.25rem;
 }
@@ -3780,6 +3785,10 @@ h1,
   border-color: rgb(254 240 138 / var(--tw-border-opacity, 1));
 }
 
+.border-white\/70 {
+  border-color: rgb(255 255 255 / 0.7);
+}
+
 .border-b-teal-500 {
   --tw-border-opacity: 1;
   border-bottom-color: rgb(38 148 148 / var(--tw-border-opacity, 1));
@@ -5467,6 +5476,10 @@ h1,
 
 .to-white {
   --tw-gradient-to: #fff var(--tw-gradient-to-position);
+}
+
+.to-sky-900\/20 {
+  --tw-gradient-to: rgb(12 74 110 / 0.2) var(--tw-gradient-to-position);
 }
 
 .bg-clip-text {
@@ -7262,6 +7275,10 @@ h1,
 
 .ring-white\/10 {
   --tw-ring-color: rgb(255 255 255 / 0.1);
+}
+
+.ring-white\/70 {
+  --tw-ring-color: rgb(255 255 255 / 0.7);
 }
 
 .ring-offset-2 {

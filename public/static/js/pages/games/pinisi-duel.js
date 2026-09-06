@@ -126,10 +126,14 @@ export function renderPinisiDuel() {
       <!-- 2. OCEAN ARENA: DUAL PINISI RACE TRACK -->
       <div class="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-b from-slate-900 to-sky-950/80 border-b border-sky-900/30 shrink-0 relative overflow-hidden">
         
-        <!-- Ocean Background Waves Effect -->
-        <div class="absolute inset-0 opacity-15 pointer-events-none overflow-hidden select-none">
-          <div class="w-[200%] h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-400 via-sky-600 to-transparent animate-pulse"></div>
+        <!-- Ocean Background Waves Effect (Animated SVG) -->
+        <div class="absolute inset-x-0 bottom-0 h-8 pointer-events-none overflow-hidden select-none z-0 opacity-30">
+          <svg viewBox="0 0 360 20" preserveAspectRatio="none" class="w-[200%] h-full" style="animation: pinisi-wave-scroll 6s linear infinite;">
+            <path d="M0,10 C30,4 60,16 90,10 C120,4 150,16 180,10 C210,4 240,16 270,10 C300,4 330,16 360,10 L360,20 L0,20 Z" fill="#0ea5e9" opacity="0.5"/>
+            <path d="M0,13 C40,7 80,19 120,13 C160,7 200,19 240,13 C280,7 320,19 360,13 L360,20 L0,20 Z" fill="#38bdf8" opacity="0.4"/>
+          </svg>
         </div>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-sky-900/20 pointer-events-none z-0"></div>
 
         <div class="max-w-6xl mx-auto space-y-2 relative z-10">
           
@@ -155,11 +159,11 @@ export function renderPinisiDuel() {
               ></div>
               <!-- Finish Line Flag -->
               <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-70 z-10">🏁</div>
-              <!-- Red Ship -->
+              <!-- Red Ship (Bob + Wave Animation) -->
               <div 
                 id="pinisi-ship-red" 
-                class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-500 ease-out z-20 flex items-center"
-                style="left: 4%;"
+                class="absolute z-20 flex items-center pinisi-ship-animate"
+                style="left: 4%; top: 50%;"
               >
                 ${PINISI_SHIP_SVG}
               </div>
@@ -188,11 +192,11 @@ export function renderPinisiDuel() {
               ></div>
               <!-- Finish Line Flag -->
               <div class="absolute right-3 top-1/2 -translate-y-1/2 text-xs opacity-70 z-10">🏁</div>
-              <!-- Blue Ship -->
+              <!-- Blue Ship (Bob + Wave Animation) -->
               <div 
                 id="pinisi-ship-blue" 
-                class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-500 ease-out z-20 flex items-center"
-                style="left: 4%;"
+                class="absolute z-20 flex items-center pinisi-ship-animate"
+                style="left: 4%; top: 50%; animation-delay: 0.6s;"
               >
                 ${PINISI_SHIP_SVG}
               </div>

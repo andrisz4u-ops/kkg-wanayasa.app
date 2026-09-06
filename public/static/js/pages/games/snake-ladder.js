@@ -411,13 +411,19 @@ function renderPawns() {
   }
 
   const activeTeams = gameState.teams.slice(0, gameState.teamCount);
-  activeTeams.forEach((t) => {
+  activeTeams.forEach((t, idx) => {
     const container = document.getElementById(`snake-pawns-container-${t.pos}`);
     if (container) {
+      const isCurrentTurn = idx === gameState.currentTurn;
       const p = document.createElement('div');
-      p.className = 'w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black animate-bounce';
+      // Active-turn pion: larger + pulse ring; others: normal
+      p.className = isCurrentTurn
+        ? 'w-6 h-6 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-[9px] font-black animate-pulse ring-2 ring-white/70 scale-110 z-30 relative'
+        : 'w-4 h-4 rounded-full border border-white/70 shadow-md flex items-center justify-center text-[8px] font-black opacity-90';
       p.style.backgroundColor = t.color;
-      p.textContent = t.name.split(' ')[1]?.[0] || '●';
+      // Show first letter of team colour name (M=Merah, B=Biru, H=Hijau, K=Kuning)
+      p.textContent = t.name.split(' ')[1]?.[0] ?? '●';
+      p.title = `${t.name} — Kotak ${t.pos}`;
       container.appendChild(p);
     }
   });

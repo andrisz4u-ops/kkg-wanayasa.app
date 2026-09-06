@@ -348,29 +348,29 @@ async function renderEducatorDashboard() {
             </span>
           </div>
 
-          <!-- Card 4: Teka-Teki Silang (TTS) -->
+          <!-- Card 4: Game Edukasi & TTS -->
           <div 
-            onclick="navigate('tts')" 
+            onclick="navigate('games')" 
             class="group relative overflow-hidden rounded-[32px] p-7 bg-white border border-slate-200/90 hover:border-indigo-500/50 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 cursor-pointer hover:-translate-y-1 flex flex-col justify-between"
           >
             <div>
               <div class="flex items-center justify-between mb-5">
                 <span class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 text-xl group-hover:scale-110 transition-transform">
-                  <i class="fas fa-puzzle-piece"></i>
+                  <i class="fas fa-gamepad"></i>
                 </span>
                 <span class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Gamifikasi Kelas
+                  Layar Sentuh IFP
                 </span>
               </div>
               <h3 class="text-xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors mb-2">
-                Teka-Teki Silang (TTS)
+                Game Edukasi & TTS
               </h3>
               <p class="text-slate-500 text-xs sm:text-sm leading-relaxed mb-6">
-                Buat lembar kerja siswa (LKPD) teka-teki silang edukatif otomatis dengan petunjuk mendatar & menurun berbasis topik ajar.
+                Pusat game edukasi kelas untuk layar sentuh IFP: Adu Perkalian, Ular Tangga, Tarik Tambang, Puzzle Peta, dan Teka-Teki Silang.
               </p>
             </div>
             <span class="text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-              Buat Soal TTS <i class="fas fa-arrow-right text-[10px]"></i>
+              Buka Game Edukasi <i class="fas fa-arrow-right text-[10px]"></i>
             </span>
           </div>
 

@@ -646,3 +646,57 @@
     box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.4);
     border-radius: 1rem;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   IFP True Fullscreen Kiosk Mode (Edge-to-Edge with Instant Exit)
+   ═════════════════════════════════════════════════════════════════════════ */
+body.is-ifp-fullscreen aside,
+body.is-ifp-fullscreen #app-desktop-header,
+body.is-ifp-fullscreen #app-mobile-header,
+body.is-ifp-fullscreen #mobile-menu,
+body.is-ifp-fullscreen #mobile-bottom-nav {
+    display: none !important;
+}
+
+body.is-ifp-fullscreen #main-content {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 999999 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #020617 !important;
+    overflow: hidden !important;
+}
+
+body.is-ifp-fullscreen #page-content-wrapper,
+body.is-ifp-fullscreen #main-content > div {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+body.is-ifp-fullscreen #ifp-game-stage {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    z-index: 999999 !important;
+}
+
+body.is-ifp-fullscreen #ifp-game-header {
+    display: flex !important;
+    height: 52px !important;
+    width: 100vw !important;
+    background-color: rgb(15 23 42 / 0.95) !important;
+    z-index: 1000000 !important;
+}
+
+body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
+    height: calc(100vh - 52px) !important;
+}

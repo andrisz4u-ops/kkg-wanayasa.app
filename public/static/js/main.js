@@ -213,7 +213,8 @@ const pages = {
   rpp: async () => (await loadPageModule('rpp')).renderRpp(),
   kisi: async () => (await loadPageModule('kisi')).renderKisi(),
   slide: async () => (await loadPageModule('slide')).renderSlide(),
-  tts: async () => (await loadPageModule('tts')).renderTts(),
+  tts: async () => (await loadPageModule('games')).renderGames({ tab: 'tts' }),
+  games: async () => (await loadPageModule('games')).renderGames(),
 };
 
 // Pages that have their own full layout (no main wrapper)
@@ -302,7 +303,7 @@ const navSections = [
       { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
       { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
       { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
-      { page: 'tts', label: 'Teka-Teki Silang', icon: 'fa-puzzle-piece', public: true, ai: true },
+      { page: 'games', label: 'Game Edukasi', icon: 'fa-gamepad', public: true, ai: true },
     ]
   },
   {
@@ -422,7 +423,7 @@ function renderNavLinks(activePage) {
 // Mobile Bottom Navigation Bar (App Bar Bawah untuk HP)
 function renderMobileBottomNav(activePage) {
   const isLoggedIn = !!state.user;
-  const isAIActive = ['rpp', 'kisi', 'slide', 'tts'].includes(activePage);
+  const isAIActive = ['rpp', 'kisi', 'slide', 'tts', 'games'].includes(activePage);
 
   return `
     <!-- Mobile Bottom Navigation Bar (Fixed Ergonomic Thumb Bar) -->
@@ -573,16 +574,16 @@ function renderMobileAiSheet(activePage) {
             <span class="block text-[10px] text-slate-500 font-normal leading-snug">Slide Mengajar Interaktif</span>
           </button>
 
-          <!-- 4. TTS Edukatif -->
+          <!-- 4. Game Edukasi & TTS -->
           <button 
-            onclick="window.closeMobileAiSheet(); navigate('tts');" 
-            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'tts' ? 'bg-purple-50/90 border-purple-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-purple-50/40 hover:border-purple-300'}"
+            onclick="window.closeMobileAiSheet(); navigate('games');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${['games', 'tts'].includes(activePage) ? 'bg-purple-50/90 border-purple-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-purple-50/40 hover:border-purple-300'}"
           >
             <div class="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
-              <i class="fas fa-puzzle-piece"></i>
+              <i class="fas fa-gamepad"></i>
             </div>
-            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Teka-Teki Silang</span>
-            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Game & LKPD Cetak Siswa</span>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Game Edukasi</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">TTS & Game Sentuh IFP</span>
           </button>
         </div>
 
@@ -663,7 +664,8 @@ async function render() {
       rpp: 'RPM Generator',
       kisi: 'Asesmen',
       slide: 'Slide Generator',
-      tts: 'Teka-Teki Silang'
+      tts: 'Teka-Teki Silang',
+      games: 'Game Edukasi'
     };
     // announce disabled
 
@@ -688,9 +690,9 @@ async function render() {
       const { initSlide } = await loadPageModule('slide');
       setTimeout(() => initSlide(), 100);
     }
-    if (page === 'tts') {
-      const { initTts } = await loadPageModule('tts');
-      setTimeout(() => initTts(), 100);
+    if (page === 'tts' || page === 'games') {
+      const { initGames } = await loadPageModule('games');
+      setTimeout(() => initGames(), 100);
     }
     if (page === 'notifications') {
       const { initNotifications } = await loadPageModule('notifications');
@@ -736,6 +738,7 @@ async function render() {
     rpp: { title: 'AI RPP & Modul Ajar Generator', icon: 'fa-magic', category: 'Asisten AI' },
     kisi: { title: 'Asesmen & Kisi-Kisi HOTS/AKM', icon: 'fa-list-check', category: 'Asisten AI' },
     slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },
+    games: { title: 'Pusat Game Edukasi Interaktif IFP', icon: 'fa-gamepad', category: 'Asisten AI' },
     tts: { title: 'Teka-Teki Silang Edukatif', icon: 'fa-puzzle-piece', category: 'Asisten AI' },
     absensi: { title: 'Presensi & Absensi Kegiatan', icon: 'fa-clipboard-check', category: 'Kegiatan' },
     materi: { title: 'Bank Materi & Modul Ajar', icon: 'fa-book-open', category: 'Akademik' },
@@ -852,7 +855,7 @@ async function render() {
         <!-- Mobile Header & Main Content -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           <!-- Desktop Top Navigation Header -->
-          <header class="hidden md:flex items-center justify-between h-20 px-8 lg:px-10 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 z-30 shrink-0 shadow-2xs">
+          <header id="app-desktop-header" class="hidden md:flex items-center justify-between h-20 px-8 lg:px-10 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 z-30 shrink-0 shadow-2xs">
             <!-- Left: Breadcrumb / Active Page context -->
             <div class="flex items-center gap-3.5">
               <span class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center justify-center text-sm shadow-2xs">
@@ -975,7 +978,7 @@ async function render() {
           </header>
 
           <!-- Mobile Top App Bar -->
-          <header class="md:hidden sticky top-0 left-0 right-0 z-30 px-4 py-2.5 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between shadow-2xs pt-[max(0.6rem,env(safe-area-inset-top))]">
+          <header id="app-mobile-header" class="md:hidden sticky top-0 left-0 right-0 z-30 px-4 py-2.5 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between shadow-2xs pt-[max(0.6rem,env(safe-area-inset-top))]">
              <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigate('home')">
                 <div class="w-8 h-8 flex items-center justify-center shrink-0">
                    <img src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" class="w-full h-full object-contain drop-shadow-2xs" alt="Logo">
@@ -1007,7 +1010,7 @@ async function render() {
             <!-- Background Decoration -->
             <div class="absolute top-0 right-0 w-[60%] h-[500px] bg-gradient-to-bl from-[rgba(38,148,148,0.04)] to-transparent rounded-bl-[100px] pointer-events-none z-0"></div>
             
-            <div class="${page === 'home' && (!state.user || state.showPublicLanding) ? 'w-full animate-fade-in flex-1 z-10 relative pb-28 md:pb-8' : 'max-w-7xl mx-auto w-full px-3.5 py-4 sm:px-6 sm:py-6 md:p-10 pb-28 md:pb-8 animate-fade-in flex-1 z-10 relative'}">
+            <div id="page-content-wrapper" class="${page === 'home' && (!state.user || state.showPublicLanding) ? 'w-full animate-fade-in flex-1 z-10 relative pb-28 md:pb-8' : (page === 'games' || page === 'tts' ? 'w-full p-2 sm:p-4 md:p-6 animate-fade-in flex-1 z-10 relative pb-28 md:pb-8' : 'max-w-7xl mx-auto w-full px-3.5 py-4 sm:px-6 sm:py-6 md:p-10 pb-28 md:pb-8 animate-fade-in flex-1 z-10 relative')}">
               ${content}
             </div>
           </main>

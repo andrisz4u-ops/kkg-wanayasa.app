@@ -44,14 +44,34 @@ const DIFF_CONFIG = {
 
 function generateQuestion(op, diff) {
   let activeOp = op;
+  let expr = null;
+
   if (op === 'mix') {
-    const ops = ['add', 'sub', 'mul', 'div'];
-    activeOp = ops[Math.floor(Math.random() * ops.length)];
+    if (diff === 'hebat' && Math.random() < 0.5) {
+      activeOp = 'composite';
+    } else {
+      const ops = ['add', 'sub', 'mul', 'div'];
+      activeOp = ops[Math.floor(Math.random() * ops.length)];
+    }
   }
 
   let a = 1, b = 1, symbol = '+', correct = 2;
 
-  if (activeOp === 'add') {
+  if (activeOp === 'composite') {
+    const isAdd = Math.random() < 0.6;
+    a = Math.floor(Math.random() * 8) + 2; // 2-9
+    b = Math.floor(Math.random() * 8) + 2; // 2-9
+    const c = Math.floor(Math.random() * 12) + 2; // 2-13
+    if (isAdd) {
+      correct = (a * b) + c;
+      expr = `(${a} × ${b}) + ${c}`;
+    } else {
+      const product = a * b;
+      const safeC = Math.min(product - 1, c);
+      correct = product - safeC;
+      expr = `(${a} × ${b}) − ${safeC}`;
+    }
+  } else if (activeOp === 'add') {
     symbol = '+';
     if (diff === 'mudah') {
       a = Math.floor(Math.random() * 9) + 1; // 1-9
@@ -108,7 +128,14 @@ function generateQuestion(op, diff) {
   // Kandidat distractor berdasarkan jenis operasi (kesalahan kognitif umum)
   const candidates = new Set();
   
-  if (activeOp === 'add') {
+  if (activeOp === 'composite') {
+    candidates.add(correct - 10);
+    candidates.add(correct + 10);
+    candidates.add(correct - 1);
+    candidates.add(correct + 1);
+    candidates.add(a * b); // lupa operasi kedua
+    candidates.add(a + b);
+  } else if (activeOp === 'add') {
     // Kesalahan: lupa carry → salah 10
     candidates.add(correct - 10);
     candidates.add(correct + 10);
@@ -157,15 +184,18 @@ function generateQuestion(op, diff) {
     }
   }
 
-  // Fallback jika belum 4 opsi
-  let fallback = 2;
-  while (options.size < 4) {
-    if (!options.has(correct + fallback)) options.add(correct + fallback);
-    fallback++;
+  // Fallback cerdas jika belum 4 opsi (bergantian minus & plus)
+  const deltas = [-1, 1, -2, 2, -3, 3, -5, 5, -10, 10, -4, 4];
+  for (const d of deltas) {
+    if (options.size >= 4) break;
+    const val = correct + d;
+    if (val > 0 && !options.has(val)) {
+      options.add(val);
+    }
   }
 
   const shuffled = Array.from(options).sort(() => Math.random() - 0.5);
-  return { a, b, symbol, correct, options: shuffled };
+  return { a, b, symbol, correct, expr, options: shuffled };
 }
 
 function nextQuestion(team) {
@@ -250,7 +280,7 @@ function renderTeamBoard(team) {
           ${isRed ? '🔴 Tim Merah' : '🔵 Tim Biru'} ${gameState[team].streak >= 3 ? '🔥 Kombo ' + gameState[team].streak + 'x' : ''}
         </span>
         <div class="font-black font-display tracking-tight text-white select-none drop-shadow-2xl leading-none py-1" style="font-size: clamp(2.8rem, 8.5vh, 6.2rem);">
-          ${q.a} ${q.symbol} ${q.b}
+          ${q.expr || `${q.a} ${q.symbol} ${q.b}`}
         </div>
         <p class="text-xs sm:text-sm font-medium ${isRed ? 'text-rose-200/80' : 'text-blue-200/80'}">
           Sentuh jawaban yang benar secepat mungkin!

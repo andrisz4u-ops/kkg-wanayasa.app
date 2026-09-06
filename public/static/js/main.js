@@ -409,7 +409,11 @@ function renderNavLinks(activePage) {
                   <i class="fas ${item.icon} text-base"></i>
                 </span>
                 <span class="text-[13.5px] sm:text-[14px] tracking-tight truncate flex-1 leading-snug">${item.label}</span>
-                ${isAI ? '<span class="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-700 border border-teal-500/20 ml-auto shrink-0">AI</span>' : ''}
+                ${isAI ? (
+                  !isLoggedIn
+                    ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 ml-auto shrink-0 flex items-center gap-1" title="Perlu Login Akun Pendidik"><i class="fas fa-lock text-[8px]"></i> AI</span>'
+                    : '<span class="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-700 border border-teal-500/20 ml-auto shrink-0">AI</span>'
+                ) : ''}
                 ${item.page === 'pengumuman' ? '<span class="w-2 h-2 bg-amber-500 rounded-full ml-auto shrink-0 animate-pulse"></span>' : ''}
               </button>
             `;

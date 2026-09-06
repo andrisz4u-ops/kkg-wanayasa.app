@@ -700,3 +700,46 @@ body.is-ifp-fullscreen #ifp-game-header {
 body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
     height: calc(100vh - 52px) !important;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Game Hub & Interaktif Micro-Animations
+   ═════════════════════════════════════════════════════════════════════════ */
+@keyframes pinisi-bob {
+    0%, 100% {
+        transform: translateY(-50%) translateY(-3px) rotate(1.2deg);
+    }
+    50% {
+        transform: translateY(-50%) translateY(3px) rotate(-1.2deg);
+    }
+}
+
+@keyframes pinisi-wave-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.pinisi-ship-animate {
+    animation: pinisi-bob 2.4s ease-in-out infinite;
+    transform-origin: center center;
+    transition: left 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.pinisi-ship-animate-delayed {
+    animation: pinisi-bob 2.4s ease-in-out infinite 0.8s;
+    transform-origin: center center;
+    transition: left 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes game-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+    animation: game-shake 0.35s ease-in-out;
+}

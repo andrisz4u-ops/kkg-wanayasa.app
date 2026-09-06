@@ -7,7 +7,7 @@ import { sfx, launchConfetti } from './audio.js';
 import { getQuestionsByFilter } from './questions-bank.js';
 
 let ropePosition = 0; // -100 (Red win) to +100 (Blue win)
-const WIN_THRESHOLD = 80;
+let WIN_THRESHOLD = 80;
 let isGameOver = false;
 let isPaused = false;
 
@@ -15,6 +15,18 @@ let selectedFase = 'fase-b';
 let selectedTingkat = 'sedang';
 let selectedPaket = 'all';
 let gameMode = 'sync'; // 'sync' (Ronde Serempak 1 Soal Bersama) | 'async' (Adu Cepat Bebas)
+
+// Helper Badge Mapel dengan Warna & Ikon Tematik
+function getMapelBadgeHtml(mapelName) {
+  const MAPEL_CONFIG = {
+    'Matematika': { icon: '📐', class: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+    'IPAS': { icon: '🌿', class: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+    'B. Indonesia': { icon: '📖', class: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+    'Pancasila': { icon: '🦅', class: 'bg-rose-500/20 text-rose-300 border-rose-500/30' }
+  };
+  const cfg = MAPEL_CONFIG[mapelName] || { icon: '⭐', class: 'bg-teal-500/20 text-teal-300 border-teal-500/30' };
+  return `<span class="text-xs font-bold px-2.5 py-1 rounded-xl border flex items-center gap-1.5 ${cfg.class}"><span>${cfg.icon}</span> <span>${mapelName || 'Umum'}</span></span>`;
+}
 
 // Untuk Mode Sync: 1 Soal Bersama
 let sharedQuestion = null;
@@ -72,6 +84,13 @@ export function renderTugOfWar() {
             <select id="tug-mode-select" class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded-xl border border-slate-700 font-semibold cursor-pointer">
               <option value="sync" selected>Mode Serempak</option>
               <option value="async">Mode Bebas</option>
+            </select>
+
+            <!-- Target Tarikan Menang -->
+            <select id="tug-target-select" class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded-xl border border-slate-700 font-semibold cursor-pointer" title="Target Jarak Tarikan Menang">
+              <option value="60">⚡ Cepat (60 Poin)</option>
+              <option value="80" selected>⚖️ Standar (80 Poin)</option>
+              <option value="100">🔥 Panjang (100 Poin)</option>
             </select>
 
             <button id="btn-tug-pause" class="px-2.5 py-1 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer">
@@ -208,9 +227,7 @@ function renderTeamQuestionSync(team) {
         <span class="px-3.5 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider ${isRed ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">
           ${isRed ? '🔴 Tim Merah' : '🔵 Tim Biru'}
         </span>
-        <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-amber-300 border border-slate-700">
-          ${sharedQuestion.mapel}
-        </span>
+        ${getMapelBadgeHtml(sharedQuestion.mapel)}
       </div>
 
       <!-- Kartu Soal Bersama -->
@@ -311,9 +328,7 @@ function renderTeamQuestionAsync(team) {
         <span class="px-3.5 py-1 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider ${isRed ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">
           ${isRed ? '🔴 Tim Merah' : '🔵 Tim Biru'}
         </span>
-        <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-amber-300 border border-slate-700">
-          ${qObj.mapel}
-        </span>
+        ${getMapelBadgeHtml(qObj.mapel)}
       </div>
 
       <div class="bg-slate-900/90 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border-2 ${isRed ? 'border-rose-500/40' : 'border-blue-500/40'} shadow-2xl">
@@ -461,6 +476,15 @@ export function initTugOfWar() {
     modeSelect.addEventListener('change', (e) => {
       gameMode = e.target.value;
       initTugOfWar();
+    });
+  }
+
+  const targetSelect = document.getElementById('tug-target-select');
+  if (targetSelect) {
+    targetSelect.value = String(WIN_THRESHOLD);
+    targetSelect.addEventListener('change', (e) => {
+      WIN_THRESHOLD = parseInt(e.target.value, 10) || 80;
+      updateRopeUI();
     });
   }
 

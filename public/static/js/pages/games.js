@@ -11,8 +11,11 @@ import { renderPuzzleRace, initPuzzleRace } from './games/puzzle-race.js';
 import { renderTugOfWar, initTugOfWar } from './games/tug-of-war.js';
 import { renderWordSearch, initWordSearch } from './games/word-search.js';
 import { renderPinisiDuel, initPinisiDuel } from './games/pinisi-duel.js';
+import { state } from '../state.js';
+import { renderLockedFeature } from '../components.js';
 
 let activeGameId = 'hub'; // 'hub' | 'tts' | 'math' | 'snake' | 'puzzle' | 'tug' | 'word' | 'pinisi'
+let activeCatalogFilter = 'all'; // 'all' | 'fase-a' | 'fase-b' | 'fase-c'
 
 const GAME_CATALOG = [
   {
@@ -25,6 +28,8 @@ const GAME_CATALOG = [
     gradient: 'from-purple-600 to-indigo-700',
     border: 'border-purple-500/30',
     badges: ['AI Generator', 'Cetak LKPD', 'Layar Sentuh'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Papan Bersama'
   },
   {
@@ -36,19 +41,23 @@ const GAME_CATALOG = [
     color: 'rose',
     gradient: 'from-rose-600 to-red-700',
     border: 'border-rose-500/30',
-    badges: ['Split Screen', '+ − × ÷', 'Fase A/B/C', 'Multi-Touch'],
+    badges: ['Split Screen', '+ − × ÷', 'Multi-Touch'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
   },
   {
     id: 'snake',
     title: 'Ular Tangga Kelas',
     subtitle: 'Smart Board Edition (Papan Bersama 1-100)',
-    desc: 'Papan ular tangga 100 kotak dengan dadu digital raksasa, animasi langkah pion tim, serta kartu soal tantangan saat menaiki tangga.',
+    desc: 'Papan ular tangga 100 kotak dengan dadu digital raksasa, visual rel tangga & tubuh ular, serta kartu soal tantangan saat mendarat.',
     icon: 'fa-dice',
     color: 'emerald',
     gradient: 'from-teal-600 to-emerald-700',
     border: 'border-teal-500/30',
-    badges: ['Papan Bersama', 'Dadu Raksasa', 'Kartu Soal Tantangan'],
+    badges: ['Papan Bersama', 'Dadu Raksasa', 'Kartu Soal'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Papan Bersama (2-4 Tim)'
   },
   {
@@ -60,7 +69,9 @@ const GAME_CATALOG = [
     color: 'cyan',
     gradient: 'from-cyan-600 to-blue-700',
     border: 'border-cyan-500/30',
-    badges: ['Split Screen', 'Geografi & IPAS', 'Multi-Touch Drag'],
+    badges: ['Split Screen', 'Geografi & IPAS', 'Multi-Touch'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Balapan (Kiri vs Kanan)'
   },
   {
@@ -72,7 +83,9 @@ const GAME_CATALOG = [
     color: 'amber',
     gradient: 'from-amber-600 to-orange-700',
     border: 'border-amber-500/30',
-    badges: ['Split Screen', 'Animasi Tali Fisik', 'Multi-Mata Pelajaran'],
+    badges: ['Split Screen', 'Animasi Tali Fisik', 'Multi-Mapel'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
   },
   {
@@ -84,7 +97,9 @@ const GAME_CATALOG = [
     color: 'violet',
     gradient: 'from-violet-600 to-fuchsia-700',
     border: 'border-violet-500/30',
-    badges: ['Split Screen', 'Kosakata Tematik', 'Touch Select'],
+    badges: ['Split Screen', 'Kosakata Tematik', 'Grid 7x7/8x8'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Balapan (Kiri vs Kanan)'
   },
   {
@@ -96,7 +111,9 @@ const GAME_CATALOG = [
     color: 'sky',
     gradient: 'from-sky-600 to-blue-700',
     border: 'border-sky-500/30',
-    badges: ['Split Screen', 'Literasi Rumpang', 'Fase A/B/C', '5 Paket Soal'],
+    badges: ['Split Screen', 'Literasi Rumpang', '45 Paket Soal'],
+    fases: ['fase-a', 'fase-b', 'fase-c'],
+    faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
   }
 ];
@@ -163,6 +180,19 @@ if (!window.__ifpFsListenerAttached) {
 }
 
 export function renderGames(opts = {}) {
+  if (!state.user) {
+    return renderLockedFeature(
+      'Pusat Game Edukasi Interaktif IFP',
+      'Maaf, fitur Game Edukasi khusus untuk anggota guru terdaftar Gugus 3 Wanayasa. Silakan masuk / login akun pendidik Anda terlebih dahulu untuk mengakses katalog dan memainkan seluruh 7 game edukatif kelas.',
+      [
+        '7 Permainan Edukasi Kurikulum Merdeka (TTS, Berhitung, Ular Tangga, Pinisi, dll)',
+        'Mode Layar Sentuh Besar IFP & Smart Board Interaktif Kelas',
+        'Bank Soal Otomatis Sesuai Fase Belajar (Fase A, Fase B, Fase C)',
+        'Pertandingan Duel Tim Seru Lengkap dengan Audio SFX & Animasi'
+      ]
+    );
+  }
+
   if (opts && opts.tab) {
     activeGameId = opts.tab;
   }
@@ -310,8 +340,12 @@ function renderActiveGameContent() {
 }
 
 function renderCatalogHub() {
+  const visibleGames = activeCatalogFilter === 'all'
+    ? GAME_CATALOG
+    : GAME_CATALOG.filter(g => (g.fases || []).includes(activeCatalogFilter));
+
   return `
-    <div class="space-y-8 animate-fade-in">
+    <div class="space-y-6 animate-fade-in">
       
       <!-- HERO BANNER -->
       <div class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 border border-teal-500/30 p-6 sm:p-10 shadow-2xl">
@@ -333,9 +367,35 @@ function renderCatalogHub() {
         </div>
       </div>
 
-      <!-- 6 GAME CARDS GRID -->
+      <!-- FILTER BAR & KURIKULUM MERDEKA BADGE -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 rounded-2xl p-3 sm:p-4 border border-slate-800">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Jenjang:</span>
+          <div class="flex items-center gap-1.5 flex-wrap" id="game-catalog-filter-chips">
+            <button type="button" data-filter="all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeCatalogFilter === 'all' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+              Semua (${GAME_CATALOG.length})
+            </button>
+            <button type="button" data-filter="fase-a" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeCatalogFilter === 'fase-a' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+              Fase A (Kls 1–2)
+            </button>
+            <button type="button" data-filter="fase-b" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeCatalogFilter === 'fase-b' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+              Fase B (Kls 3–4)
+            </button>
+            <button type="button" data-filter="fase-c" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeCatalogFilter === 'fase-c' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+              Fase C (Kls 5–6)
+            </button>
+          </div>
+        </div>
+
+        <div class="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 bg-teal-500/10 px-3 py-1.5 rounded-xl border border-teal-500/20 shrink-0">
+          <i class="fas fa-certificate text-teal-300"></i>
+          <span>Standar BSKAP Kurikulum Merdeka 2025</span>
+        </div>
+      </div>
+
+      <!-- 7 GAME CARDS GRID -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${GAME_CATALOG.map((g) => `
+        ${visibleGames.map((g) => `
           <div 
             class="group relative bg-[var(--color-bg-elevated)] rounded-3xl p-6 border ${g.border} shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 overflow-hidden"
           >
@@ -348,8 +408,8 @@ function renderCatalogHub() {
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-${g.color}-500/15 text-${g.color}-600 dark:text-${g.color}-400 border border-${g.color}-500/30">
                   <i class="fas ${g.icon}"></i> ${g.mode}
                 </span>
-                <span class="text-xs text-slate-400 font-bold">
-                  Game #${GAME_CATALOG.indexOf(g) + 1}
+                <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-teal-500/15 text-teal-400 border border-teal-500/30">
+                  ${g.faseLabel || 'Fase A, B, C'}
                 </span>
               </div>
 
@@ -394,6 +454,7 @@ function renderCatalogHub() {
 }
 
 export function initGames() {
+  if (!state.user) return;
   setupToolbarEvents();
 
   if (activeGameId === 'hub') {
@@ -471,9 +532,25 @@ function setupHubEvents() {
       switchGame(id);
     });
   });
+
+  document.querySelectorAll('#game-catalog-filter-chips button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCatalogFilter = btn.getAttribute('data-filter') || 'all';
+      sfx.playClick();
+      const stage = document.getElementById('page-content-wrapper') || document.getElementById('main-content');
+      if (stage) {
+        stage.innerHTML = renderGames();
+        initGames();
+      }
+    });
+  });
 }
 
 export function switchGame(gameId) {
+  if (!state.user) {
+    if (window.navigate) window.navigate('login');
+    return;
+  }
   activeGameId = gameId;
 
   if (gameId === 'hub') {

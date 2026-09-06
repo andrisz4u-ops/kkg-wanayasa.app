@@ -347,24 +347,38 @@ export function alert(message, type = 'info', dismissible = false) {
  */
 export function renderLockedFeature(title, description, features = []) {
   return `
-    <div class="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-      <div class="max-w-2xl card p-8 md:p-12">
+    <div class="min-h-[60vh] flex flex-col items-center justify-center p-4 sm:p-8 text-center animate-fade-in">
+      <div class="max-w-2xl w-full card p-6 sm:p-10 border border-slate-200/80 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
         
-        <div class="w-20 h-20 bg-gradient-to-br from-terracotta-100 to-sunset-100 dark:from-terracotta-900/30 dark:to-sunset-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8">
-          <i class="fas fa-lock text-3xl text-terracotta-500"></i>
+        <div class="w-18 h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-amber-500/20 to-teal-500/20 border border-amber-500/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+          <i class="fas fa-lock text-3xl sm:text-4xl text-amber-500"></i>
         </div>
 
-        <h2 class="text-3xl font-serif font-bold text-[var(--color-text-primary)] mb-4">
+        <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-[var(--color-text-primary)] mb-3 tracking-tight">
           ${escapeHtml(title)}
         </h2>
         
-        <p class="text-[var(--color-text-tertiary)] text-lg mb-8 leading-relaxed">
+        <p class="text-[var(--color-text-secondary)] text-sm sm:text-base mb-6 leading-relaxed max-w-lg mx-auto">
           ${escapeHtml(description)}
         </p>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <button onclick="navigate('login')" class="btn btn-primary px-8 py-4">
-            <i class="fas fa-sign-in-alt mr-2"></i> Masuk Sekarang
+        ${features && features.length > 0 ? `
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-8 text-left max-w-xl mx-auto">
+            ${features.map(f => `
+              <div class="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm text-[var(--color-text-primary)] font-medium">
+                <i class="fas fa-check-circle text-teal-500 text-sm shrink-0"></i>
+                <span class="leading-snug">${escapeHtml(f)}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <button onclick="navigate('login')" class="w-full sm:w-auto btn btn-primary px-8 py-3.5 rounded-2xl font-bold text-sm shadow-md hover:shadow-teal-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fas fa-sign-in-alt"></i> <span>Masuk Sekarang</span>
+          </button>
+          <button onclick="navigate('home')" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fas fa-home"></i> <span>Ke Beranda</span>
           </button>
         </div>
       </div>

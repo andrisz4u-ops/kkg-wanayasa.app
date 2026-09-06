@@ -289,57 +289,128 @@ function drawSvgConnectors() {
   svg.innerHTML = '';
   if (defs) svg.appendChild(defs);
 
-  // 1. Draw Ladders (Tangga Hijau dengan anak tangga visual)
+  // 1. Draw Ladders (Tangga Nyata: 2 Rel Sejajar + Anak Tangga / Rungs)
   Object.entries(LADDERS).forEach(([fromStr, toStr]) => {
     const from = parseInt(fromStr, 10);
     const to = parseInt(toStr, 10);
     const p1 = getTileCenterPercent(from);
     const p2 = getTileCenterPercent(to);
 
-    // Garis utama tangga
-    const ladderLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    ladderLine.setAttribute('x1', p1.x);
-    ladderLine.setAttribute('y1', p1.y);
-    ladderLine.setAttribute('x2', p2.x);
-    ladderLine.setAttribute('y2', p2.y);
-    ladderLine.setAttribute('stroke', 'url(#gradLadder)');
-    ladderLine.setAttribute('stroke-width', '1.8');
-    ladderLine.setAttribute('stroke-linecap', 'round');
-    ladderLine.setAttribute('stroke-dasharray', '2.5 1.5');
-    ladderLine.setAttribute('filter', 'url(#glow)');
-    ladderLine.setAttribute('opacity', '0.9');
-    svg.appendChild(ladderLine);
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+
+    // Normal vector perpendicular to ladder direction (offset 1.3%)
+    const nx = (-dy / len) * 1.3;
+    const ny = (dx / len) * 1.3;
+
+    // Left Rail
+    const leftRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    leftRail.setAttribute('x1', p1.x + nx);
+    leftRail.setAttribute('y1', p1.y + ny);
+    leftRail.setAttribute('x2', p2.x + nx);
+    leftRail.setAttribute('y2', p2.y + ny);
+    leftRail.setAttribute('stroke', '#10b981');
+    leftRail.setAttribute('stroke-width', '0.7');
+    leftRail.setAttribute('stroke-linecap', 'round');
+    leftRail.setAttribute('opacity', '0.85');
+    svg.appendChild(leftRail);
+
+    // Right Rail
+    const rightRail = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    rightRail.setAttribute('x1', p1.x - nx);
+    rightRail.setAttribute('y1', p1.y - ny);
+    rightRail.setAttribute('x2', p2.x - nx);
+    rightRail.setAttribute('y2', p2.y - ny);
+    rightRail.setAttribute('stroke', '#10b981');
+    rightRail.setAttribute('stroke-width', '0.7');
+    rightRail.setAttribute('stroke-linecap', 'round');
+    rightRail.setAttribute('opacity', '0.85');
+    svg.appendChild(rightRail);
+
+    // Anak Tangga (Rungs) setiap 3.2% jarak
+    const rungCount = Math.max(3, Math.floor(len / 3.2));
+    for (let i = 1; i <= rungCount; i++) {
+      const t = i / (rungCount + 1);
+      const cx = p1.x + t * dx;
+      const cy = p1.y + t * dy;
+
+      const rung = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      rung.setAttribute('x1', cx + nx);
+      rung.setAttribute('y1', cy + ny);
+      rung.setAttribute('x2', cx - nx);
+      rung.setAttribute('y2', cy - ny);
+      rung.setAttribute('stroke', '#34d399');
+      rung.setAttribute('stroke-width', '0.6');
+      rung.setAttribute('stroke-linecap', 'round');
+      rung.setAttribute('opacity', '0.9');
+      svg.appendChild(rung);
+    }
+
+    // Ladder bottom base dot
+    const baseDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    baseDot.setAttribute('cx', p1.x);
+    baseDot.setAttribute('cy', p1.y);
+    baseDot.setAttribute('r', '1.1');
+    baseDot.setAttribute('fill', '#10b981');
+    baseDot.setAttribute('opacity', '0.8');
+    svg.appendChild(baseDot);
   });
 
-  // 2. Draw Snakes (Ular Merah/Oranye Melengkung)
+  // 2. Draw Snakes (Ular Berkelok Gradien Merah-Oranye + Garis Perut + Kepala Ular)
   Object.entries(SNAKES).forEach(([fromStr, toStr]) => {
     const from = parseInt(fromStr, 10);
     const to = parseInt(toStr, 10);
     const pHead = getTileCenterPercent(from);
     const pTail = getTileCenterPercent(to);
 
-    // Calculate curve control point
-    const midX = (pHead.x + pTail.x) / 2 + (pHead.x > pTail.x ? 8 : -8);
+    // Hitung kurva lengkung
+    const dx = pTail.x - pHead.x;
+    const dy = pTail.y - pHead.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const curveOffset = (pHead.x > pTail.x ? 7 : -7) * Math.min(1.5, dist / 30);
+    const midX = (pHead.x + pTail.x) / 2 + curveOffset;
     const midY = (pHead.y + pTail.y) / 2;
 
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${pHead.x} ${pHead.y} Q ${midX} ${midY} ${pTail.x} ${pTail.y}`);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'url(#gradSnake)');
-    path.setAttribute('stroke-width', '2.2');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('opacity', '0.9');
-    svg.appendChild(path);
+    // Tubuh Utama Ular
+    const bodyPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bodyPath.setAttribute('d', `M ${pHead.x} ${pHead.y} Q ${midX} ${midY} ${pTail.x} ${pTail.y}`);
+    bodyPath.setAttribute('fill', 'none');
+    bodyPath.setAttribute('stroke', 'url(#gradSnake)');
+    bodyPath.setAttribute('stroke-width', '2.2');
+    bodyPath.setAttribute('stroke-linecap', 'round');
+    bodyPath.setAttribute('opacity', '0.88');
+    svg.appendChild(bodyPath);
 
-    // Snake head marker
+    // Garis Sisik/Perut Ular (Dashed)
+    const bellyPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bellyPath.setAttribute('d', `M ${pHead.x} ${pHead.y} Q ${midX} ${midY} ${pTail.x} ${pTail.y}`);
+    bellyPath.setAttribute('fill', 'none');
+    bellyPath.setAttribute('stroke', '#ffe4e6');
+    bellyPath.setAttribute('stroke-width', '0.7');
+    bellyPath.setAttribute('stroke-dasharray', '0.8 1.4');
+    bellyPath.setAttribute('stroke-linecap', 'round');
+    bellyPath.setAttribute('opacity', '0.8');
+    svg.appendChild(bellyPath);
+
+    // Kepala Ular (Lingkaran Merah dengan Mata)
     const headCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     headCircle.setAttribute('cx', pHead.x);
     headCircle.setAttribute('cy', pHead.y);
     headCircle.setAttribute('r', '1.6');
-    headCircle.setAttribute('fill', '#f43f5e');
+    headCircle.setAttribute('fill', '#e11d48');
     headCircle.setAttribute('stroke', '#ffffff');
-    headCircle.setAttribute('stroke-width', '0.5');
+    headCircle.setAttribute('stroke-width', '0.4');
     svg.appendChild(headCircle);
+
+    // Ekor Ular Tapered
+    const tailCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    tailCircle.setAttribute('cx', pTail.x);
+    tailCircle.setAttribute('cy', pTail.y);
+    tailCircle.setAttribute('r', '0.8');
+    tailCircle.setAttribute('fill', '#fb923c');
+    svg.appendChild(tailCircle);
   });
 }
 
@@ -362,38 +433,49 @@ function buildBoardGrid() {
     rows.push(rowNumbers);
   }
 
+  const ladderDestinations = Object.values(LADDERS);
+  const snakeDestinations = Object.values(SNAKES);
+
   rows.forEach((row) => {
     row.forEach((num) => {
       const isLadderStart = LADDERS[num];
+      const isLadderEnd = ladderDestinations.includes(num);
       const isSnakeStart = SNAKES[num];
+      const isSnakeEnd = snakeDestinations.includes(num);
       const isChallenge = CHALLENGE_TILES.includes(num);
 
       let specialBadge = '';
       let cellBg = 'bg-slate-800/80 border-slate-700/60';
 
       if (num === 100) {
-        cellBg = 'bg-amber-500/30 border-amber-400';
-        specialBadge = '<span class="text-xs font-bold text-amber-300">🏆</span>';
+        cellBg = 'bg-gradient-to-br from-amber-500/30 via-yellow-500/20 to-amber-600/30 border-2 border-amber-400 shadow-md shadow-amber-500/20';
+        specialBadge = '<span class="text-xs font-black text-amber-300">🏆 100</span>';
       } else if (isLadderStart) {
-        cellBg = 'bg-emerald-950/60 border-emerald-500/50';
-        specialBadge = `<span class="text-[9px] font-black text-emerald-300">▲${isLadderStart}</span>`;
+        cellBg = 'bg-emerald-950/80 border-2 border-emerald-500/70 shadow-sm shadow-emerald-500/20';
+        specialBadge = `<span class="text-[9px] font-black text-emerald-300 flex items-center gap-0.5">🪜▲${isLadderStart}</span>`;
+      } else if (isLadderEnd) {
+        cellBg = 'bg-emerald-950/30 border border-emerald-500/30';
+        specialBadge = '<span class="text-[8px] font-extrabold text-emerald-400">🏁</span>';
       } else if (isSnakeStart) {
-        cellBg = 'bg-rose-950/60 border-rose-500/50';
-        specialBadge = `<span class="text-[9px] font-black text-rose-300">▼${isSnakeStart}</span>`;
+        cellBg = 'bg-rose-950/80 border-2 border-rose-500/70 shadow-sm shadow-rose-500/20';
+        specialBadge = `<span class="text-[9px] font-black text-rose-300 flex items-center gap-0.5">🐍▼${isSnakeStart}</span>`;
+      } else if (isSnakeEnd) {
+        cellBg = 'bg-rose-950/30 border border-rose-500/30';
+        specialBadge = '<span class="text-[8px] font-extrabold text-rose-400">⚠️</span>';
       } else if (isChallenge) {
-        cellBg = 'bg-cyan-950/60 border-cyan-500/50';
-        specialBadge = '<span class="text-[9px] font-bold text-cyan-300">⭐</span>';
+        cellBg = 'bg-cyan-950/80 border-2 border-cyan-400/70 shadow-sm shadow-cyan-500/20';
+        specialBadge = '<span class="text-[9px] font-black text-cyan-300 flex items-center gap-0.5">⭐ Soal</span>';
       }
 
       const cell = document.createElement('div');
       cell.id = `snake-tile-${num}`;
-      cell.className = `rounded-xl border ${cellBg} flex flex-col justify-between p-1 relative transition-all duration-200 select-none`;
+      cell.className = `rounded-xl border ${cellBg} flex flex-col justify-between p-1 relative transition-all duration-200 select-none overflow-visible`;
       cell.innerHTML = `
-        <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
+        <div class="flex items-center justify-between text-[10px] sm:text-[11px] font-black text-slate-300 leading-tight">
           <span>${num}</span>
           ${specialBadge}
         </div>
-        <div id="snake-pawns-container-${num}" class="flex flex-wrap items-center justify-center gap-0.5 min-h-[16px] z-20">
+        <div id="snake-pawns-container-${num}" class="flex items-center justify-center -space-x-1 sm:-space-x-1.5 min-h-[18px] z-20 overflow-visible py-0.5">
         </div>
       `;
       grid.appendChild(cell);
@@ -416,10 +498,10 @@ function renderPawns() {
     if (container) {
       const isCurrentTurn = idx === gameState.currentTurn;
       const p = document.createElement('div');
-      // Active-turn pion: larger + pulse ring; others: normal
+      // Active-turn pion: larger + pulse ring; others: stacked avatar
       p.className = isCurrentTurn
-        ? 'w-6 h-6 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-[9px] font-black animate-pulse ring-2 ring-white/70 scale-110 z-30 relative'
-        : 'w-4 h-4 rounded-full border border-white/70 shadow-md flex items-center justify-center text-[8px] font-black opacity-90';
+        ? 'w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-[9px] sm:text-[10px] font-black animate-bounce ring-2 ring-white/80 scale-110 z-30 transition-transform relative cursor-default'
+        : 'w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-white/80 shadow-md flex items-center justify-center text-[8px] sm:text-[9px] font-black opacity-95 transition-transform hover:scale-125 hover:z-30 relative cursor-default';
       p.style.backgroundColor = t.color;
       // Show first letter of team colour name (M=Merah, B=Biru, H=Hijau, K=Kuning)
       p.textContent = t.name.split(' ')[1]?.[0] ?? '●';
@@ -659,7 +741,17 @@ function showChallengeModal(team) {
     const item = questions[0] || { q: "7 + 8 = ...", a: "15", opts: ["14", "15", "16", "17"], mapel: "Matematika" };
 
     qEl.textContent = item.q;
-    if (mapelBadge) mapelBadge.textContent = `${item.mapel || 'IPAS'} • ${selectedTingkat.toUpperCase()}`;
+    const MAPEL_LABELS = {
+      'Matematika': { label: '📐 Matematika', class: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+      'IPAS': { label: '🌿 IPAS', class: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+      'B. Indonesia': { label: '📖 Bahasa Indonesia', class: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+      'Pancasila': { label: '🦅 Pendidikan Pancasila', class: 'bg-rose-500/20 text-rose-300 border-rose-500/30' }
+    };
+    const mapelInfo = MAPEL_LABELS[item.mapel] || { label: item.mapel || 'Kurikulum Merdeka', class: 'bg-teal-500/20 text-teal-300 border-teal-500/30' };
+    if (mapelBadge) {
+      mapelBadge.className = `text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${mapelInfo.class}`;
+      mapelBadge.textContent = `${mapelInfo.label} • ${selectedTingkat.toUpperCase()}`;
+    }
     if (feedEl) {
       feedEl.classList.add('hidden');
       feedEl.innerHTML = '';

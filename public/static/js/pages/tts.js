@@ -3,11 +3,25 @@ import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect,
 import { state } from '../state.js';
 import { generateTtsDocx } from '../tts-docx.js';
 import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
+import { renderLockedFeature } from '../components.js';
 
 let _lastTtsData = null;
 let _lastTtsFormData = {};
 
 export function renderTts() {
+  if (!state.user) {
+    return renderLockedFeature(
+      'Teka-Teki Silang Pembelajaran (TTS)',
+      'Maaf, fitur TTS Studio khusus untuk anggota guru terdaftar Gugus 3 Wanayasa. Silakan masuk / login akun pendidik Anda untuk merancang TTS Kurikulum Merdeka secara otomatis dengan AI atau menyusun kata kustom.',
+      [
+        'Generator TTS Kurikulum Merdeka Berbasis AI Cepat',
+        'Mode Interaktif Layar Sentuh Proyektor & Smart Board',
+        'Ekspor LKPD Format Microsoft Word (.docx) & Cetak PDF',
+        'Bank Kata Kustom Sesuai Mata Pelajaran & Fase Kelas'
+      ]
+    );
+  }
+
   const defaultKelas = `Kelas ${detectUserDefaultKelas(state.user)}`;
 
   return `
@@ -244,6 +258,7 @@ export function renderTts() {
 }
 
 export function initTts() {
+  if (!state.user) return;
   const formAi = document.getElementById('tts-ai-form');
   const formCustom = document.getElementById('tts-custom-form');
   const tabAi = document.getElementById('tab-tts-ai');

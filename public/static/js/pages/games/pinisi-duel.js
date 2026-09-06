@@ -149,12 +149,12 @@ export function renderPinisiDuel() {
               </span>
             </div>
 
-            <!-- Track Bar Merah -->
+              <!-- Track Bar Merah -->
             <div class="flex-1 h-8 sm:h-9 bg-slate-950/80 rounded-2xl border border-rose-500/30 relative overflow-hidden shadow-inner p-1">
               <!-- Water Trail -->
               <div 
                 id="pinisi-trail-red" 
-                class="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-rose-600/30 via-rose-500/40 to-rose-400/50 rounded-2xl transition-all duration-500 ease-out"
+                class="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-rose-600/30 via-rose-500/40 to-rose-400/60 rounded-2xl border-r-2 border-rose-300/70 transition-all duration-700 ease-out"
                 style="width: 0%;"
               ></div>
               <!-- Finish Line Flag -->
@@ -162,7 +162,7 @@ export function renderPinisiDuel() {
               <!-- Red Ship (Bob + Wave Animation) -->
               <div 
                 id="pinisi-ship-red" 
-                class="absolute z-20 flex items-center pinisi-ship-animate"
+                class="absolute z-20 flex items-center pinisi-ship-animate -translate-y-1/2 transition-transform duration-300"
                 style="left: 4%; top: 50%;"
               >
                 ${PINISI_SHIP_SVG}
@@ -187,7 +187,7 @@ export function renderPinisiDuel() {
               <!-- Water Trail -->
               <div 
                 id="pinisi-trail-blue" 
-                class="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-600/30 via-blue-500/40 to-blue-400/50 rounded-2xl transition-all duration-500 ease-out"
+                class="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-600/30 via-blue-500/40 to-blue-400/60 rounded-2xl border-r-2 border-blue-300/70 transition-all duration-700 ease-out"
                 style="width: 0%;"
               ></div>
               <!-- Finish Line Flag -->
@@ -195,8 +195,8 @@ export function renderPinisiDuel() {
               <!-- Blue Ship (Bob + Wave Animation) -->
               <div 
                 id="pinisi-ship-blue" 
-                class="absolute z-20 flex items-center pinisi-ship-animate"
-                style="left: 4%; top: 50%; animation-delay: 0.6s;"
+                class="absolute z-20 flex items-center pinisi-ship-animate-delayed -translate-y-1/2 transition-transform duration-300"
+                style="left: 4%; top: 50%;"
               >
                 ${PINISI_SHIP_SVG}
               </div>
@@ -580,6 +580,14 @@ function handleTeamAnswer(team, selectedOpt, btnElement) {
 
     if (consoleEl) {
       consoleEl.classList.add('ring-4', 'ring-emerald-500/60');
+    }
+
+    const shipEl = document.getElementById(`pinisi-ship-${team}`);
+    if (shipEl) {
+      shipEl.classList.add('scale-125');
+      setTimeout(() => {
+        shipEl.classList.remove('scale-125');
+      }, 700);
     }
 
     updateScoresUI();

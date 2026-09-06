@@ -61,8 +61,14 @@ export interface CheckResult {
     keys_detail?: KeyCheckDetail[];
 }
 
-// Default subrequest timeout in milliseconds (120 seconds / 2 menit untuk dokumen besar RPP & Asesmen)
-const DEFAULT_SUBREQUEST_TIMEOUT_MS = 120000;
+// Subrequest timeouts:
+// Default timeout untuk panggilan non-streaming biasa (180 detik / 3 menit)
+const DEFAULT_SUBREQUEST_TIMEOUT_MS = 180000;
+
+// Streaming timeout settings (Sliding Idle Timeout / berbasis aktivitas aliran data):
+export const STREAM_INITIAL_TIMEOUT_MS = 25000;    // 25 detik batas waktu tunggu respon awal (TTFT agar tidak lama menunggu jika provider mati)
+export const STREAM_IDLE_TIMEOUT_MS = 60000;       // 60 detik jeda maksimal tanpa adanya token/chunk baru (sliding saat AI aktif menulis)
+export const STREAM_MAX_TOTAL_TIMEOUT_MS = 600000; // 10 menit batas pengaman global absolut
 
 // Key Rotation & Cooldown State (In-Memory per Worker Instance)
 const keyRotationIndexMap = new Map<string, number>();
@@ -664,7 +670,7 @@ CRITICAL JSON RULES:
 
     // ─── Provider Stream Dispatcher (Key Pooling & Round-Robin) ───
 
-    private async callProviderStream(provider: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+    private async callProviderStream(provider: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = 300000): Promise<AIResponse> {
         const keys = (provider.api_keys && provider.api_keys.length > 0)
             ? provider.api_keys
             : (provider.api_key ? [provider.api_key] : []);
@@ -709,10 +715,10 @@ CRITICAL JSON RULES:
                 let res: AIResponse;
                 switch (provider.api_type) {
                     case 'openai_compat':
-                        res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken, timeoutMs);
+                        res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken);
                         break;
                     case 'gemini_sdk':
-                        res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken, timeoutMs);
+                        res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken);
                         break;
                     case 'anthropic':
                     case 'bedrock':
@@ -750,9 +756,9 @@ CRITICAL JSON RULES:
         throw new Error(`${provider.name} (Semua ${keyCount} key di pool gagal): ${keyErrors.join(' | ')}`);
     }
 
-    // ─── OpenAI Compatible Stream ─────────────────────────────────
+    // ─── OpenAI Compatible Stream (Sliding Idle Timeout) ──────────
 
-    private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+    private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
 
@@ -784,77 +790,122 @@ CRITICAL JSON RULES:
             ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
         };
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(timeoutMs),
-        });
+        const controller = new AbortController();
+        let initialTimer: any = null;
+        let idleTimer: any = null;
+        let maxTotalTimer: any = null;
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
-        }
+        // 1. Timer awal: batas menunggu respon awal/antrean server (TTFT)
+        initialTimer = setTimeout(() => {
+            controller.abort(new Error(`Timeout: Provider "${p.name}" (${p.slug}) tidak memberikan respon awal dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`));
+        }, STREAM_INITIAL_TIMEOUT_MS);
 
-        const reader = response.body?.getReader();
-        if (!reader) {
-            throw new Error(`${p.name}: Response body reader is not available`);
-        }
+        // 2. Batas pengaman absolut (10 menit) untuk mencegah infinite loop
+        maxTotalTimer = setTimeout(() => {
+            controller.abort(new Error(`Timeout: Batas waktu maksimal generasi (${STREAM_MAX_TOTAL_TIMEOUT_MS / 60000} menit) terlampaui.`));
+        }, STREAM_MAX_TOTAL_TIMEOUT_MS);
 
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
-        let content = '';
-        let promptTokens = 0;
-        let completionTokens = 0;
+        // 3. Sliding Idle Timer: di-reset setiap kali ada chunk/token baru masuk
+        const resetIdleTimer = () => {
+            if (initialTimer) {
+                clearTimeout(initialTimer);
+                initialTimer = null;
+            }
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+            }
+            idleTimer = setTimeout(() => {
+                controller.abort(new Error(`Timeout: Aliran data dari provider "${p.name}" (${p.slug}) terhenti (tidak ada token baru selama ${STREAM_IDLE_TIMEOUT_MS / 1000} detik).`));
+            }, STREAM_IDLE_TIMEOUT_MS);
+        };
 
         try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
+            }
 
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || trimmed.startsWith(':')) continue;
-                    if (trimmed === 'data: [DONE]') continue;
-                    if (trimmed.startsWith('data: ')) {
-                        try {
-                            const chunk = JSON.parse(trimmed.substring(6));
-                            const delta = chunk.choices?.[0]?.delta?.content || '';
-                            if (delta) {
-                                content += delta;
-                                onToken?.(delta);
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error(`${p.name}: Response body reader is not available`);
+            }
+
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let content = '';
+            let promptTokens = 0;
+            let completionTokens = 0;
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    // Reset idle timer setiap kali data chunk masuk (Sliding Timeout)
+                    resetIdleTimer();
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed || trimmed.startsWith(':')) continue;
+                        if (trimmed === 'data: [DONE]') continue;
+                        if (trimmed.startsWith('data: ')) {
+                            try {
+                                const chunk = JSON.parse(trimmed.substring(6));
+                                const delta = chunk.choices?.[0]?.delta?.content || '';
+                                if (delta) {
+                                    content += delta;
+                                    onToken?.(delta);
+                                }
+                                if (chunk.usage) {
+                                    promptTokens = chunk.usage.prompt_tokens || promptTokens;
+                                    completionTokens = chunk.usage.completion_tokens || completionTokens;
+                                }
+                            } catch {
+                                // Skip invalid partial chunk line
                             }
-                            if (chunk.usage) {
-                                promptTokens = chunk.usage.prompt_tokens || promptTokens;
-                                completionTokens = chunk.usage.completion_tokens || completionTokens;
-                            }
-                        } catch {
-                            // Skip invalid partial chunk line
                         }
                     }
                 }
+            } finally {
+                reader.releaseLock();
             }
+
+            const totalTokens = promptTokens + completionTokens || Math.round(content.length / 4);
+            const usage: AIUsage = {
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: totalTokens,
+            };
+
+            return { content, provider: p.slug, model: p.model, usage };
+        } catch (err: any) {
+            if (controller.signal.aborted && controller.signal.reason) {
+                const reason = controller.signal.reason;
+                const message = reason instanceof Error ? reason.message : String(reason);
+                throw new Error(message);
+            }
+            throw err;
         } finally {
-            reader.releaseLock();
+            if (initialTimer) clearTimeout(initialTimer);
+            if (idleTimer) clearTimeout(idleTimer);
+            if (maxTotalTimer) clearTimeout(maxTotalTimer);
         }
-
-        const totalTokens = promptTokens + completionTokens || Math.round(content.length / 4);
-        const usage: AIUsage = {
-            prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            total_tokens: totalTokens,
-        };
-
-        return { content, provider: p.slug, model: p.model, usage };
     }
 
-    // ─── Google Gemini SDK Stream ─────────────────────────────────
+    // ─── Google Gemini SDK Stream (Sliding Idle Timeout) ──────────
 
-    private async callGeminiSDKStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+    private async callGeminiSDKStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
         const genAI = new GoogleGenerativeAI(p.api_key);
         const model = genAI.getGenerativeModel({
             model: p.model,
@@ -865,26 +916,68 @@ CRITICAL JSON RULES:
             }
         });
 
-        const streamResult = await model.generateContentStream(SYSTEM_PROMPT + '\n\n' + prompt);
-        let content = '';
+        let idleTimer: any = null;
+        let maxTotalTimer: any = null;
+        let initialTimer: any = null;
+        let timeoutError: Error | null = null;
 
-        for await (const chunk of streamResult.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-                content += chunkText;
-                onToken?.(chunkText);
+        const maxTotalPromise = new Promise<never>((_, reject) => {
+            maxTotalTimer = setTimeout(() => {
+                timeoutError = new Error(`Timeout: Batas waktu maksimal generasi (${STREAM_MAX_TOTAL_TIMEOUT_MS / 60000} menit) terlampaui.`);
+                reject(timeoutError);
+            }, STREAM_MAX_TOTAL_TIMEOUT_MS);
+        });
+
+        const resetIdleTimer = () => {
+            if (initialTimer) {
+                clearTimeout(initialTimer);
+                initialTimer = null;
             }
-        }
-
-        const response = await streamResult.response;
-        const meta = (response as any).usageMetadata;
-        const usage: AIUsage = {
-            prompt_tokens: meta?.promptTokenCount || 0,
-            completion_tokens: meta?.candidatesTokenCount || 0,
-            total_tokens: meta?.totalTokenCount || (Math.round(content.length / 4)),
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+            }
+            idleTimer = setTimeout(() => {
+                timeoutError = new Error(`Timeout: Aliran data dari Gemini (${p.slug}) terhenti lebih dari ${STREAM_IDLE_TIMEOUT_MS / 1000} detik.`);
+            }, STREAM_IDLE_TIMEOUT_MS);
         };
 
-        return { content, provider: p.slug, model: p.model, usage };
+        initialTimer = setTimeout(() => {
+            timeoutError = new Error(`Timeout: Gemini (${p.slug}) tidak merespons dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`);
+        }, STREAM_INITIAL_TIMEOUT_MS);
+
+        try {
+            const streamPromise = (async () => {
+                const streamResult = await model.generateContentStream(SYSTEM_PROMPT + '\n\n' + prompt);
+                let content = '';
+
+                for await (const chunk of streamResult.stream) {
+                    if (timeoutError) throw timeoutError;
+                    resetIdleTimer();
+                    const chunkText = chunk.text();
+                    if (chunkText) {
+                        content += chunkText;
+                        onToken?.(chunkText);
+                    }
+                }
+
+                if (timeoutError) throw timeoutError;
+                const response = await streamResult.response;
+                const meta = (response as any).usageMetadata;
+                const usage: AIUsage = {
+                    prompt_tokens: meta?.promptTokenCount || 0,
+                    completion_tokens: meta?.candidatesTokenCount || 0,
+                    total_tokens: meta?.totalTokenCount || (Math.round(content.length / 4)),
+                };
+
+                return { content, provider: p.slug, model: p.model, usage };
+            })();
+
+            return await Promise.race([streamPromise, maxTotalPromise]);
+        } finally {
+            if (initialTimer) clearTimeout(initialTimer);
+            if (idleTimer) clearTimeout(idleTimer);
+            if (maxTotalTimer) clearTimeout(maxTotalTimer);
+        }
     }
 
     // ─── OpenAI Compatible ────────────────────────────────────────

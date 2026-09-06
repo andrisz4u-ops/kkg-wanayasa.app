@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildAssessmentPrompt } from '../src/routes/kisi';
 import { buildRppPrompt, calculateTimeDistribution } from '../src/routes/rpp';
-import { AIService } from '../src/services/ai';
+import { AIService, STREAM_INITIAL_TIMEOUT_MS, STREAM_IDLE_TIMEOUT_MS, STREAM_MAX_TOTAL_TIMEOUT_MS } from '../src/services/ai';
 
 describe('AI Streaming Prompt & Pipeline Tests', () => {
     describe('buildAssessmentPrompt', () => {
@@ -105,5 +105,13 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
             expect(parsed.title).toBe('Asesmen Soal');
             expect(parsed.items.length).toBe(1);
         });
+
+        it('should configure resilient Sliding Idle Timeout parameters', () => {
+            expect(STREAM_INITIAL_TIMEOUT_MS).toBe(25000); // 25s initial response fail-fast
+            expect(STREAM_IDLE_TIMEOUT_MS).toBe(60000);    // 60s idle sliding per token
+            expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBe(600000); // 10 minutes max ceiling
+            expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBeGreaterThan(STREAM_IDLE_TIMEOUT_MS);
+        });
     });
 });
+

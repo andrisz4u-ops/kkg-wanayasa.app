@@ -318,8 +318,21 @@ export const buildAssessmentPrompt = (params: {
            "Disajikan [stimulus/konteks], peserta didik dapat [kata kerja operasional] [materi]".
         6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
         7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
-        8. ATURAN FORMAT TABEL PADA SOAL:
-           - Jika menyajikan stimulus berupa tabel data, posisikan rapi dengan baris baru.\\n\\n.${gambarRule}
+        8. ATURAN KONSISTENSI FORMAT TABEL (SANGAT PENTING):
+           - Jika butir soal (baik PG, Isian, maupun Uraian) menyajikan stimulus atau data dalam bentuk TABEL, WAJIB menggunakan format Tabel Markdown Standar yang LENGKAP:
+             * Setiap baris tabel WAJIB diawali dan diakhiri dengan karakter pipa (|).
+             * WAJIB menyertakan baris pemisah kolom/header dengan strip (| :--- | :---: | :---: |).
+             * Contoh tabel vertikal:
+               | Nama Barang | Harga Satuan | Jumlah |
+               | :--- | :---: | :---: |
+               | Buku Tulis | Rp 5.000 | 12 |
+               | Pensil 2B | Rp 3.000 | 24 |
+             * Contoh tabel horizontal (misal hari & penjualan):
+               | Hari | Senin | Selasa | Rabu | Kamis | Jumat |
+               | :--- | :---: | :---: | :---: | :---: | :---: |
+               | Penjualan (kg) | 25 | 32 | 18 | 35 | 29 |
+             * DILARANG KERAS menyajikan data tabel hanya dengan spasi/tab tanpa pipa (|), dan DILARANG menulis format semi-tabel seperti "Hari : Senin | Selasa | ...". Seluruh data tabel WAJIB di dalam tabel Markdown utuh!
+             * Berikan jarak baris kosong (\\n\\n) sebelum tabel dan setelah tabel.${gambarRule}
         ${isPG ? '9.' : '8.'} LARANGAN: JANGAN menulis teks label "L1", "L2", "L3" di dalam teks pertanyaan yang dibaca murid. Label disimpan pada field "level". JANGAN menambahkan field "gambar" ke soal isian maupun uraian.${isianRule}
         ${getKelasAdaptation(jenjangKelas)}
 

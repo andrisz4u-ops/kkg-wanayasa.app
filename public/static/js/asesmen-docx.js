@@ -192,42 +192,116 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
   }
 }
 
-// Helper: normalisasi teks soal agar tabel Markdown terpisah rapi dari kalimat pembuka/penutup
+// Helper: normalisasi teks soal agar tabel (Markdown, tabel titik dua, maupun spasi tabular) terformat rapi
 function normalizeSoalMarkdown(text) {
   if (!text) return '';
-  const clean = String(text)
+  let clean = String(text)
     .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
     .replace(/\[[^\]]*\]/g, '')
     .trim();
-  const lines = clean.split(/\r?\n/);
-  const outLines = [];
 
-  for (let rawLine of lines) {
+  // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
+  clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');
+
+  const rawLines = clean.split(/\r?\n/);
+  const normalizedLines = [];
+
+  // 2. Pre-process baris tabel berpola titik dua (misal: 'Hari : Senin | Selasa | ...')
+  for (let rawLine of rawLines) {
     let line = rawLine.trim();
     if (!line) continue;
 
-    const firstPipe = line.indexOf('|');
-    const lastPipe = line.lastIndexOf('|');
-
-    if (firstPipe !== -1 && lastPipe > firstPipe) {
-      const beforeText = line.substring(0, firstPipe).trim();
-      const tableContent = line.substring(firstPipe, lastPipe + 1).trim();
-      const afterText = line.substring(lastPipe + 1).trim();
-
-      if (beforeText) outLines.push(beforeText);
-
-      const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
-      for (const row of splitRows) {
-        if (row.trim()) outLines.push(row.trim());
+    if (line.includes('|')) {
+      const firstPipe = line.indexOf('|');
+      const colonIdx = line.indexOf(':');
+      if (colonIdx !== -1 && colonIdx < firstPipe) {
+        line = line.replace(/\s*:\s*/, ' | ');
       }
-
-      if (afterText) outLines.push(afterText);
+      if (!line.startsWith('|')) line = '| ' + line;
+      if (!line.endsWith('|')) line = line + ' |';
+      normalizedLines.push(line);
     } else {
-      outLines.push(line);
+      normalizedLines.push(line);
     }
   }
 
+  // 3. Pre-process baris tabel tanpa pipa yang dipisahkan oleh tab atau 2+ spasi (tabular)
+  const outLines = [];
+  let spaceTableCandidates = [];
+
+  function flushSpaceCandidates() {
+    if (spaceTableCandidates.length >= 2) {
+      const colCounts = spaceTableCandidates.map(r => r.length);
+      const firstCol = colCounts[0];
+      const isConsistent = colCounts.every(c => c === firstCol && c >= 2);
+      if (isConsistent) {
+        outLines.push('| ' + spaceTableCandidates[0].join(' | ') + ' |');
+        outLines.push('| ' + spaceTableCandidates[0].map(() => '---').join(' | ') + ' |');
+        for (let k = 1; k < spaceTableCandidates.length; k++) {
+          outLines.push('| ' + spaceTableCandidates[k].join(' | ') + ' |');
+        }
+        spaceTableCandidates = [];
+        return;
+      }
+    }
+    for (const raw of spaceTableCandidates) {
+      outLines.push(raw.join('    '));
+    }
+    spaceTableCandidates = [];
+  }
+
+  for (let line of normalizedLines) {
+    if (line.startsWith('|')) {
+      flushSpaceCandidates();
+      outLines.push(line);
+      continue;
+    }
+
+    const cells = line.split(/\t|\s{2,}/).map(c => c.trim()).filter(Boolean);
+    const isSentence = /[.?!]$/.test(line) || /^\d+\.\s/.test(line) || cells.length < 2 || line.length > 140;
+
+    if (!isSentence && cells.length >= 2) {
+      spaceTableCandidates.push(cells);
+    } else {
+      flushSpaceCandidates();
+      outLines.push(line);
+    }
+  }
+  flushSpaceCandidates();
+
   return outLines.join('\n');
+}
+
+// Helper: hitung lebar kolom secara cerdas & proporsional berdasarkan panjang teks isi tabel (seperti di Canvas web)
+function computeColWidths(rows) {
+  const colCount = Math.max(...rows.map(r => r.length));
+  const maxLenPerCol = Array(colCount).fill(0);
+
+  for (const r of rows) {
+    for (let c = 0; c < colCount; c++) {
+      const cellText = String(r[c] || '');
+      if (cellText.length > maxLenPerCol[c]) {
+        maxLenPerCol[c] = cellText.length;
+      }
+    }
+  }
+
+  // Bobot ideal per kolom dalam twips (1 pt = 20 twip, 1 cm = 567 twip)
+  // Karakter rata-rata 130 twips + 600 twips padding, minimum 1200 twips (~2.1 cm)
+  let idealWidths = maxLenPerCol.map(len => {
+    return Math.max(len * 130 + 600, 1200);
+  });
+
+  let totalWidth = idealWidths.reduce((a, b) => a + b, 0);
+  const MAX_TABLE_WIDTH = CM(16.0); // Maksimum lebar tabel pada kertas A4 (dalam margin)
+
+  if (totalWidth > MAX_TABLE_WIDTH) {
+    const scale = MAX_TABLE_WIDTH / totalWidth;
+    idealWidths = idealWidths.map(w => Math.max(Math.round(w * scale), 800));
+    totalWidth = idealWidths.reduce((a, b) => a + b, 0);
+  }
+
+  return { widths: idealWidths, totalWidth };
 }
 
 // ============================================================
@@ -243,26 +317,65 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   let tableLines = [];
   let isFirstLine = true;
 
+  const isTableDivider = (line) => {
+    const trimmed = line.trim();
+    return /^[:\s\-|]+$/.test(trimmed) && trimmed.includes('-') && (trimmed.includes('|') || trimmed.includes('+'));
+  };
+
+  const isPossibleTableRow = (line) => {
+    const trimmed = line.trim();
+    return trimmed.length > 0 && (trimmed.includes('|') || isTableDivider(trimmed));
+  };
+
+  const parseTableRow = (line) => {
+    let trimmed = line.trim();
+    if (trimmed.startsWith('|')) trimmed = trimmed.substring(1);
+    if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1);
+    return trimmed.split('|').map(c => c.trim());
+  };
+
   const flushTable = () => {
     if (tableLines.length === 0) return;
+    const hasDivider = tableLines.some(l => isTableDivider(l));
+    if (!hasDivider && tableLines.length < 2) {
+      for (const rawLine of tableLines) {
+        if (rawLine.trim().length > 0 || isFirstLine) {
+          const runs = (isFirstLine && noText)
+            ? [new TextRun({ text: `${noText} `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(rawLine, { size: 22 })]
+            : [...makeRuns(rawLine, { size: 22 })];
+          items.push(makeParaRaw(runs, {
+            align: AlignmentType.JUSTIFIED,
+            spaceBefore: isFirstLine ? 4 : 2,
+            spaceAfter: 2,
+            indent: isFirstLine ? { left, hanging } : { left }
+          }));
+          isFirstLine = false;
+        }
+      }
+      tableLines = [];
+      return;
+    }
+
     const rows = tableLines
-      .map(l => l.trim())
-      .filter(l => l.startsWith('|'))
-      .map(l => {
-        const cells = l.split('|');
-        return cells.slice(1, l.endsWith('|') ? cells.length - 1 : cells.length).map(c => c.trim());
-      })
-      .filter(row => row.length > 0 && !row.every(c => /^[-: ]+$/.test(c)));
+      .filter(l => !isTableDivider(l))
+      .map(parseTableRow)
+      .filter(row => row.length > 0);
 
     if (rows.length > 0) {
       const header = rows[0];
       const dataRows = rows.slice(1);
       const BORDER_BLACK = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+      const tableIndent = (left !== undefined && left !== null) ? left : CM(0.6);
+      const { widths, totalWidth } = computeColWidths(rows);
+      const colCount = widths.length;
+      const fontSize = colCount >= 6 ? 18 : 20;
+      const cellPad = colCount >= 6 ? PT(4) : PT(6);
 
       items.push(new Table({
-        width: { size: 75, type: WidthType.PERCENTAGE },
+        width: { size: totalWidth, type: WidthType.DXA },
+        columnWidths: widths,
         alignment: AlignmentType.LEFT,
-        margins: { left: left || CM(0.6) },
+        indent: tableIndent > 0 ? { size: tableIndent, type: WidthType.DXA } : undefined,
         borders: {
           top: BORDER_BLACK,
           bottom: BORDER_BLACK,
@@ -274,17 +387,22 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
         rows: [
           new TableRow({
             tableHeader: true,
-            children: header.map(h => new TableCell({
+            children: header.map((h, colIdx) => new TableCell({
+              width: { size: widths[colIdx] || widths[widths.length - 1], type: WidthType.DXA },
               shading: { fill: 'F1F5F9' },
-              margins: { top: PT(3), bottom: PT(3), left: PT(6), right: PT(6) },
-              children: [makePara(h, { bold: true, size: 20, align: AlignmentType.CENTER })]
+              margins: { top: PT(4), bottom: PT(4), left: cellPad, right: cellPad },
+              children: [makePara(h, { bold: true, size: fontSize, align: AlignmentType.CENTER })]
             }))
           }),
           ...dataRows.map(r => new TableRow({
-            children: r.map((c, colIdx) => new TableCell({
-              margins: { top: PT(3), bottom: PT(3), left: PT(6), right: PT(6) },
-              children: [makePara(c, { size: 20, align: colIdx === 0 ? AlignmentType.CENTER : AlignmentType.LEFT })]
-            }))
+            children: r.map((c, colIdx) => {
+              const isNum = /^\d+([.,]\d+)?\s*(°C|%|cm|m|kg|g|km|menit|detik|jam|Rp)?$/i.test(c) || (colIdx === 0 && /^\d+$/.test(c));
+              return new TableCell({
+                width: { size: widths[colIdx] || widths[widths.length - 1], type: WidthType.DXA },
+                margins: { top: PT(4), bottom: PT(4), left: cellPad, right: cellPad },
+                children: [makePara(c, { size: fontSize, align: isNum ? AlignmentType.CENTER : AlignmentType.LEFT })]
+              });
+            })
           }))
         ]
       }));
@@ -296,7 +414,7 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed.startsWith('|')) {
+    if (isPossibleTableRow(trimmed)) {
       tableLines.push(trimmed);
     } else {
       flushTable();
@@ -307,8 +425,8 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
         
         items.push(makeParaRaw(runs, {
           align: AlignmentType.JUSTIFIED,
-          spaceBefore: isFirstLine ? 4 : 0,
-          spaceAfter: 0,
+          spaceBefore: isFirstLine ? 4 : 2,
+          spaceAfter: 2,
           indent: isFirstLine ? { left, hanging } : { left }
         }));
         isFirstLine = false;
@@ -646,7 +764,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       }));
     } else {
       for (const q of data.isian.data) {
-        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.5), hanging: CM(0.5) }));
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
       }
     }
   }
@@ -656,7 +774,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
     for (const q of data.uraian) {
-      children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.5), hanging: CM(0.5) }));
+      children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
     }
   }
 

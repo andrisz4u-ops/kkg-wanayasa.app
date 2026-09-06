@@ -181,16 +181,8 @@ export async function renderKisi() {
               <option value="mistral">Mistral Medium</option>
               <option value="z_ai">GLM-4.7</option>
             </select>
-
-            <div class="mt-3 flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70">
-              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                <input type="checkbox" name="useGambar" value="1" checked class="rounded accent-cyan-600 w-4 h-4 cursor-pointer">
-                <span><i class="fas fa-image text-cyan-500 mr-1"></i>Sertakan Ilustrasi Gambar (Jika Relevan)</span>
-              </label>
-            </div>
-
             <!-- Streaming Mode Toggle Switch -->
-            <div class="mt-2.5 flex items-center justify-between p-2.5 rounded-xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-500/30">
+            <div class="mt-3 flex items-center justify-between p-2.5 rounded-xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-500/30">
               <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none" title="Aktifkan untuk memantau proses berpikir & naskah soal AI secara realtime">
                 <input type="checkbox" id="toggle-kisi-stream" class="rounded accent-cyan-600 w-4 h-4 cursor-pointer">
                 <span><i class="fas fa-satellite-dish text-cyan-600 dark:text-cyan-400 mr-1 animate-pulse"></i>Live AI Streaming Monitor</span>
@@ -480,17 +472,17 @@ export async function renderKisi() {
       }
       .soal-actions {
         position: absolute;
-        top: 6px;
-        right: 8px;
+        top: 4px;
+        right: -32px;
         display: flex;
         gap: 6px;
-        opacity: 0.85;
+        opacity: 0.88;
         transition: all 0.2s ease;
         z-index: 30;
       }
       .soal-item-wrapper:hover .soal-actions {
         opacity: 1;
-        transform: scale(1.02);
+        transform: scale(1.03);
       }
       #asesmen-canvas.preview-only .soal-actions {
         display: none !important;
@@ -880,40 +872,82 @@ function containsSundaneseScript(text) {
   return /[\u1B80-\u1BBF\u1CC0-\u1CCF]/.test(text);
 }
 
-// Helper: normalisasi teks soal agar tabel Markdown terpisah rapi dari kalimat pembuka/penutup
+// Helper: normalisasi teks soal agar tabel (Markdown, tabel titik dua, maupun spasi tabular) terformat rapi
 function normalizeSoalMarkdown(text) {
   if (!text) return '';
-  const clean = String(text)
+  let clean = String(text)
     .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
     .replace(/\[[^\]]*\]/g, '')
     .trim();
-  const lines = clean.split(/\r?\n/);
-  const outLines = [];
 
-  for (let rawLine of lines) {
+  // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
+  clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');
+
+  const rawLines = clean.split(/\r?\n/);
+  const normalizedLines = [];
+
+  // 2. Pre-process baris tabel berpola titik dua (misal: 'Hari : Senin | Selasa | ...')
+  for (let rawLine of rawLines) {
     let line = rawLine.trim();
     if (!line) continue;
 
-    const firstPipe = line.indexOf('|');
-    const lastPipe = line.lastIndexOf('|');
-
-    if (firstPipe !== -1 && lastPipe > firstPipe) {
-      const beforeText = line.substring(0, firstPipe).trim();
-      const tableContent = line.substring(firstPipe, lastPipe + 1).trim();
-      const afterText = line.substring(lastPipe + 1).trim();
-
-      if (beforeText) outLines.push(beforeText);
-
-      const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
-      for (const row of splitRows) {
-        if (row.trim()) outLines.push(row.trim());
+    if (line.includes('|')) {
+      const firstPipe = line.indexOf('|');
+      const colonIdx = line.indexOf(':');
+      if (colonIdx !== -1 && colonIdx < firstPipe) {
+        line = line.replace(/\s*:\s*/, ' | ');
       }
-
-      if (afterText) outLines.push(afterText);
+      if (!line.startsWith('|')) line = '| ' + line;
+      if (!line.endsWith('|')) line = line + ' |';
+      normalizedLines.push(line);
     } else {
+      normalizedLines.push(line);
+    }
+  }
+
+  // 3. Pre-process baris tabel tanpa pipa yang dipisahkan oleh tab atau 2+ spasi (tabular)
+  const outLines = [];
+  let spaceTableCandidates = [];
+
+  function flushSpaceCandidates() {
+    if (spaceTableCandidates.length >= 2) {
+      const colCounts = spaceTableCandidates.map(r => r.length);
+      const firstCol = colCounts[0];
+      const isConsistent = colCounts.every(c => c === firstCol && c >= 2);
+      if (isConsistent) {
+        outLines.push('| ' + spaceTableCandidates[0].join(' | ') + ' |');
+        outLines.push('| ' + spaceTableCandidates[0].map(() => '---').join(' | ') + ' |');
+        for (let k = 1; k < spaceTableCandidates.length; k++) {
+          outLines.push('| ' + spaceTableCandidates[k].join(' | ') + ' |');
+        }
+        spaceTableCandidates = [];
+        return;
+      }
+    }
+    for (const raw of spaceTableCandidates) {
+      outLines.push(raw.join('    '));
+    }
+    spaceTableCandidates = [];
+  }
+
+  for (let line of normalizedLines) {
+    if (line.startsWith('|')) {
+      flushSpaceCandidates();
+      outLines.push(line);
+      continue;
+    }
+
+    const cells = line.split(/\t|\s{2,}/).map(c => c.trim()).filter(Boolean);
+    const isSentence = /[.?!]$/.test(line) || /^\d+\.\s/.test(line) || cells.length < 2 || line.length > 140;
+
+    if (!isSentence && cells.length >= 2) {
+      spaceTableCandidates.push(cells);
+    } else {
+      flushSpaceCandidates();
       outLines.push(line);
     }
   }
+  flushSpaceCandidates();
 
   return outLines.join('\n');
 }
@@ -926,35 +960,64 @@ function formatSoalText(text) {
   const resultBlocks = [];
   let tableLines = [];
 
+  const isTableDivider = (line) => {
+    const trimmed = line.trim();
+    return /^[:\s\-|]+$/.test(trimmed) && trimmed.includes('-') && (trimmed.includes('|') || trimmed.includes('+'));
+  };
+
+  const isPossibleTableRow = (line) => {
+    const trimmed = line.trim();
+    return trimmed.length > 0 && (trimmed.includes('|') || isTableDivider(trimmed));
+  };
+
+  const parseTableRow = (line) => {
+    let trimmed = line.trim();
+    if (trimmed.startsWith('|')) trimmed = trimmed.substring(1);
+    if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1);
+    return trimmed.split('|').map(c => c.trim());
+  };
+
   const flushTable = () => {
     if (tableLines.length === 0) return;
+    const hasDivider = tableLines.some(l => isTableDivider(l));
+    if (!hasDivider && tableLines.length < 2) {
+      for (const rawLine of tableLines) {
+        if (rawLine.trim().length > 0) {
+          resultBlocks.push(`<div style="line-height:1.45; margin-bottom:4px;">${escapeHtml(rawLine)}</div>`);
+        }
+      }
+      tableLines = [];
+      return;
+    }
+
     const rows = tableLines
-      .map(l => l.trim())
-      .filter(l => l.startsWith('|'))
-      .map(l => {
-        const cells = l.split('|');
-        return cells.slice(1, l.endsWith('|') ? cells.length - 1 : cells.length).map(c => c.trim());
-      })
-      .filter(row => row.length > 0 && !row.every(c => /^[-: ]+$/.test(c)));
+      .filter(l => !isTableDivider(l))
+      .map(parseTableRow)
+      .filter(row => row.length > 0);
 
     if (rows.length > 0) {
       const header = rows[0];
       const dataRows = rows.slice(1);
-      let tableHtml = `<table class="soal-inner-table" style="margin: 8px 0 10px 0; border-collapse: collapse; border: 1.5px solid #334155; font-size: 10pt; width: auto; min-width: 220px; max-width: 100%;">`;
+      const colCount = Math.max(...rows.map(r => r.length));
+      const fontSize = colCount >= 6 ? '9pt' : '10pt';
+      const cellPad = colCount >= 6 ? '4px 8px' : '5px 12px';
+
+      let tableHtml = `<div class="soal-table-container" style="margin: 8px 0 12px 0; padding: 0; clear: both; overflow-x: auto;"><table class="soal-inner-table" style="border-collapse: collapse; border: 1.5px solid #334155; font-size: ${fontSize}; width: auto; min-width: 260px; max-width: 100%; margin: 0;">`;
       tableHtml += `<thead style="background-color: #f1f5f9; font-weight: bold;"><tr>`;
       header.forEach(h => {
-        tableHtml += `<th style="border: 1px solid #475569; padding: 4px 12px; text-align: center;">${escapeHtml(h)}</th>`;
+        tableHtml += `<th style="border: 1px solid #475569; padding: ${cellPad}; text-align: center; vertical-align: middle;">${escapeHtml(h)}</th>`;
       });
       tableHtml += `</tr></thead><tbody>`;
-      dataRows.forEach(r => {
-        tableHtml += `<tr>`;
+      dataRows.forEach((r, rIdx) => {
+        const bg = rIdx % 2 === 1 ? 'background-color: #f8fafc;' : 'background-color: #ffffff;';
+        tableHtml += `<tr style="${bg}">`;
         r.forEach((c, idx) => {
-          const isNum = /^\d+([.,]\d+)?$/.test(c) || idx === 0;
-          tableHtml += `<td style="border: 1px solid #475569; padding: 4px 12px; text-align: ${isNum ? 'center' : 'left'}; vertical-align: middle;">${escapeHtml(c)}</td>`;
+          const isNum = /^\d+([.,]\d+)?\s*(°C|%|cm|m|kg|g|km|menit|detik|jam|Rp)?$/i.test(c) || (idx === 0 && /^\d+$/.test(c));
+          tableHtml += `<td style="border: 1px solid #475569; padding: ${cellPad}; text-align: ${isNum ? 'center' : 'left'}; vertical-align: middle;">${escapeHtml(c)}</td>`;
         });
         tableHtml += `</tr>`;
       });
-      tableHtml += `</tbody></table>`;
+      tableHtml += `</tbody></table></div>`;
       resultBlocks.push(tableHtml);
     }
     tableLines = [];
@@ -963,7 +1026,7 @@ function formatSoalText(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed.startsWith('|')) {
+    if (isPossibleTableRow(trimmed)) {
       tableLines.push(trimmed);
     } else {
       flushTable();
@@ -1113,7 +1176,7 @@ export function initKisi() {
     e.preventDefault();
     const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries());
-    data.useGambar = form.querySelector('input[name="useGambar"]')?.checked !== false;
+    data.useGambar = true; // Stimulus gambar selalu diikutsertakan jika relevan
 
     if (!data.topik || !data.topik.trim()) {
       showToast('Harap masukkan Topik/Materi terlebih dahulu.', 'error');
@@ -1286,9 +1349,6 @@ export function initKisi() {
     const defaultKelas = `Kelas ${detectUserDefaultKelas(state.user)}`;
     setVal('jenjangKelas', defaultKelas);
     setVal('semester', 'Ganjil');
-
-    const useGambarCb = form.querySelector('input[name="useGambar"]');
-    if (useGambarCb) useGambarCb.checked = true;
 
     // Ensure AI provider dropdown is populated and never becomes blank
     const providerSelect = form.querySelector('select[name="aiProvider"]');

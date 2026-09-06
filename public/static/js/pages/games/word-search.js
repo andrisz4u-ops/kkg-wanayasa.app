@@ -22,6 +22,8 @@ function getCurrentSet() {
 
 export function renderWordSearch() {
   const currentSet = getCurrentSet();
+  const redLen = currentSet.red ? currentSet.red.words.length : currentSet.words.length;
+  const blueLen = currentSet.blue ? currentSet.blue.words.length : currentSet.words.length;
 
   return `
     <div class="flex flex-col w-full h-full bg-slate-950 text-white select-none overflow-hidden relative">
@@ -51,10 +53,10 @@ export function renderWordSearch() {
 
         <div class="flex items-center gap-4">
           <div class="text-xs font-bold text-rose-400">
-            🔴 Merah: <span id="ws-red-count">0</span> / <span class="ws-total-words">${currentSet.words.length}</span>
+            🔴 Merah: <span id="ws-red-count">0</span> / <span id="ws-red-total" class="ws-total-words">${redLen}</span>
           </div>
           <div class="text-xs font-bold text-blue-400">
-            🔵 Biru: <span id="ws-blue-count">0</span> / <span class="ws-total-words">${currentSet.words.length}</span>
+            🔵 Biru: <span id="ws-blue-count">0</span> / <span id="ws-blue-total" class="ws-total-words">${blueLen}</span>
           </div>
           <button id="btn-ws-pause" class="px-2.5 py-1 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer">
             <i class="fas fa-pause mr-1"></i> Jeda
@@ -124,19 +126,22 @@ function renderSide(team) {
   if (!container) return;
 
   const currentSet = getCurrentSet();
+  const teamSet = currentSet[team] || currentSet;
   const isRed = team === 'red';
+  const gridSize = currentSet.gridSize || (teamSet.grid && teamSet.grid.length) || 8;
+  const gridColsClass = gridSize === 7 ? 'grid-cols-7' : 'grid-cols-8';
 
   container.innerHTML = `
     <div class="flex items-center justify-between mb-2">
       <span class="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider ${isRed ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">
         ${isRed ? '🔴 Tim Merah' : '🔵 Tim Biru'}
       </span>
-      <span class="text-[11px] text-slate-400">Sentuh huruf awal, lalu sentuh huruf akhir kata</span>
+      <span class="text-[11px] text-slate-400">Sentuh huruf awal, lalu sentuh huruf akhir (Mendatar / Menurun)</span>
     </div>
 
     <!-- Word List Badges (Area Jangkauan Sentuh Aman) -->
     <div class="flex flex-wrap gap-1.5 mb-2 bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
-      ${currentSet.words.map(w => {
+      ${teamSet.words.map(w => {
         const isFound = teamData[team].foundWords.has(w);
         return `
           <span class="px-2.5 py-1 rounded-xl text-xs font-extrabold transition-all ${
@@ -152,14 +157,14 @@ function renderSide(team) {
       }).join('')}
     </div>
 
-    <!-- 8x8 Grid -->
+    <!-- Grid (7x7 atau 8x8) -->
     <div class="flex-1 flex items-center justify-center p-1">
-      <div class="grid grid-cols-8 gap-1.5 sm:gap-2 w-full max-w-[min(65vh,520px)] aspect-square bg-slate-900 p-3 rounded-3xl border-2 ${isRed ? 'border-rose-500/40' : 'border-blue-500/40'} shadow-2xl">
-        ${currentSet.grid.map((row, r) => row.map((char, c) => {
+      <div class="grid ${gridColsClass} gap-1.5 sm:gap-2 w-full max-w-[min(65vh,520px)] aspect-square bg-slate-900 p-3 rounded-3xl border-2 ${isRed ? 'border-rose-500/40' : 'border-blue-500/40'} shadow-2xl">
+        ${teamSet.grid.map((row, r) => row.map((char, c) => {
           let isPartFound = false;
-          currentSet.words.forEach(w => {
+          teamSet.words.forEach(w => {
             if (teamData[team].foundWords.has(w)) {
-              const sol = currentSet.solutions[w];
+              const sol = teamSet.solutions[w];
               if (sol && isInsideRange(r, c, sol.r1, sol.c1, sol.r2, sol.c2)) {
                 isPartFound = true;
               }
@@ -210,6 +215,7 @@ function isInsideRange(r, c, r1, c1, r2, c2) {
 
 function handleCellClick(team, r, c) {
   const currentSet = getCurrentSet();
+  const teamSet = currentSet[team] || currentSet;
   const state = teamData[team];
 
   if (!state.selectedStart) {
@@ -223,9 +229,9 @@ function handleCellClick(team, r, c) {
 
     let matchedWord = null;
 
-    currentSet.words.forEach(w => {
+    teamSet.words.forEach(w => {
       if (!state.foundWords.has(w)) {
-        const sol = currentSet.solutions[w];
+        const sol = teamSet.solutions[w];
         if (sol) {
           const matchForward = (sol.r1 === start.r && sol.c1 === start.c && sol.r2 === end.r && sol.c2 === end.c);
           const matchReverse = (sol.r1 === end.r && sol.c1 === end.c && sol.r2 === start.r && sol.c2 === start.c);
@@ -242,7 +248,7 @@ function handleCellClick(team, r, c) {
       updateScoreUI();
       renderSide(team);
 
-      if (state.foundWords.size === currentSet.words.length) {
+      if (state.foundWords.size === teamSet.words.length) {
         endGame(team);
       }
     } else {
@@ -287,33 +293,46 @@ export function initWordSearch() {
   const topicTitle = document.getElementById('ws-topic-title');
   if (topicTitle) topicTitle.textContent = `Materi: ${currentSet.topic}`;
 
-  document.querySelectorAll('.ws-total-words').forEach(el => el.textContent = currentSet.words.length);
+  const redLen = currentSet.red ? currentSet.red.words.length : currentSet.words.length;
+  const blueLen = currentSet.blue ? currentSet.blue.words.length : currentSet.words.length;
+  const redTotalEl = document.getElementById('ws-red-total');
+  const blueTotalEl = document.getElementById('ws-blue-total');
+  if (redTotalEl) redTotalEl.textContent = redLen;
+  if (blueTotalEl) blueTotalEl.textContent = blueLen;
+
   updateScoreUI();
 
   renderSide('red');
   renderSide('blue');
 
   const faseSelect = document.getElementById('ws-fase-select');
-  if (faseSelect) {
+  if (faseSelect && !faseSelect.dataset.listenerAttached) {
+    faseSelect.dataset.listenerAttached = 'true';
     faseSelect.value = selectedFase;
     faseSelect.addEventListener('change', (e) => {
       selectedFase = e.target.value;
       currentSetIdx = 0;
       initWordSearch();
     });
+  } else if (faseSelect) {
+    faseSelect.value = selectedFase;
   }
 
   const paketSelect = document.getElementById('ws-paket-select');
-  if (paketSelect) {
+  if (paketSelect && !paketSelect.dataset.listenerAttached) {
+    paketSelect.dataset.listenerAttached = 'true';
     paketSelect.value = String(currentSetIdx);
     paketSelect.addEventListener('change', (e) => {
       currentSetIdx = parseInt(e.target.value, 10);
       initWordSearch();
     });
+  } else if (paketSelect) {
+    paketSelect.value = String(currentSetIdx);
   }
 
   const resetBtn = document.getElementById('btn-ws-reset');
-  if (resetBtn) {
+  if (resetBtn && !resetBtn.dataset.listenerAttached) {
+    resetBtn.dataset.listenerAttached = 'true';
     resetBtn.addEventListener('click', initWordSearch);
   }
 
@@ -321,7 +340,8 @@ export function initWordSearch() {
   const pauseOverlay = document.getElementById('ws-pause-overlay');
   const resumeBtn = document.getElementById('btn-ws-resume');
 
-  if (pauseBtn && pauseOverlay) {
+  if (pauseBtn && pauseOverlay && !pauseBtn.dataset.listenerAttached) {
+    pauseBtn.dataset.listenerAttached = 'true';
     pauseBtn.addEventListener('click', () => {
       isPaused = true;
       pauseOverlay.classList.remove('hidden');
@@ -329,7 +349,8 @@ export function initWordSearch() {
     });
   }
 
-  if (resumeBtn && pauseOverlay) {
+  if (resumeBtn && pauseOverlay && !resumeBtn.dataset.listenerAttached) {
+    resumeBtn.dataset.listenerAttached = 'true';
     resumeBtn.addEventListener('click', () => {
       isPaused = false;
       pauseOverlay.classList.add('hidden');
@@ -338,7 +359,8 @@ export function initWordSearch() {
   }
 
   const againBtn = document.getElementById('btn-ws-play-again');
-  if (againBtn) {
+  if (againBtn && !againBtn.dataset.listenerAttached) {
+    againBtn.dataset.listenerAttached = 'true';
     againBtn.addEventListener('click', () => {
       const modal = document.getElementById('ws-winner-modal');
       if (modal) modal.classList.add('hidden');
@@ -347,7 +369,8 @@ export function initWordSearch() {
   }
 
   const copyBtn = document.getElementById('btn-ws-copy-summary');
-  if (copyBtn) {
+  if (copyBtn && !copyBtn.dataset.listenerAttached) {
+    copyBtn.dataset.listenerAttached = 'true';
     copyBtn.addEventListener('click', () => {
       const winner = teamData.red.foundWords.size >= teamData.blue.foundWords.size ? 'Tim Merah' : 'Tim Biru';
       const text = `🏆 Rekap Cari Kata Raksasa (KKG Wanayasa)\nJuara: ${winner}\nJenjang: ${selectedFase.toUpperCase()}\nMateri: ${currentSet.topic}`;

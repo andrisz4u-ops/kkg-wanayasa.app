@@ -4,22 +4,84 @@ import { PINISI_QUESTION_BANK } from '../public/static/js/pages/games/pinisi-ban
 import { LADDERS, SNAKES, CHALLENGE_TILES } from '../public/static/js/pages/games/snake-ladder.js';
 
 describe('Game Hub Data Integrity Tests', () => {
-  it('should have valid word search sets with matching solutions', () => {
+  it('should have valid word search sets with matching solutions, team separation, and both horizontal and vertical patterns', () => {
     let wsErrors = 0;
-    for (const [fase, pkgs] of Object.entries(WORD_SETS_BY_FASE)) {
-      pkgs.forEach((pkg, idx) => {
-        pkg.words.forEach(w => {
-          if (!pkg.solutions[w]) {
-            wsErrors++;
-          }
-        });
-        for (const solKey of Object.keys(pkg.solutions)) {
-          if (!pkg.words.includes(solKey)) {
+    const fases = ['fase-a', 'fase-b', 'fase-c'];
+
+    fases.forEach(fase => {
+      const pkgs = WORD_SETS_BY_FASE[fase];
+      expect(pkgs).toBeDefined();
+      expect(pkgs.length).toBe(5);
+
+      pkgs.forEach((pkg, pIdx) => {
+        expect(pkg.red).toBeDefined();
+        expect(pkg.blue).toBeDefined();
+
+        const expectedSize = fase === 'fase-a' ? 7 : 8;
+        expect(pkg.gridSize).toBe(expectedSize);
+
+        // Verify Red and Blue have ZERO overlapping words
+        const redWords = new Set(pkg.red.words);
+        const blueWords = new Set(pkg.blue.words);
+        for (const w of redWords) {
+          if (blueWords.has(w)) {
             wsErrors++;
           }
         }
+
+        // Verify each team's words and solutions
+        ['red', 'blue'].forEach(team => {
+          const teamData = pkg[team];
+          expect(teamData.grid.length).toBe(expectedSize);
+          teamData.grid.forEach(row => expect(row.length).toBe(expectedSize));
+
+          let hasHorizontal = false;
+          let hasVertical = false;
+
+          teamData.words.forEach(w => {
+            const sol = teamData.solutions[w];
+            if (!sol) {
+              wsErrors++;
+              return;
+            }
+
+            if (sol.r1 === sol.r2) hasHorizontal = true;
+            if (sol.c1 === sol.c2) hasVertical = true;
+
+            // Verify characters in grid match word
+            let extracted = '';
+            if (sol.r1 === sol.r2) {
+              const r = sol.r1;
+              const startC = Math.min(sol.c1, sol.c2);
+              const endC = Math.max(sol.c1, sol.c2);
+              for (let c = startC; c <= endC; c++) {
+                extracted += teamData.grid[r][c];
+              }
+            } else if (sol.c1 === sol.c2) {
+              const c = sol.c1;
+              const startR = Math.min(sol.r1, sol.r2);
+              const endR = Math.max(sol.r1, sol.r2);
+              for (let r = startR; r <= endR; r++) {
+                extracted += teamData.grid[r][c];
+              }
+            }
+            if (extracted !== w) {
+              wsErrors++;
+            }
+          });
+
+          // Must have both horizontal and vertical variations
+          expect(hasHorizontal).toBe(true);
+          expect(hasVertical).toBe(true);
+        });
+
+        // Verify fallback compatibility
+        expect(pkg.words).toEqual(pkg.red.words);
+        expect(pkg.grid).toEqual(pkg.red.grid);
+        expect(pkg.solutions).toEqual(pkg.red.solutions);
       });
-    }
+    });
+
     expect(wsErrors).toBe(0);
   });
 

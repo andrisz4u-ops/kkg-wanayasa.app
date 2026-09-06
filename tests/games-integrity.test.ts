@@ -78,15 +78,27 @@ describe('Game Hub Data Integrity Tests', () => {
       expect(from).toBeGreaterThan(to);
     }
 
-    // 3. Challenge tiles must not conflict with ladder starts or snake heads
+    // 3. Challenge tiles must have 16 tiles, well-spaced, not adjacent, and not conflict with snakes/ladders
     const ladderStarts = Object.keys(LADDERS).map(Number);
     const snakeHeads = Object.keys(SNAKES).map(Number);
+
+    expect(CHALLENGE_TILES.length).toBe(16);
+
+    // Verify sorted and non-adjacent (diff >= 3)
+    for (let i = 0; i < CHALLENGE_TILES.length - 1; i++) {
+      const current = CHALLENGE_TILES[i];
+      const next = CHALLENGE_TILES[i + 1];
+      expect(next - current).toBeGreaterThanOrEqual(3);
+    }
 
     CHALLENGE_TILES.forEach(tile => {
       expect(tile).toBeGreaterThan(1);
       expect(tile).toBeLessThan(100);
       expect(ladderStarts).not.toContain(tile);
       expect(snakeHeads).not.toContain(tile);
+
+      // +1 bonus step should not land directly on a snake head
+      expect(snakeHeads).not.toContain(tile + 1);
     });
   });
 });

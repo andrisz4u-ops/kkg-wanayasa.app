@@ -27,8 +27,8 @@ export const SNAKES = {
   98: 79
 };
 
-// Kotak Soal Tantangan
-export const CHALLENGE_TILES = [12, 25, 38, 55, 68, 85];
+// Kotak Soal Tantangan (16 Kotak Ideal Tersebar Merata & Tidak Berjejer)
+export const CHALLENGE_TILES = [6, 12, 18, 25, 30, 38, 44, 49, 55, 58, 65, 68, 75, 82, 85, 95];
 
 let selectedFase = 'fase-b'; // 'fase-a' | 'fase-b' | 'fase-c'
 let selectedTingkat = 'sedang'; // 'mudah' | 'sedang' | 'hebat'

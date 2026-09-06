@@ -422,7 +422,7 @@ export const TIERED_QUESTION_BANK = {
         { q: "Pembangkit Listrik Tenaga Air (PLTA) memanfaatkan perubahan energi...", a: "Energi Potensial Air -> Energi Gerak Turbin -> Energi Listrik", opts: ["Energi Potensial Air -> Energi Gerak Turbin -> Energi Listrik", "Energi Kimia -> Energi Listrik", "Energi Panas -> Energi Gerak -> Energi Listrik", "Energi Cahaya -> Energi Kimia"], mapel: "IPAS" },
         { q: "Alat keselamatan yang berfungsi memutus arus listrik saat terjadi korsleting dinamakan...", a: "Sekring (Fuse)", opts: ["Sekring (Fuse)", "Sakelar", "Transformator", "Dinamo"], mapel: "IPAS" },
         { q: "Berapakah luas permukaan kubus jika panjang rusuknya 5 cm?", a: "150 cm²", opts: ["100 cm²", "125 cm²", "150 cm²", "175 cm²"], mapel: "Matematika" },
-        { q: "Berapakah hasil dari 3/8 × 4/9?", a: "1/6", opts: ["1/6", "1/4", "7/17", "12/72 (1/6)"], mapel: "Matematika" },
+        { q: "Berapakah hasil dari 3/8 × 4/9?", a: "1/6", opts: ["1/6", "1/4", "7/17", "2/9"], mapel: "Matematika" },
         { q: "Peristiwa Rengasdengklok terjadi karena adanya perbedaan pendapat antara golongan muda dan tua mengenai...", a: "Waktu Proklamasi Kemerdekaan", opts: ["Waktu Proklamasi Kemerdekaan", "Isi Teks Undang-Undang", "Pemilihan Presiden", "Lokasi Pembacaan Teks"], mapel: "IPAS" },
         { q: "Efek rumah kaca yang berlebihan pada atmosfer bumi dapat menyebabkan...", a: "Pemanasan Global (Global Warming)", opts: ["Pemanasan Global (Global Warming)", "Zaman Es", "Tsunami", "Gempa Bumi"], mapel: "IPAS" }
       ],
@@ -437,7 +437,7 @@ export const TIERED_QUESTION_BANK = {
       ],
       // Paket 5: Pelestarian Lingkungan & Bioteknologi
       [
-        { q: "Pemanfaatan mikroorganisme ragi (Saccharomyces cerevisiae) pada pembuatan tempe dan tapai dinamakan...", a: "Fermentasi", opts: ["Fermentasi", "Sterilisasi", "Pasteurisasi", "Kristalisasi"], mapel: "IPAS" },
+        { q: "Pemanfaatan mikroorganisme seperti ragi pada pembuatan tapai atau tempe dinamakan...", a: "Fermentasi", opts: ["Fermentasi", "Sterilisasi", "Pasteurisasi", "Kristalisasi"], mapel: "IPAS" },
         { q: "Lapisan ozon di atmosfer berfungsi untuk melindungi bumi dari bahaya...", a: "Radiasi sinar ultraviolet (UV) berlebih", opts: ["Radiasi sinar ultraviolet (UV) berlebih", "Hantaman asteroid", "Angin badai matahari", "Dinginnya luar angkasa"], mapel: "IPAS" },
         { q: "Sebuah limas persegi memiliki sisi alas 6 cm dan tinggi limas 10 cm. Volumenya adalah...", a: "120 cm³", opts: ["60 cm³", "120 cm³", "180 cm³", "360 cm³"], mapel: "Matematika" },
         { q: "Jika harga 3 buku tulis adalah Rp 12.000, berapa harga 7 buku tulis yang sama?", a: "Rp 28.000", opts: ["Rp 24.000", "Rp 26.000", "Rp 28.000", "Rp 32.000"], mapel: "Matematika" },

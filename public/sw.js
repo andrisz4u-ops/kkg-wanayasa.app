@@ -11,7 +11,7 @@
 
 // Cache version - UPDATE THIS when deploying new versions
 // Using timestamp ensures cache is always fresh after redeploy
-const CACHE_VERSION = '2026-09-02-v2';
+const CACHE_VERSION = '2026-09-08-pwa-v1';
 const CACHE_NAME = `kkg-portal-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -19,6 +19,10 @@ const OFFLINE_URL = '/offline.html';
 const PRECACHE_RESOURCES = [
     '/',
     '/offline.html',
+    '/manifest.json',
+    '/favicon.png',
+    '/static/icons/icon-192x192.png',
+    '/static/icons/icon-512x512.png',
     '/static/style.css',
     '/static/js/main.js',
     '/static/js/api.js',

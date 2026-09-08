@@ -91,15 +91,32 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Handle PWA BeforeInstallPrompt (A2HS)
+// Handle PWA BeforeInstallPrompt (A2HS) & Standalone Detection
 let deferredPrompt = null;
+
+window.isPwaStandalone = function() {
+  return window.matchMedia('(display-mode: standalone)').matches || 
+         window.navigator.standalone === true || 
+         document.referrer.includes('android-app://');
+};
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  window.showPwaInstallBanner?.();
+  // Auto-show banner only if not already in standalone mode
+  if (!window.isPwaStandalone()) {
+    window.showPwaInstallBanner?.();
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('pwa-install-banner')?.remove();
+  showToast('Terima kasih! Aplikasi KKG Portal berhasil dipasang di layar utama.', 'success');
 });
 
 window.showPwaInstallBanner = function() {
+  if (window.isPwaStandalone()) return;
   const existing = document.getElementById('pwa-install-banner');
   if (existing || !deferredPrompt) return;
 
@@ -108,7 +125,7 @@ window.showPwaInstallBanner = function() {
   banner.className = 'fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-[9999] bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-teal-500/30 flex items-center justify-between gap-3 animate-slide-up print-hidden';
   banner.innerHTML = `
     <div class="flex items-center gap-3">
-      <img src="/favicon.png" class="w-10 h-10 rounded-xl border border-teal-400/40 shadow-sm" alt="KKG App">
+      <img src="/static/icons/icon-96x96.png" class="w-10 h-10 rounded-xl border border-teal-400/40 shadow-sm" alt="KKG App">
       <div>
         <h4 class="font-bold text-xs text-white">Pasang Aplikasi KKG</h4>
         <p class="text-[10px] text-teal-200/80">Akses cepat & hemat kuota di layar utama</p>
@@ -118,7 +135,7 @@ window.showPwaInstallBanner = function() {
       <button id="btn-pwa-install" class="px-3 py-1.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs shadow transition-all cursor-pointer">
         Install
       </button>
-      <button id="btn-pwa-dismiss" class="text-slate-400 hover:text-white p-1 text-xs cursor-pointer">
+      <button id="btn-pwa-dismiss" class="text-slate-400 hover:text-white p-1 text-xs cursor-pointer" aria-label="Tutup Banner">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -126,20 +143,100 @@ window.showPwaInstallBanner = function() {
   document.body.appendChild(banner);
 
   document.getElementById('btn-pwa-install')?.addEventListener('click', async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        showToast('Terima kasih telah memasang aplikasi KKG Portal!', 'success');
-      }
-      deferredPrompt = null;
-      banner.remove();
-    }
+    window.promptPwaInstall();
   });
 
   document.getElementById('btn-pwa-dismiss')?.addEventListener('click', () => {
     banner.remove();
   });
+};
+
+window.promptPwaInstall = async function() {
+  if (window.isPwaStandalone()) {
+    showToast('Aplikasi sudah terpasang dan sedang berjalan dalam mode aplikasi penuh.', 'info');
+    return;
+  }
+
+  if (deferredPrompt) {
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        showToast('Memasang aplikasi KKG Portal ke layar utama...', 'success');
+      }
+      deferredPrompt = null;
+      document.getElementById('pwa-install-banner')?.remove();
+      return;
+    } catch (err) {
+      console.warn('[PWA] Prompt error:', err);
+    }
+  }
+
+  // Fallback: show interactive step-by-step installation guide modal
+  window.openPwaGuideModal();
+};
+
+window.openPwaGuideModal = function() {
+  const existingModal = document.getElementById('pwa-guide-modal');
+  if (existingModal) existingModal.remove();
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+  const modal = document.createElement('div');
+  modal.id = 'pwa-guide-modal';
+  modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fade-in';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 animate-scale-up relative">
+      <button onclick="document.getElementById('pwa-guide-modal')?.remove()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 text-sm cursor-pointer">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <img src="/static/icons/icon-96x96.png" class="w-12 h-12 rounded-2xl shadow-md border border-teal-500/20" alt="Logo KKG">
+        <div>
+          <h3 class="text-base font-black text-slate-900 dark:text-white">Pasang di Layar Utama HP</h3>
+          <p class="text-xs text-teal-600 dark:text-teal-400 font-bold">Portal KKG Gugus 3 Wanayasa</p>
+        </div>
+      </div>
+
+      <div class="space-y-3.5 mb-6 text-xs text-slate-600 dark:text-slate-300">
+        ${isIOS ? `
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">1</span>
+            <p>Buka halaman ini di browser <strong>Safari</strong> pada iPhone/iPad Anda.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">2</span>
+            <p>Ketuk tombol <strong>Bagikan (Share)</strong> <i class="fas fa-arrow-up-from-bracket text-teal-600 mx-1"></i> di bilah bawah browser.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">3</span>
+            <p>Gulir ke bawah, lalu pilih <strong>"Tambah ke Layar Utama" (Add to Home Screen)</strong>.</p>
+          </div>
+        ` : `
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">1</span>
+            <p>Ketuk ikon menu titik tiga (<strong class="text-teal-600 font-bold">⋮</strong>) di pojok kanan atas browser <strong>Google Chrome</strong>.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">2</span>
+            <p>Pilih menu <strong>"Instal Aplikasi"</strong> atau <strong>"Tambahkan ke Layar Utama"</strong>.</p>
+          </div>
+          <div class="flex items-start gap-3 p-3 rounded-2xl bg-teal-50/60 dark:bg-slate-800/60 border border-teal-200/50">
+            <span class="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0">3</span>
+            <p>Konfirmasi pemasangan. Aplikasi akan langsung muncul di laci aplikasi & layar depan ponsel layaknya aplikasi Play Store!</p>
+          </div>
+        `}
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="document.getElementById('pwa-guide-modal')?.remove()" class="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer">
+          Mengerti, Saya Paham
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 };
 
 // Global handler for admin sidebar tab clicks
@@ -958,6 +1055,17 @@ async function render() {
                           </div>
                         </button>
                       ` : ''}
+
+                      <button 
+                        onclick="window.closeUserDropdown(); window.promptPwaInstall();" 
+                        class="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-teal-50 hover:text-teal-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <span class="w-6 h-6 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0"><i class="fas fa-download text-xs"></i></span>
+                        <div class="flex-1 min-w-0">
+                          <span class="block text-xs font-bold text-slate-800">Pasang Aplikasi</span>
+                          <span class="block text-[10px] text-slate-400 font-normal truncate">Instal ke Layar Utama / Desktop</span>
+                        </div>
+                      </button>
                     </div>
 
                     <!-- Logout -->
@@ -1042,7 +1150,27 @@ async function render() {
             <nav id="mobile-nav-links" class="flex-1 overflow-y-auto custom-scrollbar">
               ${renderNavLinks(page)}
             </nav>
-            <div class="pt-6 mt-8">
+
+            <!-- PWA Install Action Button in Mobile Drawer -->
+            <div class="pt-4 pb-1 border-t border-slate-100">
+              <button 
+                onclick="document.getElementById('mobile-menu').classList.add('hidden'); window.promptPwaInstall();" 
+                class="w-full py-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 hover:to-emerald-100 text-teal-900 border border-teal-200/80 font-bold text-xs flex items-center justify-between transition-all shadow-2xs cursor-pointer group"
+              >
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs group-hover:scale-105 transition-transform shrink-0">
+                    <i class="fas fa-mobile-screen-button"></i>
+                  </span>
+                  <div class="text-left">
+                    <span class="block text-xs font-black text-slate-800 leading-tight">Pasang Aplikasi</span>
+                    <span class="block text-[9.5px] text-teal-700 font-semibold leading-tight">Akses Cepat di Layar HP</span>
+                  </div>
+                </div>
+                <i class="fas fa-arrow-down-to-bracket text-teal-600 text-xs"></i>
+              </button>
+            </div>
+
+            <div class="pt-4 mt-2">
                 ${state.user ? `
                   <div class="flex items-center gap-3 mb-4 p-3 bg-[var(--color-bg-tertiary)] rounded-2xl">
                       ${avatar(state.user.nama, 'sm', state.user.foto_url)}

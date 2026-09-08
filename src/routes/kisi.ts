@@ -7,6 +7,7 @@ import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { getOfficialCP, cpElementsData } from '../lib/cp-data';
+import { generateVisualStimulus, detectStimulusFromSoalText } from '../lib/visual-engine';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
@@ -142,9 +143,22 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
     }
     if (m.includes('matematika')) {
         return `PANDUAN VISUAL MAPEL MATEMATIKA:
-          * Prioritas: Bangun ruang 3D (kubus, balok, tabung, kerucut, bola, prisma), jaring-jaring bangun ruang, sudut (siku-siku, lancip, tumpul), diagram pecahan lingkaran, bangun datar bersudut.
-          * "gambar_keyword": Istilah geometri bahasa Inggris (contoh: "geometric cube net", "cylinder 3d geometry", "right angle triangle", "fraction circle diagram").
-          * "gambar_prompt_en": "clean 2D geometric vector drawing of [geometry shape], pure white background, crisp black outlines, mathematical textbook illustration, no distortion, no text labels"`;
+          * SANGAT PENTING: Gunakan parameter "visual_stimulus" agar sistem merender SVG presisi matematis!
+          * Tipe visual yang didukung pada "visual_stimulus":
+            - Balok: { "type": "balok", "params": { "p": 12, "l": 8, "t": 6, "unit": "cm" } }
+            - Kubus: { "type": "kubus", "params": { "s": 10, "unit": "cm" } }
+            - Tabung: { "type": "tabung", "params": { "r": 7, "t": 14, "unit": "cm" } }
+            - Kerucut: { "type": "kerucut", "params": { "r": 7, "t": 12, "s": 15, "unit": "cm" } }
+            - Segitiga Siku: { "type": "segitiga_siku", "params": { "alas": 6, "tinggi": 8, "miring": 10, "unit": "cm" } }
+            - Sudut: { "type": "sudut", "params": { "derajat": 60 } }
+            - Pecahan Lingkaran: { "type": "pecahan_lingkaran", "params": { "pembagi": 4, "diarsir": 3 } }
+            - Pecahan Persegi: { "type": "pecahan_persegi", "params": { "kolom": 4, "baris": 2, "diarsir": 3 } }
+            - Diagram Batang: { "type": "diagram_batang", "params": { "judul": "Data Penjualan", "labels": ["Senin","Selasa","Rabu"], "data": [20, 35, 30] } }
+            - Diagram Garis: { "type": "diagram_garis", "params": { "judul": "Suhu Udara", "labels": ["06.00","12.00","18.00"], "data": [24, 32, 28] } }
+            - Jam Analog: { "type": "jam_analog", "params": { "jam": 7, "menit": 30 } }
+            - Garis Bilangan: { "type": "garis_bilangan", "params": { "min": -5, "max": 5, "titik": [{"x": 2, "label": "P"}] } }
+          * PASTIKAN angka dimensi di visual_stimulus PERSIS SAMA dengan angka di dalam naskah soal!
+          * "gambar_keyword": Istilah geometri ringkas`;
     }
     if (m.includes('pjok') || m.includes('jasmani') || m.includes('olahraga')) {
         return `PANDUAN VISUAL MAPEL PJOK:
@@ -154,6 +168,7 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
     }
     if (m.includes('inggris') || m.includes('bahasa indonesia')) {
         return `PANDUAN VISUAL MAPEL BAHASA:
+          * Untuk pertanyaan jam dinding (telling time), gunakan: "visual_stimulus": { "type": "jam_analog", "params": { "jam": 8, "menit": 15 } }
           * Prioritas: Benda konkret, hewan, profesi/pekerjaan, aktivitas sehari-hari, rambu lalu lintas, atau fasilitas umum.
           * "gambar_keyword": Nama objek/hewan/profesi (contoh: "Dentist profession", "Traffic sign", "Zebra animal", "Public library").
           * "gambar_prompt_en": "clear photograph of [object/profession/animal], isolated on clean white background, educational textbook style"`;
@@ -171,9 +186,69 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
           * "gambar_prompt_en": "clean botanical photograph of [plant/organic farming method], isolated on white background, sharp agricultural education photo"`;
     }
     return `PANDUAN VISUAL MAPEL SAINS / IPAS:
-      * Prioritas: Siklus alam (siklus air, metamorfosis), penampang organ tubuh (paru-paru, jantung), penampang sel/daun, fotosintesis, tata surya, rantai makanan ekosistem.
-      * "gambar_keyword": Istilah sains (contoh: "Siklus air", "Fotosintesis", "Metamorfosis kupu-kupu", "Sistem pernapasan manusia", "Rantai makanan").
-      * "gambar_prompt_en": "detailed 2D scientific textbook illustration of [topic], labeled vector diagram, clean white background, educational biology/physics style"`;
+      * Untuk diagram berlabel tanda huruf [X], gunakan "visual_stimulus":
+        - Sistem Pernapasan: { "type": "organ_pernapasan", "params": { "pointer": "trakea" (atau hidung/bronkus/paru-paru/diafragma), "label": "X" } }
+        - Siklus Air: { "type": "siklus_air", "params": { "pointer": "evaporasi" (atau kondensasi/presipitasi/infiltrasi), "label": "X" } }
+        - Metamorfosis: { "type": "metamorfosis", "params": { "pointer": "kepompong" (atau telur/ulat/kupu-kupu), "label": "X" } }
+        - Bagian Bunga: { "type": "bagian_bunga", "params": { "pointer": "putik" (atau benang sari/mahkota/kelopak/bakal biji), "label": "X" } }
+      * Untuk flora, fauna, atau objek nyata: kosongkan "visual_stimulus" (set null), dan isi "gambar_keyword" dengan nama entitas Indonesia resmi (contoh: "Kelinci", "Bunga Rafflesia", "Kucing Anggora").`;
+};
+
+// Helper: selesaikan visual stimulus untuk butir soal (SVG Parametrik vs Wikimedia Commons vs Fallback)
+export const resolveQuestionVisualStimulus = async (
+    q: any,
+    mataPelajaran: string,
+    topik: string,
+    unsplash: UnsplashService | null
+): Promise<void> => {
+    // 1. Cek visual stimulus eksplisit dari AI
+    let visualCfg = q.visual_stimulus;
+
+    // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal & keyword
+    if (!visualCfg || !visualCfg.type) {
+        visualCfg = detectStimulusFromSoalText(q.soal, mataPelajaran);
+    }
+
+    // 3. Jika visualCfg terdeteksi dan didukung oleh VisualEngine
+    if (visualCfg && visualCfg.type) {
+        const svgRes = generateVisualStimulus(visualCfg);
+        if (svgRes) {
+            q.gambar = {
+                url: svgRes.dataUri,
+                svg: svgRes.svg,
+                credit: svgRes.credit,
+                title: svgRes.title,
+                type: 'svg'
+            };
+            return;
+        }
+    }
+
+    // 4. Jika bukan SVG parametrik, cari gambar otentik (Wikipedia / Unsplash)
+    if (unsplash) {
+        let bracketHint = '';
+        const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
+        if (bracketMatch && bracketMatch[1]) {
+            bracketHint = bracketMatch[1].trim();
+        }
+
+        const searchKeyword = q.gambar_keyword || visualCfg?.keyword || topik || 'diagram';
+        const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
+        const subjectContext = `${mataPelajaran} ${topik}`;
+
+        try {
+            const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
+            if (img) {
+                q.gambar = {
+                    url: img.url,
+                    credit: img.creditName,
+                    type: img.source === 'cloudflare-ai' ? 'ai' : 'photo'
+                };
+            }
+        } catch (e) {
+            console.error('Image search error:', e);
+        }
+    }
 };
 
 // Helper: perumusan prompt asesmen & kisi-kisi terstandar Puspendik & BSKAP 046/2025
@@ -212,8 +287,9 @@ export const buildAssessmentPrompt = (params: {
             "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)",
             "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." },
             "kunci": "A/B/C/D",
-            "gambar_keyword": "kata kunci ringkas 1-3 kata sesuai panduan visual mapel",
-            "gambar_prompt_en": "detailed English visual description sesuai panduan visual mapel (15-25 kata)"
+            "visual_stimulus": null,
+            "gambar_keyword": "kata kunci ringkas 1-3 kata jika mencari foto otentik",
+            "gambar_prompt_en": "detailed English visual description jika mencari foto (15-25 kata)"
         } ]`;
     } else {
         const parts: string[] = [];
@@ -434,36 +510,18 @@ kisi.post('/generate', async (c) => {
                 });
 
                 // Urutkan berdasarkan relevansi visual tertinggi
-                scoredQuestions.sort((a, b) => b.score - a.score);
+                scoredQuestions.sort((a: any, b: any) => b.score - a.score);
 
                 // Ambil TEPAT sebanyak exactImageCount butir soal
-                const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map(item => item.q));
+                const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
 
                 // Pasang gambar HANYA pada targetSelected, dan hapus gambar dari butir soal lainnya
                 for (const q of finalData.pg) {
                     if (targetSelected.has(q)) {
-                        // Extract any bracketed description inside soal if present to enrich the visual prompt
-                        let bracketHint = '';
-                        const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
-                        if (bracketMatch && bracketMatch[1]) {
-                            bracketHint = bracketMatch[1].trim();
-                        }
-
                         // Clean bracketed text completely from the student's question and normalize Markdown tables
                         q.soal = normalizeSoalMarkdown(q.soal);
 
-                        const searchKeyword = q.gambar_keyword || topik || 'diagram';
-                        const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
-                        const subjectContext = `${mataPelajaran} ${topik}`;
-
-                        try {
-                            const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
-                            if (img) {
-                                q.gambar = { url: img.url, credit: img.creditName };
-                            }
-                        } catch (e) {
-                            console.error('Image search error:', e);
-                        }
+                        await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash);
                     } else {
                         // Bersihkan field gambar agar soal lain 100% bebas gambar
                         delete q.gambar;
@@ -572,7 +630,7 @@ kisi.post('/generate', async (c) => {
             const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie') || c.req.raw?.headers?.get('Cookie');
             const authHeader = c.req.header('Authorization') || c.req.header('authorization');
             const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-            const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+            const sessionId = getCookie(cookieHeader || '', 'session') || bearerToken;
             const user = await getCurrentUser(c.env.DB, sessionId);
             await recordAIGeneration(c.env.DB, {
                 user_id: user?.id || 1,
@@ -744,24 +802,8 @@ kisi.post('/generate-stream', async (c) => {
 
                         for (const q of finalData.pg) {
                             if (targetSelected.has(q)) {
-                                let bracketHint = '';
-                                const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
-                                if (bracketMatch && bracketMatch[1]) {
-                                    bracketHint = bracketMatch[1].trim();
-                                }
                                 q.soal = normalizeSoalMarkdown(q.soal);
-                                const searchKeyword = q.gambar_keyword || topik || 'diagram';
-                                const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
-                                const subjectContext = `${mataPelajaran} ${topik}`;
-
-                                try {
-                                    const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
-                                    if (img) {
-                                        q.gambar = { url: img.url, credit: img.creditName };
-                                    }
-                                } catch (e) {
-                                    console.error('Image search error:', e);
-                                }
+                                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash);
                             } else {
                                 delete q.gambar;
                                 delete q.gambar_keyword;

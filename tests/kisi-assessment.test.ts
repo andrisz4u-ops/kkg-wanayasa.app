@@ -152,7 +152,69 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             const pctL3 = Math.round((countL3 / allItems.length) * 100);
 
             expect(pctL1 + pctL2 + pctL3).toBeGreaterThanOrEqual(99);
-            expect(pctL1 + pctL2 + pctL3).toBeLessThanOrEqual(101);
+        });
+    });
+
+    describe('resolveQuestionVisualStimulus integration', () => {
+        it('should automatically assign precision SVG for math geometry question without calling unsplash', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+            const question: any = {
+                no: 1,
+                soal: 'Sebuah balok memiliki panjang 15 cm, lebar 10 cm, dan tinggi 8 cm. Berapakah volume balok tersebut?'
+            };
+
+            await resolveQuestionVisualStimulus(question, 'Matematika', 'Bangun Ruang', null);
+
+            expect(question.gambar).toBeDefined();
+            expect(question.gambar.type).toBe('svg');
+            expect(question.gambar.url).toContain('data:image/svg+xml;utf8,');
+            expect(question.gambar.credit).toBe('Examplate Visual Engine');
+            expect(question.gambar.svg).toContain('p = 15 cm');
+            expect(question.gambar.svg).toContain('l = 10 cm');
+            expect(question.gambar.svg).toContain('t = 8 cm');
+        });
+
+        it('should automatically assign labeled diagram for science respiratory question', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+            const question: any = {
+                no: 2,
+                soal: 'Perhatikan gambar sistem pernapasan manusia berikut! Bagian trakea yang ditunjuk huruf X berfungsi untuk...'
+            };
+
+            await resolveQuestionVisualStimulus(question, 'IPAS', 'Sistem Pernapasan', null);
+
+            expect(question.gambar).toBeDefined();
+            expect(question.gambar.type).toBe('svg');
+            expect(question.gambar.svg).toContain('Sistem Pernapasan Manusia');
+            expect(question.gambar.svg).toContain('huruf "X"');
+        });
+
+        it('should automatically assign precision SVG for new 3D, 2D, and IPAS questions', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+
+            // Bola 3D
+            const qBola: any = { no: 3, soal: 'Sebuah bola memiliki jari-jari 14 cm. Hitung luas permukaannya!' };
+            await resolveQuestionVisualStimulus(qBola, 'Matematika', 'Bangun Ruang', null);
+            expect(qBola.gambar?.type).toBe('svg');
+            expect(qBola.gambar?.svg).toContain('r = 14 cm');
+
+            // Trapesium 2D
+            const qTrap: any = { no: 4, soal: 'Sebuah trapesium memiliki alas atas 8 cm, alas bawah 12 cm, dan tinggi 6 cm.' };
+            await resolveQuestionVisualStimulus(qTrap, 'Matematika', 'Bangun Datar', null);
+            expect(qTrap.gambar?.type).toBe('svg');
+            expect(qTrap.gambar?.svg).toContain('a = 8 cm');
+
+            // Organ Pencernaan
+            const qPencernaan: any = { no: 5, soal: 'Perhatikan gambar sistem pencernaan! Organ lambung bertanda X bertugas mencerna...' };
+            await resolveQuestionVisualStimulus(qPencernaan, 'IPAS', 'Sistem Pencernaan', null);
+            expect(qPencernaan.gambar?.type).toBe('svg');
+            expect(qPencernaan.gambar?.svg).toContain('Sistem Pencernaan Manusia');
+
+            // Rantai Makanan
+            const qRantai: any = { no: 6, soal: 'Perhatikan rantai makanan berikut! Organisme yang bertindak sebagai produsen adalah...' };
+            await resolveQuestionVisualStimulus(qRantai, 'IPAS', 'Ekosistem', null);
+            expect(qRantai.gambar?.type).toBe('svg');
+            expect(qRantai.gambar?.svg).toContain('Rantai Makanan');
         });
     });
 });

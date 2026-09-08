@@ -438,15 +438,130 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   return items;
 }
 
-// ============================================================
-// HELPER: Convert URL to Base64/Buffer 
-// ============================================================
-async function fetchSafeImageBuffer(url) {
-  try {
-    if (!url) throw new Error('Image URL is empty');
+// Helper: Konversi SVG string / SVG data URI menjadi PNG Data URL melalui Canvas untuk Word DOCX
+async function svgToPngDataUrl(svgUrlOrString, width = 480, height = 340) {
+  return new Promise((resolve, reject) => {
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
 
-    // Handle Data URI (Base64) from Cloudflare Workers AI
-    if (url.startsWith('data:')) {
+      let src = svgUrlOrString;
+      let blobUrl = null;
+
+      // Detect Safari (iOS & macOS) — needs base64 fallback for SVG Blob URLs
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+                        /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (svgUrlOrString.trim().startsWith('<svg')) {
+        if (isSafari) {
+          // Safari fallback: use base64 data URI instead of Blob URL
+          const base64 = btoa(unescape(encodeURIComponent(svgUrlOrString)));
+          src = `data:image/svg+xml;base64,${base64}`;
+        } else {
+          const blob = new Blob([svgUrlOrString], { type: 'image/svg+xml;charset=utf-8' });
+          blobUrl = URL.createObjectURL(blob);
+          src = blobUrl;
+        }
+      } else if (svgUrlOrString.startsWith('data:image/svg+xml;utf8,')) {
+        const rawSvg = decodeURIComponent(svgUrlOrString.replace('data:image/svg+xml;utf8,', ''));
+        if (isSafari) {
+          const base64 = btoa(unescape(encodeURIComponent(rawSvg)));
+          src = `data:image/svg+xml;base64,${base64}`;
+        } else {
+          const blob = new Blob([rawSvg], { type: 'image/svg+xml;charset=utf-8' });
+          blobUrl = URL.createObjectURL(blob);
+          src = blobUrl;
+        }
+      }
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas 2D context not available');
+
+          // Background putih bersih untuk lembar soal
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+
+          // Gambar SVG ke canvas
+          ctx.drawImage(img, 0, 0, width, height);
+
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          resolve({ dataUrl: canvas.toDataURL('image/png'), type: 'png' });
+        } catch (err) {
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          reject(err);
+        }
+      };
+
+      img.onerror = (e) => {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+
+        // Retry with base64 fallback if Blob URL failed (cross-browser safety)
+        if (blobUrl && !isSafari && svgUrlOrString.trim().startsWith('<svg')) {
+          try {
+            const base64 = btoa(unescape(encodeURIComponent(svgUrlOrString)));
+            const retryImg = new Image();
+            retryImg.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { reject(new Error('Canvas 2D retry failed')); return; }
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(retryImg, 0, 0, width, height);
+              resolve({ dataUrl: canvas.toDataURL('image/png'), type: 'png' });
+            };
+            retryImg.onerror = () => reject(new Error('Failed to rasterize SVG (retry)'));
+            retryImg.src = `data:image/svg+xml;base64,${base64}`;
+            return;
+          } catch (retryErr) {
+            // fall through to reject
+          }
+        }
+        reject(new Error('Failed to rasterize SVG into Canvas'));
+      };
+
+      img.src = src;
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// ============================================================
+// HELPER: Convert URL / SVG to Base64/Buffer 
+// ============================================================
+async function fetchSafeImageBuffer(url, svgFallback) {
+  try {
+    if (!url && !svgFallback) throw new Error('Image URL is empty');
+
+    // 1. Jika berupa SVG (string atau SVG Data URI), rasterisasi ke PNG melalui Canvas
+    const isSvg = (url && (url.includes('image/svg+xml') || url.endsWith('.svg'))) || (svgFallback && svgFallback.includes('<svg'));
+    if (isSvg) {
+      try {
+        const { dataUrl } = await svgToPngDataUrl(svgFallback || url);
+        const base64Data = dataUrl.split(',')[1];
+        const binaryString = window.atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return { buffer: bytes.buffer, type: 'png' };
+      } catch (svgErr) {
+        console.warn('Rasterize SVG failed, trying fallback:', svgErr);
+      }
+    }
+
+    // 2. Handle Data URI (Base64 JPEG / PNG)
+    if (url && url.startsWith('data:')) {
+      const mime = url.substring(5, url.indexOf(';'));
+      const imgType = mime.includes('png') ? 'png' : 'jpeg';
       const base64Data = url.split(',')[1];
       const binaryString = window.atob(base64Data);
       const len = binaryString.length;
@@ -454,10 +569,10 @@ async function fetchSafeImageBuffer(url) {
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      return bytes.buffer;
+      return { buffer: bytes.buffer, type: imgType };
     }
 
-    // Handle HTTP / HTTPS URLs
+    // 3. Handle HTTP / HTTPS URLs (Unsplash / Wikimedia)
     let fetchUrl = url;
     try {
       const parsed = new URL(url);
@@ -473,7 +588,9 @@ async function fetchSafeImageBuffer(url) {
 
     const resp = await fetch(fetchUrl);
     if (!resp.ok) throw new Error('Fetch not ok: ' + resp.status);
-    return await resp.arrayBuffer();
+    const buf = await resp.arrayBuffer();
+    const isPng = url.toLowerCase().includes('.png');
+    return { buffer: buf, type: isPng ? 'png' : 'jpeg' };
   } catch (e) {
     throw e;
   }
@@ -564,7 +681,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
 
       if (q.gambar && q.gambar.url) {
         try {
-          const buf = await fetchSafeImageBuffer(q.gambar.url);
+          const imgData = await fetchSafeImageBuffer(q.gambar.url, q.gambar.svg);
           
           const cell1 = new window.docx.TableCell({
              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
@@ -579,7 +696,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
                 new Paragraph({
                    alignment: AlignmentType.LEFT,
                    spacing: { before: PT(4) },
-                   children: [new ImageRun({ data: buf, transformation: { width: 160, height: 120 }, type: 'jpeg' })]
+                   children: [new ImageRun({ data: imgData.buffer, transformation: { width: 160, height: 120 }, type: imgData.type || 'jpeg' })]
                 })
              ],
              borders: NO_BORDERS,

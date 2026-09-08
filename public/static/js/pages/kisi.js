@@ -1604,7 +1604,13 @@ function renderResult(data, formData) {
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 6px 0 8px 0; text-align:left;">
                     <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
-                      <img src="${q.gambar.url}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="Gambar Ilustrasi">
+                      <img src="${q.gambar.url}" style="max-width:240px; max-height:160px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}">
+                      ${q.gambar.credit ? `
+                        <div class="print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
+                          <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>
+                          <span>${escapeHtml(q.gambar.credit)}</span>
+                        </div>
+                      ` : ''}
                       <div class="absolute top-1.5 right-1.5 flex items-center gap-1 print:hidden opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button" class="btn-change-soal-image bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 text-[10px] font-bold shadow cursor-pointer" title="Ganti gambar ini (upload / link URL)" data-type="pg" data-qindex="${pgIdx}">
                           <i class="fas fa-camera"></i> Ganti

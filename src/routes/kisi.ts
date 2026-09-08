@@ -149,15 +149,25 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
             - Kubus: { "type": "kubus", "params": { "s": 10, "unit": "cm" } }
             - Tabung: { "type": "tabung", "params": { "r": 7, "t": 14, "unit": "cm" } }
             - Kerucut: { "type": "kerucut", "params": { "r": 7, "t": 12, "s": 15, "unit": "cm" } }
+            - Bola: { "type": "bola", "params": { "r": 14, "unit": "cm" } }
+            - Prisma Segitiga: { "type": "prisma", "params": { "alas": 10, "tinggiSegitiga": 8, "panjang": 15, "unit": "cm" } }
+            - Limas Segiempat: { "type": "limas", "params": { "s": 10, "t": 12, "unit": "cm" } }
+            - Lingkaran (2D): { "type": "lingkaran", "params": { "r": 14, "unit": "cm" } }
+            - Trapesium: { "type": "trapesium", "params": { "atasAlas": 8, "bawahAlas": 14, "tinggi": 10, "unit": "cm" } }
+            - Jajar Genjang: { "type": "jajar_genjang", "params": { "alas": 15, "tinggi": 10, "unit": "cm" } }
+            - Belah Ketupat: { "type": "belah_ketupat", "params": { "d1": 12, "d2": 16, "unit": "cm" } }
+            - Layang-Layang: { "type": "layang_layang", "params": { "d1": 10, "d2": 18, "unit": "cm" } }
             - Segitiga Siku: { "type": "segitiga_siku", "params": { "alas": 6, "tinggi": 8, "miring": 10, "unit": "cm" } }
             - Sudut: { "type": "sudut", "params": { "derajat": 60 } }
             - Pecahan Lingkaran: { "type": "pecahan_lingkaran", "params": { "pembagi": 4, "diarsir": 3 } }
             - Pecahan Persegi: { "type": "pecahan_persegi", "params": { "kolom": 4, "baris": 2, "diarsir": 3 } }
             - Diagram Batang: { "type": "diagram_batang", "params": { "judul": "Data Penjualan", "labels": ["Senin","Selasa","Rabu"], "data": [20, 35, 30] } }
             - Diagram Garis: { "type": "diagram_garis", "params": { "judul": "Suhu Udara", "labels": ["06.00","12.00","18.00"], "data": [24, 32, 28] } }
+            - Diagram Lingkaran (Pie): { "type": "diagram_lingkaran", "params": { "judul": "Data Hobi", "labels": ["Membaca","Olahraga","Musik"], "data": [40, 35, 25] } }
             - Jam Analog: { "type": "jam_analog", "params": { "jam": 7, "menit": 30 } }
             - Garis Bilangan: { "type": "garis_bilangan", "params": { "min": -5, "max": 5, "titik": [{"x": 2, "label": "P"}] } }
           * PASTIKAN angka dimensi di visual_stimulus PERSIS SAMA dengan angka di dalam naskah soal!
+          * DILARANG KERAS menggunakan jenis diagram/bangun yang sama pada lebih dari 1 butir soal dalam satu paket ujian!
           * "gambar_keyword": Istilah geometri ringkas`;
     }
     if (m.includes('pjok') || m.includes('jasmani') || m.includes('olahraga')) {
@@ -186,20 +196,29 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
           * "gambar_prompt_en": "clean botanical photograph of [plant/organic farming method], isolated on white background, sharp agricultural education photo"`;
     }
     return `PANDUAN VISUAL MAPEL SAINS / IPAS:
+      * SANGAT PENTING: DILARANG KERAS menggunakan jenis gambar/diagram yang sama pada lebih dari 1 butir soal dalam satu paket ujian! Variasikan fokus stimulus antar butir soal (misal: butir 1 organ lambung, butir 2 penampang vili usus halus atau jenis gigi).
       * Untuk diagram berlabel tanda huruf [X], gunakan "visual_stimulus":
+        - Sistem Pencernaan Makro: { "type": "organ_pencernaan", "params": { "pointer": "lambung" (atau mulut/kerongkongan/usus halus/usus besar/hati/anus), "label": "X" } }
+        - Vili Usus Halus (Mikroskopis Penyerapan): { "type": "vili_usus", "params": { "pointer": "vili" (atau kapiler/lakteal/epitel), "label": "X" } }
+        - Macam-Macam Gigi Manusia & Fungsinya: { "type": "struktur_gigi", "params": { "pointer": "seri" (atau taring/geraham), "label": "X" } }
+        - Detail Lambung & Enzim: { "type": "lambung_detail", "params": { "pointer": "rugae" (atau kardia/pilorus), "label": "X" } }
         - Sistem Pernapasan: { "type": "organ_pernapasan", "params": { "pointer": "trakea" (atau hidung/bronkus/paru-paru/diafragma), "label": "X" } }
+        - Alveolus & Pertukaran Gas: { "type": "alveolus", "params": { "pointer": "alveolus" (atau kapiler/bronkiolus), "label": "X" } }
         - Siklus Air: { "type": "siklus_air", "params": { "pointer": "evaporasi" (atau kondensasi/presipitasi/infiltrasi), "label": "X" } }
         - Metamorfosis: { "type": "metamorfosis", "params": { "pointer": "kepompong" (atau telur/ulat/kupu-kupu), "label": "X" } }
         - Bagian Bunga: { "type": "bagian_bunga", "params": { "pointer": "putik" (atau benang sari/mahkota/kelopak/bakal biji), "label": "X" } }
+        - Rantai Makanan: { "type": "rantai_makanan", "params": { "pointer": "produsen" (atau konsumen1/konsumen2/konsumen3/pengurai), "label": "X" } }
       * Untuk flora, fauna, atau objek nyata: kosongkan "visual_stimulus" (set null), dan isi "gambar_keyword" dengan nama entitas Indonesia resmi (contoh: "Kelinci", "Bunga Rafflesia", "Kucing Anggora").`;
 };
 
 // Helper: selesaikan visual stimulus untuk butir soal (SVG Parametrik vs Wikimedia Commons vs Fallback)
+// Dilengkapi DIVERSITY GUARD agar tidak pernah muncul 2 gambar kembar dalam 1 paket ujian
 export const resolveQuestionVisualStimulus = async (
     q: any,
     mataPelajaran: string,
     topik: string,
-    unsplash: UnsplashService | null
+    unsplash: UnsplashService | null,
+    usedStimulusSignatures?: Set<string>
 ): Promise<void> => {
     // 1. Cek visual stimulus eksplisit dari AI
     let visualCfg = q.visual_stimulus;
@@ -209,10 +228,56 @@ export const resolveQuestionVisualStimulus = async (
         visualCfg = detectStimulusFromSoalText(q.soal, mataPelajaran);
     }
 
-    // 3. Jika visualCfg terdeteksi dan didukung oleh VisualEngine
+    // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
+    if (visualCfg && visualCfg.type && usedStimulusSignatures) {
+        const signature = `${visualCfg.type}:${visualCfg.params?.pointer || visualCfg.params?.r || visualCfg.params?.p || 'default'}`;
+        if (usedStimulusSignatures.has(signature)) {
+            // Deteksi tabrakan! Cari sub-diagram alternatif yang lebih spesifik
+            const text = String(q.soal || '').toLowerCase();
+            if (visualCfg.type === 'organ_pencernaan') {
+                if (text.includes('vili') || text.includes('jonjot') || text.includes('penyerapan') || text.includes('lipatan')) {
+                    visualCfg = { type: 'vili_usus', params: { pointer: 'vili', label: 'X' } };
+                } else if (text.includes('gigi') || text.includes('kunyah') || text.includes('robek') || text.includes('potong')) {
+                    visualCfg = { type: 'struktur_gigi', params: { pointer: 'taring', label: 'X' } };
+                } else if (text.includes('enzim') || text.includes('pepsin') || text.includes('asam') || text.includes('kardia')) {
+                    visualCfg = { type: 'lambung_detail', params: { pointer: 'rugae', label: 'X' } };
+                } else {
+                    // Coba alihkan ke organ lain yang belum dipakai
+                    const organList = ['usus halus', 'kerongkongan', 'hati', 'usus besar', 'mulut', 'anus'];
+                    let foundAlternate = false;
+                    for (const organ of organList) {
+                        const altSig = `organ_pencernaan:${organ}`;
+                        if (!usedStimulusSignatures.has(altSig)) {
+                            visualCfg = { type: 'organ_pencernaan', params: { pointer: organ, label: 'X' } };
+                            foundAlternate = true;
+                            break;
+                        }
+                    }
+                    // Jika semua organ sudah pernah muncul, alihkan ke foto real Wikimedia Commons
+                    if (!foundAlternate) {
+                        visualCfg = null;
+                    }
+                }
+            } else if (visualCfg.type === 'organ_pernapasan') {
+                if (text.includes('alveolus') || text.includes('gas') || text.includes('oksigen') || text.includes('kapiler')) {
+                    visualCfg = { type: 'alveolus', params: { pointer: 'alveolus', label: 'X' } };
+                } else {
+                    visualCfg = null;
+                }
+            } else {
+                // Untuk bangun ruang geometri yang berdimensi sama, alihkan
+                visualCfg = null;
+            }
+        }
+    }
+
+    // 4. Jika visualCfg terdeteksi dan didukung oleh VisualEngine
     if (visualCfg && visualCfg.type) {
         const svgRes = generateVisualStimulus(visualCfg);
         if (svgRes) {
+            const finalSig = `${visualCfg.type}:${visualCfg.params?.pointer || visualCfg.params?.r || visualCfg.params?.p || 'default'}`;
+            usedStimulusSignatures?.add(finalSig);
+
             q.gambar = {
                 url: svgRes.dataUri,
                 svg: svgRes.svg,
@@ -224,7 +289,7 @@ export const resolveQuestionVisualStimulus = async (
         }
     }
 
-    // 4. Jika bukan SVG parametrik, cari gambar otentik (Wikipedia / Unsplash)
+    // 5. Jika bukan SVG parametrik atau dialihkan oleh Diversity Guard, cari gambar otentik (Wikipedia / Unsplash)
     if (unsplash) {
         let bracketHint = '';
         const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
@@ -239,6 +304,7 @@ export const resolveQuestionVisualStimulus = async (
         try {
             const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
             if (img) {
+                usedStimulusSignatures?.add(`photo:${searchKeyword}`);
                 q.gambar = {
                     url: img.url,
                     credit: img.creditName,
@@ -516,12 +582,14 @@ kisi.post('/generate', async (c) => {
                 const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
 
                 // Pasang gambar HANYA pada targetSelected, dan hapus gambar dari butir soal lainnya
+                // Gunakan usedStimulusSignatures untuk Diversity Guard agar tidak pernah ada 2 gambar kembar
+                const usedStimulusSignatures = new Set<string>();
                 for (const q of finalData.pg) {
                     if (targetSelected.has(q)) {
                         // Clean bracketed text completely from the student's question and normalize Markdown tables
                         q.soal = normalizeSoalMarkdown(q.soal);
 
-                        await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash);
+                        await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
                     } else {
                         // Bersihkan field gambar agar soal lain 100% bebas gambar
                         delete q.gambar;
@@ -799,11 +867,12 @@ kisi.post('/generate-stream', async (c) => {
                         });
                         scoredQuestions.sort((a: any, b: any) => b.score - a.score);
                         const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
+                        const usedStimulusSignatures = new Set<string>();
 
                         for (const q of finalData.pg) {
                             if (targetSelected.has(q)) {
                                 q.soal = normalizeSoalMarkdown(q.soal);
-                                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash);
+                                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
                             } else {
                                 delete q.gambar;
                                 delete q.gambar_keyword;

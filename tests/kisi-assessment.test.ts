@@ -216,5 +216,48 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(qRantai.gambar?.type).toBe('svg');
             expect(qRantai.gambar?.svg).toContain('Rantai Makanan');
         });
+
+        it('should guarantee visual diversity between Soal 1 and Soal 7 in same exam package', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+            const usedStimulusSignatures = new Set<string>();
+
+            // Soal 1: Sistem Pencernaan Umum (Lambung)
+            const q1: any = {
+                no: 1,
+                soal: 'Perhatikan gambar sistem pencernaan manusia berikut ini! Manakah pernyataan yang tepat mengenai bagian yang ditandai dengan huruf X?'
+            };
+            await resolveQuestionVisualStimulus(q1, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
+
+            expect(q1.gambar).toBeDefined();
+            expect(q1.gambar.type).toBe('svg');
+            expect(q1.gambar.svg).toContain('Sistem Pencernaan Manusia');
+
+            // Soal 7: Vili Usus Halus (Kasus nyata user)
+            const q7: any = {
+                no: 7,
+                soal: 'Perhatikan model struktur vili usus halus berikut ini! Dengan struktur lipatan-lipatan yang membentuk tonjolan seperti ini, apa manfaat utamanya bagi proses pencernaan?'
+            };
+            await resolveQuestionVisualStimulus(q7, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
+
+            expect(q7.gambar).toBeDefined();
+            expect(q7.gambar.type).toBe('svg');
+            // Pastikan Soal 7 BUKAN bagan makro tubuh yang sama, melainkan diagram mikroskopis Vili Usus Halus!
+            expect(q7.gambar.svg).toContain('Struktur Mikroskopis Vili');
+            expect(q7.gambar.svg).not.toEqual(q1.gambar.svg);
+        });
+
+        it('should prevent exact duplicate diagrams when two questions have identical organ focus', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+            const usedStimulusSignatures = new Set<string>();
+
+            const qA: any = { no: 1, soal: 'Perhatikan gambar sistem pencernaan berikut! Organ lambung bertanda X...' };
+            await resolveQuestionVisualStimulus(qA, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
+
+            const qB: any = { no: 5, soal: 'Perhatikan gambar sistem pencernaan berikut! Organ lambung bertanda X...' };
+            await resolveQuestionVisualStimulus(qB, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
+
+            // Both questions must not have the exact same SVG
+            expect(qA.gambar.svg).not.toEqual(qB.gambar?.svg);
+        });
     });
 });

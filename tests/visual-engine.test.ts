@@ -26,6 +26,10 @@ import {
   renderLayangLayangSvg,
   renderDiagramLingkaranSvg,
   renderOrganPencernaanSvg,
+  renderViliUsusSvg,
+  renderStrukturGigiSvg,
+  renderLambungDetailSvg,
+  renderAlveolusSvg,
   renderRantaiMakananSvg,
   generateVisualStimulus,
   detectStimulusFromSoalText
@@ -218,6 +222,49 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       expect(usus).toContain('huruf "Q"');
     });
 
+    it('should render microscopic villi (vili usus halus) with layers and pointer', () => {
+      const vili = renderViliUsusSvg({ pointer: 'vili', label: 'X' });
+      expect(vili).toContain('Struktur Mikroskopis Vili');
+      expect(vili).toContain('huruf "X"');
+      expect(vili).toContain('Kapiler Darah');
+      expect(vili).toContain('Lakteal');
+
+      const lakteal = renderViliUsusSvg({ pointer: 'lakteal', label: 'Y' });
+      expect(lakteal).toContain('huruf "Y"');
+      expect(lakteal).toContain('Pembuluh limfa/lakteal');
+    });
+
+    it('should render tooth types (struktur gigi) with roots, crowns, and functions', () => {
+      const gigiSeri = renderStrukturGigiSvg({ pointer: 'seri', label: 'A' });
+      expect(gigiSeri).toContain('Gigi Seri');
+      expect(gigiSeri).toContain('Memotong');
+      expect(gigiSeri).toContain('GUSI');
+
+      const taring = renderStrukturGigiSvg({ pointer: 'taring', label: 'B' });
+      expect(taring).toContain('Gigi Taring');
+      expect(taring).toContain('Merobek');
+
+      const geraham = renderStrukturGigiSvg({ pointer: 'geraham', label: 'C' });
+      expect(geraham).toContain('Gigi Geraham');
+      expect(geraham).toContain('Mengunyah');
+    });
+
+    it('should render detailed stomach anatomy with rugae and sphincters', () => {
+      const stom = renderLambungDetailSvg({ pointer: 'rugae', label: 'X' });
+      expect(stom).toContain('Penampang Detail Organ Lambung');
+      expect(stom).toContain('pepsin');
+      expect(stom).toContain('Duodenum');
+      expect(stom).toContain('huruf "X"');
+    });
+
+    it('should render alveolus gas exchange diagram with O2 and CO2 diffusion', () => {
+      const alv = renderAlveolusSvg({ pointer: 'alveolus', label: 'X' });
+      expect(alv).toContain('Penampang Alveolus');
+      expect(alv).toContain('O₂');
+      expect(alv).toContain('CO₂');
+      expect(alv).toContain('huruf "X"');
+    });
+
     it('should render food chain with organism boxes', () => {
       const svg = renderRantaiMakananSvg({ pointer: 'konsumen1', label: 'X' });
       expect(svg).toContain('Rantai Makanan');
@@ -372,10 +419,28 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
     });
 
     it('should detect new IPAS diagrams from question text', () => {
-      // Pencernaan
+      // Pencernaan Makro
       const pencernaan = detectStimulusFromSoalText('Perhatikan gambar sistem pencernaan manusia! Organ yang ditunjuk huruf X adalah lambung.', 'IPAS');
       expect(pencernaan?.type).toBe('organ_pencernaan');
       expect(pencernaan?.params?.pointer).toBe('lambung');
+
+      // Vili Usus Halus (Kasus Soal No. 7 User!)
+      const vili = detectStimulusFromSoalText('Perhatikan model struktur vili usus halus berikut ini! Dengan struktur lipatan-lipatan yang membentuk tonjolan seperti ini, apa manfaat utamanya bagi proses pencernaan?', 'IPAS');
+      expect(vili?.type).toBe('vili_usus');
+      expect(vili?.params?.pointer).toBe('vili');
+
+      // Gigi
+      const gigi = detectStimulusFromSoalText('Perhatikan gambar gigi berikut! Gigi yang berfungsi untuk merobek dan mengoyak makanan adalah...', 'IPAS');
+      expect(gigi?.type).toBe('struktur_gigi');
+      expect(gigi?.params?.pointer).toBe('taring');
+
+      // Lambung Detail
+      const lambungDetail = detectStimulusFromSoalText('Perhatikan penampang dinding lambung yang memiliki rugae dan menghasilkan enzim pepsin serta asam klorida!', 'IPAS');
+      expect(lambungDetail?.type).toBe('lambung_detail');
+
+      // Alveolus Mikroskopis
+      const alveolus = detectStimulusFromSoalText('Perhatikan gambar alveolus berikut! Tempat terjadinya pertukaran gas oksigen dan karbondioksida ditunjukkan oleh...', 'IPAS');
+      expect(alveolus?.type).toBe('alveolus');
 
       // Rantai Makanan
       const rantai = detectStimulusFromSoalText('Perhatikan rantai makanan berikut! Organisme yang berperan sebagai produsen adalah...', 'IPAS');

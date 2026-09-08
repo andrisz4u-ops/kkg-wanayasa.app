@@ -1162,67 +1162,440 @@ export function renderDiagramLingkaranSvg(params: { judul?: string; labels?: str
 }
 
 // =========================================================================
-// 9. DIAGRAM IPAS/SAINS TAMBAHAN (ORGAN PENCERNAAN, RANTAI MAKANAN)
+// 9. DIAGRAM IPAS/SAINS TAMBAHAN (ORGAN PENCERNAAN, SUB-DIAGRAM, ALVEOLUS, RANTAI MAKANAN)
 // =========================================================================
 
-/** Render Organ Pencernaan Manusia dengan Panah Penunjuk Dinamis X */
+/** Render Organ Pencernaan Manusia dengan Siluet Torso Anatomis & Highlight Organ Dinamis X */
 export function renderOrganPencernaanSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'lambung').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 160, y: 135, name: 'Lambung' };
-  if (pointer.includes('mulut')) target = { x: 160, y: 42, name: 'Mulut' };
-  else if (pointer.includes('kerongkongan') || pointer.includes('esofagus')) target = { x: 160, y: 80, name: 'Kerongkongan' };
-  else if (pointer.includes('usus halus')) target = { x: 150, y: 170, name: 'Usus Halus' };
-  else if (pointer.includes('usus besar')) target = { x: 200, y: 155, name: 'Usus Besar' };
-  else if (pointer.includes('anus') || pointer.includes('rektum')) target = { x: 180, y: 210, name: 'Anus / Rektum' };
-  else if (pointer.includes('hati') || pointer.includes('liver')) target = { x: 120, y: 118, name: 'Hati' };
+  // Tentukan organ target dan highlight state
+  let target = { x: 185, y: 125, name: 'Lambung' };
+  let isTarget = {
+    mulut: false,
+    kerongkongan: false,
+    lambung: false,
+    hati: false,
+    ususHalus: false,
+    ususBesar: false,
+    anus: false
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 260" width="340" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  if (pointer.includes('mulut') || pointer.includes('gigi') || pointer.includes('lidah')) {
+    target = { x: 170, y: 44, name: 'Rongga Mulut' };
+    isTarget.mulut = true;
+  } else if (pointer.includes('kerongkongan') || pointer.includes('esofagus')) {
+    target = { x: 170, y: 76, name: 'Kerongkongan (Esofagus)' };
+    isTarget.kerongkongan = true;
+  } else if (pointer.includes('usus halus')) {
+    target = { x: 170, y: 175, name: 'Usus Halus' };
+    isTarget.ususHalus = true;
+  } else if (pointer.includes('usus besar') || pointer.includes('kolon')) {
+    target = { x: 215, y: 155, name: 'Usus Besar (Kolon)' };
+    isTarget.ususBesar = true;
+  } else if (pointer.includes('anus') || pointer.includes('rektum')) {
+    target = { x: 170, y: 220, name: 'Anus / Rektum' };
+    isTarget.anus = true;
+  } else if (pointer.includes('hati') || pointer.includes('liver')) {
+    target = { x: 135, y: 115, name: 'Hati' };
+    isTarget.hati = true;
+  } else {
+    // Default Lambung
+    isTarget.lambung = true;
+  }
+
+  // Warna adaptif: organ target di-highlight warna menyala
+  const colMulut = isTarget.mulut ? '#e11d48' : '#fda4af';
+  const swMulut = isTarget.mulut ? 2.5 : 1.2;
+
+  const colEsofagus = isTarget.kerongkongan ? '#d97706' : '#fed7aa';
+  const swEsofagus = isTarget.kerongkongan ? 2.5 : 1.2;
+
+  const colLambung = isTarget.lambung ? '#e11d48' : '#fecdd3';
+  const swLambung = isTarget.lambung ? 2.5 : 1.5;
+
+  const colHati = isTarget.hati ? '#15803d' : '#86efac';
+  const swHati = isTarget.hati ? 2.5 : 1.2;
+
+  const colUsusHalus = isTarget.ususHalus ? '#ea580c' : '#fed7aa';
+  const swUsusHalus = isTarget.ususHalus ? 3.5 : 2;
+
+  const colUsusBesar = isTarget.ususBesar ? '#0284c7' : '#bae6fd';
+  const swUsusBesar = isTarget.ususBesar ? 4 : 2.5;
+
+  const colAnus = isTarget.anus ? '#475569' : '#cbd5e1';
+  const swAnus = isTarget.anus ? 2.5 : 1.5;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270" width="360" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <marker id="arrPen" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <linearGradient id="torsoBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <marker id="arrPenc" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
     </marker>
   </defs>
 
-  <text x="170" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Sistem Pencernaan Manusia</text>
+  <text x="180" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Sistem Pencernaan Manusia</text>
 
-  <!-- Mulut -->
-  <ellipse cx="160" cy="42" rx="18" ry="10" fill="#fda4af" stroke="#e11d48" stroke-width="1.5"/>
-  <text x="190" y="46" font-size="9" fill="#475569">Mulut</text>
+  <!-- Siluet Tubuh Torso Manusia (Konteks Posisi Anatomis) -->
+  <path d="M 140,28 C 140,20 155,18 170,18 C 185,18 200,20 200,28 C 200,38 190,48 185,55 L 235,68 C 245,72 250,85 245,110 L 235,160 C 235,180 245,210 245,240 L 95,240 C 95,210 105,180 105,160 L 95,110 C 90,85 95,72 105,68 L 155,55 C 150,48 140,38 140,28 Z" fill="url(#torsoBg)" stroke="#e2e8f0" stroke-width="1.5"/>
 
-  <!-- Kerongkongan (Esofagus) -->
-  <rect x="155" y="54" width="10" height="38" rx="3" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <text x="178" y="75" font-size="9" fill="#475569">Kerongkongan</text>
+  <!-- 1. Mulut & Gigi/Lidah -->
+  <ellipse cx="170" cy="44" rx="14" ry="8" fill="${colMulut}" stroke="#e11d48" stroke-width="${swMulut}"/>
+  <text x="140" y="47" font-size="9" text-anchor="end" fill="#64748b">Mulut</text>
 
-  <!-- Lambung -->
-  <path d="M 140,94 C 120,100 110,125 125,145 C 135,155 165,158 175,145 C 185,130 180,100 170,94 Z" fill="#fecdd3" stroke="#e11d48" stroke-width="1.8"/>
-  <text x="90" y="130" font-size="9" fill="#475569">Lambung</text>
+  <!-- 2. Kerongkongan (Esofagus) -->
+  <path d="M 167,52 L 167,95 M 173,52 L 173,95" stroke="${colEsofagus}" stroke-width="${swEsofagus * 1.5}" stroke-linecap="round"/>
+  <text x="140" y="76" font-size="9" text-anchor="end" fill="#64748b">Kerongkongan</text>
 
-  <!-- Hati -->
-  <path d="M 95,98 C 85,90 80,105 90,115 C 100,125 120,120 120,110 C 120,100 105,95 95,98 Z" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>
-  <text x="70" y="100" font-size="9" fill="#475569">Hati</text>
+  <!-- 3. Hati (Liver - Kanan Tubuh / Kiri Gambar) -->
+  <path d="M 125,95 C 115,95 105,110 115,125 C 125,135 145,135 155,120 L 155,100 Z" fill="${colHati}" stroke="#15803d" stroke-width="${swHati}"/>
+  <!-- Kantung Empedu Kecil -->
+  <ellipse cx="148" cy="126" rx="4" ry="5" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+  <text x="100" y="115" font-size="9" text-anchor="end" fill="#64748b">Hati</text>
 
-  <!-- Usus Halus (loop kecil-kecil) -->
-  <path d="M 148,155 C 130,160 120,170 135,175 C 150,180 170,175 160,168 C 150,162 130,167 140,178 C 150,188 175,185 165,175" fill="none" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>
-  <text x="100" y="182" font-size="9" fill="#475569">Usus Halus</text>
+  <!-- 4. Lambung (Kiri Tubuh / Kanan Gambar) -->
+  <path d="M 165,95 C 150,95 155,125 165,140 C 175,150 195,145 200,135 C 205,125 200,105 185,100 Z" fill="${colLambung}" stroke="#e11d48" stroke-width="${swLambung}"/>
+  <text x="215" y="112" font-size="9" fill="#64748b">Lambung</text>
 
-  <!-- Usus Besar (frame besar) -->
-  <path d="M 190,145 C 220,140 230,160 228,175 C 226,190 215,205 190,210 C 165,215 140,210 130,200" fill="none" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/>
-  <text x="235" y="168" font-size="9" fill="#475569">Usus Besar</text>
+  <!-- 5. Usus Halus (Lipatan-lipatan di Tengah) -->
+  <path d="M 155,160 Q 170,155 185,160 Q 185,175 170,175 Q 155,175 155,190 Q 170,190 185,190" fill="none" stroke="${colUsusHalus}" stroke-width="${swUsusHalus}" stroke-linecap="round"/>
+  <text x="135" y="180" font-size="9" text-anchor="end" fill="#64748b">Usus Halus</text>
 
-  <!-- Anus -->
-  <circle cx="130" cy="204" r="5" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
-  <text x="100" y="215" font-size="9" fill="#475569">Anus</text>
+  <!-- 6. Usus Besar (Kolon Membingkai Usus Halus) -->
+  <path d="M 145,195 L 145,150 C 145,145 195,145 195,150 L 195,200 L 175,200 L 175,218" fill="none" stroke="${colUsusBesar}" stroke-width="${swUsusBesar}" stroke-linecap="round"/>
+  <text x="220" y="165" font-size="9" fill="#64748b">Usus Besar</text>
 
-  <!-- Panah Penunjuk Dinamis -->
+  <!-- 7. Anus -->
+  <circle cx="170" cy="225" r="4.5" fill="${colAnus}" stroke="#334155" stroke-width="${swAnus}"/>
+  <text x="150" y="228" font-size="9" text-anchor="end" fill="#64748b">Anus</text>
+
+  <!-- Panah Penunjuk Dinamis Leader Line Target X -->
   <g>
-    <line x1="295" y1="${target.y}" x2="${target.x + 10}" y2="${target.y}" stroke="#e11d48" stroke-width="2" marker-end="url(#arrPen)"/>
-    <circle cx="303" cy="${target.y}" r="14" fill="#e11d48"/>
-    <text x="303" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <line x1="300" y1="${target.y}" x2="${target.x + 12}" y2="${target.y}" stroke="#e11d48" stroke-width="2.2" marker-end="url(#arrPenc)"/>
+    <circle cx="310" cy="${target.y}" r="14" fill="#e11d48"/>
+    <text x="310" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
-  <text x="170" y="250" text-anchor="middle" font-size="11" fill="#64748b">Perhatikan bagian bertanda huruf "${escapeXml(labelChar)}"</text>
+  <text x="180" y="258" text-anchor="middle" font-size="10.5" fill="#64748b">Perhatikan bagian organ yang ditunjuk oleh huruf "${escapeXml(labelChar)}"</text>
+</svg>`;
+}
+
+/** Render Penampang Mikroskopis Vili (Jonjot) Usus Halus dengan Penunjuk Dinamis X */
+export function renderViliUsusSvg(params: { pointer?: string; label?: string }): string {
+  const pointer = (params.pointer || 'vili').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let target = { x: 190, y: 80, name: 'Vili Usus' };
+  let desc = 'Struktur lipatan tonjolan bertanda huruf "' + escapeXml(labelChar) + '" berfungsi memperluas bidang penyerapan sari makanan.';
+
+  if (pointer.includes('kapiler') || pointer.includes('darah')) {
+    target = { x: 175, y: 110, name: 'Kapiler Darah' };
+    desc = 'Pembuluh darah bertanda huruf "' + escapeXml(labelChar) + '" menyerap sari makanan berupa glukosa dan asam amino.';
+  } else if (pointer.includes('lakteal') || pointer.includes('limfa') || pointer.includes('lemak') || pointer.includes('kil')) {
+    target = { x: 190, y: 105, name: 'Pembuluh Lakteal (Kil)' };
+    desc = 'Pembuluh limfa/lakteal bertanda huruf "' + escapeXml(labelChar) + '" berfungsi menyerap asam lemak dan gliserol.';
+  } else if (pointer.includes('epitel') || pointer.includes('dinding')) {
+    target = { x: 165, y: 70, name: 'Lapisan Epitel' };
+    desc = 'Lapisan sel bertanda huruf "' + escapeXml(labelChar) + '" membatasi lumen usus dan menyerap nutrisi.';
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="villiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="100%" stop-color="#fed7aa"/>
+    </linearGradient>
+    <linearGradient id="lactealGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+    <marker id="arrVili" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <text x="190" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Struktur Mikroskopis Vili (Jonjot) Usus Halus</text>
+
+  <!-- Molekul Sari Makanan di Rongga Lumen -->
+  <g opacity="0.85">
+    <circle cx="80" cy="38" r="3.5" fill="#38bdf8"/>
+    <circle cx="120" cy="42" r="3" fill="#f43f5e"/>
+    <circle cx="170" cy="35" r="4" fill="#eab308"/>
+    <circle cx="210" cy="40" r="3" fill="#38bdf8"/>
+    <circle cx="260" cy="36" r="3.5" fill="#f43f5e"/>
+    <circle cx="300" cy="42" r="3" fill="#eab308"/>
+    <text x="190" y="50" text-anchor="middle" font-size="9" fill="#94a3b8" font-style="italic">Lumen Usus (Rongga Berisi Sari-Sari Makanan)</text>
+  </g>
+
+  <!-- Dasar Jaringan Mukosa & Submukosa Usus -->
+  <rect x="25" y="195" width="330" height="35" rx="4" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="190" y="218" text-anchor="middle" font-size="10" font-weight="600" fill="#9a3412">Dinding Mukosa &amp; Jaringan Dasar Usus Halus</text>
+
+  <!-- 3 Vili Berdampingan -->
+  <!-- Vili Kiri -->
+  <path d="M 50,195 C 50,110 65,70 85,70 C 105,70 120,110 120,195" fill="url(#villiGrad)" stroke="#f97316" stroke-width="1.5"/>
+  <path d="M 85,95 L 85,195" stroke="#eab308" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M 75,95 C 70,120 70,160 75,195" stroke="#ef4444" stroke-width="1.8" fill="none"/>
+  <path d="M 95,95 C 100,120 100,160 95,195" stroke="#3b82f6" stroke-width="1.8" fill="none"/>
+
+  <!-- Vili Kanan -->
+  <path d="M 260,195 C 260,110 275,70 295,70 C 315,70 330,110 330,195" fill="url(#villiGrad)" stroke="#f97316" stroke-width="1.5"/>
+  <path d="M 295,95 L 295,195" stroke="#eab308" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M 285,95 C 280,120 280,160 285,195" stroke="#ef4444" stroke-width="1.8" fill="none"/>
+  <path d="M 305,95 C 310,120 310,160 305,195" stroke="#3b82f6" stroke-width="1.8" fill="none"/>
+
+  <!-- Vili Tengah (Fokus Utama / Penampang Transparan) -->
+  <path d="M 145,195 C 145,100 165,55 190,55 C 215,55 235,100 235,195" fill="url(#villiGrad)" stroke="#ea580c" stroke-width="2.5"/>
+
+  <!-- Sel Epitel Pelapis -->
+  <path d="M 148,190 C 148,105 167,60 190,60 C 213,60 232,105 232,190" fill="none" stroke="#fdba74" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Pembuluh Lakteal (Kuning Emas) -->
+  <path d="M 190,82 L 190,195" stroke="url(#lactealGrad)" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="190" cy="80" rx="4" ry="4" fill="#ca8a04"/>
+
+  <!-- Anyaman Pembuluh Kapiler Darah -->
+  <path d="M 176,82 C 168,115 168,155 174,195" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 204,82 C 212,115 212,155 206,195" stroke="#3b82f6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 176,82 C 182,72 198,72 204,82" stroke="#dc2626" stroke-width="2.5" fill="none"/>
+  <line x1="172" y1="120" x2="208" y2="120" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <line x1="171" y1="150" x2="209" y2="150" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+  <!-- Panah Penunjuk Target X -->
+  <g>
+    <line x1="330" y1="${target.y}" x2="${target.x + 15}" y2="${target.y}" stroke="#e11d48" stroke-width="2" marker-end="url(#arrVili)"/>
+    <circle cx="340" cy="${target.y}" r="14" fill="#e11d48"/>
+    <text x="340" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Keterangan Komponen di Bawah -->
+  <g font-size="9" fill="#475569">
+    <circle cx="55" cy="242" r="4" fill="#f97316"/>
+    <text x="64" y="245">Lipatan Vili</text>
+    <circle cx="140" cy="242" r="4" fill="#ef4444"/>
+    <text x="149" y="245">Kapiler Darah</text>
+    <circle cx="235" cy="242" r="4" fill="#eab308"/>
+    <text x="244" y="245">Lakteal (Limfa)</text>
+  </g>
+
+  <text x="190" y="262" text-anchor="middle" font-size="10.5" fill="#64748b">${desc}</text>
+</svg>`;
+}
+
+/** Render Ragam Jenis Gigi Manusia & Fungsinya dengan Tanda X */
+export function renderStrukturGigiSvg(params: { pointer?: string; label?: string }): string {
+  const pointer = (params.pointer || 'seri').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let targetIdx = 0; // 0 = seri, 1 = taring, 2 = geraham
+  let targetX = 75;
+  let targetY = 110;
+  let desc = 'Gigi bertanda huruf "' + escapeXml(labelChar) + '" berfungsi memotong makanan.';
+
+  if (pointer.includes('taring') || pointer.includes('canine') || pointer.includes('robek')) {
+    targetIdx = 1;
+    targetX = 180;
+    targetY = 100;
+    desc = 'Gigi bertanda huruf "' + escapeXml(labelChar) + '" berbentuk runcing untuk merobek dan mengoyak makanan.';
+  } else if (pointer.includes('geraham') || pointer.includes('molar') || pointer.includes('kunyah') || pointer.includes('lumat')) {
+    targetIdx = 2;
+    targetX = 285;
+    targetY = 110;
+    desc = 'Gigi bertanda huruf "' + escapeXml(labelChar) + '" berpermukaan lebar untuk mengunyah dan melumatkan makanan.';
+  }
+
+  const highlight0 = targetIdx === 0 ? 'stroke="#e11d48" stroke-width="2.5"' : 'stroke="#64748b" stroke-width="1.5"';
+  const highlight1 = targetIdx === 1 ? 'stroke="#e11d48" stroke-width="2.5"' : 'stroke="#64748b" stroke-width="1.5"';
+  const highlight2 = targetIdx === 2 ? 'stroke="#e11d48" stroke-width="2.5"' : 'stroke="#64748b" stroke-width="1.5"';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="toothGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="rootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <marker id="arrGigi" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Jenis-Jenis Gigi Manusia &amp; Fungsinya</text>
+
+  <!-- Pita Gusi (Gingiva) Merah Muda di Bagian Bawah -->
+  <rect x="20" y="150" width="320" height="40" rx="6" fill="#fbcfe8" stroke="#f43f5e" stroke-width="1.5"/>
+  <text x="32" y="174" font-size="9" font-weight="bold" fill="#be123c">GUSI</text>
+
+  <!-- 1. GIGI SERI (Incisor) -->
+  <g>
+    <path d="M 67,150 L 75,190 L 83,150 Z" fill="url(#rootGrad)" stroke="#d97706" stroke-width="1.2"/>
+    <path d="M 60,150 L 62,80 C 62,75 88,75 88,80 L 90,150 Z" fill="url(#toothGrad)" ${highlight0}/>
+    <line x1="64" y1="78" x2="86" y2="78" stroke="#94a3b8" stroke-width="2"/>
+    <text x="75" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Gigi Seri</text>
+    <text x="75" y="206" text-anchor="middle" font-size="8.5" fill="#475569">Fungsi: Memotong</text>
+  </g>
+
+  <!-- 2. GIGI TARING (Canine) -->
+  <g>
+    <path d="M 171,150 L 180,195 L 189,150 Z" fill="url(#rootGrad)" stroke="#d97706" stroke-width="1.2"/>
+    <path d="M 166,150 L 168,90 L 180,68 L 192,90 L 194,150 Z" fill="url(#toothGrad)" ${highlight1}/>
+    <circle cx="180" cy="68" r="2" fill="#e11d48"/>
+    <text x="180" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Gigi Taring</text>
+    <text x="180" y="206" text-anchor="middle" font-size="8.5" fill="#475569">Fungsi: Merobek</text>
+  </g>
+
+  <!-- 3. GIGI GERAHAM (Molar) -->
+  <g>
+    <path d="M 268,150 L 265,188 L 273,150 L 285,150 L 293,188 L 290,150 Z" fill="url(#rootGrad)" stroke="#d97706" stroke-width="1.2"/>
+    <path d="M 262,150 L 264,88 C 265,78 272,78 275,82 C 278,78 285,78 288,82 C 291,78 297,78 298,88 L 300,150 Z" fill="url(#toothGrad)" ${highlight2}/>
+    <path d="M 268,84 Q 281,88 294,84" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+    <text x="281" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Gigi Geraham</text>
+    <text x="281" y="206" text-anchor="middle" font-size="8.5" fill="#475569">Fungsi: Mengunyah</text>
+  </g>
+
+  <!-- Panah Penunjuk Target X -->
+  <g>
+    <line x1="${targetX}" y1="36" x2="${targetX}" y2="${targetY - 20}" stroke="#e11d48" stroke-width="2" marker-end="url(#arrGigi)"/>
+    <circle cx="${targetX}" cy="36" r="13" fill="#e11d48"/>
+    <text x="${targetX}" y="41" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <text x="180" y="235" text-anchor="middle" font-size="10.5" fill="#64748b">${desc}</text>
+</svg>`;
+}
+
+/** Render Struktur Anatomi Lambung Detail & Enzim dengan Tanda X */
+export function renderLambungDetailSvg(params: { pointer?: string; label?: string }): string {
+  const pointer = (params.pointer || 'rugae').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let target = { x: 180, y: 135, name: 'Dinding Lambung (Rugae)' };
+  let desc = 'Bagian bertanda huruf "' + escapeXml(labelChar) + '" menghasilkan asam klorida (HCl) dan enzim pepsin.';
+
+  if (pointer.includes('kardia') || pointer.includes('esofagus') || pointer.includes('atas') || pointer.includes('katup')) {
+    target = { x: 148, y: 70, name: 'Sfingter Kardia' };
+    desc = 'Bagian katup bertanda huruf "' + escapeXml(labelChar) + '" mencegah makanan dan asam lambung kembali ke kerongkongan.';
+  } else if (pointer.includes('pilorus') || pointer.includes('duodenum') || pointer.includes('bawah') || pointer.includes('usus')) {
+    target = { x: 235, y: 165, name: 'Sfingter Pilorus / Duodenum' };
+    desc = 'Bagian bertanda huruf "' + escapeXml(labelChar) + '" mengatur jalannya makanan lumat (kimus) menuju usus 12 jari.';
+  } else if (pointer.includes('fundus') || pointer.includes('kubah')) {
+    target = { x: 215, y: 75, name: 'Fundus Lambung' };
+    desc = 'Bagian kubah atas lambung bertanda huruf "' + escapeXml(labelChar) + '" menampung gas hasil pencernaan.';
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="stomachGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="50%" stop-color="#fecdd3"/>
+      <stop offset="100%" stop-color="#fda4af"/>
+    </linearGradient>
+    <marker id="arrStom" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Penampang Detail Organ Lambung Manusia</text>
+
+  <!-- Kerongkongan (Esofagus) Masuk -->
+  <path d="M 135,40 L 135,70 M 155,40 L 155,70" stroke="#f97316" stroke-width="4"/>
+  <text x="110" y="55" font-size="9" fill="#64748b">Esofagus</text>
+
+  <!-- Kontur Kantung Lambung J-Shape -->
+  <path d="M 135,70 C 115,85 105,120 120,165 C 135,200 185,205 220,175 C 240,160 245,150 260,150 L 260,170 C 245,170 225,190 205,210 C 145,225 100,195 90,145 C 80,95 110,65 145,65 C 190,65 245,70 245,110 C 245,130 225,145 205,145 C 175,145 160,120 160,95 L 155,70" fill="url(#stomachGrad)" stroke="#e11d48" stroke-width="2.5"/>
+
+  <!-- Lipatan Dinding Dalam (Rugae) -->
+  <path d="M 125,125 C 135,135 140,160 135,175" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M 145,135 C 155,145 160,170 155,185" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M 165,145 C 175,155 185,175 180,190" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M 185,145 C 195,150 205,165 200,175" stroke="#f43f5e" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+
+  <!-- Saluran Duodenum (Usus 12 Jari) Keluar -->
+  <text x="270" y="155" font-size="9" fill="#64748b">Duodenum</text>
+
+  <!-- Panah Penunjuk Target X -->
+  <g>
+    <line x1="300" y1="${target.y}" x2="${target.x + 12}" y2="${target.y}" stroke="#e11d48" stroke-width="2" marker-end="url(#arrStom)"/>
+    <circle cx="310" cy="${target.y}" r="14" fill="#e11d48"/>
+    <text x="310" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <text x="180" y="238" text-anchor="middle" font-size="10.5" fill="#64748b">${desc}</text>
+</svg>`;
+}
+
+/** Render Penampang Alveolus & Kapiler Pertukaran Gas dengan Tanda X */
+export function renderAlveolusSvg(params: { pointer?: string; label?: string }): string {
+  const pointer = (params.pointer || 'alveolus').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let target = { x: 180, y: 120, name: 'Kantung Alveolus' };
+  let desc = 'Kantung udara bertanda huruf "' + escapeXml(labelChar) + '" adalah tempat terjadinya pertukaran gas O2 dan CO2.';
+
+  if (pointer.includes('kapiler') || pointer.includes('darah')) {
+    target = { x: 235, y: 140, name: 'Kapiler Darah' };
+    desc = 'Pembuluh darah kapiler bertanda huruf "' + escapeXml(labelChar) + '" mengikat oksigen dan melepaskan karbon dioksida.';
+  } else if (pointer.includes('bronkiolus') || pointer.includes('saluran')) {
+    target = { x: 90, y: 80, name: 'Bronkiolus' };
+    desc = 'Saluran bronkiolus bertanda huruf "' + escapeXml(labelChar) + '" mengalirkan udara bersih masuk ke gugusan alveoli.';
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <marker id="arrAlv" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+    </marker>
+    <radialGradient id="alvRongga" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#fed7aa"/>
+    </radialGradient>
+  </defs>
+
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Penampang Alveolus &amp; Pertukaran Gas (O₂ &amp; CO₂)</text>
+
+  <!-- Bronkiolus Cabang Saluran -->
+  <path d="M 40,70 Q 75,75 110,95 L 105,115 Q 75,95 40,90 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+  <text x="60" y="65" font-size="9" fill="#9a3412">Bronkiolus</text>
+
+  <!-- Gugusan Kantung Alveoli Belakang -->
+  <circle cx="150" cy="100" r="28" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+  <circle cx="210" cy="95" r="26" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+  <circle cx="155" cy="155" r="27" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+  <circle cx="215" cy="150" r="28" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/>
+
+  <!-- Kantung Alveolus Tengah Dibelah (Fokus Penampang) -->
+  <circle cx="180" cy="125" r="32" fill="url(#alvRongga)" stroke="#ea580c" stroke-width="2.5"/>
+
+  <!-- Anyaman Kapiler Darah (Biru = Kaya CO2, Merah = Kaya O2) -->
+  <path d="M 125,120 Q 150,85 185,85" stroke="#3b82f6" stroke-width="3" fill="none"/>
+  <path d="M 185,85 Q 225,85 240,120" stroke="#ef4444" stroke-width="3" fill="none"/>
+  <path d="M 125,135 Q 150,165 185,165" stroke="#3b82f6" stroke-width="3" fill="none"/>
+  <path d="M 185,165 Q 225,165 240,135" stroke="#ef4444" stroke-width="3" fill="none"/>
+
+  <!-- Panah Difusi Gas di Dalam Alveolus -->
+  <g font-size="9" font-weight="bold">
+    <text x="165" y="118" fill="#15803d">O₂</text>
+    <path d="M 175,115 L 195,105" stroke="#15803d" stroke-width="1.5" marker-end="url(#arrAlv)"/>
+    <text x="185" y="140" fill="#dc2626">CO₂</text>
+    <path d="M 195,145 L 175,135" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arrAlv)"/>
+  </g>
+
+  <!-- Panah Penunjuk Target X -->
+  <g>
+    <line x1="310" y1="${target.y}" x2="${target.x + 15}" y2="${target.y}" stroke="#e11d48" stroke-width="2" marker-end="url(#arrAlv)"/>
+    <circle cx="320" cy="${target.y}" r="14" fill="#e11d48"/>
+    <text x="320" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <text x="180" y="238" text-anchor="middle" font-size="10.5" fill="#64748b">${desc}</text>
 </svg>`;
 }
 
@@ -1372,9 +1745,21 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   else if (type === 'organ_pernapasan' || type === 'pernapasan') {
     svg = renderOrganPernapasanSvg(params);
     title = title || 'Diagram Sistem Pernapasan Manusia';
+  } else if (type === 'alveolus') {
+    svg = renderAlveolusSvg(params);
+    title = title || 'Penampang Alveolus & Pertukaran Gas';
   } else if (type === 'organ_pencernaan' || type === 'pencernaan') {
     svg = renderOrganPencernaanSvg(params);
     title = title || 'Diagram Sistem Pencernaan Manusia';
+  } else if (type === 'vili_usus' || type === 'vili' || type === 'jonjot_usus') {
+    svg = renderViliUsusSvg(params);
+    title = title || 'Struktur Vili (Jonjot) Usus Halus';
+  } else if (type === 'struktur_gigi' || type === 'gigi' || type === 'jenis_gigi') {
+    svg = renderStrukturGigiSvg(params);
+    title = title || 'Jenis-Jenis Gigi Manusia & Fungsinya';
+  } else if (type === 'lambung_detail' || type === 'lambung') {
+    svg = renderLambungDetailSvg(params);
+    title = title || 'Penampang Detail Organ Lambung';
   } else if (type === 'rantai_makanan') {
     svg = renderRantaiMakananSvg(params);
     title = title || 'Rantai Makanan';
@@ -1618,16 +2003,50 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
     return { type: 'sudut', params: { derajat: deg } };
   }
 
-  // 15. IPAS: Pernapasan
-  if (text.includes('pernapasan') || text.includes('paru-paru') || text.includes('trakea') || text.includes('bronkus') || text.includes('alveolus')) {
+  // 15. IPAS: Alveolus & Pertukaran Gas (Mikroskopis)
+  if (text.includes('alveolus') || (text.includes('pertukaran') && (text.includes('oksigen') || text.includes('o2') || text.includes('karbon dioksida') || text.includes('co2')))) {
+    let ptr = 'alveolus';
+    if (text.includes('kapiler') || text.includes('darah')) ptr = 'kapiler';
+    else if (text.includes('bronkiolus')) ptr = 'bronkiolus';
+    return { type: 'alveolus', params: { pointer: ptr, label: 'X' } };
+  }
+
+  // 16. IPAS: Pernapasan Umum (Makro Torso)
+  if (text.includes('pernapasan') || text.includes('paru-paru') || text.includes('trakea') || text.includes('bronkus')) {
     let ptr = 'trakea';
     if (text.includes('hidung')) ptr = 'hidung';
-    else if (text.includes('alveolus')) ptr = 'alveolus';
     else if (text.includes('bronkus')) ptr = 'bronkus';
+    else if (text.includes('paru')) ptr = 'paru';
+    else if (text.includes('diafragma')) ptr = 'diafragma';
     return { type: 'organ_pernapasan', params: { pointer: ptr, label: 'X' } };
   }
 
-  // 16. IPAS: Pencernaan
+  // 17. IPAS: Vili Usus Halus (Jonjot Usus - Mikroskopis)
+  if (text.includes('vili') || text.includes('jonjot') || (text.includes('lipatan') && text.includes('penyerapan') && text.includes('usus'))) {
+    let ptr = 'vili';
+    if (text.includes('kapiler') || text.includes('darah')) ptr = 'kapiler';
+    else if (text.includes('lakteal') || text.includes('limfa') || text.includes('lemak') || text.includes('kil')) ptr = 'lakteal';
+    else if (text.includes('epitel') || text.includes('dinding')) ptr = 'epitel';
+    return { type: 'vili_usus', params: { pointer: ptr, label: 'X' } };
+  }
+
+  // 18. IPAS: Ragam Jenis Gigi & Fungsinya
+  if (text.includes('gigi') && (text.includes('seri') || text.includes('taring') || text.includes('geraham') || text.includes('memotong') || text.includes('merobek') || text.includes('mengunyah') || text.includes('rahang'))) {
+    let ptr = 'seri';
+    if (text.includes('taring') || text.includes('robek') || text.includes('koyak')) ptr = 'taring';
+    else if (text.includes('geraham') || text.includes('kunyah') || text.includes('lumat')) ptr = 'geraham';
+    return { type: 'struktur_gigi', params: { pointer: ptr, label: 'X' } };
+  }
+
+  // 19. IPAS: Lambung Detail (Enzim, Rugae, Sfingter)
+  if ((text.includes('lambung') && (text.includes('rugae') || text.includes('kardia') || text.includes('pilorus') || text.includes('pepsin') || text.includes('asam klorida') || text.includes('hcl') || text.includes('sfingter'))) || (text.includes('enzim') && text.includes('lambung'))) {
+    let ptr = 'rugae';
+    if (text.includes('kardia') || text.includes('esofagus') || text.includes('katup')) ptr = 'kardia';
+    else if (text.includes('pilorus') || text.includes('duodenum')) ptr = 'pilorus';
+    return { type: 'lambung_detail', params: { pointer: ptr, label: 'X' } };
+  }
+
+  // 20. IPAS: Pencernaan Umum (Makro Torso)
   if (text.includes('pencernaan') || /\blambung\b/.test(text) || text.includes('usus') || text.includes('kerongkongan') || text.includes('esofagus')) {
     let ptr = 'lambung';
     if (/\bmulut\b/.test(text) && !text.includes('bermulut')) ptr = 'mulut';

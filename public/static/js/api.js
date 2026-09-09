@@ -160,6 +160,14 @@ export async function api(path, options = {}) {
         // Detailed technical error in console for debugging
         console.error(`API Error on [${path}]:`, error);
 
+        // Auto-retry once for idempotent GET requests on transient network glitches (e.g. dev server HMR reload)
+        const isGet = !options.method || options.method.toUpperCase() === 'GET';
+        if (isGet && (!options._retryCount || options._retryCount < 1) && error.name !== 'AbortError') {
+            console.warn(`[API] Transient network error on GET [${path}], auto-retrying in 500ms...`);
+            await new Promise(r => setTimeout(r, 500));
+            return api(path, { ...options, _retryCount: (options._retryCount || 0) + 1 });
+        }
+
         let msg = 'Gagal menghubungi server. Periksa koneksi internet Anda.';
         if (error.name === 'AbortError') {
             msg = 'Request timeout. Server terlalu lama merespons (AI sedang sibuk).';

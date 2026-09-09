@@ -8,12 +8,18 @@ const KEY_LENGTH = 256;
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 
+let cachedSecret: string | null = null;
+let cachedCryptoKey: CryptoKey | null = null;
+
 /**
  * Get or derive encryption key from environment
  * In production, use a secure key from environment variables
  */
 async function getEncryptionKey(env: Record<string, any>): Promise<CryptoKey> {
-    const secret = env.ENCRYPTION_KEY || env.SECRET_KEY || 'default-encryption-key-change-in-production';
+    const secret = env?.ENCRYPTION_KEY || env?.SECRET_KEY || 'default-encryption-key-change-in-production';
+    if (cachedCryptoKey && cachedSecret === secret) {
+        return cachedCryptoKey;
+    }
     
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -26,7 +32,7 @@ async function getEncryptionKey(env: Record<string, any>): Promise<CryptoKey> {
 
     const salt = encoder.encode('kkg-portal-encryption-salt');
     
-    return crypto.subtle.deriveKey(
+    const derived = await crypto.subtle.deriveKey(
         {
             name: 'PBKDF2',
             salt: salt,
@@ -38,6 +44,10 @@ async function getEncryptionKey(env: Record<string, any>): Promise<CryptoKey> {
         false,
         ['encrypt', 'decrypt']
     );
+
+    cachedSecret = secret;
+    cachedCryptoKey = derived;
+    return derived;
 }
 
 /**

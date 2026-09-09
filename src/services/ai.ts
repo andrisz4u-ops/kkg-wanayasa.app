@@ -827,15 +827,31 @@ CRITICAL JSON RULES:
                     { role: 'user', content: prompt }
                   ]);
 
+        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
+
         const body: any = {
             model: p.model,
             stream: true,
             messages,
-            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
+            ...extraBody,
         };
 
         if (isReasoningModel) {
             body.max_completion_tokens = p.max_tokens;
+        } else if (hasReasoningEffort) {
+            // KRITIS: Saat reasoning_effort aktif (low/medium/high), model mengonsumsi
+            // token berpikir + token konten dari budget yang SAMA jika kita pakai max_tokens.
+            // Solusi: gunakan max_completion_tokens agar token berpikir TIDAK memotong kuota konten.
+            body.max_completion_tokens = p.max_tokens;
+            body.temperature = p.temperature;
+            // Jangan set max_tokens — biarkan model menggunakan budget berpikir tanpa batas
+            // sementara konten akhir (JSON) dijamin mendapatkan alokasi penuh.
+            // Beberapa proxy tidak mendukung max_completion_tokens, set max_tokens tinggi sebagai fallback:
+            body.max_tokens = Math.min(p.max_tokens * 3, 131072);
+            if (jsonMode) {
+                body.response_format = { type: 'json_object' };
+            }
         } else {
             body.temperature = p.temperature;
             body.max_tokens = p.max_tokens;
@@ -911,6 +927,7 @@ CRITICAL JSON RULES:
             let reasoningAccumulator = '';
             let promptTokens = 0;
             let completionTokens = 0;
+            let finishReason = '';
 
             try {
                 while (true) {
@@ -949,6 +966,10 @@ CRITICAL JSON RULES:
                                     onToken?.(streamToken);
                                 }
 
+                                // Track finish_reason untuk mendeteksi truncation
+                                const chunkFinish = chunk.choices?.[0]?.finish_reason;
+                                if (chunkFinish) finishReason = chunkFinish;
+
                                 if (chunk.usage) {
                                     promptTokens = chunk.usage.prompt_tokens || promptTokens;
                                     completionTokens = chunk.usage.completion_tokens || completionTokens;
@@ -963,9 +984,22 @@ CRITICAL JSON RULES:
                 reader.releaseLock();
             }
 
+            // Log peringatan jika stream terpotong karena limit token
+            if (finishReason === 'length') {
+                console.warn(`[AI-STREAM] ⚠ Provider "${p.name}" stream terpotong (finish_reason=length). Content: ${content.length} chars, Reasoning: ${reasoningAccumulator.length} chars.`);
+            }
+
             if (!content.trim() && reasoningAccumulator.trim()) {
-                // Cadangan jika model/proxy mengirimkan jawaban dalam reasoning_content
-                content = reasoningAccumulator;
+                // Cadangan: jika model/proxy mengirimkan jawaban dalam reasoning_content,
+                // coba ekstrak JSON dari teks reasoning (model sering menyisipkan draft JSON dalam pikiran)
+                const jsonMatch = reasoningAccumulator.match(/\{[\s\S]*"(?:pg|isian|uraian|data|soal)"[\s\S]*\}/g);
+                if (jsonMatch) {
+                    // Ambil blok JSON terpanjang dari reasoning (kemungkinan besar JSON jawaban)
+                    content = jsonMatch.reduce((a, b) => a.length >= b.length ? a : b, '');
+                    console.log(`[AI-STREAM] Extracted JSON (${content.length} chars) from reasoning content.`);
+                } else {
+                    content = reasoningAccumulator;
+                }
             }
 
             if (!content.trim()) {
@@ -1096,15 +1130,25 @@ CRITICAL JSON RULES:
                     { role: 'user', content: prompt }
                   ]);
 
+        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
+
         const body: any = {
             model: p.model,
             messages,
-            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
+            ...extraBody,
         };
 
         if (isReasoningModel) {
             body.max_completion_tokens = p.max_tokens;
             // Omit temperature for reasoning models
+        } else if (hasReasoningEffort) {
+            body.max_completion_tokens = p.max_tokens;
+            body.temperature = p.temperature;
+            body.max_tokens = Math.min(p.max_tokens * 3, 131072);
+            if (jsonMode) {
+                body.response_format = { type: 'json_object' };
+            }
         } else {
             body.temperature = p.temperature;
             body.max_tokens = p.max_tokens;

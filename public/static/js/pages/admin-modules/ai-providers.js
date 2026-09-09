@@ -58,15 +58,17 @@ window.unwrapNestedJson = unwrapNestedJson;
 // Load AI Providers
 // ============================================
 
-window.loadAdminAiProviders = async function loadAdminAiProviders() {
+window.loadAdminAiProviders = async function loadAdminAiProviders(retryCount = 0) {
   const container = document.getElementById('ai-providers-list');
   if (!container) return;
 
-  container.innerHTML = `
-    <div class="flex items-center justify-center py-12 text-slate-400">
-      <i class="fas fa-spinner fa-spin text-2xl mr-3 text-indigo-600"></i> Memuat provider AI...
-    </div>
-  `;
+  if (retryCount === 0) {
+    container.innerHTML = `
+      <div class="flex items-center justify-center py-12 text-slate-400">
+        <i class="fas fa-spinner fa-spin text-2xl mr-3 text-indigo-600"></i> Memuat provider AI...
+      </div>
+    `;
+  }
 
   try {
     const res = await api('/admin/ai-providers');
@@ -92,6 +94,13 @@ window.loadAdminAiProviders = async function loadAdminAiProviders() {
       </div>
     `;
   } catch (e) {
+    // Retry otomatis 1x jika terjadi transient network/socket glitch (misal dev server HMR reload sesaat)
+    if (retryCount < 1 && (e.code === 'NETWORK_ERROR' || e.message?.includes('Gagal menghubungi server') || e.message?.includes('network'))) {
+      console.warn('[AI-Providers] Transient connection issue detected, auto-retrying in 500ms...', e);
+      await new Promise(r => setTimeout(r, 500));
+      return window.loadAdminAiProviders(retryCount + 1);
+    }
+
     console.error('Failed to load AI providers:', e);
     container.innerHTML = `
       <div class="text-center py-8 text-rose-500 bg-rose-50/50 rounded-2xl border border-rose-200 p-6">

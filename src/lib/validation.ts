@@ -503,6 +503,31 @@ export function validateId(idParam: string): { valid: true; id: number } | { val
 
 export const aiProviderApiTypes = ['openai_compat', 'anthropic', 'gemini_sdk', 'bedrock', 'custom_proxy'] as const;
 
+function sanitizeJsonString(val: any): string | undefined {
+    if (val === undefined) return undefined;
+    if (val === null) return '{}';
+    if (typeof val === 'object') return JSON.stringify(val);
+    if (typeof val === 'string') {
+        let curr = val.trim();
+        if (!curr || curr === '{}') return '{}';
+        let attempts = 0;
+        while (typeof curr === 'string' && attempts < 5) {
+            try {
+                const parsed = JSON.parse(curr);
+                curr = parsed;
+                attempts++;
+            } catch {
+                break;
+            }
+        }
+        if (typeof curr === 'object' && curr !== null && !Array.isArray(curr)) {
+            return JSON.stringify(curr);
+        }
+        return '{}';
+    }
+    return '{}';
+}
+
 export const createAiProviderSchema = z.object({
     name: z.string().min(1, 'Nama provider wajib diisi').max(100, 'Nama terlalu panjang'),
     slug: z.string().min(1, 'Slug wajib diisi').max(50, 'Slug terlalu panjang')
@@ -514,9 +539,15 @@ export const createAiProviderSchema = z.object({
     priority: z.coerce.number().int().min(1, 'Prioritas minimal 1').max(999, 'Prioritas maksimal 999').optional().default(100),
     is_active: z.coerce.number().int().min(0).max(1).optional().default(1),
     max_tokens: z.coerce.number().int().min(1, 'Max tokens minimal 1').max(131072, 'Max tokens maksimal 131072').optional().default(8192),
-    temperature: z.coerce.number().min(0, 'Temperature minimal 0').max(2, 'Temperature maksimal 2').optional().default(0.7),
-    extra_headers: z.union([z.string().max(2000), z.record(z.any())]).optional().default('{}').transform(val => typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
-    extra_body: z.union([z.string().max(2000), z.record(z.any())]).optional().default('{}').transform(val => typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
+    temperature: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            const num = parseFloat(val.replace(',', '.'));
+            return isNaN(num) ? val : num;
+        }
+        return val;
+    }, z.coerce.number().min(0, 'Temperature minimal 0').max(2, 'Temperature maksimal 2')).optional().default(0.7),
+    extra_headers: z.preprocess(sanitizeJsonString, z.string().max(2000).optional()).default('{}'),
+    extra_body: z.preprocess(sanitizeJsonString, z.string().max(2000).optional()).default('{}'),
 });
 
 export const updateAiProviderSchema = createAiProviderSchema.partial();

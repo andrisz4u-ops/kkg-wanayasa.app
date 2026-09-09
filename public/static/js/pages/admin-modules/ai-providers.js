@@ -9,6 +9,52 @@ let editingProviderId = null;
 let currentProviders = [];
 
 // ============================================
+// Robust JSON Unwrapping Helper
+// Cleans up multi-level stringified JSON bugs (e.g. "\"\\\"\\\\\\\"{}\\\\\\\\\"\\\"\"" -> {})
+// ============================================
+export function unwrapNestedJson(input) {
+  if (input === null || input === undefined) return {};
+  if (typeof input === 'object') {
+    return Array.isArray(input) ? {} : input;
+  }
+
+  let curr = String(input).trim();
+  if (!curr || curr === '{}') return {};
+
+  let attempts = 0;
+  while (typeof curr === 'string' && attempts < 10) {
+    curr = curr.trim();
+    if (!curr || curr === '{}') return {};
+
+    try {
+      const parsed = JSON.parse(curr);
+      curr = parsed;
+      attempts++;
+    } catch {
+      // If direct parse fails, try unescaping backslashes
+      try {
+        if (curr.includes('\\"')) {
+          const unescaped = curr.replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+          const parsed = JSON.parse(unescaped);
+          curr = parsed;
+          attempts++;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+  }
+
+  if (typeof curr === 'object' && curr !== null && !Array.isArray(curr)) {
+    return curr;
+  }
+  return {};
+}
+window.unwrapNestedJson = unwrapNestedJson;
+
+// ============================================
 // Load AI Providers
 // ============================================
 
@@ -521,78 +567,86 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
 };
 
 window.showEditAiProviderModal = function showEditAiProviderModal(id) {
-  const p = currentProviders.find(item => item.id === id);
-  if (!p) return;
-
-  editingProviderId = id;
-  document.getElementById('ai-provider-modal-title').textContent = `Edit Provider: ${p.name}`;
-  document.getElementById('ai-provider-id').value = p.id;
-
-  // Ensure submit button is cleanly reset
-  const submitBtn = document.getElementById('ai-provider-submit-btn');
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fas fa-save mr-1.5"></i> Simpan Perubahan';
-    delete submitBtn.dataset.originalHtml;
-    delete submitBtn.dataset.originalDisabled;
-  }
-
-  document.getElementById('aip-name').value = p.name || '';
-  document.getElementById('aip-slug').value = p.slug || '';
-  document.getElementById('aip-api_type').value = p.api_type || 'openai_compat';
-  document.getElementById('aip-base_url').value = p.base_url || '';
-  document.getElementById('aip-model').value = p.model || '';
-  document.getElementById('aip-api_key').value = p.api_key || '';
-  document.getElementById('aip-priority').value = p.priority ?? 100;
-  document.getElementById('aip-max_tokens').value = p.max_tokens || 8192;
-  document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
-
-  // Unwrap any multi-level JSON stringification bugs
-  const cleanHeaders = unwrapNestedJson(p.extra_headers);
-  const cleanBody = unwrapNestedJson(p.extra_body);
-
-  // Extract reasoning effort if present
-  let reasoningEffort = '';
-  if (cleanBody.reasoning_effort) {
-    reasoningEffort = String(cleanBody.reasoning_effort).toLowerCase();
-  } else if (cleanBody.thinking && cleanBody.thinking.budget_tokens) {
-    const b = Number(cleanBody.thinking.budget_tokens);
-    reasoningEffort = b <= 2048 ? 'low' : (b >= 8000 ? 'high' : 'medium');
-  }
-
-  const reSelect = document.getElementById('aip-reasoning_effort');
-  if (reSelect) reSelect.value = reasoningEffort || '';
-
-  document.getElementById('aip-extra_headers').value = Object.keys(cleanHeaders).length ? JSON.stringify(cleanHeaders, null, 2) : '{}';
-  document.getElementById('aip-extra_body').value = Object.keys(cleanBody).length ? JSON.stringify(cleanBody, null, 2) : '{}';
-
-  const form = document.getElementById('ai-provider-form');
-  if (form && !form.dataset.enterBound) {
-    form.dataset.enterBound = 'true';
-    form.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
-        e.preventDefault();
-      }
-    });
-
-    const keyTextarea = document.getElementById('aip-api_key');
-    if (keyTextarea) {
-      keyTextarea.addEventListener('input', () => window.updateAiKeyCountPill());
+  try {
+    const p = currentProviders.find(item => item.id === id);
+    if (!p) {
+      moduleToast('AI Provider', 'Data provider tidak ditemukan', 'error');
+      return;
     }
+
+    editingProviderId = id;
+    document.getElementById('ai-provider-modal-title').textContent = `Edit Provider: ${p.name}`;
+    document.getElementById('ai-provider-id').value = p.id;
+
+    // Ensure submit button is cleanly reset
+    const submitBtn = document.getElementById('ai-provider-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-save mr-1.5"></i> Simpan Perubahan';
+      delete submitBtn.dataset.originalHtml;
+      delete submitBtn.dataset.originalDisabled;
+    }
+
+    document.getElementById('aip-name').value = p.name || '';
+    document.getElementById('aip-slug').value = p.slug || '';
+    document.getElementById('aip-api_type').value = p.api_type || 'openai_compat';
+    document.getElementById('aip-base_url').value = p.base_url || '';
+    document.getElementById('aip-model').value = p.model || '';
+    document.getElementById('aip-api_key').value = p.api_key || '';
+    document.getElementById('aip-priority').value = p.priority ?? 100;
+    document.getElementById('aip-max_tokens').value = p.max_tokens || 8192;
+    document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
+
+    // Unwrap any multi-level JSON stringification bugs
+    const cleanHeaders = unwrapNestedJson(p.extra_headers);
+    const cleanBody = unwrapNestedJson(p.extra_body);
+
+    // Extract reasoning effort if present
+    let reasoningEffort = '';
+    if (cleanBody.reasoning_effort) {
+      reasoningEffort = String(cleanBody.reasoning_effort).toLowerCase();
+    } else if (cleanBody.thinking && cleanBody.thinking.budget_tokens) {
+      const b = Number(cleanBody.thinking.budget_tokens);
+      reasoningEffort = b <= 2048 ? 'low' : (b >= 8000 ? 'high' : 'medium');
+    }
+
+    const reSelect = document.getElementById('aip-reasoning_effort');
+    if (reSelect) reSelect.value = reasoningEffort || '';
+
+    document.getElementById('aip-extra_headers').value = Object.keys(cleanHeaders).length ? JSON.stringify(cleanHeaders, null, 2) : '{}';
+    document.getElementById('aip-extra_body').value = Object.keys(cleanBody).length ? JSON.stringify(cleanBody, null, 2) : '{}';
+
+    const form = document.getElementById('ai-provider-form');
+    if (form && !form.dataset.enterBound) {
+      form.dataset.enterBound = 'true';
+      form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'submit') {
+          e.preventDefault();
+        }
+      });
+
+      const keyTextarea = document.getElementById('aip-api_key');
+      if (keyTextarea) {
+        keyTextarea.addEventListener('input', () => window.updateAiKeyCountPill());
+      }
+    }
+
+    window.updateAiKeyCountPill();
+
+    const selectWrapper = document.getElementById('aip-model-select-wrapper');
+    if (selectWrapper) selectWrapper.classList.add('hidden');
+    const chipsContainer = document.getElementById('aip-model-chips');
+    if (chipsContainer) chipsContainer.innerHTML = '';
+    const feedback = document.getElementById('aip-models-feedback');
+    if (feedback) {
+      feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';
+    }
+
+    openAdminModal('ai-provider-modal', '#aip-name');
+  } catch (err) {
+    console.error('Failed to open edit AI provider modal:', err);
+    moduleToast('AI Provider', `Gagal membuka form edit: ${err.message}`, 'error');
   }
-
-  window.updateAiKeyCountPill();
-
-  const selectWrapper = document.getElementById('aip-model-select-wrapper');
-  if (selectWrapper) selectWrapper.classList.add('hidden');
-  const chipsContainer = document.getElementById('aip-model-chips');
-  if (chipsContainer) chipsContainer.innerHTML = '';
-  const feedback = document.getElementById('aip-models-feedback');
-  if (feedback) {
-    feedback.innerHTML = '💡 Klik <strong>"Tarik Daftar Model"</strong> untuk memuat seluruh model aktif langsung dari server provider.';
-  }
-
-  openAdminModal('ai-provider-modal', '#aip-name');
 };
 
 window.closeAiProviderModal = function closeAiProviderModal() {
@@ -719,9 +773,9 @@ window.saveAiProvider = async function saveAiProvider(e) {
     const max_tokens = parseInt(document.getElementById('aip-max_tokens').value) || 8192;
 
     // Handle comma or dot for temperature (e.g. "0,7" -> 0.7)
-    const rawTemp = String(document.getElementById('aip-temperature').value).replace(',', '.');
+    const rawTemp = String(document.getElementById('aip-temperature').value).trim().replace(',', '.');
     const parsedTemp = parseFloat(rawTemp);
-    const temperature = isNaN(parsedTemp) ? 0.7 : parsedTemp;
+    const temperature = isNaN(parsedTemp) ? 0.7 : Math.min(2, Math.max(0, parsedTemp));
 
     // Client-side quick validations
     if (!name) throw new Error('Nama Provider wajib diisi');
@@ -730,24 +784,42 @@ window.saveAiProvider = async function saveAiProvider(e) {
     if (!model) throw new Error('Model ID wajib diisi');
 
     let extra_headers = '{}';
-    let extra_body = '{}';
     const h = (document.getElementById('aip-extra_headers')?.value || '').trim();
     if (h && h !== '{}') {
-      try {
-        const parsedH = unwrapNestedJson(h);
+      const parsedH = unwrapNestedJson(h);
+      if (Object.keys(parsedH).length === 0) {
+        try {
+          const test = JSON.parse(h);
+          if (typeof test === 'object' && test !== null && !Array.isArray(test)) {
+            extra_headers = JSON.stringify(test);
+          } else {
+            extra_headers = '{}';
+          }
+        } catch {
+          throw new Error('Extra Headers bukan format JSON yang valid. Contoh: {"Authorization": "Bearer ..."}');
+        }
+      } else {
         extra_headers = JSON.stringify(parsedH);
-      } catch {
-        throw new Error('Extra Headers bukan format JSON yang valid');
       }
     }
 
-    const b = (document.getElementById('aip-extra_body')?.value || '').trim();
     let bodyObj = {};
+    const b = (document.getElementById('aip-extra_body')?.value || '').trim();
     if (b && b !== '{}') {
-      try {
-        bodyObj = unwrapNestedJson(b);
-      } catch {
-        throw new Error('Extra Body bukan format JSON yang valid');
+      const parsedB = unwrapNestedJson(b);
+      if (Object.keys(parsedB).length === 0) {
+        try {
+          const test = JSON.parse(b);
+          if (typeof test === 'object' && test !== null && !Array.isArray(test)) {
+            bodyObj = test;
+          } else {
+            bodyObj = {};
+          }
+        } catch {
+          throw new Error('Extra Body bukan format JSON yang valid. Contoh: {"temperature": 0.7}');
+        }
+      } else {
+        bodyObj = parsedB;
       }
     }
 

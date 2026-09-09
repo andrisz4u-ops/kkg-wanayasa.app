@@ -1078,7 +1078,7 @@ export async function renderAdmin() {
           </button>
         </div>
 
-        <form id="ai-provider-form" onsubmit="saveAiProvider(event)" class="p-8 space-y-5">
+        <form id="ai-provider-form" novalidate onsubmit="saveAiProvider(event)" class="p-8 space-y-5">
           <input type="hidden" id="ai-provider-id">
 
           <!-- Row 1: Name & Slug -->
@@ -1176,7 +1176,7 @@ export async function renderAdmin() {
             </div>
             <div>
               <label class="label">Temperature (0.0 - 2.0)</label>
-              <input type="number" id="aip-temperature" min="0" max="2" step="any" value="0.7" class="input-field font-mono">
+              <input type="text" inputmode="decimal" id="aip-temperature" value="0.7" placeholder="0.7" class="input-field font-mono">
             </div>
             <div>
               <label class="label">Tingkat Berpikir (Reasoning)</label>

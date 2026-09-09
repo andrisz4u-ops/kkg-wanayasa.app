@@ -1391,7 +1391,7 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      user_id: currentUser.id,
+      user_id: currentUser?.id || 1,
       action: 'AI_PROVIDER_CREATE',
       entity_type: 'ai_provider',
       entity_id: result.meta.last_row_id,
@@ -1511,7 +1511,7 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      user_id: currentUser.id,
+      user_id: currentUser?.id || 1,
       action: 'AI_PROVIDER_UPDATE',
       entity_type: 'ai_provider',
       entity_id: id,
@@ -1538,7 +1538,7 @@ admin.delete('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async 
 
     const currentUser: any = c.get('user');
     await createAuditLog(c.env.DB, {
-      user_id: currentUser.id,
+      user_id: currentUser?.id || 1,
       action: 'AI_PROVIDER_DELETE',
       entity_type: 'ai_provider',
       entity_id: id,

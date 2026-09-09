@@ -489,6 +489,8 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
   document.getElementById('aip-priority').value = '100';
   document.getElementById('aip-max_tokens').value = '8192';
   document.getElementById('aip-temperature').value = '0.7';
+  const reAdd = document.getElementById('aip-reasoning_effort');
+  if (reAdd) reAdd.value = '';
   document.getElementById('aip-extra_headers').value = '{}';
   document.getElementById('aip-extra_body').value = '{}';
   document.getElementById('aip-api_type').value = 'openai_compat';
@@ -545,30 +547,24 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
   document.getElementById('aip-max_tokens').value = p.max_tokens || 8192;
   document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
 
-  let extraHeadersStr = '{}';
-  if (typeof p.extra_headers === 'object' && p.extra_headers !== null) {
-    extraHeadersStr = JSON.stringify(p.extra_headers, null, 2);
-  } else if (typeof p.extra_headers === 'string' && p.extra_headers.trim()) {
-    try {
-      extraHeadersStr = JSON.stringify(JSON.parse(p.extra_headers), null, 2);
-    } catch {
-      extraHeadersStr = p.extra_headers;
-    }
+  // Unwrap any multi-level JSON stringification bugs
+  const cleanHeaders = unwrapNestedJson(p.extra_headers);
+  const cleanBody = unwrapNestedJson(p.extra_body);
+
+  // Extract reasoning effort if present
+  let reasoningEffort = '';
+  if (cleanBody.reasoning_effort) {
+    reasoningEffort = String(cleanBody.reasoning_effort).toLowerCase();
+  } else if (cleanBody.thinking && cleanBody.thinking.budget_tokens) {
+    const b = Number(cleanBody.thinking.budget_tokens);
+    reasoningEffort = b <= 2048 ? 'low' : (b >= 8000 ? 'high' : 'medium');
   }
 
-  let extraBodyStr = '{}';
-  if (typeof p.extra_body === 'object' && p.extra_body !== null) {
-    extraBodyStr = JSON.stringify(p.extra_body, null, 2);
-  } else if (typeof p.extra_body === 'string' && p.extra_body.trim()) {
-    try {
-      extraBodyStr = JSON.stringify(JSON.parse(p.extra_body), null, 2);
-    } catch {
-      extraBodyStr = p.extra_body;
-    }
-  }
+  const reSelect = document.getElementById('aip-reasoning_effort');
+  if (reSelect) reSelect.value = reasoningEffort || '';
 
-  document.getElementById('aip-extra_headers').value = extraHeadersStr;
-  document.getElementById('aip-extra_body').value = extraBodyStr;
+  document.getElementById('aip-extra_headers').value = Object.keys(cleanHeaders).length ? JSON.stringify(cleanHeaders, null, 2) : '{}';
+  document.getElementById('aip-extra_body').value = Object.keys(cleanBody).length ? JSON.stringify(cleanBody, null, 2) : '{}';
 
   const form = document.getElementById('ai-provider-form');
   if (form && !form.dataset.enterBound) {
@@ -738,22 +734,39 @@ window.saveAiProvider = async function saveAiProvider(e) {
     const h = (document.getElementById('aip-extra_headers')?.value || '').trim();
     if (h && h !== '{}') {
       try {
-        JSON.parse(h);
-        extra_headers = h;
+        const parsedH = unwrapNestedJson(h);
+        extra_headers = JSON.stringify(parsedH);
       } catch {
         throw new Error('Extra Headers bukan format JSON yang valid');
       }
     }
 
     const b = (document.getElementById('aip-extra_body')?.value || '').trim();
+    let bodyObj = {};
     if (b && b !== '{}') {
       try {
-        JSON.parse(b);
-        extra_body = b;
+        bodyObj = unwrapNestedJson(b);
       } catch {
         throw new Error('Extra Body bukan format JSON yang valid');
       }
     }
+
+    // Terapkan tingkat berpikir (Reasoning Effort / Extended Thinking) ke Extra Body
+    const effort = (document.getElementById('aip-reasoning_effort')?.value || '').trim();
+    if (effort) {
+      if (api_type === 'anthropic' || model.toLowerCase().includes('claude')) {
+        const budgetMap = { low: 2048, medium: 4096, high: 8192 };
+        bodyObj.thinking = { type: 'enabled', budget_tokens: budgetMap[effort] || 4096 };
+        delete bodyObj.reasoning_effort;
+      } else {
+        bodyObj.reasoning_effort = effort;
+        delete bodyObj.thinking;
+      }
+    } else {
+      delete bodyObj.reasoning_effort;
+      delete bodyObj.thinking;
+    }
+    extra_body = Object.keys(bodyObj).length ? JSON.stringify(bodyObj) : '{}';
 
     const payload = {
       name, slug, api_type, base_url, model, api_key,

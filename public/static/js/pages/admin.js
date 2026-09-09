@@ -1168,8 +1168,8 @@ export async function renderAdmin() {
             </p>
           </div>
 
-          <!-- Row 5: Max Tokens & Temperature -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Row 5: Max Tokens, Temperature & Reasoning Effort -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="label">Max Output Tokens</label>
               <input type="number" id="aip-max_tokens" min="256" max="131072" value="8192" class="input-field font-mono">
@@ -1177,6 +1177,15 @@ export async function renderAdmin() {
             <div>
               <label class="label">Temperature (0.0 - 2.0)</label>
               <input type="number" id="aip-temperature" min="0" max="2" step="any" value="0.7" class="input-field font-mono">
+            </div>
+            <div>
+              <label class="label">Tingkat Berpikir (Reasoning)</label>
+              <select id="aip-reasoning_effort" class="input-field text-sm">
+                <option value="">Default / Nonaktif</option>
+                <option value="low">Low (Cepat & Hemat)</option>
+                <option value="medium">Medium (Seimbang)</option>
+                <option value="high">High (Maksimal & Teliti)</option>
+              </select>
             </div>
           </div>
 

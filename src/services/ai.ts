@@ -937,6 +937,7 @@ CRITICAL JSON RULES:
                 responseMimeType: jsonMode ? 'application/json' : 'text/plain',
                 maxOutputTokens: p.max_tokens,
                 temperature: p.temperature,
+                ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
             }
         });
 
@@ -1128,6 +1129,7 @@ CRITICAL JSON RULES:
                 responseMimeType: jsonMode ? 'application/json' : 'text/plain',
                 maxOutputTokens: p.max_tokens,
                 temperature: p.temperature,
+                ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
             }
         });
 

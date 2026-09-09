@@ -784,6 +784,7 @@ window.saveAiProvider = async function saveAiProvider(e) {
     if (!model) throw new Error('Model ID wajib diisi');
 
     let extra_headers = '{}';
+    let extra_body = '{}';
     const h = (document.getElementById('aip-extra_headers')?.value || '').trim();
     if (h && h !== '{}') {
       const parsedH = unwrapNestedJson(h);

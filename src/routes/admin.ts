@@ -1645,6 +1645,10 @@ admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit,
       if (rawApiKey) {
         headers['Authorization'] = `Bearer ${rawApiKey}`;
       }
+      if (cleanUrl.includes('openrouter.ai') || cleanUrl.includes('xkiro.com')) {
+        headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
+        headers['X-Title'] = 'KKG Wanayasa App';
+      }
 
       let res = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000) });
 

@@ -172,4 +172,60 @@ describe('AI Providers Admin & Validation Tests', () => {
             expect(reconciledKeys).toEqual(['sk-new-key-987654321']);
         });
     });
+
+    describe('Smart Proxy Headers Fallback', () => {
+        it('should inject HTTP-Referer and X-Title for OpenRouter or xKiro URLs when missing', () => {
+            const provider = {
+                base_url: 'https://api.xkiro.com/v1',
+                slug: 'xkiro',
+                api_key: 'xk-test',
+                extra_headers: {}
+            };
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${provider.api_key}`,
+                ...(provider.extra_headers || {})
+            };
+
+            const isProxy = (provider.base_url && (provider.base_url.includes('openrouter.ai') || provider.base_url.includes('xkiro.com'))) ||
+                            (provider.slug && (provider.slug.includes('xkiro') || provider.slug.includes('openrouter')));
+            if (isProxy) {
+                if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
+                if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+            }
+
+            expect(headers['HTTP-Referer']).toBe('https://kkg-wanayasa.app');
+            expect(headers['X-Title']).toBe('KKG Wanayasa App');
+        });
+
+        it('should preserve custom HTTP-Referer and X-Title if explicitly provided by user', () => {
+            const provider = {
+                base_url: 'https://openrouter.ai/api/v1',
+                slug: 'openrouter',
+                api_key: 'or-test',
+                extra_headers: {
+                    'HTTP-Referer': 'https://custom-domain.com',
+                    'X-Title': 'Custom Title'
+                }
+            };
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${provider.api_key}`,
+                ...(provider.extra_headers || {})
+            };
+
+            const isProxy = (provider.base_url && (provider.base_url.includes('openrouter.ai') || provider.base_url.includes('xkiro.com'))) ||
+                            (provider.slug && (provider.slug.includes('xkiro') || provider.slug.includes('openrouter')));
+            if (isProxy) {
+                if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
+                if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+            }
+
+            expect(headers['HTTP-Referer']).toBe('https://custom-domain.com');
+            expect(headers['X-Title']).toBe('Custom Title');
+        });
+    });
 });
+

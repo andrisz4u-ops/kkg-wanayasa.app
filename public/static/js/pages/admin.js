@@ -1196,12 +1196,28 @@ export async function renderAdmin() {
             </summary>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-200/60">
               <div>
-                <label class="label">Extra HTTP Headers (JSON)</label>
+                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <label class="label mb-0">Extra HTTP Headers (JSON)</label>
+                  <div class="flex items-center gap-1">
+                    <button type="button" onclick="window.applyExtraHeaderTemplate('openrouter')" class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium cursor-pointer" title="Auto-isi HTTP-Referer & X-Title">OpenRouter/xKiro</button>
+                    <button type="button" onclick="window.applyExtraHeaderTemplate('anthropic')" class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium cursor-pointer" title="Auto-isi anthropic-version">Anthropic</button>
+                    <button type="button" onclick="window.applyExtraHeaderTemplate('empty')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 font-medium cursor-pointer">Reset</button>
+                  </div>
+                </div>
                 <textarea id="aip-extra_headers" rows="3" class="input-field font-mono text-xs" placeholder="{}">{}</textarea>
+                <p class="text-[10px] text-slate-400 mt-1">Gunakan untuk token referer, x-title, atau header autentikasi custom.</p>
               </div>
               <div>
-                <label class="label">Extra Request Body (JSON)</label>
+                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <label class="label mb-0">Extra Request Body (JSON)</label>
+                  <div class="flex items-center gap-1">
+                    <button type="button" onclick="window.applyExtraBodyTemplate('thinking_claude')" class="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium cursor-pointer" title="Extended Thinking Claude">Claude Thinking</button>
+                    <button type="button" onclick="window.applyExtraBodyTemplate('reasoning_effort')" class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium cursor-pointer" title="Reasoning effort high">Reasoning</button>
+                    <button type="button" onclick="window.applyExtraBodyTemplate('empty')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 hover:bg-slate-300 font-medium cursor-pointer">Reset</button>
+                  </div>
+                </div>
                 <textarea id="aip-extra_body" rows="3" class="input-field font-mono text-xs" placeholder="{}">{}</textarea>
+                <p class="text-[10px] text-slate-400 mt-1">Parameter tambahan payload JSON yang dikirim ke server provider.</p>
               </div>
             </div>
           </details>

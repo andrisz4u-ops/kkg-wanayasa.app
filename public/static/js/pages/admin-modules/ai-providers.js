@@ -722,6 +722,48 @@ window.applyAiPreset = function applyAiPreset(presetKey) {
   moduleToast('Preset', `Preset ${preset.name} diterapkan! Masukkan API Key Anda.`, 'info');
 };
 
+window.applyExtraHeaderTemplate = function applyExtraHeaderTemplate(templateKey) {
+  const el = document.getElementById('aip-extra_headers');
+  if (!el) return;
+  if (templateKey === 'openrouter') {
+    el.value = JSON.stringify({
+      "HTTP-Referer": "https://kkg-wanayasa.app",
+      "X-Title": "KKG Wanayasa App"
+    }, null, 2);
+    moduleToast('Header', 'Template OpenRouter/xKiro diterapkan', 'info');
+  } else if (templateKey === 'anthropic') {
+    el.value = JSON.stringify({
+      "anthropic-version": "2023-06-01"
+    }, null, 2);
+    moduleToast('Header', 'Template Anthropic diterapkan', 'info');
+  } else {
+    el.value = '{}';
+    moduleToast('Header', 'Extra Headers direset ke {}', 'info');
+  }
+};
+
+window.applyExtraBodyTemplate = function applyExtraBodyTemplate(templateKey) {
+  const el = document.getElementById('aip-extra_body');
+  if (!el) return;
+  if (templateKey === 'thinking_claude') {
+    el.value = JSON.stringify({
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 4096
+      }
+    }, null, 2);
+    moduleToast('Body', 'Template Claude Extended Thinking diterapkan', 'info');
+  } else if (templateKey === 'reasoning_effort') {
+    el.value = JSON.stringify({
+      "reasoning_effort": "high"
+    }, null, 2);
+    moduleToast('Body', 'Template Reasoning Effort diterapkan', 'info');
+  } else {
+    el.value = '{}';
+    moduleToast('Body', 'Extra Body direset ke {}', 'info');
+  }
+};
+
 // Auto slug generator from name
 window.onAiProviderNameChange = function onAiProviderNameChange() {
   if (editingProviderId) return; // Don't auto-generate when editing

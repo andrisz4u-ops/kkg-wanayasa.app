@@ -761,17 +761,25 @@ CRITICAL JSON RULES:
 
     private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
-        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
+        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
+                                 p.model.toLowerCase().includes('reasoner') || 
+                                 p.model.toLowerCase().includes('r1') || 
+                                 p.model.toLowerCase().includes('qwq');
 
-        const body: any = {
-            model: p.model,
-            stream: true,
-            messages: isReasoningModel
+        const isTestPing = p.max_tokens <= 32;
+        const messages = isTestPing
+            ? [{ role: 'user', content: prompt }]
+            : (isReasoningModel
                 ? [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + prompt }]
                 : [
                     { role: 'system', content: SYSTEM_PROMPT },
                     { role: 'user', content: prompt }
-                ],
+                  ]);
+
+        const body: any = {
+            model: p.model,
+            stream: true,
+            messages,
             ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
 
@@ -790,6 +798,14 @@ CRITICAL JSON RULES:
             'Authorization': `Bearer ${p.api_key}`,
             ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
         };
+
+        // Smart proxy headers fallback for OpenRouter, xKiro, etc.
+        const isProxyStream = (p.base_url && (p.base_url.includes('openrouter.ai') || p.base_url.includes('xkiro.com'))) ||
+                              (p.slug && (p.slug.includes('xkiro') || p.slug.includes('openrouter')));
+        if (isProxyStream) {
+            if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
+            if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+        }
 
         const controller = new AbortController();
         let initialTimer: any = null;
@@ -1014,16 +1030,24 @@ CRITICAL JSON RULES:
 
     private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
-        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3');
+        const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
+                                 p.model.toLowerCase().includes('reasoner') || 
+                                 p.model.toLowerCase().includes('r1') || 
+                                 p.model.toLowerCase().includes('qwq');
 
-        const body: any = {
-            model: p.model,
-            messages: isReasoningModel
+        const isTestPing = p.max_tokens <= 32;
+        const messages = isTestPing
+            ? [{ role: 'user', content: prompt }]
+            : (isReasoningModel
                 ? [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + prompt }]
                 : [
                     { role: 'system', content: SYSTEM_PROMPT },
                     { role: 'user', content: prompt }
-                ],
+                  ]);
+
+        const body: any = {
+            model: p.model,
+            messages,
             ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
 
@@ -1043,6 +1067,14 @@ CRITICAL JSON RULES:
             'Authorization': `Bearer ${p.api_key}`,
             ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
         };
+
+        // Smart proxy headers fallback for OpenRouter, xKiro, etc.
+        const isProxyNonStream = (p.base_url && (p.base_url.includes('openrouter.ai') || p.base_url.includes('xkiro.com'))) ||
+                                 (p.slug && (p.slug.includes('xkiro') || p.slug.includes('openrouter')));
+        if (isProxyNonStream) {
+            if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
+            if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+        }
 
         const response = await fetch(url, {
             method: 'POST',
@@ -1156,7 +1188,11 @@ CRITICAL JSON RULES:
 
     private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const region = p.extra_body?.region || this.env?.BEDROCK_REGION || 'us-east-1';
-        const endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke`;
+        let endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke`;
+        if (p.base_url && !p.base_url.includes('bedrock-runtime') && !p.base_url.includes('amazonaws.com')) {
+            const cleanBase = p.base_url.replace(/\/+$/, '');
+            endpoint = `${cleanBase}/model/${encodeURIComponent(p.model)}/invoke`;
+        }
 
         const userContent = jsonMode
             ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
@@ -1314,10 +1350,10 @@ CRITICAL JSON RULES:
         // If multiple keys in pool, test all keys concurrently in parallel
         if (keys.length > 1 && provider.api_type !== 'custom_proxy') {
             const checkPromises = keys.map(async (k, i) => {
-                const singleP: DBProvider = { ...provider, api_key: k };
+                const singleP: DBProvider = { ...provider, api_key: k, max_tokens: 16 };
                 const keyStart = Date.now();
                 try {
-                    await this.callProvider(singleP, 'Respond with the single word "OK". Nothing else.', false, 15000);
+                    await this.callProvider(singleP, 'Hi', false, 35000);
                     const keyLat = Date.now() - keyStart;
                     return {
                         index: i + 1,
@@ -1345,7 +1381,7 @@ CRITICAL JSON RULES:
                         httpCode = 403;
                         cleanMsg = '403 Forbidden (Akses ke model atau endpoint ditolak)';
                     } else if (errMsg.toLowerCase().includes('timeout')) {
-                        cleanMsg = 'Timeout (>15 detik tanpa respons)';
+                        cleanMsg = 'Timeout (>35 detik tanpa respons)';
                     }
 
                     return {
@@ -1381,8 +1417,9 @@ CRITICAL JSON RULES:
         } else {
             const singleKey = keys[0] || '';
             const keyStart = Date.now();
+            const singleTestP: DBProvider = { ...provider, max_tokens: 16 };
             try {
-                await this.callProvider(provider, 'Respond with the single word "OK". Nothing else.', false, 15000);
+                await this.callProvider(singleTestP, 'Hi', false, 35000);
                 validKeys = 1;
                 keysDetail.push({
                     index: 1,

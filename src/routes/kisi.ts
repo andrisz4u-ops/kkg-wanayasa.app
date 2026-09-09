@@ -7,7 +7,7 @@ import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { getOfficialCP, cpElementsData } from '../lib/cp-data';
-import { generateVisualStimulus, detectStimulusFromSoalText } from '../lib/visual-engine';
+import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
@@ -50,6 +50,30 @@ kisi.get('/cp-reference', async (c) => {
         elements: elements || {},
         source: 'Keputusan Kepala BSKAP No. 046 Tahun 2025'
     });
+});
+
+// Endpoint katalog template visual stimulus SVG untuk frontend picker & integrasi modul
+kisi.get('/visual-catalog', async (c) => {
+    const catalog = getVisualCatalog();
+    return successResponse(c, catalog);
+});
+
+// Endpoint on-demand visual render untuk pratinjau / custom diagram manual
+kisi.post('/visual-render', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { type, params, caption } = body;
+        if (!type) {
+            return Errors.badRequest(c, 'Parameter type wajib disertakan');
+        }
+        const result = generateVisualStimulus({ type, params, caption });
+        if (!result) {
+            return Errors.notFound(c, `Tipe visual stimulus "${type}" tidak ditemukan`);
+        }
+        return successResponse(c, result);
+    } catch (e: any) {
+        return Errors.internal(c, e.message || 'Gagal merender stimulus visual');
+    }
 });
 
 // Helper: normalisasi metadata kisi-kisi untuk setiap butir soal
@@ -395,8 +419,43 @@ export const resolveQuestionVisualStimulus = async (
                     }
                 }
                 if (!foundAlt) visualCfg = null;
+            } else if (['jaring_kubus', 'jaring_balok', 'segitiga_sama_sisi', 'segitiga_sama_kaki', 'segitiga_siku', 'persegi_panjang', 'jajar_genjang', 'belah_ketupat', 'layang_layang', 'trapesium', 'balok', 'kubus', 'tabung', 'kerucut', 'bola', 'prisma', 'limas', 'pecahan_lingkaran', 'pecahan_persegi', 'pictogram'].includes(visualCfg.type)) {
+                // Math shape collision: divert to related shape if not yet used in current exam packet
+                const geomAlternatives: Record<string, string[]> = {
+                    jaring_kubus: ['jaring_balok'],
+                    jaring_balok: ['jaring_kubus'],
+                    segitiga_sama_sisi: ['segitiga_sama_kaki', 'segitiga_siku'],
+                    segitiga_sama_kaki: ['segitiga_sama_sisi', 'segitiga_siku'],
+                    segitiga_siku: ['segitiga_sama_kaki', 'segitiga_sama_sisi'],
+                    persegi_panjang: ['jajar_genjang', 'trapesium'],
+                    jajar_genjang: ['trapesium', 'belah_ketupat'],
+                    belah_ketupat: ['layang_layang', 'jajar_genjang'],
+                    layang_layang: ['belah_ketupat'],
+                    trapesium: ['jajar_genjang', 'persegi_panjang'],
+                    balok: ['kubus', 'prisma'],
+                    kubus: ['balok', 'prisma'],
+                    tabung: ['kerucut', 'bola'],
+                    kerucut: ['tabung'],
+                    bola: ['tabung', 'kerucut'],
+                    prisma: ['limas', 'balok'],
+                    limas: ['prisma', 'kubus'],
+                    pecahan_lingkaran: ['pecahan_persegi'],
+                    pecahan_persegi: ['pecahan_lingkaran'],
+                    pictogram: ['diagram_batang', 'diagram_lingkaran']
+                };
+                const alts = geomAlternatives[visualCfg.type] || [];
+                let foundGeomAlt = false;
+                for (const altType of alts) {
+                    const anyUsed = Array.from(usedStimulusSignatures).some(s => s.startsWith(altType));
+                    if (!anyUsed) {
+                        visualCfg = { ...visualCfg, type: altType };
+                        foundGeomAlt = true;
+                        break;
+                    }
+                }
+                if (!foundGeomAlt) visualCfg = null;
             } else {
-                // Untuk bangun ruang geometri yang benar-benar identik (tipe + semua dimensi sama), alihkan ke foto
+                // Untuk bangun yang tidak memiliki alternatif, alihkan ke foto
                 visualCfg = null;
             }
             // Audit trail: log diversifikasi stimulus

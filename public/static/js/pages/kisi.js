@@ -2301,7 +2301,7 @@ function openSoalEditor(type, index, data, formData) {
 }
 
 // ============================================================
-// DEDICATED QUICK CHANGE IMAGE MODAL
+// DEDICATED QUICK CHANGE IMAGE MODAL (Upload, Link URL, & SVG Visual Engine)
 // ============================================================
 function openChangeImageModal(type, qIdx, data, formData) {
   const existing = document.querySelector('.soal-image-modal-overlay');
@@ -2314,28 +2314,47 @@ function openChangeImageModal(type, qIdx, data, formData) {
   if (!q) return;
 
   let selectedImageUrl = q.gambar?.url || '';
+  let selectedSvg = q.gambar?.svg || '';
+  let selectedTitle = q.gambar?.title || '';
 
   const overlay = document.createElement('div');
   overlay.className = 'soal-editor-overlay soal-image-modal-overlay';
   overlay.innerHTML = `
-    <div class="soal-editor-modal" style="max-width: 520px;">
-      <h3><i class="fas fa-image" style="color:#2563eb"></i> Ganti Gambar Soal No. ${q.no}</h3>
+    <div class="soal-editor-modal" style="max-width: 540px;">
+      <h3><i class="fas fa-image" style="color:#2563eb"></i> Kelola Gambar / Stimulus Soal No. ${q.no}</h3>
       
       <div style="text-align:center; margin-bottom:16px; background:#f8fafc; padding:12px; border-radius:10px; border:1px dashed #cbd5e1;">
-        <label style="margin-bottom:8px; display:block; font-size:11px; font-weight:600; color:#64748b;">Pratinjau Gambar:</label>
-        <div style="display:flex; justify-content:center; align-items:center; min-height:110px;">
-          <img id="img-change-preview" src="${selectedImageUrl || ''}" style="max-width:220px; max-height:140px; width:auto; height:auto; object-fit:contain; border-radius:6px; border:1px solid #e2e8f0; background:#fff; ${selectedImageUrl ? '' : 'display:none;'}" alt="Pratinjau">
-          <p id="img-change-empty" style="color:#94a3b8; font-size:12px; margin:0; ${selectedImageUrl ? 'display:none;' : ''}">Belum ada gambar yang dipilih</p>
+        <label style="margin-bottom:8px; display:block; font-size:11px; font-weight:600; color:#64748b;">Pratinjau Stimulus Visual:</label>
+        <div style="display:flex; justify-content:center; align-items:center; min-height:120px;">
+          <img id="img-change-preview" src="${selectedImageUrl || ''}" style="max-width:240px; max-height:160px; width:auto; height:auto; object-fit:contain; border-radius:6px; border:1px solid #e2e8f0; background:#fff; ${selectedImageUrl ? '' : 'display:none;'}" alt="Pratinjau">
+          <p id="img-change-empty" style="color:#94a3b8; font-size:12px; margin:0; ${selectedImageUrl ? 'display:none;' : ''}">Belum ada gambar/diagram yang dipilih</p>
         </div>
       </div>
 
-      <div style="margin-bottom:14px;">
-        <label><i class="fas fa-upload mr-1 text-indigo-500"></i> 1. Upload dari Komputer / Laptop</label>
+      <!-- Option 3: Diagram SVG Vektor -->
+      <div style="margin-bottom:14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px;">
+        <label style="font-size:11.5px; font-weight:700; color:#0369a1; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <i class="fas fa-bezier-curve text-sky-600"></i> Pilih dari 41 Diagram Vektor SVG (Visual Engine)
+        </label>
+        <div style="display:flex; gap:6px;">
+          <select id="modal-svg-select" class="flex-1 text-xs bg-white border border-sky-300 rounded-lg p-2 cursor-pointer" style="margin-bottom:0;">
+            <option value="">-- Memuat Katalog 41 Diagram SVG... --</option>
+          </select>
+          <button type="button" id="modal-btn-apply-svg" class="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap inline-flex items-center gap-1 shadow-sm">
+            <i class="fas fa-magic"></i> Pasang
+          </button>
+        </div>
+      </div>
+
+      <!-- Option 1: Upload File -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:#475569;"><i class="fas fa-upload mr-1 text-indigo-500"></i> Atau Upload dari Komputer / Laptop:</label>
         <input type="file" id="modal-file-input" accept="image/*" class="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs cursor-pointer">
       </div>
 
+      <!-- Option 2: URL Link -->
       <div style="margin-bottom:16px;">
-        <label><i class="fas fa-link mr-1 text-emerald-500"></i> 2. Atau Tempel Link Gambar dari Internet</label>
+        <label style="font-size:11px; font-weight:600; color:#475569;"><i class="fas fa-link mr-1 text-emerald-500"></i> Atau Tempel Link Gambar dari Internet:</label>
         <div style="display:flex; gap:6px;">
           <input type="text" id="modal-url-input" placeholder="https://..." value="${selectedImageUrl.startsWith('data:') ? '' : selectedImageUrl}" style="margin-bottom:0;" class="flex-1 text-xs">
           <button type="button" id="modal-btn-apply-url" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap">Cek Link</button>
@@ -2348,7 +2367,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
         </button>
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn-editor-cancel">Batal</button>
-          <button type="button" id="modal-btn-save-image" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Terapkan Gambar</button>
+          <button type="button" id="modal-btn-save-image" class="btn-editor-save"><i class="fas fa-check mr-1"></i> Terapkan Stimulus</button>
         </div>
       </div>
     </div>
@@ -2360,6 +2379,29 @@ function openChangeImageModal(type, qIdx, data, formData) {
   const emptyText = overlay.querySelector('#img-change-empty');
   const fileInput = overlay.querySelector('#modal-file-input');
   const urlInput = overlay.querySelector('#modal-url-input');
+  const svgSelect = overlay.querySelector('#modal-svg-select');
+
+  // Load SVG catalog from API
+  api('/kisi/visual-catalog').then(res => {
+    if (res?.data && Array.isArray(res.data)) {
+      const categories = {};
+      res.data.forEach(item => {
+        if (!categories[item.category]) categories[item.category] = [];
+        categories[item.category].push(item);
+      });
+      let html = '<option value="">-- Pilih Template Diagram SVG (41 Pilihan) --</option>';
+      for (const [cat, items] of Object.entries(categories)) {
+        html += `<optgroup label="${cat}">`;
+        items.forEach(it => {
+          html += `<option value="${it.id}">${escapeHtml(it.name)} - ${escapeHtml(it.description)}</option>`;
+        });
+        html += `</optgroup>`;
+      }
+      svgSelect.innerHTML = html;
+    }
+  }).catch(() => {
+    svgSelect.innerHTML = '<option value="">Gagal memuat katalog SVG</option>';
+  });
 
   const updatePreview = (url) => {
     selectedImageUrl = url;
@@ -2374,6 +2416,33 @@ function openChangeImageModal(type, qIdx, data, formData) {
     }
   };
 
+  // SVG apply
+  overlay.querySelector('#modal-btn-apply-svg').addEventListener('click', async () => {
+    const type = svgSelect.value;
+    if (!type) {
+      showToast('Pilih salah satu template diagram SVG terlebih dahulu.', 'error');
+      return;
+    }
+    try {
+      showToast('Merender diagram SVG...', 'info');
+      const res = await api('/kisi/visual-render', {
+        method: 'POST',
+        body: { type }
+      });
+      if (res?.data?.dataUri) {
+        selectedImageUrl = res.data.dataUri;
+        selectedSvg = res.data.svg;
+        selectedTitle = res.data.title;
+        updatePreview(selectedImageUrl);
+        urlInput.value = '';
+        fileInput.value = '';
+        showToast(`Diagram ${res.data.title} berhasil dipasang.`, 'success');
+      }
+    } catch (err) {
+      showToast('Gagal merender diagram: ' + err.message, 'error');
+    }
+  });
+
   // File input change
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
@@ -2384,6 +2453,8 @@ function openChangeImageModal(type, qIdx, data, formData) {
       }
       const reader = new FileReader();
       reader.onload = (re) => {
+        selectedSvg = '';
+        selectedTitle = file.name;
         updatePreview(re.target.result);
         urlInput.value = '';
         showToast('Gambar dari komputer berhasil dipilih.', 'info');
@@ -2399,6 +2470,8 @@ function openChangeImageModal(type, qIdx, data, formData) {
       showToast('Masukkan link gambar yang valid.', 'error');
       return;
     }
+    selectedSvg = '';
+    selectedTitle = 'Gambar Internet';
     updatePreview(url);
     fileInput.value = '';
     showToast('Link gambar berhasil dimuat.', 'info');
@@ -2406,6 +2479,8 @@ function openChangeImageModal(type, qIdx, data, formData) {
 
   // Remove image
   overlay.querySelector('#modal-btn-remove-this-img').addEventListener('click', () => {
+    selectedSvg = '';
+    selectedTitle = '';
     updatePreview('');
     urlInput.value = '';
     fileInput.value = '';
@@ -2429,7 +2504,11 @@ function openChangeImageModal(type, qIdx, data, formData) {
     if (selectedImageUrl) {
       q.gambar = {
         url: selectedImageUrl,
-        deskripsi: q.gambar?.deskripsi || 'Gambar Ilustrasi'
+        svg: selectedSvg || undefined,
+        type: selectedSvg ? 'svg' : (selectedImageUrl.includes('image/svg+xml') ? 'svg' : 'photo'),
+        title: selectedTitle || q.gambar?.title || 'Gambar Ilustrasi',
+        credit: selectedSvg ? 'Examplate Visual Engine' : (q.gambar?.credit || 'Upload Manual'),
+        deskripsi: q.gambar?.deskripsi || selectedTitle || 'Gambar Ilustrasi'
       };
     } else {
       delete q.gambar;
@@ -2437,7 +2516,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
     overlay.remove();
     document.removeEventListener('keydown', escImgHandler);
     renderResult(data, formData);
-    showToast(selectedImageUrl ? `Gambar pada nomor ${q.no} berhasil diganti.` : `Gambar pada nomor ${q.no} berhasil dihapus.`, 'success');
+    showToast(selectedImageUrl ? `Stimulus pada soal nomor ${q.no} berhasil diperbarui.` : `Gambar pada nomor ${q.no} berhasil dihapus.`, 'success');
   });
 }
 

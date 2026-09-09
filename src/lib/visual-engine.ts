@@ -2,13 +2,15 @@
  * visual-engine.ts
  * Examplate Visual Stimulus Engine untuk Portal Pendidikan A4EDU / KKG Wanayasa
  *
- * Menghasilkan visual stimulus SVG vektor berstandar lembar ujian sekolah nasional:
- * 1. Geometri 3D & 2D (Balok, Kubus, Tabung, Kerucut, Bola, Sudut, Segitiga Siku)
- * 2. Pecahan (Pecahan Lingkaran terarsir, Pecahan Persegi Grid)
- * 3. Statistik / Data Chart (Diagram Batang, Diagram Garis, Diagram Lingkaran)
- * 4. Diagram IPAS / Sains Berlabel Dinamis (Organ Pernapasan, Pencernaan, Siklus Air, Metamorfosis, Bagian Bunga, Rantai Makanan)
- * 5. Pengukuran & Waktu (Jam Dinding Analog, Garis Bilangan)
- * 6. Parser Cerdas Pendeteksi Stimulus dari Teks Soal
+ * Menghasilkan 41 stimulus visual SVG vektor presisi berstandar lembar ujian nasional:
+ * 1. Geometri 3D: Balok, Kubus, Tabung, Kerucut, Bola, Prisma, Limas, Jaring-jaring Kubus, Jaring-jaring Balok
+ * 2. Geometri 2D: Persegi Panjang, Segitiga Siku, Segitiga Sama Sisi, Segitiga Sama Kaki, Lingkaran, Trapesium, Jajar Genjang, Belah Ketupat, Layang-layang, Sudut, Simetri Lipat, Bangun Gabungan L/T, Koordinat Kartesius
+ * 3. Pecahan: Pecahan Lingkaran terarsir, Pecahan Persegi Grid terarsir
+ * 4. Statistik & Data: Diagram Batang, Diagram Garis, Diagram Lingkaran (Pie), Diagram Venn, Pictogram (Diagram Gambar)
+ * 5. Pengukuran: Jam Dinding Analog, Garis Bilangan
+ * 6. IPAS / Sains: Sistem Pencernaan, Vili Usus Halus, Struktur Gigi, Lambung Detail, Sistem Pernapasan, Alveolus, Siklus Air, Metamorfosis, Bagian Bunga, Rantai Makanan
+ * 7. Parser Cerdas Pendeteksi Stimulus Otomatis dari Teks Soal
+ * 8. Katalog Template Terpadu untuk Integrasi API & UI
  */
 
 export interface VisualStimulusConfig {
@@ -1121,6 +1123,12 @@ export function renderPersegiPanjangSvg(params: { p?: number; l?: number; unit?:
       <stop offset="0%" stop-color="#f0f9ff"/>
       <stop offset="100%" stop-color="#dbeafe"/>
     </linearGradient>
+    <marker id="arrowL" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 10 0 L 0 5 L 10 10 z" fill="#e11d48"/>
+    </marker>
+    <marker id="arrowR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#e11d48"/>
+    </marker>
   </defs>
 
   <!-- Persegi Panjang utama -->
@@ -2756,5 +2764,73 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
   }
 
   return null;
+}
+
+export interface VisualCatalogItem {
+  id: string;
+  category: 'Geometri 3D' | 'Geometri 2D' | 'Pecahan' | 'Statistik' | 'Pengukuran' | 'Sains / IPAS';
+  name: string;
+  description: string;
+  sampleParams: Record<string, any>;
+}
+
+/**
+ * Katalog lengkap 41 template visual stimulus SVG untuk API dan UI selector
+ */
+export function getVisualCatalog(): VisualCatalogItem[] {
+  return [
+    // Geometri 3D
+    { id: 'balok', category: 'Geometri 3D', name: 'Balok 3D', description: 'Balok isometrik dengan p, l, t dan rusuk putus-putus', sampleParams: { p: 12, l: 8, t: 6, unit: 'cm' } },
+    { id: 'kubus', category: 'Geometri 3D', name: 'Kubus 3D', description: 'Kubus isometrik dengan panjang rusuk s', sampleParams: { s: 10, unit: 'cm' } },
+    { id: 'tabung', category: 'Geometri 3D', name: 'Tabung 3D', description: 'Silinder tabung dengan jari-jari r dan tinggi t', sampleParams: { r: 7, t: 14, unit: 'cm' } },
+    { id: 'kerucut', category: 'Geometri 3D', name: 'Kerucut 3D', description: 'Kerucut dengan jari-jari r, tinggi t, garis pelukis s', sampleParams: { r: 7, t: 12, s: 15, unit: 'cm' } },
+    { id: 'bola', category: 'Geometri 3D', name: 'Bola 3D', description: 'Bola berarsir radial dengan jari-jari r', sampleParams: { r: 14, unit: 'cm' } },
+    { id: 'prisma', category: 'Geometri 3D', name: 'Prisma Segitiga 3D', description: 'Prisma segitiga isometrik dengan alas, tinggi, panjang', sampleParams: { alas: 10, tinggiSegitiga: 8, panjang: 15, unit: 'cm' } },
+    { id: 'limas', category: 'Geometri 3D', name: 'Limas Segiempat 3D', description: 'Limas piramida dengan alas persegi s dan tinggi t', sampleParams: { s: 10, t: 12, unit: 'cm' } },
+    { id: 'jaring_kubus', category: 'Geometri 3D', name: 'Jaring-jaring Kubus', description: 'Pola salib 6 muka kubus berlabel sisi', sampleParams: { s: 5, unit: 'cm' } },
+    { id: 'jaring_balok', category: 'Geometri 3D', name: 'Jaring-jaring Balok', description: 'Pola unfolded balok p × l × t berlabel muka', sampleParams: { p: 6, l: 4, t: 3, unit: 'cm' } },
+
+    // Geometri 2D
+    { id: 'persegi_panjang', category: 'Geometri 2D', name: 'Persegi Panjang', description: 'Persegi panjang ABCD berdimensi p & l dan siku-siku', sampleParams: { p: 12, l: 8, unit: 'cm' } },
+    { id: 'segitiga_sama_sisi', category: 'Geometri 2D', name: 'Segitiga Sama Sisi', description: 'Segitiga 3 sisi sama berlabel s dan sudut 60°', sampleParams: { s: 10, unit: 'cm' } },
+    { id: 'segitiga_sama_kaki', category: 'Geometri 2D', name: 'Segitiga Sama Kaki', description: 'Segitiga dengan 2 kaki sama dan garis tinggi putus-putus', sampleParams: { kaki: 10, alas: 8, unit: 'cm' } },
+    { id: 'segitiga_siku', category: 'Geometri 2D', name: 'Segitiga Siku-siku', description: 'Segitiga siku-siku berlabel alas, tinggi, sisi miring', sampleParams: { alas: 6, tinggi: 8, miring: 10, unit: 'cm' } },
+    { id: 'lingkaran', category: 'Geometri 2D', name: 'Lingkaran (2D)', description: 'Bangun datar lingkaran dengan jari-jari r', sampleParams: { r: 14, unit: 'cm' } },
+    { id: 'trapesium', category: 'Geometri 2D', name: 'Trapesium', description: 'Trapesium dengan sisi alas atas, alas bawah, dan tinggi', sampleParams: { atasAlas: 8, bawahAlas: 14, tinggi: 10, unit: 'cm' } },
+    { id: 'jajar_genjang', category: 'Geometri 2D', name: 'Jajar Genjang', description: 'Jajar genjang dengan alas, tinggi, dan garis tinggi proyeksi', sampleParams: { alas: 15, tinggi: 10, unit: 'cm' } },
+    { id: 'belah_ketupat', category: 'Geometri 2D', name: 'Belah Ketupat', description: 'Belah ketupat dengan diagonal d1 dan d2', sampleParams: { d1: 12, d2: 16, unit: 'cm' } },
+    { id: 'layang_layang', category: 'Geometri 2D', name: 'Layang-layang', description: 'Layang-layang dengan persilangan diagonal d1 dan d2', sampleParams: { d1: 10, d2: 18, unit: 'cm' } },
+    { id: 'sudut', category: 'Geometri 2D', name: 'Pengukuran Sudut', description: 'Sudut dengan busur derajat', sampleParams: { derajat: 60 } },
+    { id: 'simetri_lipat', category: 'Geometri 2D', name: 'Simetri Lipat', description: 'Bangun datar dengan sumbu simetri lipat putus-putus', sampleParams: { bangun: 'persegi' } },
+    { id: 'bangun_gabungan', category: 'Geometri 2D', name: 'Bangun Gabungan L / T', description: 'Bangun datar gabungan poligon bentuk L atau T', sampleParams: { bentuk: 'L', segmen: [{ p: 10, l: 4 }, { p: 6, l: 4 }], unit: 'cm' } },
+    { id: 'koordinat', category: 'Geometri 2D', name: 'Koordinat Kartesius', description: 'Bidang kartesius 4 kuadran dengan titik berlabel', sampleParams: { titik: [{ x: 3, y: 4, label: 'P' }, { x: -2, y: 3, label: 'Q' }] } },
+
+    // Pecahan
+    { id: 'pecahan_lingkaran', category: 'Pecahan', name: 'Pecahan Lingkaran', description: 'Pecahan juring lingkaran terarsir', sampleParams: { pembagi: 4, diarsir: 3 } },
+    { id: 'pecahan_persegi', category: 'Pecahan', name: 'Pecahan Persegi (Grid)', description: 'Matriks grid kotak terarsir proporsional', sampleParams: { kolom: 4, baris: 2, diarsir: 3 } },
+
+    // Statistik
+    { id: 'diagram_batang', category: 'Statistik', name: 'Diagram Batang', description: 'Diagram batang vertikal dengan label sumbu X & Y', sampleParams: { judul: 'Data Penjualan', labels: ['Senin', 'Selasa', 'Rabu'], data: [20, 35, 30] } },
+    { id: 'diagram_garis', category: 'Statistik', name: 'Diagram Garis', description: 'Diagram garis tren dengan titik data berurutan', sampleParams: { judul: 'Suhu Udara', labels: ['06.00', '12.00', '18.00'], data: [24, 32, 28] } },
+    { id: 'diagram_lingkaran', category: 'Statistik', name: 'Diagram Lingkaran (Pie)', description: 'Pie chart statistik dengan persentase dan legenda', sampleParams: { judul: 'Data Hobi', labels: ['Membaca', 'Olahraga', 'Musik'], data: [40, 35, 25] } },
+    { id: 'diagram_venn', category: 'Statistik', name: 'Diagram Venn', description: 'Dua himpunan overlap dengan semesta S dan irisan', sampleParams: { judul: 'Hobi Siswa', labelA: 'Sepak Bola', labelB: 'Basket', aSaja: 12, irisan: 5, bSaja: 8 } },
+    { id: 'pictogram', category: 'Statistik', name: 'Pictogram / Diagram Gambar', description: 'Tabel diagram gambar dengan baris ikon dan legenda', sampleParams: { judul: 'Data Penjualan Buah', labels: ['Apel', 'Jeruk', 'Mangga'], data: [4, 3, 5], ikon: '●', nilaiIkon: 2 } },
+
+    // Pengukuran
+    { id: 'jam_analog', category: 'Pengukuran', name: 'Jam Analog', description: 'Jam dinding analog dengan jarum jam dan menit presisi', sampleParams: { jam: 7, menit: 30 } },
+    { id: 'garis_bilangan', category: 'Pengukuran', name: 'Garis Bilangan', description: 'Garis bilangan bulat berlabel titik P', sampleParams: { min: -5, max: 5, titik: [{ x: 2, label: 'P' }] } },
+
+    // Sains / IPAS
+    { id: 'organ_pencernaan', category: 'Sains / IPAS', name: 'Sistem Pencernaan', description: 'Organ pencernaan makro manusia berlabel target X', sampleParams: { pointer: 'lambung', label: 'X' } },
+    { id: 'vili_usus', category: 'Sains / IPAS', name: 'Vili Usus Halus', description: 'Struktur mikroskopis penyerapan sari makanan', sampleParams: { pointer: 'vili', label: 'X' } },
+    { id: 'struktur_gigi', category: 'Sains / IPAS', name: 'Struktur & Jenis Gigi', description: 'Gigi seri, taring, dan geraham dengan fungsinya', sampleParams: { pointer: 'taring', label: 'X' } },
+    { id: 'lambung_detail', category: 'Sains / IPAS', name: 'Lambung & Enzim Detail', description: 'Penampang dinding lambung, rugae, kardia, dan pilorus', sampleParams: { pointer: 'rugae', label: 'X' } },
+    { id: 'organ_pernapasan', category: 'Sains / IPAS', name: 'Sistem Pernapasan', description: 'Organ pernapasan manusia berlabel target X', sampleParams: { pointer: 'trakea', label: 'X' } },
+    { id: 'alveolus', category: 'Sains / IPAS', name: 'Alveolus & Pertukaran Gas', description: 'Penampang mikroskopis kapiler dan difusi O2/CO2', sampleParams: { pointer: 'alveolus', label: 'X' } },
+    { id: 'siklus_air', category: 'Sains / IPAS', name: 'Siklus Air', description: 'Daur air (evaporasi, kondensasi, presipitasi, infiltrasi)', sampleParams: { pointer: 'evaporasi', label: 'X' } },
+    { id: 'metamorfosis', category: 'Sains / IPAS', name: 'Metamorfosis Kupu-kupu', description: 'Daur hidup telur, ulat, kepompong, kupu-kupu berlabel X', sampleParams: { pointer: 'kepompong', label: 'X' } },
+    { id: 'bagian_bunga', category: 'Sains / IPAS', name: 'Bagian Bunga', description: 'Penampang putik, benang sari, mahkota, kelopak berlabel X', sampleParams: { pointer: 'putik', label: 'X' } },
+    { id: 'rantai_makanan', category: 'Sains / IPAS', name: 'Rantai Makanan', description: 'Alur produsen -> konsumen 1, 2, 3 -> pengurai berlabel X', sampleParams: { pointer: 'produsen', label: 'X' } }
+  ];
 }
 

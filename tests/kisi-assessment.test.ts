@@ -259,5 +259,59 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             // Both questions must not have the exact same SVG
             expect(qA.gambar.svg).not.toEqual(qB.gambar?.svg);
         });
+
+        it('should prevent exact duplicate math shapes when two questions have identical shape focus', async () => {
+            const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
+            const usedStimulusSignatures = new Set<string>();
+
+            const qA: any = { no: 1, soal: 'Perhatikan jaring-jaring kubus dengan rusuk 5 cm berikut!' };
+            await resolveQuestionVisualStimulus(qA, 'Matematika', 'Bangun Ruang', null, usedStimulusSignatures);
+            expect(qA.gambar?.type).toBe('svg');
+            expect(qA.gambar?.title).toContain('Jaring-jaring Kubus');
+
+            const qB: any = { no: 2, soal: 'Perhatikan jaring-jaring kubus dengan rusuk 5 cm berikut!' };
+            await resolveQuestionVisualStimulus(qB, 'Matematika', 'Bangun Ruang', null, usedStimulusSignatures);
+            expect(qB.gambar?.type).toBe('svg');
+            // Diverted to alternative geometric shape (jaring_balok)
+            expect(qB.gambar?.title).toContain('Jaring-jaring Balok');
+            expect(qA.gambar?.svg).not.toEqual(qB.gambar?.svg);
+        });
+
+        it('should provide full visual catalog with 41 distinct templates', async () => {
+            const { getVisualCatalog } = await import('../src/lib/visual-engine');
+            const catalog = getVisualCatalog();
+            expect(catalog.length).toBe(41);
+            const ids = catalog.map(item => item.id);
+            expect(ids).toContain('persegi_panjang');
+            expect(ids).toContain('segitiga_sama_sisi');
+            expect(ids).toContain('jaring_kubus');
+            expect(ids).toContain('jaring_balok');
+            expect(ids).toContain('koordinat');
+            expect(ids).toContain('diagram_venn');
+            expect(ids).toContain('pictogram');
+            expect(ids).toContain('simetri_lipat');
+            expect(ids).toContain('bangun_gabungan');
+        });
+
+        it('should handle /visual-catalog and /visual-render endpoints via kisi router', async () => {
+            const kisi = (await import('../src/routes/kisi')).default;
+
+            const resCatalog = await kisi.request('/visual-catalog');
+            expect(resCatalog.status).toBe(200);
+            const bodyCat = await resCatalog.json();
+            expect(bodyCat.success).toBe(true);
+            expect(bodyCat.data.length).toBe(41);
+
+            const resRender = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'persegi_panjang', params: { p: 12, l: 8 } })
+            });
+            expect(resRender.status).toBe(200);
+            const bodyRender = await resRender.json();
+            expect(bodyRender.success).toBe(true);
+            expect(bodyRender.data.svg).toContain('Persegi Panjang ABCD');
+            expect(bodyRender.data.dataUri).toContain('data:image/svg+xml');
+        });
     });
 });

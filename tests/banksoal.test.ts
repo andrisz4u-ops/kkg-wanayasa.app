@@ -217,4 +217,25 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         const data = await res.json();
         expect(data.success).toBe(false);
     });
+
+    it('should support flexible filtering by mapel and kelas (e.g. kelas=5 or kelas=Kelas 5)', async () => {
+        const mockDb = createMockDb(true);
+        const resNum = await banksoal.request('/?kelas=5&mapel=Matematika', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer test-session-token' }
+        }, { DB: mockDb } as any);
+
+        expect(resNum.status).toBe(200);
+        const dataNum = await resNum.json();
+        expect(dataNum.success).toBe(true);
+
+        const resNamed = await banksoal.request('/?kelas=Kelas%205&mapel=IPAS', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer test-session-token' }
+        }, { DB: mockDb } as any);
+
+        expect(resNamed.status).toBe(200);
+        const dataNamed = await resNamed.json();
+        expect(dataNamed.success).toBe(true);
+    });
 });

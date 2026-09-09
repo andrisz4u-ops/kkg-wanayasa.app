@@ -14,7 +14,7 @@ const banksoal = new Hono<{ Bindings: Bindings }>();
 // ============================================
 // Self-healing: ensure tables exist
 // ============================================
-async function ensureBankSoalTables(db: D1Database): Promise<void> {
+export async function ensureBankSoalTables(db: D1Database): Promise<void> {
     try {
         await db.prepare('SELECT 1 FROM bank_soal LIMIT 1').first();
     } catch {
@@ -103,12 +103,18 @@ banksoal.get('/', async (c) => {
     }
 
     if (mapel) {
-        where += ` AND LOWER(bs.mata_pelajaran) = LOWER(?)`;
-        params.push(mapel);
+        where += ` AND (LOWER(bs.mata_pelajaran) = LOWER(?) OR LOWER(bs.mata_pelajaran) LIKE LOWER(?))`;
+        params.push(mapel, `%${mapel}%`);
     }
     if (kelas) {
-        where += ` AND LOWER(bs.jenjang_kelas) = LOWER(?)`;
-        params.push(kelas);
+        const num = kelas.replace(/[^0-9]/g, '');
+        if (num) {
+            where += ` AND (LOWER(bs.jenjang_kelas) = LOWER(?) OR LOWER(bs.jenjang_kelas) = LOWER(?) OR LOWER(bs.jenjang_kelas) = ?)`;
+            params.push(kelas, `Kelas ${num}`, num);
+        } else {
+            where += ` AND LOWER(bs.jenjang_kelas) = LOWER(?)`;
+            params.push(kelas);
+        }
     }
     if (topik) {
         where += ` AND LOWER(bs.topik) LIKE LOWER(?)`;

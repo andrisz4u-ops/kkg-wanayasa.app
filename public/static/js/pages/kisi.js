@@ -872,13 +872,107 @@ function containsSundaneseScript(text) {
   return /[\u1B80-\u1BBF\u1CC0-\u1CCF]/.test(text);
 }
 
+// Helper: bersihkan segala artefak sisa prompt, visual_stimulus, gambar_keyword dari naskah soal
+function cleanPromptDebris(text) {
+  if (!text) return '';
+  let s = String(text);
+
+  // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
+  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
+  s = s.replace(/\[[^\]]*\]/g, '');
+
+  // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
+  let safetyCounter = 0;
+  while (safetyCounter++ < 20) {
+    const match = s.match(/visual_stimulus\s*:?\s*\{/i);
+    if (!match || match.index === undefined) break;
+
+    const startIdx = match.index;
+    const braceStart = s.indexOf('{', startIdx);
+    let depth = 0;
+    let endIdx = -1;
+
+    for (let i = braceStart; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          endIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (endIdx !== -1) {
+      let pre = s.substring(0, startIdx);
+      let post = s.substring(endIdx + 1);
+      if (pre.endsWith('\n') && post.startsWith('\n')) {
+        post = post.substring(1);
+      }
+      s = pre + post;
+    } else {
+      const newlineIdx = s.indexOf('\n', startIdx);
+      if (newlineIdx !== -1) {
+        s = s.substring(0, startIdx) + s.substring(newlineIdx);
+      } else {
+        s = s.substring(0, startIdx);
+      }
+      break;
+    }
+  }
+
+  // 3. Hapus objek JSON stimulus mandiri yang bocor di naskah soal (misal {"type": "sudut", "params": {...}})
+  safetyCounter = 0;
+  while (safetyCounter++ < 20) {
+    const match = s.match(/\{\s*"type"\s*:\s*"[a-zA-Z0-9_-]+"/i);
+    if (!match || match.index === undefined) break;
+
+    const startIdx = match.index;
+    let depth = 0;
+    let endIdx = -1;
+
+    for (let i = startIdx; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          endIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (endIdx !== -1) {
+      let pre = s.substring(0, startIdx);
+      let post = s.substring(endIdx + 1);
+      if (pre.endsWith('\n') && post.startsWith('\n')) {
+        post = post.substring(1);
+      }
+      s = pre + post;
+    } else {
+      break;
+    }
+  }
+
+  // 4. Bersihkan sisa-sisa keyword prompt baris tunggal
+  s = s.replace(/^[ \t]*visual_stimulus\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/visual_stimulus\s*:[^\n\r]*/gi, '');
+  s = s.replace(/^[ \t]*gambar_keyword\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/gambar_keyword\s*:[^\n\r]*/gi, '');
+  s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
+
+  // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+  s = s.replace(/[ \t]+/g, ' ');
+  s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
+
+  return s;
+}
+
 // Helper: normalisasi teks soal agar tabel (Markdown, tabel titik dua, maupun spasi tabular) terformat rapi
 function normalizeSoalMarkdown(text) {
   if (!text) return '';
-  let clean = String(text)
-    .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-    .replace(/\[[^\]]*\]/g, '')
-    .trim();
+  let clean = cleanPromptDebris(text);
 
   // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
   clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');
@@ -1227,6 +1321,9 @@ export function initKisi() {
               content: finalResultData
             });
 
+            // Auto-update badge Bank Soal Kolaboratif seketika
+            loadBankSoalCountBadge();
+
             showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
           });
         } else {
@@ -1261,6 +1358,9 @@ export function initKisi() {
             inputData: data,
             content: result.data
           });
+
+          // Auto-update badge Bank Soal Kolaboratif seketika
+          loadBankSoalCountBadge();
 
           showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
         } else {
@@ -1314,6 +1414,7 @@ export function initKisi() {
   // Bank Soal Kolaboratif Handler
   document.getElementById('btn-bank-soal')?.addEventListener('click', () => {
     openBankSoalDrawer();
+    loadBankSoalCountBadge();
   });
 
   // Load bank soal count badge
@@ -1323,6 +1424,9 @@ export function initKisi() {
   document.getElementById('btn-back-form')?.addEventListener('click', () => {
     document.getElementById('asesmen-form-view').classList.remove('hidden');
     document.getElementById('asesmen-result-view').classList.add('hidden');
+
+    // Pastikan badge count Bank Soal Kolaboratif selalu ter-update seketika tanpa reload F5
+    loadBankSoalCountBadge();
 
     const form = document.getElementById('asesmen-form');
     if (!form) return;
@@ -2157,7 +2261,7 @@ function openSoalEditor(type, index, data, formData) {
       </div>
 
       <label>Teks Soal</label>
-      <textarea id="edit-soal-text" rows="3">${escapeHtml(q.soal || '')}</textarea>
+      <textarea id="edit-soal-text" rows="3">${escapeHtml(cleanPromptDebris(q.soal || ''))}</textarea>
       ${gambarSectionHTML}
       ${opsiFieldsHTML}
       ${rubrikHTML}
@@ -2247,7 +2351,7 @@ function openSoalEditor(type, index, data, formData) {
     const newSoal = overlay.querySelector('#edit-soal-text').value.trim();
     if (!newSoal) { showToast('Teks soal tidak boleh kosong.', 'error'); return; }
 
-    q.soal = newSoal;
+    q.soal = cleanPromptDebris(newSoal);
 
     // Update kisi-kisi attributes
     const newCP = overlay.querySelector('#edit-cp')?.value.trim();
@@ -2834,9 +2938,22 @@ async function loadBankSoalCountBadge() {
     const res = await api('/banksoal/stats');
     if (res.success && res.data) {
       const badge = document.getElementById('bank-soal-count-badge');
-      if (badge && res.data.total_soal > 0) {
-        badge.textContent = res.data.total_soal;
-        badge.classList.remove('hidden');
+      if (badge) {
+        const total = Number(res.data.total_soal) || 0;
+        if (total > 0) {
+          badge.textContent = total;
+          badge.classList.remove('hidden');
+          // Animasi halus agar pengguna melihat pertambahan secara interaktif
+          badge.classList.add('scale-110');
+          setTimeout(() => badge.classList.remove('scale-110'), 300);
+        } else {
+          badge.textContent = '0';
+          badge.classList.add('hidden');
+        }
+      }
+      const subtitle = document.getElementById('bs-header-subtitle');
+      if (subtitle) {
+        subtitle.textContent = `${res.data.total_soal || 0} paket soal · ${res.data.my_soal || 0} milik Anda`;
       }
     }
   } catch (_) { /* ignore */ }
@@ -2868,225 +2985,534 @@ function renderStars(rating, size = 'text-xs') {
   return h;
 }
 
-async function openBankSoalDrawer(filters = {}) {
-  const existing = document.getElementById('banksoal-drawer-root');
+// Global reference for refreshing active modal in-place
+let activeBankSoalRefresh = null;
+
+async function applyBankSoalPackage(id) {
+  try {
+    const res = await api(`/banksoal/${id}`);
+    if (!res.success || !res.data) {
+      showToast('Gagal memuat paket soal', 'error');
+      return;
+    }
+    const soal = res.data;
+    try {
+      await api(`/banksoal/${id}/use`, { method: 'POST' });
+    } catch (_) {}
+
+    const formData = {
+      mataPelajaran: soal.mata_pelajaran,
+      topik: soal.topik,
+      jenjangKelas: soal.jenjang_kelas,
+      semester: soal.semester || '',
+      jenisUjian: soal.jenis_ujian || '',
+      namaSekolah: state.user?.sekolah_nama || state.user?.sekolah || '',
+      namaGuru: state.user?.nama || soal.user_nama,
+      nipGuru: state.user?.nip || '',
+      namaKepalaSekolah: state.user?.kepala_sekolah || '',
+      nipKepalaSekolah: state.user?.nip_kepala_sekolah || '',
+      isianType: soal.isian_type || 'Standard',
+    };
+
+    // Close modals
+    document.getElementById('banksoal-modal-root')?.remove();
+    document.getElementById('banksoal-drawer-root')?.remove();
+    document.getElementById('banksoal-detail-modal')?.remove();
+
+    // Render into result view
+    renderResult(soal.content, formData);
+    showToast(`Paket soal "${soal.topik}" berhasil dimuat! Siap dicetak atau diekspor ke Word.`, 'success');
+  } catch (err) {
+    showToast('Gagal menerapkan paket soal: ' + (err.message || 'Error'), 'error');
+  }
+}
+
+async function openBankSoalDrawer(initialFilters = {}) {
+  // Remove any stale modals
+  const existing = document.getElementById('banksoal-modal-root') || document.getElementById('banksoal-drawer-root');
   if (existing) existing.remove();
 
-  const mapel = filters.mapel || '';
-  const kelas = filters.kelas || '';
-  const topik = filters.topik || '';
-  const sort = filters.sort || 'newest';
-  const mine = filters.mine || '';
-  const page = filters.page || 1;
+  // Active filter state
+  const filters = {
+    mapel: initialFilters.mapel || '',
+    kelas: initialFilters.kelas || '',
+    topik: initialFilters.topik || '',
+    sort: initialFilters.sort || 'newest',
+    mine: initialFilters.mine || '',
+    page: initialFilters.page || 1,
+  };
 
-  let url = `/banksoal?page=${page}&limit=12&sort=${sort}`;
-  if (mapel) url += `&mapel=${encodeURIComponent(mapel)}`;
-  if (kelas) url += `&kelas=${encodeURIComponent(kelas)}`;
-  if (topik) url += `&topik=${encodeURIComponent(topik)}`;
-  if (mine) url += `&mine=1`;
-
-  let items = [];
-  let pagination = { page: 1, totalPages: 1, total: 0 };
+  // Fetch initial stats for select options and header counters
   let stats = { total_soal: 0, my_soal: 0, per_mapel: [], per_kelas: [] };
-
   try {
-    const [listRes, statsRes] = await Promise.all([
-      api(url),
-      api('/banksoal/stats')
-    ]);
-    if (listRes.success) {
-      items = listRes.data.items || [];
-      pagination = listRes.data.pagination || pagination;
+    const statsRes = await api('/banksoal/stats');
+    if (statsRes.success && statsRes.data) {
+      stats = statsRes.data;
+      const badge = document.getElementById('bank-soal-count-badge');
+      if (badge) {
+        const total = Number(stats.total_soal) || 0;
+        if (total > 0) {
+          badge.textContent = total;
+          badge.classList.remove('hidden');
+        } else {
+          badge.textContent = '0';
+          badge.classList.add('hidden');
+        }
+      }
     }
-    if (statsRes.success) stats = statsRes.data;
-  } catch (e) {
-    console.error('Bank Soal load error:', e);
-  }
+  } catch (_) {}
 
-  const mapelOptions = (stats.per_mapel || []).map(m => `<option value="${escBs(m.mata_pelajaran)}" ${mapel === m.mata_pelajaran ? 'selected' : ''}>${escBs(m.mata_pelajaran)} (${m.count})</option>`).join('');
-  const kelasOptions = [1,2,3,4,5,6].map(k => `<option value="Kelas ${k}" ${kelas === `Kelas ${k}` ? 'selected' : ''}>Kelas ${k}</option>`).join('');
+  const mapelOptions = (stats.per_mapel || []).map(m => 
+    `<option value="${escBs(m.mata_pelajaran)}" ${filters.mapel === m.mata_pelajaran ? 'selected' : ''}>${escBs(m.mata_pelajaran)} (${m.count})</option>`
+  ).join('');
+
+  const kelasOptions = [1,2,3,4,5,6].map(k => {
+    const kStr = `Kelas ${k}`;
+    return `<option value="${kStr}" ${filters.kelas === kStr ? 'selected' : ''}>Kelas ${k}</option>`;
+  }).join('');
 
   const root = document.createElement('div');
-  root.id = 'banksoal-drawer-root';
-  root.className = 'fixed inset-0 z-[9999] overflow-hidden animate-fade-in';
+  root.id = 'banksoal-modal-root';
+  root.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in';
 
   root.innerHTML = `
-    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" id="bs-drawer-backdrop"></div>
-    <div class="fixed inset-y-0 right-0 max-w-full flex pl-4 sm:pl-10">
-      <div class="w-screen max-w-2xl bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col">
+    <div class="fixed inset-0 bg-black/65 backdrop-blur-md" id="bs-modal-backdrop"></div>
+    <div class="bg-white dark:bg-slate-900 w-full max-w-5xl xl:max-w-6xl h-[92vh] max-h-[94vh] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 relative z-10 flex flex-col overflow-hidden animate-scale-up">
 
-        <!-- Header -->
-        <div class="px-6 py-5 bg-gradient-to-r from-violet-950 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-violet-900/50 shrink-0">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center text-violet-300">
-              <i class="fas fa-database text-lg"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-base text-white font-display">Bank Soal Kolaboratif</h3>
-              <p class="text-xs text-violet-200/80">${stats.total_soal} paket soal · ${stats.my_soal} milik Anda</p>
-            </div>
+      <!-- Header -->
+      <div class="px-6 py-4 sm:px-8 sm:py-4.5 bg-gradient-to-r from-violet-950 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-violet-800/40 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center text-violet-300 shadow-inner">
+            <i class="fas fa-database text-lg"></i>
           </div>
-          <button id="bs-drawer-close" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-base sm:text-lg text-white font-display">Bank Soal Kolaboratif</h3>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-violet-500/30 text-violet-200 border border-violet-400/30">KKG Gugus 3</span>
+            </div>
+            <p class="text-xs text-violet-200/80" id="bs-header-subtitle">${stats.total_soal} paket soal · ${stats.my_soal} milik Anda</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="bs-refresh-btn" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Segarkan data">
+            <i class="fas fa-rotate text-xs"></i>
+          </button>
+          <button id="bs-modal-close" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Tutup">
             <i class="fas fa-times text-sm"></i>
           </button>
         </div>
+      </div>
 
-        <!-- Filters -->
-        <div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-3 shrink-0">
-          <div class="flex flex-wrap gap-2 items-center">
-            <div class="relative flex-1 min-w-[160px]">
-              <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
-              <input type="text" id="bs-filter-topik" value="${escBs(topik)}" placeholder="Cari topik..." class="w-full pl-8 pr-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-violet-500">
-            </div>
-            <select id="bs-filter-mapel" class="text-xs px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+      <!-- Filters & Sorting Toolbar -->
+      <div class="p-4 sm:px-6 sm:py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2.5 shrink-0">
+        <!-- Row 1: Search & Dropdowns -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+          <!-- Search Topik -->
+          <div class="sm:col-span-6 relative">
+            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="bs-filter-topik" value="${escBs(filters.topik)}" placeholder="Cari topik atau materi asesmen..." class="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all">
+            <button id="bs-clear-topik" type="button" class="${filters.topik ? '' : 'hidden'} absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Filter Mapel -->
+          <div class="sm:col-span-3">
+            <select id="bs-filter-mapel" class="w-full text-xs py-2 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer">
               <option value="">Semua Mapel</option>
               ${mapelOptions}
             </select>
-            <select id="bs-filter-kelas" class="text-xs px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+          </div>
+
+          <!-- Filter Kelas -->
+          <div class="sm:col-span-2">
+            <select id="bs-filter-kelas" class="w-full text-xs py-2 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:border-violet-500 cursor-pointer">
               <option value="">Semua Kelas</option>
               ${kelasOptions}
             </select>
           </div>
-          <div class="flex items-center justify-between">
-            <div class="flex gap-1.5">
-              ${['newest','popular','rating'].map(s => `
-                <button class="bs-sort-btn px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${sort === s ? 'bg-violet-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50'}" data-sort="${s}">
-                  ${s === 'newest' ? '<i class="fas fa-clock mr-1"></i>Terbaru' : s === 'popular' ? '<i class="fas fa-fire mr-1"></i>Populer' : '<i class="fas fa-star mr-1"></i>Rating'}
-                </button>
-              `).join('')}
-            </div>
-            <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer select-none">
-              <input type="checkbox" id="bs-filter-mine" ${mine ? 'checked' : ''} class="rounded accent-violet-600">
-              Soal Saya
+
+          <!-- Soal Saya Toggle -->
+          <div class="sm:col-span-1 flex items-center justify-end">
+            <label class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:bg-violet-50/50 transition-colors whitespace-nowrap" title="Tampilkan hanya soal yang saya buat">
+              <input type="checkbox" id="bs-filter-mine" ${filters.mine ? 'checked' : ''} class="rounded accent-violet-600 cursor-pointer">
+              <span class="hidden xl:inline">Soal Saya</span>
+              <i class="fas fa-user-check text-[11px] text-violet-600 xl:hidden"></i>
             </label>
           </div>
         </div>
 
-        <!-- Items Grid -->
-        <div class="flex-1 overflow-y-auto p-4" id="bs-items-container">
-          ${items.length === 0 ? `
-            <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-              <div class="w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-400 mb-3 text-2xl">
-                <i class="fas fa-database"></i>
-              </div>
-              <p class="font-bold text-slate-700 dark:text-slate-300 text-sm">Belum Ada Soal di Bank</p>
-              <p class="text-xs text-slate-500 mt-1 max-w-xs">Setiap kali Anda men-generate asesmen, soal otomatis tersimpan di Bank Soal untuk bisa diakses oleh seluruh guru di KKG.</p>
-            </div>
-          ` : `
-            <div class="grid grid-cols-1 gap-3">
-              ${items.map(item => {
-                const totalSoal = (item.jumlah_pg || 0) + (item.jumlah_isian || 0) + (item.jumlah_uraian || 0);
-                const isMine = item.user_id === state.user?.id;
-                return `
-                  <div class="banksoal-card p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-violet-300 dark:hover:border-violet-600 transition-all hover:shadow-md group cursor-pointer" data-id="${item.id}">
-                    <div class="flex items-start justify-between gap-3 mb-2">
-                      <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap gap-1.5 mb-1.5">
-                          <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 uppercase tracking-wide">
-                            ${escBs(item.mata_pelajaran)}
-                          </span>
-                          <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                            ${escBs(item.jenjang_kelas)}
-                          </span>
-                          ${item.jenis_ujian ? `<span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${escBs(item.jenis_ujian)}</span>` : ''}
-                          ${isMine ? '<span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700"><i class="fas fa-user-check mr-0.5"></i>Milik Saya</span>' : ''}
-                        </div>
-                        <h4 class="font-bold text-sm text-slate-900 dark:text-white line-clamp-1 leading-snug">${escBs(item.topik)}</h4>
-                      </div>
-                      <div class="text-right shrink-0">
-                        <div class="flex items-center gap-0.5">${renderStars(item.avg_rating, 'text-[10px]')}</div>
-                        <p class="text-[10px] text-slate-400 mt-0.5">${item.total_reviews || 0} review</p>
-                      </div>
-                    </div>
-
-                    <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-700/50 mt-2">
-                      <div class="flex items-center gap-3">
-                        <span><i class="fas fa-user text-[9px] mr-1 text-slate-400"></i>${escBs(item.user_nama)}</span>
-                        <span class="text-slate-300">·</span>
-                        <span>${formatBsDate(item.created_at)}</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-mono font-semibold text-[10px]">
-                          ${item.jumlah_pg || 0} PG · ${item.jumlah_isian || 0} Isian · ${item.jumlah_uraian || 0} Uraian
-                        </span>
-                        <span class="text-[10px] text-violet-500 font-semibold"><i class="fas fa-download mr-0.5"></i>${item.use_count || 0}x</span>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `}
-        </div>
-
-        <!-- Pagination Footer -->
-        ${pagination.totalPages > 1 ? `
-          <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between shrink-0">
-            <span class="text-[11px] text-slate-500">Hal. ${pagination.page} dari ${pagination.totalPages} (${pagination.total} soal)</span>
-            <div class="flex gap-2">
-              ${pagination.page > 1 ? `<button class="bs-page-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:bg-violet-50 cursor-pointer" data-page="${pagination.page - 1}"><i class="fas fa-chevron-left mr-1"></i>Sebelumnya</button>` : ''}
-              ${pagination.page < pagination.totalPages ? `<button class="bs-page-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 cursor-pointer" data-page="${pagination.page + 1}">Selanjutnya<i class="fas fa-chevron-right ml-1"></i></button>` : ''}
-            </div>
+        <!-- Row 2: Sort Tabs & Counter -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <div class="flex items-center gap-1.5" id="bs-sort-group">
+            <button class="bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${filters.sort === 'newest' ? 'bg-violet-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50'}" data-sort="newest">
+              <i class="fas fa-clock mr-1 text-[11px]"></i>Terbaru
+            </button>
+            <button class="bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${filters.sort === 'popular' ? 'bg-violet-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50'}" data-sort="popular">
+              <i class="fas fa-fire mr-1 text-[11px]"></i>Populer
+            </button>
+            <button class="bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${filters.sort === 'rating' ? 'bg-violet-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50'}" data-sort="rating">
+              <i class="fas fa-star mr-1 text-[11px]"></i>Rating Tertinggi
+            </button>
           </div>
-        ` : ''}
+
+          <!-- Counter & Reset Filters -->
+          <div class="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+            <span id="bs-result-counter" class="font-medium">Memuat...</span>
+            <button id="bs-reset-filters-btn" type="button" class="hidden text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline cursor-pointer flex items-center gap-1">
+              <i class="fas fa-rotate-left text-[10px]"></i> Reset Filter
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable 2-Column Cards Area -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/60 dark:bg-slate-900/40" id="bs-cards-container">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="bs-cards-grid">
+          <!-- Dynamic cards injected here -->
+        </div>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div id="bs-pagination-container" class="p-3.5 sm:px-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/90 flex items-center justify-between shrink-0">
+        <!-- Pagination controls injected here -->
       </div>
     </div>
   `;
 
   document.body.appendChild(root);
 
-  // Close
-  const close = () => root.remove();
-  document.getElementById('bs-drawer-close')?.addEventListener('click', close);
-  document.getElementById('bs-drawer-backdrop')?.addEventListener('click', close);
+  // Close handlers
+  const closeModal = () => {
+    root.remove();
+    activeBankSoalRefresh = null;
+    loadBankSoalCountBadge();
+  };
+  document.getElementById('bs-modal-close')?.addEventListener('click', closeModal);
+  document.getElementById('bs-modal-backdrop')?.addEventListener('click', closeModal);
 
-  // Collect current filters
-  const getFilters = () => ({
-    mapel: document.getElementById('bs-filter-mapel')?.value || '',
-    kelas: document.getElementById('bs-filter-kelas')?.value || '',
-    topik: document.getElementById('bs-filter-topik')?.value || '',
-    sort: root.querySelector('.bs-sort-btn.bg-violet-600')?.dataset?.sort || 'newest',
-    mine: document.getElementById('bs-filter-mine')?.checked ? '1' : '',
-    page: 1
-  });
+  // Core function: Load Data In-Place without destroying the modal or resetting inputs!
+  let currentFetchId = 0;
+  async function loadBankSoalData() {
+    const fetchId = ++currentFetchId;
+    const grid = document.getElementById('bs-cards-grid');
+    const paginationContainer = document.getElementById('bs-pagination-container');
+    const counterEl = document.getElementById('bs-result-counter');
+    const resetBtn = document.getElementById('bs-reset-filters-btn');
+    const clearTopikBtn = document.getElementById('bs-clear-topik');
 
-  // Filter handlers
+    if (!grid) return;
+
+    // Toggle clear search button
+    if (clearTopikBtn) {
+      if (filters.topik) clearTopikBtn.classList.remove('hidden');
+      else clearTopikBtn.classList.add('hidden');
+    }
+
+    // Toggle reset filter button
+    const hasActiveFilters = Boolean(filters.topik || filters.mapel || filters.kelas || filters.mine || filters.sort !== 'newest');
+    if (resetBtn) {
+      if (hasActiveFilters) resetBtn.classList.remove('hidden');
+      else resetBtn.classList.add('hidden');
+    }
+
+    // Show smooth skeleton cards while loading
+    grid.innerHTML = Array(4).fill(0).map(() => `
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700 animate-pulse space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+          <div class="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+        </div>
+        <div class="h-5 w-3/4 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+        <div class="h-3 w-1/2 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between">
+          <div class="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+          <div class="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+        </div>
+      </div>
+    `).join('');
+
+    let url = `/banksoal?page=${filters.page}&limit=10&sort=${filters.sort}`;
+    if (filters.mapel) url += `&mapel=${encodeURIComponent(filters.mapel)}`;
+    if (filters.kelas) url += `&kelas=${encodeURIComponent(filters.kelas)}`;
+    if (filters.topik) url += `&topik=${encodeURIComponent(filters.topik)}`;
+    if (filters.mine) url += `&mine=1`;
+
+    try {
+      const res = await api(url);
+      if (fetchId !== currentFetchId) return; // Discard stale responses
+
+      const items = res.success && res.data ? (res.data.items || []) : [];
+      const pagination = res.success && res.data ? (res.data.pagination || { page: 1, totalPages: 1, total: 0 }) : { page: 1, totalPages: 1, total: 0 };
+
+      // Update counter
+      if (counterEl) {
+        counterEl.textContent = `Menampilkan ${items.length} dari ${pagination.total} paket soal`;
+      }
+
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-16 flex flex-col items-center justify-center text-center p-6 text-slate-400">
+            <div class="w-16 h-16 rounded-3xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-500 mb-3 text-2xl shadow-inner">
+              <i class="fas fa-search"></i>
+            </div>
+            <h4 class="font-bold text-slate-700 dark:text-slate-200 text-sm">Tidak Ada Paket Soal yang Cocok</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm">Coba ubah kata kunci pencarian, pilih jenjang kelas lain, atau tekan tombol reset filter.</p>
+            ${hasActiveFilters ? `
+              <button onclick="document.getElementById('bs-reset-filters-btn')?.click()" class="mt-4 px-4 py-2 rounded-xl text-xs font-semibold bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-100 border border-violet-200 dark:border-violet-700 transition-colors">
+                <i class="fas fa-rotate-left mr-1.5"></i>Reset Semua Filter
+              </button>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        grid.innerHTML = items.map(item => {
+          const isMine = (item.user_id === state.user?.id) || (state.user?.role === 'admin');
+          return `
+            <div class="banksoal-card bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs hover:shadow-md hover:border-violet-300 dark:hover:border-violet-600 transition-all flex flex-col justify-between group" data-id="${item.id}">
+              <div>
+                <!-- Top Badges & Quick Actions -->
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 uppercase tracking-wide">
+                      ${escBs(item.mata_pelajaran)}
+                    </span>
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50">
+                      ${escBs(item.jenjang_kelas)}
+                    </span>
+                    ${item.jenis_ujian ? `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${escBs(item.jenis_ujian)}</span>` : ''}
+                    ${isMine ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70"><i class="fas fa-check mr-1"></i>Milik Anda</span>` : ''}
+                  </div>
+
+                  <div class="flex items-center gap-1 shrink-0">
+                    ${isMine ? `
+                      <button type="button" class="bs-quick-delete-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors cursor-pointer" data-id="${item.id}" data-topik="${escBs(item.topik)}" title="Hapus paket soal ini dari Bank Soal">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                      </button>
+                    ` : ''}
+                    <div class="text-right">
+                      <div class="flex items-center gap-0.5">${renderStars(item.avg_rating, 'text-[10px]')}</div>
+                      <p class="text-[10px] text-slate-400">${item.total_reviews || 0} review</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Topik / Judul -->
+                <h4 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-2 leading-snug mb-1.5 group-hover:text-violet-600 transition-colors cursor-pointer bs-card-title-btn" data-id="${item.id}">
+                  ${escBs(item.topik)}
+                </h4>
+
+                <!-- Penulis & Metadata -->
+                <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  <span class="truncate max-w-[180px]"><i class="fas fa-user-circle text-slate-400 mr-1"></i>${escBs(item.user_nama)}</span>
+                  <span class="text-slate-300 dark:text-slate-600">·</span>
+                  <span class="text-[11px]">${formatBsDate(item.created_at)}</span>
+                </div>
+              </div>
+
+              <!-- Breakdown & Direct Action Buttons -->
+              <div class="pt-3 border-t border-slate-100 dark:border-slate-700/60 mt-auto space-y-2.5">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded-lg">
+                    ${item.jumlah_pg || 0} PG · ${item.jumlah_isian || 0} Isian · ${item.jumlah_uraian || 0} Uraian
+                  </span>
+                  <span class="text-violet-600 dark:text-violet-400 text-xs font-semibold flex items-center gap-1">
+                    <i class="fas fa-download text-[10px]"></i> ${item.use_count || 0}x digunakan
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2 pt-0.5">
+                  <button type="button" class="bs-preview-btn flex-1 py-1.5 px-3 rounded-xl border border-violet-200 dark:border-violet-700/60 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer" data-id="${item.id}">
+                    <i class="fas fa-eye text-[11px]"></i> Lihat Soal
+                  </button>
+                  <button type="button" class="bs-direct-use-btn flex-1 py-1.5 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer" data-id="${item.id}">
+                    <i class="fas fa-download text-[11px]"></i> Gunakan
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render pagination
+      if (paginationContainer) {
+        if (pagination.totalPages > 1) {
+          paginationContainer.innerHTML = `
+            <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+              Halaman <strong>${pagination.page}</strong> dari <strong>${pagination.totalPages}</strong> (${pagination.total} soal)
+            </span>
+            <div class="flex items-center gap-2">
+              <button class="bs-page-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-violet-50 dark:hover:bg-violet-900/30 disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1" data-page="${pagination.page - 1}" ${pagination.page <= 1 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left text-[10px]"></i> Sebelumnya
+              </button>
+              <button class="bs-page-btn px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer flex items-center gap-1" data-page="${pagination.page + 1}" ${pagination.page >= pagination.totalPages ? 'disabled' : ''}>
+                Selanjutnya <i class="fas fa-chevron-right text-[10px]"></i>
+              </button>
+            </div>
+          `;
+        } else {
+          paginationContainer.innerHTML = `
+            <span class="text-[11px] sm:text-xs text-slate-400">Menampilkan seluruh ${pagination.total} paket soal</span>
+            <span class="text-[10px] text-slate-400">KKG Gugus 3 Wanayasa</span>
+          `;
+        }
+      }
+
+      // Attach card button listeners
+      grid.querySelectorAll('.bs-preview-btn, .bs-card-title-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          openBankSoalDetail(id);
+        });
+      });
+
+      grid.querySelectorAll('.bs-direct-use-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          applyBankSoalPackage(id);
+        });
+      });
+
+      grid.querySelectorAll('.bs-quick-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const topikName = btn.dataset.topik || 'paket ini';
+          if (!confirm(`Hapus paket soal "${topikName}" dari Bank Soal? Tindakan ini tidak dapat dibatalkan.`)) return;
+
+          try {
+            const delRes = await api(`/banksoal/${id}`, { method: 'DELETE' });
+            if (delRes.success) {
+              showToast(`Paket soal "${topikName}" berhasil dihapus.`, 'info');
+              loadBankSoalCountBadge();
+              loadBankSoalData();
+            } else {
+              showToast(delRes.message || 'Gagal menghapus soal', 'error');
+            }
+          } catch (err) {
+            showToast('Gagal menghapus soal: ' + (err.message || 'Error'), 'error');
+          }
+        });
+      });
+
+      paginationContainer?.querySelectorAll('.bs-page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          filters.page = parseInt(btn.dataset.page, 10);
+          loadBankSoalData();
+          document.getElementById('bs-cards-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+    } catch (err) {
+      if (fetchId !== currentFetchId) return;
+      grid.innerHTML = `
+        <div class="col-span-full py-12 text-center text-rose-500 bg-rose-50/50 rounded-2xl border border-rose-200 p-6">
+          <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+          <p class="font-bold text-sm">Gagal memuat Bank Soal</p>
+          <p class="text-xs text-rose-600/80 mt-1">${escBs(err.message || 'Terjadi kesalahan jaringan')}</p>
+          <button onclick="activeBankSoalRefresh?.()" class="mt-3 px-4 py-1.5 bg-white border border-rose-300 text-rose-700 rounded-xl text-xs font-semibold hover:bg-rose-50">
+            Coba Lagi
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  activeBankSoalRefresh = loadBankSoalData;
+
+  // Search filter with live debounce (300ms)
   let debounceTimer = null;
-  document.getElementById('bs-filter-topik')?.addEventListener('input', () => {
+  const topikInput = document.getElementById('bs-filter-topik');
+  topikInput?.addEventListener('input', () => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => { close(); openBankSoalDrawer(getFilters()); }, 400);
+    debounceTimer = setTimeout(() => {
+      filters.topik = topikInput.value.trim();
+      filters.page = 1;
+      loadBankSoalData();
+    }, 300);
   });
-  document.getElementById('bs-filter-mapel')?.addEventListener('change', () => { close(); openBankSoalDrawer(getFilters()); });
-  document.getElementById('bs-filter-kelas')?.addEventListener('change', () => { close(); openBankSoalDrawer(getFilters()); });
-  document.getElementById('bs-filter-mine')?.addEventListener('change', () => { close(); openBankSoalDrawer(getFilters()); });
 
-  // Sort handlers
+  document.getElementById('bs-clear-topik')?.addEventListener('click', () => {
+    if (topikInput) topikInput.value = '';
+    filters.topik = '';
+    filters.page = 1;
+    loadBankSoalData();
+    topikInput?.focus();
+  });
+
+  // Mapel select
+  document.getElementById('bs-filter-mapel')?.addEventListener('change', (e) => {
+    filters.mapel = e.target.value;
+    filters.page = 1;
+    loadBankSoalData();
+  });
+
+  // Kelas select
+  document.getElementById('bs-filter-kelas')?.addEventListener('change', (e) => {
+    filters.kelas = e.target.value;
+    filters.page = 1;
+    loadBankSoalData();
+  });
+
+  // Mine checkbox
+  document.getElementById('bs-filter-mine')?.addEventListener('change', (e) => {
+    filters.mine = e.target.checked ? '1' : '';
+    filters.page = 1;
+    loadBankSoalData();
+  });
+
+  // Sort buttons
   root.querySelectorAll('.bs-sort-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const f = getFilters();
-      f.sort = btn.dataset.sort;
-      close();
-      openBankSoalDrawer(f);
+      root.querySelectorAll('.bs-sort-btn').forEach(b => {
+        b.className = 'bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50';
+      });
+      btn.className = 'bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer bg-violet-600 text-white shadow-xs';
+      filters.sort = btn.dataset.sort;
+      filters.page = 1;
+      loadBankSoalData();
     });
   });
 
-  // Pagination
-  root.querySelectorAll('.bs-page-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const f = getFilters();
-      f.page = parseInt(btn.dataset.page);
-      close();
-      openBankSoalDrawer(f);
+  // Reset all filters
+  document.getElementById('bs-reset-filters-btn')?.addEventListener('click', () => {
+    if (topikInput) topikInput.value = '';
+    const mapelEl = document.getElementById('bs-filter-mapel');
+    if (mapelEl) mapelEl.value = '';
+    const kelasEl = document.getElementById('bs-filter-kelas');
+    if (kelasEl) kelasEl.value = '';
+    const mineEl = document.getElementById('bs-filter-mine');
+    if (mineEl) mineEl.checked = false;
+
+    // Reset sort to newest
+    root.querySelectorAll('.bs-sort-btn').forEach(b => {
+      if (b.dataset.sort === 'newest') {
+        b.className = 'bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer bg-violet-600 text-white shadow-xs';
+      } else {
+        b.className = 'bs-sort-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-violet-50';
+      }
     });
+
+    filters.topik = '';
+    filters.mapel = '';
+    filters.kelas = '';
+    filters.mine = '';
+    filters.sort = 'newest';
+    filters.page = 1;
+
+    loadBankSoalData();
   });
 
-  // Click on card → open detail
-  root.querySelectorAll('.banksoal-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      const id = card.dataset.id;
-      await openBankSoalDetail(id);
-    });
+  // Refresh button
+  document.getElementById('bs-refresh-btn')?.addEventListener('click', () => {
+    loadBankSoalData();
   });
+
+  // Initial load
+  loadBankSoalData();
 }
 
 async function openBankSoalDetail(id) {
@@ -3251,34 +3677,7 @@ async function openBankSoalDetail(id) {
 
   // Use Soal
   document.getElementById('bs-use-btn')?.addEventListener('click', async () => {
-    try {
-      await api(`/banksoal/${id}/use`, { method: 'POST' });
-    } catch (_) {}
-
-    // Render into asesmen result view
-    const formData = {
-      mataPelajaran: soal.mata_pelajaran,
-      topik: soal.topik,
-      jenjangKelas: soal.jenjang_kelas,
-      semester: soal.semester || '',
-      jenisUjian: soal.jenis_ujian || '',
-      namaSekolah: state.user?.sekolah_nama || state.user?.sekolah || '',
-      namaGuru: state.user?.nama || soal.user_nama,
-      nipGuru: state.user?.nip || '',
-      namaKepalaSekolah: state.user?.kepala_sekolah || '',
-      nipKepalaSekolah: state.user?.nip_kepala_sekolah || '',
-      isianType: soal.isian_type || 'Standard',
-    };
-
-    closeDetail();
-
-    // Close drawer too
-    const drawer = document.getElementById('banksoal-drawer-root');
-    if (drawer) drawer.remove();
-
-    // Render result
-    renderResult(content, formData);
-    showToast(`Soal "${soal.topik}" berhasil dimuat! Anda bisa langsung cetak atau download DOCX.`, 'success');
+    await applyBankSoalPackage(id);
   });
 
   // Delete own soal
@@ -3289,9 +3688,7 @@ async function openBankSoalDetail(id) {
       showToast('Soal berhasil dihapus dari Bank Soal.', 'info');
       closeDetail();
       loadBankSoalCountBadge();
-      // Refresh drawer
-      const drawer = document.getElementById('banksoal-drawer-root');
-      if (drawer) { drawer.remove(); openBankSoalDrawer(); }
+      activeBankSoalRefresh?.();
     } catch (e) {
       showToast('Gagal menghapus: ' + e.message, 'error');
     }

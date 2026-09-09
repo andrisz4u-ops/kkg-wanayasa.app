@@ -314,4 +314,81 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(bodyRender.data.dataUri).toContain('data:image/svg+xml');
         });
     });
+
+    describe('Prompt Debris Sanitization & Clean Question Stem Tests', () => {
+        it('should strip visual_stimulus tag from Question 1 in user screenshot', async () => {
+            const { cleanPromptDebris, normalizeSoalMarkdown } = await import('../src/routes/kisi');
+            const rawSoal = 'Perhatikan gambar berikut!\nvisual_stimulus {"type": "sudut", "params": {"derajat": 90}}\nBerdasarkan gambar, besar sudut tersebut adalah ...';
+            
+            const cleaned = cleanPromptDebris(rawSoal);
+            expect(cleaned).not.toContain('visual_stimulus');
+            expect(cleaned).not.toContain('"derajat": 90');
+            expect(cleaned).toBe('Perhatikan gambar berikut!\nBerdasarkan gambar, besar sudut tersebut adalah ...');
+
+            const normalized = normalizeSoalMarkdown(rawSoal);
+            expect(normalized).toBe('Perhatikan gambar berikut!\nBerdasarkan gambar, besar sudut tersebut adalah ...');
+        });
+
+        it('should strip visual_stimulus tag from Question 2 in user screenshot', async () => {
+            const { cleanPromptDebris, normalizeSoalMarkdown } = await import('../src/routes/kisi');
+            const rawSoal = 'Perhatikan gambar berikut!\nvisual_stimulus {"type": "sudut", "params": {"derajat": 45}}\nJenis sudut pada gambar tersebut adalah ...';
+            
+            const cleaned = cleanPromptDebris(rawSoal);
+            expect(cleaned).not.toContain('visual_stimulus');
+            expect(cleaned).not.toContain('"derajat": 45');
+            expect(cleaned).toBe('Perhatikan gambar berikut!\nJenis sudut pada gambar tersebut adalah ...');
+
+            const normalized = normalizeSoalMarkdown(rawSoal);
+            expect(normalized).toBe('Perhatikan gambar berikut!\nJenis sudut pada gambar tersebut adalah ...');
+        });
+
+        it('should strip multiline visual_stimulus with nested objects/arrays and bracketed labels', async () => {
+            const { cleanPromptDebris } = await import('../src/routes/kisi');
+            const multilineSoal = `Perhatikan gambar berikut!
+[visual_stimulus: organ_pencernaan]
+visual_stimulus {
+  "type": "organ_pencernaan",
+  "params": {
+    "pointer": "lambung",
+    "label": "X"
+  }
+}
+gambar_keyword: Lambung
+gambar_prompt_en: human stomach anatomical diagram
+Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim ...`;
+
+            const cleaned = cleanPromptDebris(multilineSoal);
+            expect(cleaned).not.toContain('visual_stimulus');
+            expect(cleaned).not.toContain('gambar_keyword');
+            expect(cleaned).not.toContain('gambar_prompt_en');
+            expect(cleaned).not.toContain('lambung');
+            expect(cleaned).toContain('Perhatikan gambar berikut!');
+            expect(cleaned).toContain('Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim ...');
+        });
+
+        it('should extract visual stimulus from q.soal if AI failed to set q.visual_stimulus property', async () => {
+            const { resolveQuestionVisualStimulus, normalizeSoalMarkdown } = await import('../src/routes/kisi');
+            const question: any = {
+                no: 1,
+                soal: 'Perhatikan gambar berikut!\nvisual_stimulus {"type": "sudut", "params": {"derajat": 90}}\nBerdasarkan gambar, besar sudut tersebut adalah ...'
+            };
+
+            // Before resolution, q.visual_stimulus is undefined
+            expect(question.visual_stimulus).toBeUndefined();
+
+            await resolveQuestionVisualStimulus(question, 'Matematika', 'Pengukuran Sudut', null);
+
+            // Now question.visual_stimulus should be populated and SVG generated
+            expect(question.visual_stimulus).toBeDefined();
+            expect(question.visual_stimulus.type).toBe('sudut');
+            expect(question.gambar).toBeDefined();
+            expect(question.gambar.type).toBe('svg');
+            expect(question.gambar.svg).toContain('Sudut 90');
+
+            // Then cleaning normalizeSoalMarkdown cleans question.soal completely
+            question.soal = normalizeSoalMarkdown(question.soal);
+            expect(question.soal).not.toContain('visual_stimulus');
+            expect(question.soal).toBe('Perhatikan gambar berikut!\nBerdasarkan gambar, besar sudut tersebut adalah ...');
+        });
+    });
 });

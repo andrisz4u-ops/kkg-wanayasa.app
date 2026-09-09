@@ -8,6 +8,7 @@ import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { getOfficialCP, cpElementsData } from '../lib/cp-data';
 import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
+import { ensureBankSoalTables } from './banksoal';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
@@ -106,13 +107,107 @@ export const getKelasAdaptation = (kelas: string): string => {
     return `ADAPTASI KELAS ${kelas}: Bisa menggunakan data sederhana, tabel, atau kasus nyata sebagai stimulus. HOTS berupa analisis data, argumentasi berdasar fakta, atau merancang solusi dari permasalahan kontekstual.`;
 };
 
+// Helper: bersihkan segala artefak sisa prompt, visual_stimulus, gambar_keyword dari naskah soal
+export const cleanPromptDebris = (text: string): string => {
+    if (!text) return '';
+    let s = String(text);
+
+    // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
+    s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
+    s = s.replace(/\[[^\]]*\]/g, '');
+
+    // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
+    let safetyCounter = 0;
+    while (safetyCounter++ < 20) {
+        const match = s.match(/visual_stimulus\s*:?\s*\{/i);
+        if (!match || match.index === undefined) break;
+
+        const startIdx = match.index;
+        const braceStart = s.indexOf('{', startIdx);
+        let depth = 0;
+        let endIdx = -1;
+
+        for (let i = braceStart; i < s.length; i++) {
+            if (s[i] === '{') depth++;
+            else if (s[i] === '}') {
+                depth--;
+                if (depth === 0) {
+                    endIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (endIdx !== -1) {
+            let pre = s.substring(0, startIdx);
+            let post = s.substring(endIdx + 1);
+            if (pre.endsWith('\n') && post.startsWith('\n')) {
+                post = post.substring(1);
+            }
+            s = pre + post;
+        } else {
+            const newlineIdx = s.indexOf('\n', startIdx);
+            if (newlineIdx !== -1) {
+                s = s.substring(0, startIdx) + s.substring(newlineIdx);
+            } else {
+                s = s.substring(0, startIdx);
+            }
+            break;
+        }
+    }
+
+    // 3. Hapus objek JSON stimulus mandiri yang bocor di naskah soal (misal {"type": "sudut", "params": {...}})
+    safetyCounter = 0;
+    while (safetyCounter++ < 20) {
+        const match = s.match(/\{\s*"type"\s*:\s*"[a-zA-Z0-9_-]+"/i);
+        if (!match || match.index === undefined) break;
+
+        const startIdx = match.index;
+        let depth = 0;
+        let endIdx = -1;
+
+        for (let i = startIdx; i < s.length; i++) {
+            if (s[i] === '{') depth++;
+            else if (s[i] === '}') {
+                depth--;
+                if (depth === 0) {
+                    endIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (endIdx !== -1) {
+            let pre = s.substring(0, startIdx);
+            let post = s.substring(endIdx + 1);
+            if (pre.endsWith('\n') && post.startsWith('\n')) {
+                post = post.substring(1);
+            }
+            s = pre + post;
+        } else {
+            break;
+        }
+    }
+
+    // 4. Bersihkan sisa-sisa keyword prompt baris tunggal
+    s = s.replace(/^[ \t]*visual_stimulus\s*:?[^\n\r]*\r?\n?/gim, '');
+    s = s.replace(/visual_stimulus\s*:[^\n\r]*/gi, '');
+    s = s.replace(/^[ \t]*gambar_keyword\s*:?[^\n\r]*\r?\n?/gim, '');
+    s = s.replace(/gambar_keyword\s*:[^\n\r]*/gi, '');
+    s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
+    s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
+
+    // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+    s = s.replace(/[ \t]+/g, ' ');
+    s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
+
+    return s;
+};
+
 // Helper: normalisasi Markdown table agar terpisah rapi dari teks pembuka & pertanyaan
 export const normalizeSoalMarkdown = (text: string): string => {
     if (!text) return '';
-    const clean = String(text)
-        .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-        .replace(/\[[^\]]*\]/g, '')
-        .trim();
+    const clean = cleanPromptDebris(text);
     const lines = clean.split(/\r?\n/);
     const outLines: string[] = [];
 
@@ -302,6 +397,35 @@ export const resolveQuestionVisualStimulus = async (
 ): Promise<void> => {
     // 1. Cek visual stimulus eksplisit dari AI
     let visualCfg = q.visual_stimulus;
+
+    // 1b. Jika visualCfg belum ada atau tidak punya type, coba ekstrak dari visual_stimulus {...} yang tertulis di teks soal
+    if (!visualCfg || !visualCfg.type) {
+        const vsMatch = String(q.soal || '').match(/visual_stimulus\s*:?\s*\{/i);
+        if (vsMatch && vsMatch.index !== undefined) {
+            const startIdx = q.soal.indexOf('{', vsMatch.index);
+            let depth = 0;
+            let jsonStr = '';
+            for (let i = startIdx; i < q.soal.length; i++) {
+                if (q.soal[i] === '{') depth++;
+                else if (q.soal[i] === '}') {
+                    depth--;
+                    if (depth === 0) {
+                        jsonStr = q.soal.substring(startIdx, i + 1);
+                        break;
+                    }
+                }
+            }
+            if (jsonStr) {
+                try {
+                    const parsed = JSON.parse(jsonStr);
+                    if (parsed && parsed.type) {
+                        visualCfg = parsed;
+                        q.visual_stimulus = parsed;
+                    }
+                } catch (e) {}
+            }
+        }
+    }
 
     // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal & keyword
     if (!visualCfg || !visualCfg.type) {
@@ -543,7 +667,7 @@ export const buildAssessmentPrompt = (params: {
             "indikator": "Indikator Soal baku (contoh: Disajikan wacana/stimulus ..., peserta didik dapat ...)",
             "level": "L1/L2/L3 (Pilih salah satu sesuai standar Puspendik)",
             "bentuk": "Pilihan Ganda",
-            "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)",
+            "soal": "Pertanyaan Pilihan Ganda (sajikan naskah soal bersih tanpa teks kurung siku [] dan JANGAN mencantumkan tag visual_stimulus di sini)",
             "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." },
             "kunci": "A/B/C/D",
             "visual_stimulus": { "type": "nama_tipe_diagram", "params": { "pointer": "bagian_yang_ditunjuk", "label": "X" } },
@@ -622,15 +746,17 @@ export const buildAssessmentPrompt = (params: {
               * Setiap butir soal bergambar WAJIB menggunakan tipe visual_stimulus atau gambar_keyword yang UNIK dan BERBEDA dari butir soal bergambar lainnya.
               * DILARANG KERAS menggunakan tipe visual_stimulus yang sama (misal tipe + pointer identik) pada lebih dari 1 butir soal dalam satu paket ujian!
               * Contoh BENAR (variasi visual):
-                - Soal 2: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung", "label": "X" } }
-                - Soal 5: visual_stimulus { "type": "vili_usus", "params": { "pointer": "kapiler", "label": "X" } }
-                - Soal 8: gambar_keyword "Kelinci" (foto otentik hewan)
+                - Soal 2 (atribut JSON "visual_stimulus"): { "type": "organ_pencernaan", "params": { "pointer": "lambung", "label": "X" } }
+                - Soal 5 (atribut JSON "visual_stimulus"): { "type": "vili_usus", "params": { "pointer": "kapiler", "label": "X" } }
+                - Soal 8 (atribut JSON "gambar_keyword"): "Kelinci"
               * Contoh SALAH (duplikasi — DILARANG):
-                - Soal 2: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung" } }
-                - Soal 7: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung" } } ← DUPLIKAT!
+                - Soal 2: tipe "organ_pencernaan" dengan pointer "lambung"
+                - Soal 7: tipe "organ_pencernaan" dengan pointer "lambung" ← DUPLIKAT!
             - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
               * ${getSubjectImagePromptGuideline(mataPelajaran)}
             - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
+              * DILARANG KERAS menuliskan teks "visual_stimulus {...}", "gambar_keyword", atau format kode prompt apa pun di dalam teks naskah soal ("soal")! Naskah "soal" hanya boleh berisi kalimat pengantar dan pertanyaan bersih (contoh: "Perhatikan gambar berikut! Berdasarkan gambar tersebut, besar sudut tersebut adalah ...").
+              * Parameter visual_stimulus HANYA boleh diletakkan pada atribut JSON "visual_stimulus" terpisah di luar string soal!
               * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks atau diagram pohon faktor angka.
               * DILARANG KERAS menuliskan teks deskripsi seperti "[Diagram menunjukkan...]" di dalam teks soal!
             - Pada butir soal lainnya, WAJIB mengosongkan field ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "").`;
@@ -755,7 +881,7 @@ kisi.post('/generate', async (c) => {
             // Deduplication: hapus soal yang teks awalnya sama (normalize lowercase, 100 char pertama)
             const seenSoal = new Set<string>();
             finalData.pg = finalData.pg.filter((q: any) => {
-                const normalized = String(q.soal || '')
+                const normalized = cleanPromptDebris(String(q.soal || ''))
                     .toLowerCase()
                     .replace(/\s+/g, ' ')
                     .trim()
@@ -790,15 +916,15 @@ kisi.post('/generate', async (c) => {
                 const usedStimulusSignatures = new Set<string>();
                 for (const q of finalData.pg) {
                     if (targetSelected.has(q)) {
-                        // Clean bracketed text completely from the student's question and normalize Markdown tables
-                        q.soal = normalizeSoalMarkdown(q.soal);
-
                         await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
+                        // Bersihkan segala artefak sisa prompt dan normalisasi tabel Markdown
+                        q.soal = normalizeSoalMarkdown(q.soal);
                     } else {
                         // Bersihkan field gambar agar soal lain 100% bebas gambar
                         delete q.gambar;
                         delete q.gambar_keyword;
                         delete q.gambar_prompt_en;
+                        delete q.visual_stimulus;
                         q.soal = normalizeSoalMarkdown(q.soal);
                     }
                 }
@@ -808,6 +934,7 @@ kisi.post('/generate', async (c) => {
                     delete q.gambar;
                     delete q.gambar_keyword;
                     delete q.gambar_prompt_en;
+                    delete q.visual_stimulus;
                     q.soal = normalizeSoalMarkdown(q.soal);
                 }
             }
@@ -917,6 +1044,7 @@ kisi.post('/generate', async (c) => {
 
             // Auto-save to Bank Soal (server-side persistence for collaborative sharing)
             try {
+                await ensureBankSoalTables(c.env.DB);
                 await c.env.DB.prepare(`
                     INSERT INTO bank_soal (
                         user_id, user_nama, sekolah, mata_pelajaran, topik,
@@ -1048,7 +1176,7 @@ kisi.post('/generate-stream', async (c) => {
                     // Deduplication
                     const seenSoal = new Set<string>();
                     finalData.pg = finalData.pg.filter((q: any) => {
-                        const normalized = String(q.soal || '')
+                        const normalized = cleanPromptDebris(String(q.soal || ''))
                             .toLowerCase()
                             .replace(/\s+/g, ' ')
                             .trim()
@@ -1075,12 +1203,14 @@ kisi.post('/generate-stream', async (c) => {
 
                         for (const q of finalData.pg) {
                             if (targetSelected.has(q)) {
-                                q.soal = normalizeSoalMarkdown(q.soal);
                                 await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
+                                // Bersihkan segala artefak sisa prompt dan normalisasi tabel Markdown
+                                q.soal = normalizeSoalMarkdown(q.soal);
                             } else {
                                 delete q.gambar;
                                 delete q.gambar_keyword;
                                 delete q.gambar_prompt_en;
+                                delete q.visual_stimulus;
                                 q.soal = normalizeSoalMarkdown(q.soal);
                             }
                         }
@@ -1089,6 +1219,7 @@ kisi.post('/generate-stream', async (c) => {
                             delete q.gambar;
                             delete q.gambar_keyword;
                             delete q.gambar_prompt_en;
+                            delete q.visual_stimulus;
                             q.soal = normalizeSoalMarkdown(q.soal);
                         }
                     }
@@ -1211,6 +1342,7 @@ kisi.post('/generate-stream', async (c) => {
                     });
 
                     try {
+                        await ensureBankSoalTables(c.env.DB);
                         await c.env.DB.prepare(`
                             INSERT INTO bank_soal (
                                 user_id, user_nama, sekolah, mata_pelajaran, topik,

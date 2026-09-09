@@ -192,13 +192,107 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
   }
 }
 
+// Helper: bersihkan segala artefak sisa prompt, visual_stimulus, gambar_keyword dari naskah soal
+function cleanPromptDebris(text) {
+  if (!text) return '';
+  let s = String(text);
+
+  // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
+  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
+  s = s.replace(/\[[^\]]*\]/g, '');
+
+  // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
+  let safetyCounter = 0;
+  while (safetyCounter++ < 20) {
+    const match = s.match(/visual_stimulus\s*:?\s*\{/i);
+    if (!match || match.index === undefined) break;
+
+    const startIdx = match.index;
+    const braceStart = s.indexOf('{', startIdx);
+    let depth = 0;
+    let endIdx = -1;
+
+    for (let i = braceStart; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          endIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (endIdx !== -1) {
+      let pre = s.substring(0, startIdx);
+      let post = s.substring(endIdx + 1);
+      if (pre.endsWith('\n') && post.startsWith('\n')) {
+        post = post.substring(1);
+      }
+      s = pre + post;
+    } else {
+      const newlineIdx = s.indexOf('\n', startIdx);
+      if (newlineIdx !== -1) {
+        s = s.substring(0, startIdx) + s.substring(newlineIdx);
+      } else {
+        s = s.substring(0, startIdx);
+      }
+      break;
+    }
+  }
+
+  // 3. Hapus objek JSON stimulus mandiri yang bocor di naskah soal (misal {"type": "sudut", "params": {...}})
+  safetyCounter = 0;
+  while (safetyCounter++ < 20) {
+    const match = s.match(/\{\s*"type"\s*:\s*"[a-zA-Z0-9_-]+"/i);
+    if (!match || match.index === undefined) break;
+
+    const startIdx = match.index;
+    let depth = 0;
+    let endIdx = -1;
+
+    for (let i = startIdx; i < s.length; i++) {
+      if (s[i] === '{') depth++;
+      else if (s[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          endIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (endIdx !== -1) {
+      let pre = s.substring(0, startIdx);
+      let post = s.substring(endIdx + 1);
+      if (pre.endsWith('\n') && post.startsWith('\n')) {
+        post = post.substring(1);
+      }
+      s = pre + post;
+    } else {
+      break;
+    }
+  }
+
+  // 4. Bersihkan sisa-sisa keyword prompt baris tunggal
+  s = s.replace(/^[ \t]*visual_stimulus\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/visual_stimulus\s*:[^\n\r]*/gi, '');
+  s = s.replace(/^[ \t]*gambar_keyword\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/gambar_keyword\s*:[^\n\r]*/gi, '');
+  s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
+  s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
+
+  // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+  s = s.replace(/[ \t]+/g, ' ');
+  s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
+
+  return s;
+}
+
 // Helper: normalisasi teks soal agar tabel (Markdown, tabel titik dua, maupun spasi tabular) terformat rapi
 function normalizeSoalMarkdown(text) {
   if (!text) return '';
-  let clean = String(text)
-    .replace(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*\]/gi, '')
-    .replace(/\[[^\]]*\]/g, '')
-    .trim();
+  let clean = cleanPromptDebris(text);
 
   // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
   clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');

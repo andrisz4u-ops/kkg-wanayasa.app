@@ -143,6 +143,21 @@ function repairTruncatedJSON(str: string): string {
     return result;
 }
 
+export function healTruncatedJsonArray(str: string): string | null {
+    // If generation cut off in the middle of a list of questions/data items,
+    // find the last completed child object '}'
+    const lastObjectClose = str.lastIndexOf('}');
+    if (lastObjectClose === -1 || lastObjectClose >= str.length - 2) return null;
+
+    // Ensure there is an array '[' before this closing '}'
+    const arrayOpen = str.lastIndexOf('[', lastObjectClose);
+    if (arrayOpen === -1) return null;
+
+    let candidate = str.substring(0, lastObjectClose + 1);
+    candidate = candidate.replace(/,\s*$/, '');
+    return repairTruncatedJSON(candidate);
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // System prompt shared across text generation
 // ═══════════════════════════════════════════════════════════════════
@@ -266,6 +281,31 @@ export class AIService {
 
         // ── Layer 1: Strip thinking blocks & markdown code fences
         clean = clean.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        clean = clean.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
+        clean = clean.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '').trim();
+
+        // Handle unclosed thinking blocks (e.g. if generation was cut off mid-thought or proxy dropped closing tag)
+        if (clean.includes('<think>')) {
+            const thinkIdx = clean.indexOf('<think>');
+            const afterThink = clean.substring(thinkIdx);
+            const firstBraceAfter = afterThink.indexOf('{');
+            if (firstBraceAfter !== -1) {
+                clean = clean.substring(0, thinkIdx) + ' ' + afterThink.substring(firstBraceAfter);
+            } else {
+                clean = clean.substring(0, thinkIdx).trim();
+            }
+        }
+        if (clean.includes('<thought>')) {
+            const thoughtIdx = clean.indexOf('<thought>');
+            const afterThought = clean.substring(thoughtIdx);
+            const firstBraceAfter = afterThought.indexOf('{');
+            if (firstBraceAfter !== -1) {
+                clean = clean.substring(0, thoughtIdx) + ' ' + afterThought.substring(firstBraceAfter);
+            } else {
+                clean = clean.substring(0, thoughtIdx).trim();
+            }
+        }
+
         clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
         // ── Layer 2: Extract between first { and last }
@@ -322,6 +362,17 @@ export class AIService {
             return attachMeta(JSON.parse(trailingFixed));
         } catch (e: any) {
             parseErrors.push(`Layer 6 (Truncated repair): ${e.message}`);
+        }
+
+        // ── Layer 6b: Smart Array Truncation Recovery (salvage completed questions/items)
+        try {
+            const healed = healTruncatedJsonArray(clean);
+            if (healed) {
+                const trailingFixed = healed.replace(/,\s*([}\]])/g, '$1');
+                return attachMeta(JSON.parse(trailingFixed));
+            }
+        } catch (e: any) {
+            parseErrors.push(`Layer 6b (Smart Array Recovery): ${e.message}`);
         }
 
         // ── Layer 7: Aggressive regex JSON repair

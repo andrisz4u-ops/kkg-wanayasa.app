@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseKeyPool } from '../src/services/ai';
+import { parseKeyPool, healTruncatedJsonArray, AIService } from '../src/services/ai';
 
 // Mock the AI providers
 vi.mock('@google/generative-ai', () => ({
@@ -125,6 +125,33 @@ describe('AIService', () => {
             
             expect(Array.isArray(parsed)).toBe(true);
             expect(parsed.length).toBe(2);
+        });
+
+        it('should heal truncated JSON array when stream cuts off mid-object', () => {
+            const truncated = `{
+                "pg": [
+                    { "no": 1, "soal": "Apa ibukota Indonesia?", "kunci": "Jakarta" },
+                    { "no": 2, "soal": "Planet terbesar?", "kunci": `;
+            const healed = healTruncatedJsonArray(truncated);
+            expect(healed).not.toBeNull();
+            const parsed = JSON.parse(healed!);
+            expect(parsed.pg).toHaveLength(1);
+            expect(parsed.pg[0].soal).toBe('Apa ibukota Indonesia?');
+        });
+
+        it('should parse AI JSON successfully even with unclosed <think> tag and truncated array', () => {
+            const service = new AIService({});
+            const aiOutput = `<think>
+Saya akan merancang 2 butir soal IPA.
+Soal 1 tentang tata surya.
+{"pg": [
+    { "no": 1, "soal": "Planet ketiga adalah?", "kunci": "Bumi" },
+    { "no": 2, "soal": "Planet merah adalah?", "pilihan": { "A": "Mars", `;
+
+            const parsed = service.parseAIJson(aiOutput);
+            expect(parsed.pg).toBeDefined();
+            expect(parsed.pg).toHaveLength(1);
+            expect(parsed.pg[0].kunci).toBe('Bumi');
         });
     });
 

@@ -224,11 +224,22 @@ export function renderKerucutSvg(params: { r?: number; t?: number; s?: number; u
 }
 
 /** Render Segitiga Siku-Siku dengan alas a, tinggi t, sisi miring c */
-export function renderSegitigaSikuSvg(params: { alas?: number; tinggi?: number; miring?: number; unit?: string }): string {
+export function renderSegitigaSikuSvg(params: {
+  alas?: number;
+  tinggi?: number;
+  miring?: number;
+  unit?: string;
+  showAlas?: boolean;
+  showTinggi?: boolean;
+  showMiring?: boolean;
+}): string {
   const a = params.alas || 6;
   const t = params.tinggi || 8;
-  const c = params.miring || 10;
+  const c = params.miring || Math.round(Math.sqrt(a * a + t * t) * 10) / 10;
   const unit = params.unit || 'cm';
+  const showA = params.showAlas !== false;
+  const showT = params.showTinggi !== false;
+  const showC = params.showMiring !== false;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 230" width="320" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <polygon points="70,40 70,170 230,170" fill="#f1f5f9" stroke="#0f172a" stroke-width="2"/>
@@ -238,9 +249,9 @@ export function renderSegitigaSikuSvg(params: { alas?: number; tinggi?: number; 
   <text x="54" y="184" font-size="12" font-weight="bold" fill="#334155">B</text>
   <text x="238" y="176" font-size="12" font-weight="bold" fill="#334155">C</text>
 
-  <text x="48" y="110" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">t = ${t} ${unit}</text>
-  <text x="150" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">a = ${a} ${unit}</text>
-  <text x="165" y="95" font-size="12" font-weight="bold" fill="#047857">c = ${c} ${unit}</text>
+  ${showT ? `<text x="48" y="110" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">t = ${t} ${unit}</text>` : ''}
+  ${showA ? `<text x="150" y="192" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">a = ${a} ${unit}</text>` : ''}
+  ${showC ? `<text x="165" y="95" font-size="12" font-weight="bold" fill="#047857">c = ${c} ${unit}</text>` : ''}
 
   <text x="160" y="220" text-anchor="middle" font-size="11" fill="#64748b">Segitiga Siku-Siku ABC (∠B = 90°)</text>
 </svg>`;
@@ -252,9 +263,11 @@ export function renderSudutSvg(params: { derajat?: number; jenis?: string; label
   const label = params.label || `Sudut ${deg}°`;
   const rad = (deg * Math.PI) / 180;
 
-  const len = 150;
-  const cx = 80;
+  // Jika sudut tumpul (> 90°), geser titik sudut cx ke tengah agar kaki kiri tidak terpotong (x < 0)
+  const isObtuse = deg > 90;
+  const cx = isObtuse ? 170 : 80;
   const cy = 160;
+  const len = isObtuse ? 120 : 140;
 
   const x1 = cx + len;
   const y1 = cy;
@@ -262,24 +275,31 @@ export function renderSudutSvg(params: { derajat?: number; jenis?: string; label
   const x2 = cx + len * Math.cos(rad);
   const y2 = cy - len * Math.sin(rad);
 
-  const arcR = 45;
+  const arcR = 40;
   const arcX = cx + arcR * Math.cos(rad);
   const arcY = cy - arcR * Math.sin(rad);
+  const largeArc = deg > 180 ? 1 : 0;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  // Penempatan label derajat di tengah busur sudut
+  const midRad = rad / 2;
+  const textR = arcR + 20;
+  const textX = cx + textR * Math.cos(midRad);
+  const textY = cy - textR * Math.sin(midRad);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 220" width="340" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <line x1="${cx}" y1="${cy}" x2="${x1}" y2="${y1}" stroke="#0f172a" stroke-width="2.5"/>
   <line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#0f172a" stroke-width="2.5"/>
 
-  <path d="M ${cx + arcR},${cy} A ${arcR},${arcR} 0 0,0 ${arcX},${arcY}" fill="none" stroke="#e11d48" stroke-width="2"/>
+  <path d="M ${cx + arcR},${cy} A ${arcR},${arcR} 0 ${largeArc},0 ${arcX},${arcY}" fill="none" stroke="#e11d48" stroke-width="2"/>
   
   <circle cx="${cx}" cy="${cy}" r="4" fill="#0f172a"/>
   <text x="${cx - 16}" y="${cy + 16}" font-size="13" font-weight="bold" fill="#334155">B</text>
   <text x="${x1 + 10}" y="${y1 + 4}" font-size="13" font-weight="bold" fill="#334155">C</text>
-  <text x="${x2 + 6}" y="${y2 - 6}" font-size="13" font-weight="bold" fill="#334155">A</text>
+  <text x="${x2 + (Math.cos(rad) >= 0 ? 8 : -18)}" y="${y2 + (Math.sin(rad) >= 0 ? -8 : 16)}" font-size="13" font-weight="bold" fill="#334155">A</text>
 
-  <text x="${cx + arcR + 15}" y="${cy - arcR / 2}" font-size="13" font-weight="bold" fill="#e11d48">${deg}°</text>
+  <text x="${textX}" y="${textY + 4}" text-anchor="middle" font-size="13" font-weight="bold" fill="#e11d48">${deg}°</text>
 
-  <text x="160" y="205" text-anchor="middle" font-size="11" fill="#64748b">${escapeXml(label)}</text>
+  <text x="170" y="205" text-anchor="middle" font-size="11" fill="#64748b">${escapeXml(label)}</text>
 </svg>`;
 }
 
@@ -1202,19 +1222,63 @@ export function renderSegitigaSamaSisiSvg(params: { s?: number; unit?: string })
 }
 
 /** Render Segitiga Sama Kaki dengan 2 sisi sama dan garis tinggi putus-putus */
-export function renderSegitigaSamaKakiSvg(params: { kaki?: number; alas?: number; unit?: string }): string {
-  const kaki = params.kaki || 10;
-  const alas = params.alas || 8;
+export function renderSegitigaSamaKakiSvg(params: {
+  kaki?: number;
+  alas?: number;
+  tinggi?: number;
+  unit?: string;
+  showKaki?: boolean;
+  showTinggi?: boolean;
+  showAlas?: boolean;
+}): string {
   const unit = params.unit || 'cm';
+  const alasNum = typeof params.alas === 'number' ? params.alas : (Number(params.alas) || 12);
+  let kakiNum = typeof params.kaki === 'number' ? params.kaki : (Number(params.kaki) || 0);
+  let tinggiNum = typeof params.tinggi === 'number' ? params.tinggi : (Number(params.tinggi) || 0);
 
-  const base = 180;
-  const h = Math.round(Math.sqrt(Math.pow(base * (kaki / alas) * 0.5, 2) - Math.pow(base / 2, 2)));
-  const safeH = Math.max(100, Math.min(180, h));
+  const hadTinggi = tinggiNum > 0;
+  const hadKaki = kakiNum > 0;
+
+  // Hubungan Pythagoras pada segitiga sama kaki: kaki² = (alas/2)² + tinggi²
+  const halfAlas = alasNum / 2;
+
+  if (hadTinggi && !hadKaki) {
+    // Hitung kaki dari tinggi dan alas
+    kakiNum = Math.round(Math.sqrt(tinggiNum * tinggiNum + halfAlas * halfAlas) * 10) / 10;
+  } else if (hadKaki && !hadTinggi) {
+    // Hitung tinggi dari kaki dan alas jika kaki > alas/2
+    if (kakiNum > halfAlas) {
+      tinggiNum = Math.round(Math.sqrt(kakiNum * kakiNum - halfAlas * halfAlas) * 10) / 10;
+    } else {
+      // Degenerate/invalid input: pastikan kaki > alas/2 agar tidak menghasilkan NaN
+      kakiNum = Math.round(alasNum * 0.8 * 10) / 10;
+      tinggiNum = Math.round(Math.sqrt(Math.max(1, kakiNum * kakiNum - halfAlas * halfAlas)) * 10) / 10;
+    }
+  } else if (!hadKaki && !hadTinggi) {
+    // Default fallback proporsional (triple 6-8-10 jika alas 12)
+    kakiNum = Math.round(alasNum * 0.85 * 10) / 10;
+    tinggiNum = Math.round(Math.sqrt(Math.max(1, kakiNum * kakiNum - halfAlas * halfAlas)) * 10) / 10;
+  }
+
+  // Hitung rasio proporsi tinggi visual terhadap alas visual
+  const baseVisual = 180;
+  const realRatio = (tinggiNum > 0 && alasNum > 0) ? (tinggiNum / alasNum) : 0.8;
+  // Bounding box: tinggi visual antara 75px dan 140px agar selalu aman di canvas viewBox [0 0 360 260]
+  const visualH = Math.round(Math.max(75, Math.min(140, baseVisual * realRatio)));
+
   const cx = 180;
   const by = 210;
-  const ax = cx - base / 2;
-  const bx = cx + base / 2;
-  const ty = by - safeH;
+  const ax = cx - baseVisual / 2; // 90
+  const bx = cx + baseVisual / 2; // 270
+  const ty = by - visualH; // Selalu di antara 70 dan 135
+
+  const showKakiLabel = params.showKaki !== false;
+  const showAlasLabel = params.showAlas !== false;
+  const showTinggiLabel = params.showTinggi === true || hadTinggi;
+
+  const leftMidX = (cx + ax) / 2;
+  const rightMidX = (cx + bx) / 2;
+  const legMidY = (ty + by) / 2;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" width="360" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
@@ -1224,12 +1288,13 @@ export function renderSegitigaSamaKakiSvg(params: { kaki?: number; alas?: number
     </linearGradient>
   </defs>
 
+  <!-- Badan Segitiga Sama Kaki -->
   <polygon points="${cx},${ty} ${ax},${by} ${bx},${by}" fill="url(#sskGrad)" stroke="#b45309" stroke-width="2.5"/>
 
   <!-- Titik sudut -->
-  <circle cx="${cx}" cy="${ty}" r="3" fill="#b45309"/><text x="${cx}" y="${ty - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#b45309">A</text>
-  <circle cx="${ax}" cy="${by}" r="3" fill="#b45309"/><text x="${ax - 10}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">B</text>
-  <circle cx="${bx}" cy="${by}" r="3" fill="#b45309"/><text x="${bx + 5}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">C</text>
+  <circle cx="${cx}" cy="${ty}" r="3.5" fill="#b45309"/><text x="${cx}" y="${ty - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#b45309">A</text>
+  <circle cx="${ax}" cy="${by}" r="3.5" fill="#b45309"/><text x="${ax - 10}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">B</text>
+  <circle cx="${bx}" cy="${by}" r="3.5" fill="#b45309"/><text x="${bx + 5}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">C</text>
 
   <!-- Garis tinggi putus-putus -->
   <line x1="${cx}" y1="${ty}" x2="${cx}" y2="${by}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,4"/>
@@ -1238,18 +1303,23 @@ export function renderSegitigaSamaKakiSvg(params: { kaki?: number; alas?: number
   <!-- Simbol siku-siku di kaki tinggi -->
   <polyline points="${cx + 10},${by} ${cx + 10},${by - 10} ${cx},${by - 10}" fill="none" stroke="#6b7280" stroke-width="1.2"/>
 
+  <!-- Label tinggi jika diberikan / diminta -->
+  ${showTinggiLabel ? `<text x="${cx - 8}" y="${legMidY}" text-anchor="end" font-size="11" font-weight="bold" fill="#6b7280">t = ${tinggiNum} ${unit}</text>` : ''}
+
   <!-- Label kaki (sama panjang) -->
-  <text x="${(cx + ax) / 2 - 18}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48">${kaki} ${unit}</text>
-  <text x="${(cx + bx) / 2 + 8}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48">${kaki} ${unit}</text>
+  ${showKakiLabel ? `
+  <text x="${leftMidX - 16}" y="${legMidY}" text-anchor="end" font-size="12" font-weight="bold" fill="#e11d48">${kakiNum} ${unit}</text>
+  <text x="${rightMidX + 16}" y="${legMidY}" text-anchor="start" font-size="12" font-weight="bold" fill="#e11d48">${kakiNum} ${unit}</text>
+  ` : ''}
 
   <!-- Tanda strip kaki kongruen -->
-  <line x1="${(cx + ax) / 2}" y1="${(ty + by) / 2 - 4}" x2="${(cx + ax) / 2 + 6}" y2="${(ty + by) / 2 + 4}" stroke="#b45309" stroke-width="2.5"/>
-  <line x1="${(cx + ax) / 2 - 4}" y1="${(ty + by) / 2 - 2}" x2="${(cx + ax) / 2 + 2}" y2="${(ty + by) / 2 + 6}" stroke="#b45309" stroke-width="2.5"/>
-  <line x1="${(cx + bx) / 2}" y1="${(ty + by) / 2 - 4}" x2="${(cx + bx) / 2 - 6}" y2="${(ty + by) / 2 + 4}" stroke="#b45309" stroke-width="2.5"/>
-  <line x1="${(cx + bx) / 2 + 4}" y1="${(ty + by) / 2 - 2}" x2="${(cx + bx) / 2 - 2}" y2="${(ty + by) / 2 + 6}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${leftMidX}" y1="${legMidY - 4}" x2="${leftMidX + 6}" y2="${legMidY + 4}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${leftMidX - 4}" y1="${legMidY - 2}" x2="${leftMidX + 2}" y2="${legMidY + 6}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${rightMidX}" y1="${legMidY - 4}" x2="${rightMidX - 6}" y2="${legMidY + 4}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${rightMidX + 4}" y1="${legMidY - 2}" x2="${rightMidX - 2}" y2="${legMidY + 6}" stroke="#b45309" stroke-width="2.5"/>
 
   <!-- Label alas -->
-  <text x="${cx}" y="${by + 16}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">${alas} ${unit}</text>
+  ${showAlasLabel ? `<text x="${cx}" y="${by + 16}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">${alasNum} ${unit}</text>` : ''}
 
   <text x="180" y="252" text-anchor="middle" font-size="11" fill="#64748b">Segitiga Sama Kaki ABC</text>
 </svg>`;
@@ -1298,8 +1368,10 @@ export function renderJaringBalokSvg(params: { p?: number; l?: number; t?: numbe
   const t = params.t || 3;
   const unit = params.unit || 'cm';
 
-  // Skala visual agar pas di viewport
-  const scale = 18;
+  // Skala visual adaptif agar pas di viewport
+  const unitW = 2 * t + 2 * p;
+  const unitH = 2 * t + l;
+  const scale = Math.min(22, Math.max(6, Math.min(280 / Math.max(1, unitW), 170 / Math.max(1, unitH))));
   const ps = p * scale;
   const ls = l * scale;
   const ts = t * scale;
@@ -1343,11 +1415,12 @@ export function renderKoordinatKartesiusSvg(params: { titik?: Array<{ x: number;
   const xRange = params.xRange || 6;
   const yRange = params.yRange || 6;
 
-  const w = 360;
-  const h = 320;
+  const maxRange = Math.max(xRange, yRange, 1);
+  const gridStep = Math.min(28, Math.max(14, Math.floor(145 / maxRange)));
+  const w = Math.max(360, (xRange * gridStep + 30) * 2);
+  const h = Math.max(320, (yRange * gridStep + 35) * 2);
   const cx = w / 2;
   const cy = h / 2 - 10;
-  const gridStep = 28;
 
   // Grid lines
   let grid = '';
@@ -1559,7 +1632,10 @@ export function renderBangunGabunganSvg(params: { bentuk?: string; segmen?: Arra
   const unit = params.unit || 'cm';
   const seg = params.segmen?.length ? params.segmen : [{ p: 10, l: 4 }, { p: 6, l: 4 }];
 
-  const scale = 14;
+  // Skala adaptif
+  const maxDimW = Math.max(seg[0]?.p || 10, seg[1]?.p || 6, 1);
+  const totalDimH = (seg[0]?.l || 4) + (seg[1]?.l || 4);
+  const scale = Math.min(18, Math.max(6, Math.min(220 / maxDimW, 140 / Math.max(1, totalDimH))));
   const ox = 50;
   const oy = 30;
 
@@ -1659,13 +1735,17 @@ export function renderDiagramLingkaranSvg(params: { judul?: string; labels?: str
     const color = colors[idx % colors.length];
     const lbl = labels[idx] || `Item ${idx + 1}`;
 
-    slicesSvg += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 ${largeArc},1 ${x2},${y2} Z" fill="${color}" stroke="#ffffff" stroke-width="2"/>`;
+    if (data.length === 1 || sweep >= 2 * Math.PI - 0.001) {
+      slicesSvg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="2"/>`;
+    } else {
+      slicesSvg += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 ${largeArc},1 ${x2},${y2} Z" fill="${color}" stroke="#ffffff" stroke-width="2"/>`;
+    }
 
     // Label di tengah slice
     const midAngle = startAngle + sweep / 2;
     const labelR = r * 0.6;
-    const lx = cx + labelR * Math.cos(midAngle);
-    const ly = cy + labelR * Math.sin(midAngle);
+    const lx = data.length === 1 ? cx : (cx + labelR * Math.cos(midAngle));
+    const ly = data.length === 1 ? cy : (cy + labelR * Math.sin(midAngle));
     if (showPercent && pct >= 5) {
       slicesSvg += `<text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">${Math.round(pct)}%</text>`;
     }
@@ -2365,6 +2445,9 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
  */
 export function detectStimulusFromSoalText(soalText: string, mapel: string): VisualStimulusConfig | null {
   const text = (soalText || '').toLowerCase();
+  // Pisahkan teks pertanyaan inti dari opsi pilihan ganda agar angka opsi (A. 26 cm, B. 28 cm) tidak disalahartikan sebagai ukuran bangun
+  const stemText = text.split(/\b[a-d]\s*[\.\)]/i)[0] || text;
+
   // 0a. Simetri Lipat (Prioritas tinggi karena soal menanyakan simetri pada bangun lain)
   if (text.includes('simetri lipat') || text.includes('garis simetri') || text.includes('sumbu simetri')) {
     let b = 'persegi';
@@ -2384,18 +2467,18 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 0c. Jaring-jaring Kubus
   if ((text.includes('jaring') || text.includes('jaring-jaring')) && text.includes('kubus')) {
-    const sMatch = text.match(/(?:rusuk|sisi)\D*(\d+)/i) || text.match(/s\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const sMatch = stemText.match(/(?:rusuk|sisi)\D*(\d+)/i) || stemText.match(/s\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     const s = sMatch ? parseInt(sMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 5);
     return { type: 'jaring_kubus', params: { s, unit: 'cm' } };
   }
 
   // 0d. Jaring-jaring Balok
   if ((text.includes('jaring') || text.includes('jaring-jaring')) && text.includes('balok')) {
-    const pMatch = text.match(/panjang\D*(\d+)/i) || text.match(/p\s*=\s*(\d+)/i);
-    const lMatch = text.match(/lebar\D*(\d+)/i) || text.match(/l\s*=\s*(\d+)/i);
-    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const pMatch = stemText.match(/panjang\D*(\d+)/i) || stemText.match(/p\s*=\s*(\d+)/i);
+    const lMatch = stemText.match(/lebar\D*(\d+)/i) || stemText.match(/l\s*=\s*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i) || stemText.match(/t\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     let p = pMatch ? parseInt(pMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 6);
     let l = lMatch ? parseInt(lMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 4);
     let t = tMatch ? parseInt(tMatch[1]) : (nums && nums.length >= 3 ? parseInt(nums[2]) : 3);
@@ -2404,9 +2487,9 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 0e. Persegi Panjang
   if (text.includes('persegi panjang') || text.includes('persegipanjang')) {
-    const pMatch = text.match(/panjang\D*(\d+)/i) || text.match(/p\s*=\s*(\d+)/i);
-    const lMatch = text.match(/lebar\D*(\d+)/i) || text.match(/l\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const pMatch = stemText.match(/panjang\D*(\d+)/i) || stemText.match(/p\s*=\s*(\d+)/i);
+    const lMatch = stemText.match(/lebar\D*(\d+)/i) || stemText.match(/l\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     let p = pMatch ? parseInt(pMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 12);
     let l = lMatch ? parseInt(lMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
     return { type: 'persegi_panjang', params: { p, l, unit: 'cm' } };
@@ -2414,28 +2497,47 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 0f. Segitiga Sama Sisi
   if (text.includes('segitiga sama sisi') || text.includes('segitiga samasisi')) {
-    const sMatch = text.match(/sisi\D*(\d+)/i) || text.match(/s\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const sMatch = stemText.match(/sisi\D*(\d+)/i) || stemText.match(/s\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     const s = sMatch ? parseInt(sMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 10);
     return { type: 'segitiga_sama_sisi', params: { s, unit: 'cm' } };
   }
 
   // 0g. Segitiga Sama Kaki
   if (text.includes('segitiga sama kaki') || text.includes('segitiga samakaki')) {
-    const kMatch = text.match(/kaki\D*(\d+)/i) || text.match(/sisi\s*sama\D*(\d+)/i);
-    const aMatch = text.match(/alas\D*(\d+)/i) || text.match(/a\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
-    let kaki = kMatch ? parseInt(kMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 10);
-    let alas = aMatch ? parseInt(aMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
-    return { type: 'segitiga_sama_kaki', params: { kaki, alas, unit: 'cm' } };
+    const kMatch = stemText.match(/kaki\D*(\d+)/i) || stemText.match(/sisi\s*(?:miring|sama)\D*(\d+)/i);
+    const aMatch = stemText.match(/alas\D*(\d+)/i) || stemText.match(/a\s*=\s*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i) || stemText.match(/t\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
+
+    let alas = aMatch ? parseInt(aMatch[1]) : undefined;
+    let kaki = kMatch ? parseInt(kMatch[1]) : undefined;
+    let tinggi = tMatch ? parseInt(tMatch[1]) : undefined;
+
+    if (!alas && nums && nums.length >= 2) {
+      kaki = kaki ?? parseInt(nums[0]);
+      alas = parseInt(nums[1]);
+    } else if (!alas && nums && nums.length === 1) {
+      alas = parseInt(nums[0]);
+    }
+
+    return {
+      type: 'segitiga_sama_kaki',
+      params: {
+        kaki: kaki || (tinggi ? undefined : 10),
+        alas: alas || 12,
+        tinggi,
+        unit: 'cm'
+      }
+    };
   }
 
   // 0h. Segitiga Siku-siku
   if (text.includes('segitiga siku') || text.includes('segitiga sikusiku')) {
-    const aMatch = text.match(/alas\D*(\d+)/i) || text.match(/a\s*=\s*(\d+)/i);
-    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
-    const mMatch = text.match(/miring\D*(\d+)/i) || text.match(/c\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const aMatch = stemText.match(/alas\D*(\d+)/i) || stemText.match(/a\s*=\s*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i) || stemText.match(/t\s*=\s*(\d+)/i);
+    const mMatch = stemText.match(/miring\D*(\d+)/i) || stemText.match(/c\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     let alas = aMatch ? parseInt(aMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 6);
     let tinggi = tMatch ? parseInt(tMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
     let miring = mMatch ? parseInt(mMatch[1]) : (nums && nums.length >= 3 ? parseInt(nums[2]) : 10);
@@ -2444,7 +2546,7 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 0i. Koordinat Kartesius
   if (text.includes('kartesius') || text.includes('koordinat') || (text.includes('titik') && /\([+-]?\d+\s*,\s*[+-]?\d+\)/.test(text))) {
-    const pointMatches = [...text.matchAll(/([A-Za-z])\s*\(\s*([+-]?\d+)\s*,\s*([+-]?\d+)\s*\)/g)];
+    const pointMatches = [...stemText.matchAll(/([A-Za-z])\s*\(\s*([+-]?\d+)\s*,\s*([+-]?\d+)\s*\)/g)];
     const titik = pointMatches.map(pm => ({
       label: pm[1].toUpperCase(),
       x: parseInt(pm[2]),
@@ -2468,10 +2570,10 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 1. Balok
   if (text.includes('balok') && (text.includes('panjang') || text.includes('volume') || text.includes('rusuk') || text.includes('cm'))) {
-    const pMatch = text.match(/panjang\D*(\d+)/i) || text.match(/p\s*=\s*(\d+)/i);
-    const lMatch = text.match(/lebar\D*(\d+)/i) || text.match(/l\s*=\s*(\d+)/i);
-    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
-    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const pMatch = stemText.match(/panjang\D*(\d+)/i) || stemText.match(/p\s*=\s*(\d+)/i);
+    const lMatch = stemText.match(/lebar\D*(\d+)/i) || stemText.match(/l\s*=\s*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i) || stemText.match(/t\s*=\s*(\d+)/i);
+    const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
 
     let p = pMatch ? parseInt(pMatch[1]) : 12;
     let l = lMatch ? parseInt(lMatch[1]) : 8;
@@ -2488,15 +2590,15 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 2. Kubus
   if (text.includes('kubus') && (text.includes('rusuk') || text.includes('sisi') || text.includes('volume') || text.includes('luas permukaan'))) {
-    const sMatch = text.match(/(?:rusuk|sisi)\D*(\d+)/i) || text.match(/s\s*=\s*(\d+)/i);
+    const sMatch = stemText.match(/(?:rusuk|sisi)\D*(\d+)/i) || stemText.match(/s\s*=\s*(\d+)/i);
     const s = sMatch ? parseInt(sMatch[1]) : 10;
     return { type: 'kubus', params: { s, unit: 'cm' } };
   }
 
   // 3. Tabung
   if (text.includes('tabung') && (text.includes('jari-jari') || text.includes('diameter') || text.includes('tinggi'))) {
-    const rMatch = text.match(/jari-jari\D*(\d+)/i) || text.match(/r\s*=\s*(\d+)/i);
-    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
+    const rMatch = stemText.match(/jari-jari\D*(\d+)/i) || stemText.match(/r\s*=\s*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i) || stemText.match(/t\s*=\s*(\d+)/i);
     return {
       type: 'tabung',
       params: {
@@ -2509,8 +2611,8 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
 
   // 4. Kerucut
   if (text.includes('kerucut') && (text.includes('jari-jari') || text.includes('tinggi') || text.includes('pelukis'))) {
-    const rMatch = text.match(/jari-jari\D*(\d+)/i);
-    const tMatch = text.match(/tinggi\D*(\d+)/i);
+    const rMatch = stemText.match(/jari-jari\D*(\d+)/i);
+    const tMatch = stemText.match(/tinggi\D*(\d+)/i);
     return {
       type: 'kerucut',
       params: {

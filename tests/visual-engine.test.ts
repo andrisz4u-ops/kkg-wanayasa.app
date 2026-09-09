@@ -690,5 +690,70 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       });
       expect(sigKoor).toBe('koordinat:titik=P:2,3;Q:-1,4');
     });
+
+    it('should never produce NaN in renderSegitigaSamaKakiSvg even when kaki < alas (regression test)', () => {
+      // Kasus foto user: alas = 12, opsi keliling 26, 28, 30, 32 -> kaki = 7, 8, 9, 10
+      const testCases = [
+        { kaki: 10, alas: 12 }, // kaki < alas
+        { kaki: 8, alas: 12 },  // kaki < alas
+        { kaki: 7, alas: 12 },  // kaki < alas
+        { alas: 12, tinggi: 8 }, // hanya alas dan tinggi
+        { kaki: 5, alas: 15 },  // degenerate input fallback
+        { kaki: 13, alas: 10 }, // kaki > alas
+      ];
+
+      for (const tc of testCases) {
+        const svg = renderSegitigaSamaKakiSvg(tc);
+        expect(svg).not.toContain('NaN');
+        expect(svg).toContain('<polygon');
+        expect(svg).toContain('<circle cx="180"');
+        expect(svg).toContain('>A</text>');
+        expect(svg).toContain('>B</text>');
+        expect(svg).toContain('>C</text>');
+        expect(svg).toContain('Segitiga Sama Kaki ABC');
+      }
+
+      // Pastikan label tinggi muncul jika diberikan
+      const svgTinggi = renderSegitigaSamaKakiSvg({ alas: 12, tinggi: 8 });
+      expect(svgTinggi).toContain('t = 8 cm');
+      expect(svgTinggi).toContain('10 cm'); // Pythagoras kaki 6-8-10
+      expect(svgTinggi).not.toContain('NaN');
+    });
+
+    it('should render obtuse angles without clipping left edge in renderSudutSvg', () => {
+      const svg135 = renderSudutSvg({ derajat: 135 });
+      expect(svg135).toContain('<svg');
+      expect(svg135).toContain('135°');
+      expect(svg135).not.toContain('x="-'); // Pastikan tidak ada koordinat x negatif
+      expect(svg135).not.toContain('NaN');
+
+      const svg150 = renderSudutSvg({ derajat: 150 });
+      expect(svg150).not.toContain('x="-');
+      expect(svg150).toContain('150°');
+    });
+
+    it('should render full circle properly for 100% single slice in renderDiagramLingkaranSvg', () => {
+      const svg = renderDiagramLingkaranSvg({ data: [100], labels: ['Total'] });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('<circle cx="150" cy="115" r="80"');
+      expect(svg).toContain('100%');
+      expect(svg).not.toContain('NaN');
+    });
+
+    it('should not extract numbers from multiple-choice options in detectStimulusFromSoalText', () => {
+      const soalWithOptionNumbers = `Perhatikan gambar segitiga berikut!
+Keliling segitiga sama kaki tersebut adalah ....
+A. 26 cm
+B. 28 cm
+C. 30 cm
+D. 32 cm`;
+      const detected = detectStimulusFromSoalText(soalWithOptionNumbers, 'matematika');
+      expect(detected).not.toBeNull();
+      expect(detected?.type).toBe('segitiga_sama_kaki');
+      // Pastikan bukan 26 atau 28 dari opsi pilihan ganda
+      const svg = renderSegitigaSamaKakiSvg(detected?.params || {});
+      expect(svg).not.toContain('NaN');
+      expect(svg).toContain('Segitiga Sama Kaki ABC');
+    });
   });
 });

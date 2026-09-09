@@ -1100,8 +1100,526 @@ export function renderLayangLayangSvg(params: { d1?: number; d2?: number; unit?:
 }
 
 // =========================================================================
-// 8. DIAGRAM LINGKARAN (PIE CHART)
+// 7b. GEOMETRI MATEMATIKA TAMBAHAN (Persegi Panjang, Segitiga Variatif,
+//     Jaring-jaring, Koordinat, Venn, Pictogram, Simetri, Bangun Gabungan)
 // =========================================================================
+
+/** Render Persegi Panjang berlabel panjang & lebar dengan sudut siku-siku */
+export function renderPersegiPanjangSvg(params: { p?: number; l?: number; unit?: string }): string {
+  const p = params.p || 12;
+  const l = params.l || 8;
+  const unit = params.unit || 'cm';
+
+  const rw = 220; // lebar visual
+  const rh = 140; // tinggi visual
+  const x0 = 60;
+  const y0 = 40;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 230" width="360" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="ppGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0f9ff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Persegi Panjang utama -->
+  <rect x="${x0}" y="${y0}" width="${rw}" height="${rh}" fill="url(#ppGrad)" stroke="#1e40af" stroke-width="2.5" rx="2"/>
+
+  <!-- Titik sudut -->
+  <circle cx="${x0}" cy="${y0}" r="3" fill="#1e40af"/><text x="${x0 - 12}" y="${y0 - 6}" font-size="12" font-weight="bold" fill="#1e40af">A</text>
+  <circle cx="${x0 + rw}" cy="${y0}" r="3" fill="#1e40af"/><text x="${x0 + rw + 5}" y="${y0 - 6}" font-size="12" font-weight="bold" fill="#1e40af">B</text>
+  <circle cx="${x0 + rw}" cy="${y0 + rh}" r="3" fill="#1e40af"/><text x="${x0 + rw + 5}" y="${y0 + rh + 15}" font-size="12" font-weight="bold" fill="#1e40af">C</text>
+  <circle cx="${x0}" cy="${y0 + rh}" r="3" fill="#1e40af"/><text x="${x0 - 12}" y="${y0 + rh + 15}" font-size="12" font-weight="bold" fill="#1e40af">D</text>
+
+  <!-- Simbol siku-siku di sudut A -->
+  <polyline points="${x0 + 14},${y0} ${x0 + 14},${y0 + 14} ${x0},${y0 + 14}" fill="none" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- Label panjang (atas) -->
+  <line x1="${x0 + 10}" y1="${y0 - 15}" x2="${x0 + rw - 10}" y2="${y0 - 15}" stroke="#e11d48" stroke-width="1.5" marker-start="url(#arrowL)" marker-end="url(#arrowR)"/>
+  <text x="${x0 + rw / 2}" y="${y0 - 20}" text-anchor="middle" font-size="13" font-weight="bold" fill="#e11d48">${p} ${unit}</text>
+
+  <!-- Label lebar (kanan) -->
+  <text x="${x0 + rw + 28}" y="${y0 + rh / 2 + 4}" text-anchor="middle" font-size="13" font-weight="bold" fill="#0284c7" transform="rotate(90,${x0 + rw + 28},${y0 + rh / 2})">${l} ${unit}</text>
+
+  <text x="180" y="215" text-anchor="middle" font-size="12" fill="#64748b">Persegi Panjang ABCD</text>
+</svg>`;
+}
+
+/** Render Segitiga Sama Sisi dengan 3 sisi sama dan sudut 60° */
+export function renderSegitigaSamaSisiSvg(params: { s?: number; unit?: string }): string {
+  const s = params.s || 10;
+  const unit = params.unit || 'cm';
+
+  const base = 200;
+  const h = Math.round(base * 0.866); // √3/2
+  const cx = 180;
+  const by = 200;
+  const ax = cx - base / 2;
+  const bx = cx + base / 2;
+  const ty = by - h;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="sssGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#d1fae5"/>
+    </linearGradient>
+  </defs>
+
+  <polygon points="${cx},${ty} ${ax},${by} ${bx},${by}" fill="url(#sssGrad)" stroke="#047857" stroke-width="2.5"/>
+
+  <!-- Titik sudut -->
+  <circle cx="${cx}" cy="${ty}" r="3" fill="#047857"/><text x="${cx}" y="${ty - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#047857">A</text>
+  <circle cx="${ax}" cy="${by}" r="3" fill="#047857"/><text x="${ax - 10}" y="${by + 16}" font-size="12" font-weight="bold" fill="#047857">B</text>
+  <circle cx="${bx}" cy="${by}" r="3" fill="#047857"/><text x="${bx + 5}" y="${by + 16}" font-size="12" font-weight="bold" fill="#047857">C</text>
+
+  <!-- Label sisi (semua sama) -->
+  <text x="${(cx + ax) / 2 - 18}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48" transform="rotate(-60,${(cx + ax) / 2 - 18},${(ty + by) / 2})">${s} ${unit}</text>
+  <text x="${cx}" y="${by + 16}" text-anchor="middle" font-size="12" font-weight="bold" fill="#e11d48">${s} ${unit}</text>
+  <text x="${(cx + bx) / 2 + 18}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48" transform="rotate(60,${(cx + bx) / 2 + 18},${(ty + by) / 2})">${s} ${unit}</text>
+
+  <!-- Tanda sama panjang (strip) -->
+  <line x1="${(cx + ax) / 2 - 2}" y1="${(ty + by) / 2 - 2}" x2="${(cx + ax) / 2 + 4}" y2="${(ty + by) / 2 + 4}" stroke="#047857" stroke-width="2"/>
+  <line x1="${cx - 4}" y1="${by - 2}" x2="${cx + 4}" y2="${by - 2}" stroke="#047857" stroke-width="2"/>
+  <line x1="${(cx + bx) / 2 - 2}" y1="${(ty + by) / 2 + 4}" x2="${(cx + bx) / 2 + 4}" y2="${(ty + by) / 2 - 2}" stroke="#047857" stroke-width="2"/>
+
+  <!-- Sudut 60° -->
+  <text x="${cx}" y="${ty + 24}" text-anchor="middle" font-size="10" fill="#475569">60°</text>
+  <text x="${ax + 20}" y="${by - 6}" font-size="10" fill="#475569">60°</text>
+  <text x="${bx - 28}" y="${by - 6}" font-size="10" fill="#475569">60°</text>
+
+  <text x="180" y="240" text-anchor="middle" font-size="11" fill="#64748b">Segitiga Sama Sisi ABC (sisi = ${s} ${unit})</text>
+</svg>`;
+}
+
+/** Render Segitiga Sama Kaki dengan 2 sisi sama dan garis tinggi putus-putus */
+export function renderSegitigaSamaKakiSvg(params: { kaki?: number; alas?: number; unit?: string }): string {
+  const kaki = params.kaki || 10;
+  const alas = params.alas || 8;
+  const unit = params.unit || 'cm';
+
+  const base = 180;
+  const h = Math.round(Math.sqrt(Math.pow(base * (kaki / alas) * 0.5, 2) - Math.pow(base / 2, 2)));
+  const safeH = Math.max(100, Math.min(180, h));
+  const cx = 180;
+  const by = 210;
+  const ax = cx - base / 2;
+  const bx = cx + base / 2;
+  const ty = by - safeH;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" width="360" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="sskGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+  </defs>
+
+  <polygon points="${cx},${ty} ${ax},${by} ${bx},${by}" fill="url(#sskGrad)" stroke="#b45309" stroke-width="2.5"/>
+
+  <!-- Titik sudut -->
+  <circle cx="${cx}" cy="${ty}" r="3" fill="#b45309"/><text x="${cx}" y="${ty - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#b45309">A</text>
+  <circle cx="${ax}" cy="${by}" r="3" fill="#b45309"/><text x="${ax - 10}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">B</text>
+  <circle cx="${bx}" cy="${by}" r="3" fill="#b45309"/><text x="${bx + 5}" y="${by + 16}" font-size="12" font-weight="bold" fill="#b45309">C</text>
+
+  <!-- Garis tinggi putus-putus -->
+  <line x1="${cx}" y1="${ty}" x2="${cx}" y2="${by}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <circle cx="${cx}" cy="${by}" r="2.5" fill="#6b7280"/>
+  <text x="${cx + 6}" y="${by - 4}" font-size="9" fill="#6b7280">T</text>
+  <!-- Simbol siku-siku di kaki tinggi -->
+  <polyline points="${cx + 10},${by} ${cx + 10},${by - 10} ${cx},${by - 10}" fill="none" stroke="#6b7280" stroke-width="1.2"/>
+
+  <!-- Label kaki (sama panjang) -->
+  <text x="${(cx + ax) / 2 - 18}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48">${kaki} ${unit}</text>
+  <text x="${(cx + bx) / 2 + 8}" y="${(ty + by) / 2}" font-size="12" font-weight="bold" fill="#e11d48">${kaki} ${unit}</text>
+
+  <!-- Tanda strip kaki kongruen -->
+  <line x1="${(cx + ax) / 2}" y1="${(ty + by) / 2 - 4}" x2="${(cx + ax) / 2 + 6}" y2="${(ty + by) / 2 + 4}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${(cx + ax) / 2 - 4}" y1="${(ty + by) / 2 - 2}" x2="${(cx + ax) / 2 + 2}" y2="${(ty + by) / 2 + 6}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${(cx + bx) / 2}" y1="${(ty + by) / 2 - 4}" x2="${(cx + bx) / 2 - 6}" y2="${(ty + by) / 2 + 4}" stroke="#b45309" stroke-width="2.5"/>
+  <line x1="${(cx + bx) / 2 + 4}" y1="${(ty + by) / 2 - 2}" x2="${(cx + bx) / 2 - 2}" y2="${(ty + by) / 2 + 6}" stroke="#b45309" stroke-width="2.5"/>
+
+  <!-- Label alas -->
+  <text x="${cx}" y="${by + 16}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">${alas} ${unit}</text>
+
+  <text x="180" y="252" text-anchor="middle" font-size="11" fill="#64748b">Segitiga Sama Kaki ABC</text>
+</svg>`;
+}
+
+/** Render Jaring-jaring Kubus (bentuk salib/plus) */
+export function renderJaringKubusSvg(params: { s?: number; unit?: string }): string {
+  const s = params.s || 5;
+  const unit = params.unit || 'cm';
+  const cs = 60; // ukuran kotak visual
+  const gap = 1;
+
+  // Posisi salib: 1 atas, 4 tengah berjajar, 1 bawah
+  const faces = [
+    { x: cs + gap, y: 0, label: 'Atas' },           // atas
+    { x: 0, y: cs + gap, label: 'Kiri' },             // kiri
+    { x: cs + gap, y: cs + gap, label: 'Depan' },     // depan (tengah)
+    { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' }, // kanan
+    { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' }, // belakang
+    { x: cs + gap, y: 2 * (cs + gap), label: 'Bawah' }, // bawah
+  ];
+
+  const colors = ['#dbeafe', '#fce7f3', '#d1fae5', '#fef3c7', '#e0e7ff', '#fecaca'];
+  const w = 4 * (cs + gap) + 40;
+  const h = 3 * (cs + gap) + 60;
+  const ox = 20;
+  const oy = 20;
+
+  let rects = '';
+  faces.forEach((f, i) => {
+    rects += `<rect x="${ox + f.x}" y="${oy + f.y}" width="${cs}" height="${cs}" fill="${colors[i]}" stroke="#1e40af" stroke-width="2" rx="2"/>`;
+    rects += `<text x="${ox + f.x + cs / 2}" y="${oy + f.y + cs / 2 + 4}" text-anchor="middle" font-size="9" fill="#475569">${f.label}</text>`;
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  ${rects}
+  <text x="${ox + cs + gap + cs / 2}" y="${oy + 3 * (cs + gap) + 26}" text-anchor="middle" font-size="12" font-weight="bold" fill="#e11d48">s = ${s} ${unit}</text>
+  <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Kubus (sisi ${s} ${unit})</text>
+</svg>`;
+}
+
+/** Render Jaring-jaring Balok (bentuk T terbuka) */
+export function renderJaringBalokSvg(params: { p?: number; l?: number; t?: number; unit?: string }): string {
+  const p = params.p || 6;
+  const l = params.l || 4;
+  const t = params.t || 3;
+  const unit = params.unit || 'cm';
+
+  // Skala visual agar pas di viewport
+  const scale = 18;
+  const ps = p * scale;
+  const ls = l * scale;
+  const ts = t * scale;
+
+  const ox = 30;
+  const oy = 20;
+  const colors = ['#dbeafe', '#d1fae5', '#fef3c7', '#fce7f3', '#e0e7ff', '#fecaca'];
+
+  // Layout T: atas (t×l), kiri (p×t), depan (p×l), kanan (p×t), bawah (t×l), belakang (p×l di bawah depan)
+  const faces = [
+    { x: ts, y: 0, w: ps, h: ts, label: 'Atas', color: colors[0] },
+    { x: 0, y: ts, w: ts, h: ls, label: 'Kiri', color: colors[1] },
+    { x: ts, y: ts, w: ps, h: ls, label: 'Depan', color: colors[2] },
+    { x: ts + ps, y: ts, w: ts, h: ls, label: 'Kanan', color: colors[3] },
+    { x: ts + ps + ts, y: ts, w: ps, h: ls, label: 'Belakang', color: colors[4] },
+    { x: ts, y: ts + ls, w: ps, h: ts, label: 'Bawah', color: colors[5] },
+  ];
+
+  let rects = '';
+  faces.forEach(f => {
+    rects += `<rect x="${ox + f.x}" y="${oy + f.y}" width="${f.w}" height="${f.h}" fill="${f.color}" stroke="#1e40af" stroke-width="1.8" rx="1"/>`;
+    rects += `<text x="${ox + f.x + f.w / 2}" y="${oy + f.y + f.h / 2 + 4}" text-anchor="middle" font-size="9" fill="#475569">${f.label}</text>`;
+  });
+
+  const totalW = 2 * ts + 2 * ps + ox * 2;
+  const totalH = ts + ls + ts + oy * 2 + 30;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  ${rects}
+  <!-- Label dimensi -->
+  <text x="${ox + ts + ps / 2}" y="${oy - 5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">p = ${p} ${unit}</text>
+  <text x="${ox - 5}" y="${oy + ts + ls / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">l = ${l} ${unit}</text>
+  <text x="${ox + ts / 2}" y="${oy - 5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#7c3aed">t = ${t} ${unit}</text>
+  <text x="${totalW / 2}" y="${totalH - 6}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Balok (${p}×${l}×${t} ${unit})</text>
+</svg>`;
+}
+
+/** Render Bidang Koordinat Kartesius 4 kuadran dengan titik berlabel */
+export function renderKoordinatKartesiusSvg(params: { titik?: Array<{ x: number; y: number; label: string }>; xRange?: number; yRange?: number }): string {
+  const titik = params.titik?.length ? params.titik : [{ x: 3, y: 4, label: 'P' }, { x: -2, y: 3, label: 'Q' }];
+  const xRange = params.xRange || 6;
+  const yRange = params.yRange || 6;
+
+  const w = 360;
+  const h = 320;
+  const cx = w / 2;
+  const cy = h / 2 - 10;
+  const gridStep = 28;
+
+  // Grid lines
+  let grid = '';
+  for (let i = -xRange; i <= xRange; i++) {
+    const gx = cx + i * gridStep;
+    grid += `<line x1="${gx}" y1="${cy - yRange * gridStep}" x2="${gx}" y2="${cy + yRange * gridStep}" stroke="${i === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${i === 0 ? 2 : 0.8}"/>`;
+    if (i !== 0) grid += `<text x="${gx}" y="${cy + 14}" text-anchor="middle" font-size="9" fill="#64748b">${i}</text>`;
+  }
+  for (let j = -yRange; j <= yRange; j++) {
+    const gy = cy - j * gridStep;
+    grid += `<line x1="${cx - xRange * gridStep}" y1="${gy}" x2="${cx + xRange * gridStep}" y2="${gy}" stroke="${j === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${j === 0 ? 2 : 0.8}"/>`;
+    if (j !== 0) grid += `<text x="${cx - 12}" y="${gy + 4}" text-anchor="end" font-size="9" fill="#64748b">${j}</text>`;
+  }
+
+  // Axis labels
+  grid += `<text x="${cx + xRange * gridStep + 8}" y="${cy + 4}" font-size="12" font-weight="bold" fill="#0f172a">X</text>`;
+  grid += `<text x="${cx + 8}" y="${cy - yRange * gridStep - 4}" font-size="12" font-weight="bold" fill="#0f172a">Y</text>`;
+  grid += `<text x="${cx - 10}" y="${cy + 14}" font-size="9" fill="#64748b">O</text>`;
+
+  // Axis arrows
+  grid += `<polygon points="${cx + xRange * gridStep + 4},${cy} ${cx + xRange * gridStep - 2},${cy - 4} ${cx + xRange * gridStep - 2},${cy + 4}" fill="#0f172a"/>`;
+  grid += `<polygon points="${cx},${cy - yRange * gridStep - 4} ${cx - 4},${cy - yRange * gridStep + 2} ${cx + 4},${cy - yRange * gridStep + 2}" fill="#0f172a"/>`;
+
+  // Plot points
+  const pointColors = ['#dc2626', '#2563eb', '#059669', '#d97706', '#7c3aed'];
+  let points = '';
+  titik.forEach((pt, i) => {
+    const px = cx + pt.x * gridStep;
+    const py = cy - pt.y * gridStep;
+    const color = pointColors[i % pointColors.length];
+    points += `<circle cx="${px}" cy="${py}" r="5" fill="${color}" stroke="white" stroke-width="1.5"/>`;
+    points += `<text x="${px + 8}" y="${py - 6}" font-size="11" font-weight="bold" fill="${color}">${escapeXml(pt.label)}(${pt.x},${pt.y})</text>`;
+    // Garis bantu putus-putus ke sumbu
+    points += `<line x1="${px}" y1="${py}" x2="${px}" y2="${cy}" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+    points += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${py}" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  ${grid}
+  ${points}
+  <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Bidang Koordinat Kartesius</text>
+</svg>`;
+}
+
+/** Render Diagram Venn dua himpunan dengan irisan */
+export function renderDiagramVennSvg(params: { judul?: string; labelA?: string; labelB?: string; aSaja?: number; irisan?: number; bSaja?: number }): string {
+  const judul = params.judul || 'Diagram Venn';
+  const labelA = params.labelA || 'Himpunan A';
+  const labelB = params.labelB || 'Himpunan B';
+  const aSaja = params.aSaja ?? 10;
+  const irisan = params.irisan ?? 5;
+  const bSaja = params.bSaja ?? 8;
+
+  const w = 380;
+  const h = 260;
+  const r = 85;
+  const cax = 150;
+  const cbx = 230;
+  const cy = 125;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <!-- Judul -->
+  <text x="${w / 2}" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">${escapeXml(judul)}</text>
+
+  <!-- Kotak semesta -->
+  <rect x="20" y="32" width="${w - 40}" height="${h - 60}" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" rx="6"/>
+  <text x="35" y="50" font-size="11" font-weight="bold" fill="#64748b">S</text>
+
+  <!-- Lingkaran A -->
+  <circle cx="${cax}" cy="${cy}" r="${r}" fill="#bfdbfe" fill-opacity="0.6" stroke="#2563eb" stroke-width="2"/>
+  <text x="${cax - 40}" y="${cy - r - 8}" font-size="12" font-weight="bold" fill="#2563eb">${escapeXml(labelA)}</text>
+
+  <!-- Lingkaran B -->
+  <circle cx="${cbx}" cy="${cy}" r="${r}" fill="#fecaca" fill-opacity="0.6" stroke="#dc2626" stroke-width="2"/>
+  <text x="${cbx + 10}" y="${cy - r - 8}" font-size="12" font-weight="bold" fill="#dc2626">${escapeXml(labelB)}</text>
+
+  <!-- Angka di area A saja -->
+  <text x="${cax - 35}" y="${cy + 5}" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e40af">${aSaja}</text>
+
+  <!-- Angka di irisan -->
+  <text x="${(cax + cbx) / 2}" y="${cy + 5}" text-anchor="middle" font-size="20" font-weight="bold" fill="#7c3aed">${irisan}</text>
+
+  <!-- Angka di area B saja -->
+  <text x="${cbx + 35}" y="${cy + 5}" text-anchor="middle" font-size="20" font-weight="bold" fill="#b91c1c">${bSaja}</text>
+
+  <text x="${w / 2}" y="${h - 10}" text-anchor="middle" font-size="11" fill="#64748b">${escapeXml(judul)}</text>
+</svg>`;
+}
+
+/** Render Pictogram / Diagram Gambar dengan ikon berulang */
+export function renderPictogramSvg(params: { judul?: string; labels?: string[]; data?: number[]; ikon?: string; nilaiIkon?: number }): string {
+  const judul = params.judul || 'Diagram Gambar';
+  const labels = params.labels?.length ? params.labels : ['Apel', 'Jeruk', 'Mangga'];
+  const data = params.data?.length ? params.data : [4, 3, 5];
+  const ikon = params.ikon || '●';
+  const nilaiIkon = params.nilaiIkon || 1;
+
+  const rowH = 36;
+  const labelW = 90;
+  const iconW = 22;
+  const maxVal = Math.max(...data);
+  const w = Math.max(320, labelW + maxVal * iconW + 60);
+  const h = labels.length * rowH + 90;
+
+  let rows = '';
+  const rowColors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+  labels.forEach((lbl, i) => {
+    const ry = 55 + i * rowH;
+    const val = data[i] || 0;
+    const color = rowColors[i % rowColors.length];
+
+    // Label
+    rows += `<text x="${labelW - 5}" y="${ry + 14}" text-anchor="end" font-size="12" font-weight="600" fill="#334155">${escapeXml(lbl)}</text>`;
+    // Separator line
+    rows += `<line x1="${labelW}" y1="${ry - 2}" x2="${labelW}" y2="${ry + rowH - 8}" stroke="#cbd5e1" stroke-width="1"/>`;
+
+    // Icons
+    for (let j = 0; j < val; j++) {
+      rows += `<text x="${labelW + 10 + j * iconW}" y="${ry + 16}" font-size="16" fill="${color}">${ikon}</text>`;
+    }
+    // Value
+    rows += `<text x="${labelW + 10 + val * iconW + 5}" y="${ry + 14}" font-size="11" fill="#64748b">(${val * nilaiIkon})</text>`;
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <text x="${w / 2}" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">${escapeXml(judul)}</text>
+  <text x="${w / 2}" y="42" text-anchor="middle" font-size="10" fill="#64748b">Keterangan: ${ikon} = ${nilaiIkon}</text>
+  ${rows}
+  <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Pictogram / Diagram Gambar</text>
+</svg>`;
+}
+
+/** Render Simetri Lipat pada bangun datar */
+export function renderSimetriLipatSvg(params: { bangun?: string; jumlahGaris?: number }): string {
+  const bangun = (params.bangun || 'persegi').toLowerCase();
+  const cx = 180;
+  const cy = 120;
+
+  let shape = '';
+  let lines = '';
+  let labelBangun = '';
+  let garis = 0;
+
+  if (bangun.includes('persegi') && !bangun.includes('panjang')) {
+    const s = 100;
+    shape = `<rect x="${cx - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" fill="#dbeafe" stroke="#1e40af" stroke-width="2.5" rx="2"/>`;
+    // 4 garis simetri: vertikal, horizontal, 2 diagonal
+    lines += `<line x1="${cx}" y1="${cy - s / 2 - 10}" x2="${cx}" y2="${cy + s / 2 + 10}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - s / 2 - 10}" y1="${cy}" x2="${cx + s / 2 + 10}" y2="${cy}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - s / 2 - 8}" y1="${cy - s / 2 - 8}" x2="${cx + s / 2 + 8}" y2="${cy + s / 2 + 8}" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx + s / 2 + 8}" y1="${cy - s / 2 - 8}" x2="${cx - s / 2 - 8}" y2="${cy + s / 2 + 8}" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    garis = 4;
+    labelBangun = 'Persegi';
+  } else if (bangun.includes('panjang')) {
+    const pw = 140;
+    const ph = 80;
+    shape = `<rect x="${cx - pw / 2}" y="${cy - ph / 2}" width="${pw}" height="${ph}" fill="#d1fae5" stroke="#047857" stroke-width="2.5" rx="2"/>`;
+    lines += `<line x1="${cx}" y1="${cy - ph / 2 - 10}" x2="${cx}" y2="${cy + ph / 2 + 10}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - pw / 2 - 10}" y1="${cy}" x2="${cx + pw / 2 + 10}" y2="${cy}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    garis = 2;
+    labelBangun = 'Persegi Panjang';
+  } else if (bangun.includes('sama_sisi') || bangun.includes('sama sisi') || bangun.includes('segitiga')) {
+    const s = 120;
+    const hh = Math.round(s * 0.866);
+    shape = `<polygon points="${cx},${cy - hh / 2} ${cx - s / 2},${cy + hh / 2} ${cx + s / 2},${cy + hh / 2}" fill="#fef3c7" stroke="#b45309" stroke-width="2.5"/>`;
+    lines += `<line x1="${cx}" y1="${cy - hh / 2 - 10}" x2="${cx}" y2="${cy + hh / 2 + 10}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - s / 2 - 5}" y1="${cy + hh / 2 + 3}" x2="${cx + s / 4 + 5}" y2="${cy - hh / 4 - 5}" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx + s / 2 + 5}" y1="${cy + hh / 2 + 3}" x2="${cx - s / 4 - 5}" y2="${cy - hh / 4 - 5}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    garis = 3;
+    labelBangun = 'Segitiga Sama Sisi';
+  } else if (bangun.includes('lingkaran')) {
+    shape = `<circle cx="${cx}" cy="${cy}" r="60" fill="#fce7f3" stroke="#be185d" stroke-width="2.5"/>`;
+    // Lingkaran punya ∞ simetri, gambar 4 contoh
+    lines += `<line x1="${cx}" y1="${cy - 68}" x2="${cx}" y2="${cy + 68}" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - 68}" y1="${cy}" x2="${cx + 68}" y2="${cy}" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - 48}" y1="${cy - 48}" x2="${cx + 48}" y2="${cy + 48}" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx + 48}" y1="${cy - 48}" x2="${cx - 48}" y2="${cy + 48}" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    garis = -1; // tak terhingga
+    labelBangun = 'Lingkaran';
+  } else if (bangun.includes('belah_ketupat') || bangun.includes('belah ketupat')) {
+    shape = `<polygon points="${cx},${cy - 60} ${cx + 45},${cy} ${cx},${cy + 60} ${cx - 45},${cy}" fill="#e0e7ff" stroke="#4338ca" stroke-width="2.5"/>`;
+    lines += `<line x1="${cx}" y1="${cy - 68}" x2="${cx}" y2="${cy + 68}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    lines += `<line x1="${cx - 53}" y1="${cy}" x2="${cx + 53}" y2="${cy}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    garis = 2;
+    labelBangun = 'Belah Ketupat';
+  } else {
+    // Default: persegi
+    const s = 100;
+    shape = `<rect x="${cx - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" fill="#dbeafe" stroke="#1e40af" stroke-width="2.5" rx="2"/>`;
+    lines += `<line x1="${cx}" y1="${cy - s / 2 - 10}" x2="${cx}" y2="${cy + s / 2 + 10}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+    garis = params.jumlahGaris || 1;
+    labelBangun = 'Bangun';
+  }
+
+  const garisText = garis === -1 ? '∞ (tak terhingga)' : String(garis);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" width="360" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <text x="180" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Simetri Lipat: ${escapeXml(labelBangun)}</text>
+  ${shape}
+  ${lines}
+  <text x="180" y="240" text-anchor="middle" font-size="12" fill="#64748b">Jumlah garis simetri = <tspan font-weight="bold" fill="#e11d48">${garisText}</tspan></text>
+  <text x="180" y="256" text-anchor="middle" font-size="10" fill="#94a3b8">--- garis simetri lipat (putus-putus)</text>
+</svg>`;
+}
+
+/** Render Bangun Gabungan bentuk L atau T dengan dimensi per segmen */
+export function renderBangunGabunganSvg(params: { bentuk?: string; segmen?: Array<{ p: number; l: number }>; unit?: string }): string {
+  const bentuk = (params.bentuk || 'L').toUpperCase();
+  const unit = params.unit || 'cm';
+  const seg = params.segmen?.length ? params.segmen : [{ p: 10, l: 4 }, { p: 6, l: 4 }];
+
+  const scale = 14;
+  const ox = 50;
+  const oy = 30;
+
+  if (bentuk === 'T') {
+    const topW = (seg[0]?.p || 12) * scale;
+    const topH = (seg[0]?.l || 3) * scale;
+    const botW = (seg[1]?.p || 4) * scale;
+    const botH = (seg[1]?.l || 6) * scale;
+    const botX = ox + (topW - botW) / 2;
+
+    const w = topW + ox * 2;
+    const h = topH + botH + oy * 2 + 30;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ede9fe"/>
+        <stop offset="100%" stop-color="#c4b5fd"/>
+      </linearGradient>
+    </defs>
+    <!-- Top bar -->
+    <rect x="${ox}" y="${oy}" width="${topW}" height="${topH}" fill="url(#bgGrad)" stroke="#5b21b6" stroke-width="2"/>
+    <!-- Bottom bar (centered) -->
+    <rect x="${botX}" y="${oy + topH}" width="${botW}" height="${botH}" fill="url(#bgGrad)" stroke="#5b21b6" stroke-width="2"/>
+
+    <!-- Dimensi atas -->
+    <text x="${ox + topW / 2}" y="${oy - 8}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">${seg[0]?.p || 12} ${unit}</text>
+    <text x="${ox - 6}" y="${oy + topH / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">${seg[0]?.l || 3} ${unit}</text>
+    <!-- Dimensi bawah -->
+    <text x="${botX + botW + 6}" y="${oy + topH + botH / 2 + 4}" font-size="11" font-weight="bold" fill="#0284c7">${seg[1]?.l || 6} ${unit}</text>
+    <text x="${botX + botW / 2}" y="${oy + topH + botH + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">${seg[1]?.p || 4} ${unit}</text>
+
+    <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Bangun Gabungan Bentuk T</text>
+  </svg>`;
+  }
+
+  // Default: Bentuk L
+  const topW = (seg[0]?.p || 10) * scale;
+  const topH = (seg[0]?.l || 4) * scale;
+  const botW = (seg[1]?.p || 6) * scale;
+  const botH = (seg[1]?.l || 4) * scale;
+
+  const totalW = topW + ox * 2;
+  const totalH = topH + botH + oy * 2 + 30;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="bgGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+  </defs>
+  <!-- Top (full width) -->
+  <rect x="${ox}" y="${oy}" width="${topW}" height="${topH}" fill="url(#bgGradL)" stroke="#1e40af" stroke-width="2"/>
+  <!-- Bottom (shorter, aligned left) -->
+  <rect x="${ox}" y="${oy + topH}" width="${botW}" height="${botH}" fill="url(#bgGradL)" stroke="#1e40af" stroke-width="2"/>
+
+  <!-- Dimensi -->
+  <text x="${ox + topW / 2}" y="${oy - 8}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">${seg[0]?.p || 10} ${unit}</text>
+  <text x="${ox - 6}" y="${oy + topH / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">${seg[0]?.l || 4} ${unit}</text>
+  <text x="${ox + botW / 2}" y="${oy + topH + botH + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">${seg[1]?.p || 6} ${unit}</text>
+  <text x="${ox + botW + 6}" y="${oy + topH + botH / 2 + 4}" font-size="11" font-weight="bold" fill="#0284c7">${seg[1]?.l || 4} ${unit}</text>
+
+  <text x="${totalW / 2}" y="${totalH - 6}" text-anchor="middle" font-size="11" fill="#64748b">Bangun Gabungan Bentuk L</text>
+</svg>`;
+}
+
+
 
 /** Render Diagram Lingkaran (Pie Chart) dengan data dan persentase */
 export function renderDiagramLingkaranSvg(params: { judul?: string; labels?: string[]; data?: number[]; showPercent?: boolean }): string {
@@ -1721,6 +2239,36 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   } else if (type === 'layang_layang' || type === 'layanglayang') {
     svg = renderLayangLayangSvg(params);
     title = title || 'Diagram Layang-Layang';
+  } else if (type === 'persegi_panjang' || type === 'persegipanjang') {
+    svg = renderPersegiPanjangSvg(params);
+    title = title || 'Diagram Persegi Panjang';
+  } else if (type === 'segitiga_sama_sisi' || type === 'segitigasamasisi') {
+    svg = renderSegitigaSamaSisiSvg(params);
+    title = title || 'Diagram Segitiga Sama Sisi';
+  } else if (type === 'segitiga_sama_kaki' || type === 'segitigasamakaki') {
+    svg = renderSegitigaSamaKakiSvg(params);
+    title = title || 'Diagram Segitiga Sama Kaki';
+  } else if (type === 'jaring_kubus' || type === 'jaring_jaring_kubus' || type === 'jaringjaringkubus') {
+    svg = renderJaringKubusSvg(params);
+    title = title || 'Jaring-jaring Kubus';
+  } else if (type === 'jaring_balok' || type === 'jaring_jaring_balok' || type === 'jaringjaringbalok') {
+    svg = renderJaringBalokSvg(params);
+    title = title || 'Jaring-jaring Balok';
+  } else if (type === 'koordinat' || type === 'koordinat_kartesius' || type === 'kartesius') {
+    svg = renderKoordinatKartesiusSvg(params);
+    title = title || 'Bidang Koordinat Kartesius';
+  } else if (type === 'diagram_venn' || type === 'venn') {
+    svg = renderDiagramVennSvg(params);
+    title = title || 'Diagram Venn';
+  } else if (type === 'pictogram' || type === 'piktogram' || type === 'diagram_gambar') {
+    svg = renderPictogramSvg(params);
+    title = title || 'Diagram Gambar (Pictogram)';
+  } else if (type === 'simetri_lipat' || type === 'simetri') {
+    svg = renderSimetriLipatSvg(params);
+    title = title || 'Simetri Lipat Bangun Datar';
+  } else if (type === 'bangun_gabungan' || type === 'gabungan') {
+    svg = renderBangunGabunganSvg(params);
+    title = title || 'Bangun Datar Gabungan';
   }
   // Pecahan
   else if (type === 'pecahan_lingkaran' || type === 'pecahan_pie') {
@@ -1809,7 +2357,106 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
  */
 export function detectStimulusFromSoalText(soalText: string, mapel: string): VisualStimulusConfig | null {
   const text = (soalText || '').toLowerCase();
-  const m = (mapel || '').toLowerCase();
+  // 0a. Simetri Lipat (Prioritas tinggi karena soal menanyakan simetri pada bangun lain)
+  if (text.includes('simetri lipat') || text.includes('garis simetri') || text.includes('sumbu simetri')) {
+    let b = 'persegi';
+    if (text.includes('panjang')) b = 'persegi_panjang';
+    else if (text.includes('sama sisi') || text.includes('sama_sisi')) b = 'segitiga_sama_sisi';
+    else if (text.includes('segitiga')) b = 'segitiga';
+    else if (text.includes('lingkaran')) b = 'lingkaran';
+    else if (text.includes('belah ketupat')) b = 'belah_ketupat';
+    return { type: 'simetri_lipat', params: { bangun: b } };
+  }
+
+  // 0b. Bangun Gabungan (Bentuk L / T)
+  if (text.includes('bangun gabungan') || text.includes('luas gabungan') || (text.includes('gabungan') && (text.includes('bentuk l') || text.includes('berbentuk l') || text.includes('bentuk t') || text.includes('berbentuk t')))) {
+    const bentuk = text.includes('bentuk t') || text.includes('berbentuk t') ? 'T' : 'L';
+    return { type: 'bangun_gabungan', params: { bentuk } };
+  }
+
+  // 0c. Jaring-jaring Kubus
+  if ((text.includes('jaring') || text.includes('jaring-jaring')) && text.includes('kubus')) {
+    const sMatch = text.match(/(?:rusuk|sisi)\D*(\d+)/i) || text.match(/s\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const s = sMatch ? parseInt(sMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 5);
+    return { type: 'jaring_kubus', params: { s, unit: 'cm' } };
+  }
+
+  // 0d. Jaring-jaring Balok
+  if ((text.includes('jaring') || text.includes('jaring-jaring')) && text.includes('balok')) {
+    const pMatch = text.match(/panjang\D*(\d+)/i) || text.match(/p\s*=\s*(\d+)/i);
+    const lMatch = text.match(/lebar\D*(\d+)/i) || text.match(/l\s*=\s*(\d+)/i);
+    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    let p = pMatch ? parseInt(pMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 6);
+    let l = lMatch ? parseInt(lMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 4);
+    let t = tMatch ? parseInt(tMatch[1]) : (nums && nums.length >= 3 ? parseInt(nums[2]) : 3);
+    return { type: 'jaring_balok', params: { p, l, t, unit: 'cm' } };
+  }
+
+  // 0e. Persegi Panjang
+  if (text.includes('persegi panjang') || text.includes('persegipanjang')) {
+    const pMatch = text.match(/panjang\D*(\d+)/i) || text.match(/p\s*=\s*(\d+)/i);
+    const lMatch = text.match(/lebar\D*(\d+)/i) || text.match(/l\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    let p = pMatch ? parseInt(pMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 12);
+    let l = lMatch ? parseInt(lMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
+    return { type: 'persegi_panjang', params: { p, l, unit: 'cm' } };
+  }
+
+  // 0f. Segitiga Sama Sisi
+  if (text.includes('segitiga sama sisi') || text.includes('segitiga samasisi')) {
+    const sMatch = text.match(/sisi\D*(\d+)/i) || text.match(/s\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    const s = sMatch ? parseInt(sMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 10);
+    return { type: 'segitiga_sama_sisi', params: { s, unit: 'cm' } };
+  }
+
+  // 0g. Segitiga Sama Kaki
+  if (text.includes('segitiga sama kaki') || text.includes('segitiga samakaki')) {
+    const kMatch = text.match(/kaki\D*(\d+)/i) || text.match(/sisi\s*sama\D*(\d+)/i);
+    const aMatch = text.match(/alas\D*(\d+)/i) || text.match(/a\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    let kaki = kMatch ? parseInt(kMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 10);
+    let alas = aMatch ? parseInt(aMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
+    return { type: 'segitiga_sama_kaki', params: { kaki, alas, unit: 'cm' } };
+  }
+
+  // 0h. Segitiga Siku-siku
+  if (text.includes('segitiga siku') || text.includes('segitiga sikusiku')) {
+    const aMatch = text.match(/alas\D*(\d+)/i) || text.match(/a\s*=\s*(\d+)/i);
+    const tMatch = text.match(/tinggi\D*(\d+)/i) || text.match(/t\s*=\s*(\d+)/i);
+    const mMatch = text.match(/miring\D*(\d+)/i) || text.match(/c\s*=\s*(\d+)/i);
+    const nums = text.match(/\b(\d+)\s*(?:cm|m)\b/g);
+    let alas = aMatch ? parseInt(aMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 6);
+    let tinggi = tMatch ? parseInt(tMatch[1]) : (nums && nums.length >= 2 ? parseInt(nums[1]) : 8);
+    let miring = mMatch ? parseInt(mMatch[1]) : (nums && nums.length >= 3 ? parseInt(nums[2]) : 10);
+    return { type: 'segitiga_siku', params: { alas, tinggi, miring, unit: 'cm' } };
+  }
+
+  // 0i. Koordinat Kartesius
+  if (text.includes('kartesius') || text.includes('koordinat') || (text.includes('titik') && /\([+-]?\d+\s*,\s*[+-]?\d+\)/.test(text))) {
+    const pointMatches = [...text.matchAll(/([A-Za-z])\s*\(\s*([+-]?\d+)\s*,\s*([+-]?\d+)\s*\)/g)];
+    const titik = pointMatches.map(pm => ({
+      label: pm[1].toUpperCase(),
+      x: parseInt(pm[2]),
+      y: parseInt(pm[3])
+    }));
+    return {
+      type: 'koordinat',
+      params: titik.length ? { titik } : { titik: [{ x: 3, y: 4, label: 'P' }, { x: -2, y: 3, label: 'Q' }] }
+    };
+  }
+
+  // 0j. Diagram Venn
+  if (text.includes('diagram venn') || text.includes('diagram ven') || (text.includes('himpunan') && (text.includes('irisan') || text.includes('gabungan')))) {
+    return { type: 'diagram_venn', params: {} };
+  }
+
+  // 0k. Pictogram / Diagram Gambar
+  if (text.includes('pictogram') || text.includes('piktogram') || text.includes('diagram gambar')) {
+    return { type: 'pictogram', params: {} };
+  }
 
   // 1. Balok
   if (text.includes('balok') && (text.includes('panjang') || text.includes('volume') || text.includes('rusuk') || text.includes('cm'))) {

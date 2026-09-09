@@ -161,6 +161,16 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
             - Sudut: { "type": "sudut", "params": { "derajat": 60 } }
             - Pecahan Lingkaran: { "type": "pecahan_lingkaran", "params": { "pembagi": 4, "diarsir": 3 } }
             - Pecahan Persegi: { "type": "pecahan_persegi", "params": { "kolom": 4, "baris": 2, "diarsir": 3 } }
+            - Persegi Panjang: { "type": "persegi_panjang", "params": { "p": 12, "l": 8, "unit": "cm" } }
+            - Segitiga Sama Sisi: { "type": "segitiga_sama_sisi", "params": { "s": 10, "unit": "cm" } }
+            - Segitiga Sama Kaki: { "type": "segitiga_sama_kaki", "params": { "kaki": 10, "alas": 8, "unit": "cm" } }
+            - Jaring-jaring Kubus: { "type": "jaring_kubus", "params": { "s": 5, "unit": "cm" } }
+            - Jaring-jaring Balok: { "type": "jaring_balok", "params": { "p": 6, "l": 4, "t": 3, "unit": "cm" } }
+            - Koordinat Kartesius: { "type": "koordinat", "params": { "titik": [{"x": 3, "y": 4, "label": "P"}, {"x": -2, "y": 3, "label": "Q"}] } }
+            - Diagram Venn: { "type": "diagram_venn", "params": { "judul": "Hobi Siswa", "labelA": "Sepak Bola", "labelB": "Basket", "aSaja": 12, "irisan": 5, "bSaja": 8 } }
+            - Pictogram / Diagram Gambar: { "type": "pictogram", "params": { "judul": "Data Penjualan Buah", "labels": ["Apel", "Jeruk", "Mangga"], "data": [4, 3, 5], "ikon": "●", "nilaiIkon": 2 } }
+            - Simetri Lipat: { "type": "simetri_lipat", "params": { "bangun": "persegi" } }
+            - Bangun Gabungan: { "type": "bangun_gabungan", "params": { "bentuk": "L", "segmen": [{"p": 10, "l": 4}, {"p": 6, "l": 4}], "unit": "cm" } }
             - Diagram Batang: { "type": "diagram_batang", "params": { "judul": "Data Penjualan", "labels": ["Senin","Selasa","Rabu"], "data": [20, 35, 30] } }
             - Diagram Garis: { "type": "diagram_garis", "params": { "judul": "Suhu Udara", "labels": ["06.00","12.00","18.00"], "data": [24, 32, 28] } }
             - Diagram Lingkaran (Pie): { "type": "diagram_lingkaran", "params": { "judul": "Data Hobi", "labels": ["Membaca","Olahraga","Musik"], "data": [40, 35, 25] } }
@@ -211,8 +221,54 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
       * Untuk flora, fauna, atau objek nyata: kosongkan "visual_stimulus" (set null), dan isi "gambar_keyword" dengan nama entitas Indonesia resmi (contoh: "Kelinci", "Bunga Rafflesia", "Kucing Anggora").`;
 };
 
+// Helper: bangun signature komprehensif dari konfigurasi visual stimulus
+// Dipakai oleh Diversity Guard (collision check) dan registrasi stimulus (post-render)
+export const buildStimulusSignature = (cfg: { type: string; params?: Record<string, any> }): string => {
+    const p = cfg.params || {};
+    let sig = cfg.type;
+    if (p.pointer) sig += `:ptr=${p.pointer}`;
+    if (p.r != null) sig += `:r=${p.r}`;
+    if (p.d != null) sig += `:d=${p.d}`;
+    if (p.p != null) sig += `:p=${p.p}`;
+    if (p.l != null) sig += `:l=${p.l}`;
+    if (p.t != null) sig += `:t=${p.t}`;
+    if (p.s != null) sig += `:s=${p.s}`;
+    if (p.kaki != null) sig += `:kaki=${p.kaki}`;
+    if (p.alas != null) sig += `:alas=${p.alas}`;
+    if (p.tinggi != null) sig += `:tinggi=${p.tinggi}`;
+    if (p.tinggiSegitiga != null) sig += `:tSeg=${p.tinggiSegitiga}`;
+    if (p.panjang != null) sig += `:pjg=${p.panjang}`;
+    if (p.atasAlas != null) sig += `:atas=${p.atasAlas}`;
+    if (p.bawahAlas != null) sig += `:bawah=${p.bawahAlas}`;
+    if (p.d1 != null) sig += `:d1=${p.d1}`;
+    if (p.d2 != null) sig += `:d2=${p.d2}`;
+    if (p.derajat != null) sig += `:deg=${p.derajat}`;
+    if (p.pembagi != null) sig += `:pbg=${p.pembagi}`;
+    if (p.diarsir != null) sig += `:ars=${p.diarsir}`;
+    if (p.jam != null) sig += `:jam=${p.jam}`;
+    if (p.menit != null) sig += `:mnt=${p.menit}`;
+    if (p.kolom != null) sig += `:kol=${p.kolom}`;
+    if (p.baris != null) sig += `:brs=${p.baris}`;
+    if (p.bentuk) sig += `:bentuk=${p.bentuk}`;
+    if (p.bangun) sig += `:bangun=${p.bangun}`;
+    if (p.ikon) sig += `:ikon=${p.ikon}`;
+    if (p.labelA) sig += `:lblA=${p.labelA}`;
+    if (p.labelB) sig += `:lblB=${p.labelB}`;
+    if (p.aSaja != null) sig += `:aSaja=${p.aSaja}`;
+    if (p.irisan != null) sig += `:irisan=${p.irisan}`;
+    if (p.bSaja != null) sig += `:bSaja=${p.bSaja}`;
+    if (Array.isArray(p.titik)) sig += `:titik=${p.titik.map((pt: any) => `${pt.label || ''}:${pt.x},${pt.y}`).join(';')}`;
+    if (Array.isArray(p.segmen)) sig += `:seg=${p.segmen.map((s: any) => `${s.p}x${s.l}`).join(';')}`;
+    if (Array.isArray(p.labels)) sig += `:lbl=${p.labels.join(',')}`;
+    if (Array.isArray(p.data)) sig += `:dat=${p.data.join(',')}`;
+    if (p.judul) sig += `:jdl=${p.judul}`;
+    if (p.min != null) sig += `:min=${p.min}`;
+    if (p.max != null) sig += `:max=${p.max}`;
+    return sig;
+};
+
 // Helper: selesaikan visual stimulus untuk butir soal (SVG Parametrik vs Wikimedia Commons vs Fallback)
-// Dilengkapi DIVERSITY GUARD agar tidak pernah muncul 2 gambar kembar dalam 1 paket ujian
+// Dilengkapi DIVERSITY GUARD agar tidak pernah muncul 2 gambar/chart/SVG kembar dalam 1 paket ujian
 export const resolveQuestionVisualStimulus = async (
     q: any,
     mataPelajaran: string,
@@ -230,8 +286,11 @@ export const resolveQuestionVisualStimulus = async (
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
     if (visualCfg && visualCfg.type && usedStimulusSignatures) {
-        const signature = `${visualCfg.type}:${visualCfg.params?.pointer || visualCfg.params?.r || visualCfg.params?.p || 'default'}`;
+        const signature = buildStimulusSignature(visualCfg);
+
         if (usedStimulusSignatures.has(signature)) {
+            const originalType = visualCfg.type;
+            const originalSig = signature;
             // Deteksi tabrakan! Cari sub-diagram alternatif yang lebih spesifik
             const text = String(q.soal || '').toLowerCase();
             if (visualCfg.type === 'organ_pencernaan') {
@@ -246,14 +305,13 @@ export const resolveQuestionVisualStimulus = async (
                     const organList = ['usus halus', 'kerongkongan', 'hati', 'usus besar', 'mulut', 'anus'];
                     let foundAlternate = false;
                     for (const organ of organList) {
-                        const altSig = `organ_pencernaan:${organ}`;
+                        const altSig = `organ_pencernaan:ptr=${organ}`;
                         if (!usedStimulusSignatures.has(altSig)) {
                             visualCfg = { type: 'organ_pencernaan', params: { pointer: organ, label: 'X' } };
                             foundAlternate = true;
                             break;
                         }
                     }
-                    // Jika semua organ sudah pernah muncul, alihkan ke foto real Wikimedia Commons
                     if (!foundAlternate) {
                         visualCfg = null;
                     }
@@ -262,12 +320,89 @@ export const resolveQuestionVisualStimulus = async (
                 if (text.includes('alveolus') || text.includes('gas') || text.includes('oksigen') || text.includes('kapiler')) {
                     visualCfg = { type: 'alveolus', params: { pointer: 'alveolus', label: 'X' } };
                 } else {
-                    visualCfg = null;
+                    const organNapas = ['hidung', 'trakea', 'bronkus', 'paru-paru', 'diafragma'];
+                    let foundAlt = false;
+                    for (const org of organNapas) {
+                        const altSig = `organ_pernapasan:ptr=${org}`;
+                        if (!usedStimulusSignatures.has(altSig)) {
+                            visualCfg = { type: 'organ_pernapasan', params: { pointer: org, label: 'X' } };
+                            foundAlt = true;
+                            break;
+                        }
+                    }
+                    if (!foundAlt) visualCfg = null;
                 }
+            } else if (visualCfg.type === 'siklus_air') {
+                const phases = ['evaporasi', 'kondensasi', 'presipitasi', 'infiltrasi'];
+                let foundAlt = false;
+                for (const phase of phases) {
+                    const altSig = `siklus_air:ptr=${phase}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'siklus_air', params: { pointer: phase, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'metamorfosis') {
+                const stages = ['telur', 'ulat', 'kepompong', 'kupu-kupu'];
+                let foundAlt = false;
+                for (const stage of stages) {
+                    const altSig = `metamorfosis:ptr=${stage}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'metamorfosis', params: { pointer: stage, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'bagian_bunga') {
+                const parts = ['putik', 'benang sari', 'mahkota', 'kelopak', 'bakal biji'];
+                let foundAlt = false;
+                for (const part of parts) {
+                    const altSig = `bagian_bunga:ptr=${part}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'bagian_bunga', params: { pointer: part, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'rantai_makanan') {
+                const roles = ['produsen', 'konsumen1', 'konsumen2', 'konsumen3', 'pengurai'];
+                let foundAlt = false;
+                for (const role of roles) {
+                    const altSig = `rantai_makanan:ptr=${role}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'rantai_makanan', params: { pointer: role, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (['diagram_batang', 'diagram_garis', 'diagram_lingkaran'].includes(visualCfg.type)) {
+                // Chart collision: coba alihkan ke tipe chart berbeda yang belum dipakai
+                const chartTypes = ['diagram_batang', 'diagram_garis', 'diagram_lingkaran'];
+                let foundAlt = false;
+                for (const altChart of chartTypes) {
+                    if (altChart === visualCfg.type) continue;
+                    // Cek apakah chart tipe ini sudah pernah dipakai (minimal cek tipe dasar)
+                    const anyUsed = Array.from(usedStimulusSignatures).some(s => s.startsWith(altChart));
+                    if (!anyUsed) {
+                        visualCfg = { ...visualCfg, type: altChart };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
             } else {
-                // Untuk bangun ruang geometri yang berdimensi sama, alihkan
+                // Untuk bangun ruang geometri yang benar-benar identik (tipe + semua dimensi sama), alihkan ke foto
                 visualCfg = null;
             }
+            // Audit trail: log diversifikasi stimulus
+            const newType = visualCfg?.type || 'photo-fallback';
+            const newPointer = visualCfg?.params?.pointer || '';
+            console.log(`[DiversityGuard] Soal ${q.no || '?'}: Collision "${originalSig}" → diverted to "${newType}${newPointer ? ':' + newPointer : ''}"`);
         }
     }
 
@@ -275,8 +410,7 @@ export const resolveQuestionVisualStimulus = async (
     if (visualCfg && visualCfg.type) {
         const svgRes = generateVisualStimulus(visualCfg);
         if (svgRes) {
-            const finalSig = `${visualCfg.type}:${visualCfg.params?.pointer || visualCfg.params?.r || visualCfg.params?.p || 'default'}`;
-            usedStimulusSignatures?.add(finalSig);
+            usedStimulusSignatures?.add(buildStimulusSignature(visualCfg));
 
             q.gambar = {
                 url: svgRes.dataUri,
@@ -353,9 +487,9 @@ export const buildAssessmentPrompt = (params: {
             "soal": "Pertanyaan Pilihan Ganda (sajikan langsung tanpa teks penjelasan kurung siku)",
             "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." },
             "kunci": "A/B/C/D",
-            "visual_stimulus": null,
-            "gambar_keyword": "kata kunci ringkas 1-3 kata jika mencari foto otentik",
-            "gambar_prompt_en": "detailed English visual description jika mencari foto (15-25 kata)"
+            "visual_stimulus": { "type": "nama_tipe_diagram", "params": { "pointer": "bagian_yang_ditunjuk", "label": "X" } },
+            "gambar_keyword": "kata kunci ringkas 1-3 kata jika mencari foto otentik (kosongkan jika pakai visual_stimulus)",
+            "gambar_prompt_en": "detailed English visual description jika mencari foto, 15-25 kata (kosongkan jika pakai visual_stimulus)"
         } ]`;
     } else {
         const parts: string[] = [];
@@ -424,14 +558,25 @@ export const buildAssessmentPrompt = (params: {
         if (isGambarEnabled) {
             const exactImages = Math.max(1, Math.round(count * 0.2));
             gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
+            - PERENCANAAN VARIASI VISUAL (SANGAT PENTING — BACA SEBELUM MULAI MENYUSUN SOAL):
+              * SEBELUM mulai menulis soal, RENCANAKAN terlebih dahulu ${exactImages} jenis stimulus visual yang BERBEDA-BEDA untuk ${exactImages} butir soal bergambar.
+              * Setiap butir soal bergambar WAJIB menggunakan tipe visual_stimulus atau gambar_keyword yang UNIK dan BERBEDA dari butir soal bergambar lainnya.
+              * DILARANG KERAS menggunakan tipe visual_stimulus yang sama (misal tipe + pointer identik) pada lebih dari 1 butir soal dalam satu paket ujian!
+              * Contoh BENAR (variasi visual):
+                - Soal 2: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung", "label": "X" } }
+                - Soal 5: visual_stimulus { "type": "vili_usus", "params": { "pointer": "kapiler", "label": "X" } }
+                - Soal 8: gambar_keyword "Kelinci" (foto otentik hewan)
+              * Contoh SALAH (duplikasi — DILARANG):
+                - Soal 2: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung" } }
+                - Soal 7: visual_stimulus { "type": "organ_pencernaan", "params": { "pointer": "lambung" } } ← DUPLIKAT!
             - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
               * ${getSubjectImagePromptGuideline(mataPelajaran)}
             - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
               * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks atau diagram pohon faktor angka.
               * DILARANG KERAS menuliskan teks deskripsi seperti "[Diagram menunjukkan...]" di dalam teks soal!
-            - Pada butir soal lainnya, WAJIB mengosongkan field ("gambar_keyword": "", "gambar_prompt_en": "").`;
+            - Pada butir soal lainnya, WAJIB mengosongkan field ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "").`;
         } else {
-            gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
+            gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
         }
     }
 

@@ -24,6 +24,16 @@ import {
   renderJajarGenjangSvg,
   renderBelahKetupatSvg,
   renderLayangLayangSvg,
+  renderPersegiPanjangSvg,
+  renderSegitigaSamaSisiSvg,
+  renderSegitigaSamaKakiSvg,
+  renderJaringKubusSvg,
+  renderJaringBalokSvg,
+  renderKoordinatKartesiusSvg,
+  renderDiagramVennSvg,
+  renderPictogramSvg,
+  renderSimetriLipatSvg,
+  renderBangunGabunganSvg,
   renderDiagramLingkaranSvg,
   renderOrganPencernaanSvg,
   renderViliUsusSvg,
@@ -34,6 +44,7 @@ import {
   generateVisualStimulus,
   detectStimulusFromSoalText
 } from '../src/lib/visual-engine';
+import { buildStimulusSignature } from '../src/routes/kisi';
 
 describe('Examplate Visual Stimulus Engine Tests', () => {
   describe('Geometric 3D & 2D SVG Renderers', () => {
@@ -450,6 +461,234 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       // Diagram Lingkaran (Pie Chart)
       const pie = detectStimulusFromSoalText('Perhatikan diagram lingkaran berikut yang menunjukkan data hobi siswa kelas 5!', 'Matematika');
       expect(pie?.type).toBe('diagram_lingkaran');
+    });
+
+    it('should detect all 10 expanded math topics from question text', () => {
+      // 1. Persegi Panjang
+      const pp = detectStimulusFromSoalText('Hitunglah luas persegi panjang dengan panjang 12 cm dan lebar 8 cm!', 'Matematika');
+      expect(pp?.type).toBe('persegi_panjang');
+      expect(pp?.params?.p).toBe(12);
+      expect(pp?.params?.l).toBe(8);
+
+      // 2. Segitiga Sama Sisi
+      const sss = detectStimulusFromSoalText('Keliling segitiga sama sisi dengan sisi 9 cm adalah...', 'Matematika');
+      expect(sss?.type).toBe('segitiga_sama_sisi');
+      expect(sss?.params?.s).toBe(9);
+
+      // 3. Segitiga Sama Kaki
+      const ssk = detectStimulusFromSoalText('Segitiga sama kaki memiliki panjang kaki 10 cm dan alas 8 cm.', 'Matematika');
+      expect(ssk?.type).toBe('segitiga_sama_kaki');
+      expect(ssk?.params?.kaki).toBe(10);
+      expect(ssk?.params?.alas).toBe(8);
+
+      // 4. Segitiga Siku
+      const siku = detectStimulusFromSoalText('Tentukan luas segitiga siku-siku dengan alas 6 cm dan tinggi 8 cm!', 'Matematika');
+      expect(siku?.type).toBe('segitiga_siku');
+      expect(siku?.params?.alas).toBe(6);
+      expect(siku?.params?.tinggi).toBe(8);
+
+      // 5. Jaring Kubus
+      const jk = detectStimulusFromSoalText('Manakah jaring-jaring kubus dengan panjang rusuk 5 cm yang benar?', 'Matematika');
+      expect(jk?.type).toBe('jaring_kubus');
+      expect(jk?.params?.s).toBe(5);
+
+      // 6. Jaring Balok
+      const jb = detectStimulusFromSoalText('Jaring-jaring balok memiliki ukuran panjang 6 cm, lebar 4 cm, dan tinggi 3 cm.', 'Matematika');
+      expect(jb?.type).toBe('jaring_balok');
+      expect(jb?.params?.p).toBe(6);
+      expect(jb?.params?.l).toBe(4);
+      expect(jb?.params?.t).toBe(3);
+
+      // 7. Koordinat Kartesius
+      const koor = detectStimulusFromSoalText('Pada bidang koordinat kartesius, titik P(3, 4) dan Q(-2, 3) berada pada...', 'Matematika');
+      expect(koor?.type).toBe('koordinat');
+      expect(koor?.params?.titik).toEqual([
+        { label: 'P', x: 3, y: 4 },
+        { label: 'Q', x: -2, y: 3 }
+      ]);
+
+      // 8. Diagram Venn
+      const venn = detectStimulusFromSoalText('Perhatikan diagram Venn mengenai siswa yang menyukai olahraga dan seni!', 'Matematika');
+      expect(venn?.type).toBe('diagram_venn');
+
+      // 9. Pictogram
+      const picto = detectStimulusFromSoalText('Berdasarkan data pictogram / diagram gambar penjualan buah apel berikut...', 'Matematika');
+      expect(picto?.type).toBe('pictogram');
+
+      // 10. Simetri Lipat
+      const sim = detectStimulusFromSoalText('Berapa banyak simetri lipat pada bangun persegi panjang berikut?', 'Matematika');
+      expect(sim?.type).toBe('simetri_lipat');
+      expect(sim?.params?.bangun).toBe('persegi_panjang');
+
+      // 11. Bangun Gabungan
+      const gab = detectStimulusFromSoalText('Hitunglah luas bangun gabungan berbentuk L berikut ini!', 'Matematika');
+      expect(gab?.type).toBe('bangun_gabungan');
+      expect(gab?.params?.bentuk).toBe('L');
+    });
+  });
+
+  describe('10 Expanded Math SVG Renderers Direct Testing', () => {
+    it('1. renderPersegiPanjangSvg should render rectangle with labels', () => {
+      const svg = renderPersegiPanjangSvg({ p: 15, l: 10, unit: 'cm' });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('15 cm');
+      expect(svg).toContain('10 cm');
+      expect(svg).toContain('Persegi Panjang ABCD');
+    });
+
+    it('2. renderSegitigaSamaSisiSvg should render equilateral triangle with 60° angles', () => {
+      const svg = renderSegitigaSamaSisiSvg({ s: 12, unit: 'cm' });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('12 cm');
+      expect(svg).toContain('60°');
+      expect(svg).toContain('Segitiga Sama Sisi ABC');
+    });
+
+    it('3. renderSegitigaSamaKakiSvg should render isosceles triangle with altitude line', () => {
+      const svg = renderSegitigaSamaKakiSvg({ kaki: 13, alas: 10, unit: 'cm' });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('13 cm');
+      expect(svg).toContain('10 cm');
+      expect(svg).toContain('stroke-dasharray="5,4"'); // altitude line
+      expect(svg).toContain('Segitiga Sama Kaki ABC');
+    });
+
+    it('4. renderJaringKubusSvg should render cross unfolded cube net', () => {
+      const svg = renderJaringKubusSvg({ s: 6, unit: 'cm' });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('s = 6 cm');
+      expect(svg).toContain('Atas');
+      expect(svg).toContain('Depan');
+      expect(svg).toContain('Bawah');
+      expect(svg).toContain('Jaring-jaring Kubus');
+    });
+
+    it('5. renderJaringBalokSvg should render unfolded rectangular box net', () => {
+      const svg = renderJaringBalokSvg({ p: 8, l: 5, t: 4, unit: 'cm' });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('p = 8 cm');
+      expect(svg).toContain('l = 5 cm');
+      expect(svg).toContain('t = 4 cm');
+      expect(svg).toContain('Jaring-jaring Balok');
+    });
+
+    it('6. renderKoordinatKartesiusSvg should render Cartesian grid with points', () => {
+      const svg = renderKoordinatKartesiusSvg({
+        titik: [
+          { x: 2, y: 5, label: 'A' },
+          { x: -3, y: -2, label: 'B' }
+        ]
+      });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('A(2,5)');
+      expect(svg).toContain('B(-3,-2)');
+      expect(svg).toContain('Bidang Koordinat Kartesius');
+      expect(svg).toContain('stroke-dasharray="3,3"'); // projection lines
+    });
+
+    it('7. renderDiagramVennSvg should render 2 overlapping circles with universal set', () => {
+      const svg = renderDiagramVennSvg({
+        judul: 'Hobi Kelas 5',
+        labelA: 'Sepak Bola',
+        labelB: 'Basket',
+        aSaja: 15,
+        irisan: 6,
+        bSaja: 9
+      });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('Hobi Kelas 5');
+      expect(svg).toContain('Sepak Bola');
+      expect(svg).toContain('Basket');
+      expect(svg).toContain('15');
+      expect(svg).toContain('6');
+      expect(svg).toContain('9');
+      expect(svg).toContain('S'); // universal set symbol
+    });
+
+    it('8. renderPictogramSvg should render pictogram with custom icons and legend', () => {
+      const svg = renderPictogramSvg({
+        judul: 'Hasil Panen Jeruk',
+        labels: ['Senin', 'Selasa'],
+        data: [3, 5],
+        ikon: '🍊',
+        nilaiIkon: 10
+      });
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('Hasil Panen Jeruk');
+      expect(svg).toContain('Senin');
+      expect(svg).toContain('Selasa');
+      expect(svg).toContain('🍊');
+      expect(svg).toContain('Keterangan: 🍊 = 10');
+      expect(svg).toContain('(30)');
+      expect(svg).toContain('(50)');
+    });
+
+    it('9. renderSimetriLipatSvg should render symmetry axes with dash lines', () => {
+      const svgPersegi = renderSimetriLipatSvg({ bangun: 'persegi' });
+      expect(svgPersegi).toContain('<svg');
+      expect(svgPersegi).toContain('Persegi');
+      expect(svgPersegi).toContain('Jumlah garis simetri = <tspan font-weight="bold" fill="#e11d48">4</tspan>');
+
+      const svgLingkaran = renderSimetriLipatSvg({ bangun: 'lingkaran' });
+      expect(svgLingkaran).toContain('∞ (tak terhingga)');
+    });
+
+    it('10. renderBangunGabunganSvg should render L-shape and T-shape with dimensions', () => {
+      const svgL = renderBangunGabunganSvg({ bentuk: 'L', unit: 'cm' });
+      expect(svgL).toContain('<svg');
+      expect(svgL).toContain('Bangun Gabungan Bentuk L');
+
+      const svgT = renderBangunGabunganSvg({ bentuk: 'T', unit: 'cm' });
+      expect(svgT).toContain('<svg');
+      expect(svgT).toContain('Bangun Gabungan Bentuk T');
+    });
+
+    it('should dispatch all 10 expanded math types via generateVisualStimulus', () => {
+      const newMathTypes = [
+        { type: 'persegi_panjang', params: { p: 10, l: 5 } },
+        { type: 'segitiga_sama_sisi', params: { s: 8 } },
+        { type: 'segitiga_sama_kaki', params: { kaki: 10, alas: 6 } },
+        { type: 'jaring_kubus', params: { s: 4 } },
+        { type: 'jaring_balok', params: { p: 6, l: 3, t: 2 } },
+        { type: 'koordinat', params: { titik: [{ x: 1, y: 1, label: 'A' }] } },
+        { type: 'diagram_venn', params: { aSaja: 8, irisan: 3, bSaja: 5 } },
+        { type: 'pictogram', params: { data: [2, 4] } },
+        { type: 'simetri_lipat', params: { bangun: 'persegi_panjang' } },
+        { type: 'bangun_gabungan', params: { bentuk: 'L' } },
+      ];
+
+      for (const item of newMathTypes) {
+        const res = generateVisualStimulus(item);
+        expect(res, `Dispatcher failed for type=${item.type}`).not.toBeNull();
+        expect(res?.svg).toContain('<svg');
+        expect(res?.dataUri).toContain('data:image/svg+xml');
+        expect(res?.width).toBeGreaterThan(0);
+        expect(res?.height).toBeGreaterThan(0);
+      }
+    });
+
+    it('should generate distinct stimulus signatures for diversity guard', () => {
+      const sig1 = buildStimulusSignature({ type: 'persegi_panjang', params: { p: 12, l: 8 } });
+      const sig2 = buildStimulusSignature({ type: 'persegi_panjang', params: { p: 14, l: 10 } });
+      expect(sig1).not.toBe(sig2);
+      expect(sig1).toBe('persegi_panjang:p=12:l=8');
+
+      const sigKaki = buildStimulusSignature({ type: 'segitiga_sama_kaki', params: { kaki: 10, alas: 6 } });
+      expect(sigKaki).toBe('segitiga_sama_kaki:s=undefined:kaki=10:alas=6'.replace(':s=undefined', '')); // without undefined if not set
+      expect(sigKaki).toContain('kaki=10');
+      expect(sigKaki).toContain('alas=6');
+
+      const sigVenn = buildStimulusSignature({ type: 'diagram_venn', params: { aSaja: 10, irisan: 5, bSaja: 8 } });
+      expect(sigVenn).toContain('diagram_venn');
+      expect(sigVenn).toContain('aSaja=10');
+      expect(sigVenn).toContain('irisan=5');
+      expect(sigVenn).toContain('bSaja=8');
+
+      const sigKoor = buildStimulusSignature({
+        type: 'koordinat',
+        params: { titik: [{ label: 'P', x: 2, y: 3 }, { label: 'Q', x: -1, y: 4 }] }
+      });
+      expect(sigKoor).toBe('koordinat:titik=P:2,3;Q:-1,4');
     });
   });
 });

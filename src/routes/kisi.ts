@@ -808,6 +808,12 @@ export const buildAssessmentPrompt = (params: {
         ${isPG ? '9.' : '8.'} LARANGAN: JANGAN menulis teks label "L1", "L2", "L3" di dalam teks pertanyaan yang dibaca murid. Label disimpan pada field "level". JANGAN menambahkan field "gambar" ke soal isian maupun uraian.${isianRule}
         ${getKelasAdaptation(jenjangKelas)}
 
+        ${isPG ? '10.' : '9.'} PEDOMAN EFISIENSI PENALARAN (REASONING EFFICIENCY):
+        - Jika model AI menggunakan mode penalaran (Reasoning / Extended Thinking / Chain of Thought):
+          * Buat telaah perancangan butir soal secara RINGKAS, PADAT, dan LANGSUNG (maksimal 1-2 kalimat pertimbangan per nomor).
+          * DILARANG mengulang-ulang kutipan teks regulasi, menyalin teks prompt, atau membuat monolog analisis bertele-tele.
+          * Segera formulasikan output struktur JSON yang diminta secara lengkap dan valid agar proses selesai tepat waktu.
+
         III. FORMAT OUTPUT JSON (berikan JSON valid saja, tanpa teks pengantar):
         {
            ${jsonStructure}
@@ -1238,55 +1244,68 @@ kisi.post('/generate-stream', async (c) => {
                         })
                     });
 
-                    const startNoIsian = totalPG + 1;
-                    const prompt = buildPrompt('isian', startNoIsian, totalIsian, totalPG);
-                    const result = await ai.generateJSONStream(prompt, preferredSlug, onToken);
-                    if (result?._ai_meta) finalData._meta = result._ai_meta;
+                    try {
+                        const startNoIsian = totalPG + 1;
+                        const prompt = buildPrompt('isian', startNoIsian, totalIsian, totalPG);
+                        const result = await ai.generateJSONStream(prompt, preferredSlug, onToken);
+                        if (result?._ai_meta) finalData._meta = result._ai_meta;
 
-                    if (totalIsian > 0 && result?.isian) {
-                        finalData.isian = result.isian;
-                        finalData.isian.type = isianType || 'Standard';
+                        if (totalIsian > 0 && result?.isian) {
+                            finalData.isian = result.isian;
+                            finalData.isian.type = isianType || 'Standard';
 
-                        if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
-                            finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
-                            finalData.isian.data.forEach((q: any) => {
+                            if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
+                                finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
+                                finalData.isian.data.forEach((q: any) => {
+                                    delete q.gambar;
+                                    delete q.gambar_keyword;
+                                    q.soal = normalizeSoalMarkdown(q.soal);
+                                });
+                            }
+
+                            if (isianType === 'Crossword' && finalData.isian.data) {
+                                const words = finalData.isian.data.map((q: any) => String(q.kunci));
+                                const cw = generateCrossword(words, startNoIsian);
+                                if (cw.success) {
+                                    finalData.isian.crossword = cw;
+                                    for (const p of cw.placements) {
+                                        if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
+                                            finalData.isian.data[p.originalIndex].no = p.number;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            finalData.isian = null;
+                        }
+
+                        if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
+                            finalData.uraian = result.uraian.slice(0, totalUraian);
+                            finalData.uraian.forEach((q: any) => {
                                 delete q.gambar;
                                 delete q.gambar_keyword;
                                 q.soal = normalizeSoalMarkdown(q.soal);
                             });
-                        }
 
-                        if (isianType === 'Crossword' && finalData.isian.data) {
-                            const words = finalData.isian.data.map((q: any) => String(q.kunci));
-                            const cw = generateCrossword(words, startNoIsian);
-                            if (cw.success) {
-                                finalData.isian.crossword = cw;
-                                for (const p of cw.placements) {
-                                    if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
-                                        finalData.isian.data[p.originalIndex].no = p.number;
-                                    }
-                                }
+                            if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
+                                const maxIsianNo = Math.max(...finalData.isian.data.map((x: any) => x.no || 0));
+                                finalData.uraian.forEach((q: any, i: number) => {
+                                    q.no = maxIsianNo + 1 + i;
+                                });
                             }
+                        } else {
+                            finalData.uraian = [];
                         }
-                    } else {
-                        finalData.isian = null;
-                    }
-
-                    if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
-                        finalData.uraian = result.uraian.slice(0, totalUraian);
-                        finalData.uraian.forEach((q: any) => {
-                            delete q.gambar;
-                            delete q.gambar_keyword;
-                            q.soal = normalizeSoalMarkdown(q.soal);
+                    } catch (step3Err: any) {
+                        // Step 3 gagal (biasanya karena reasoning model menghabiskan token budget).
+                        // Jika Step 2 (PG) sudah berhasil, JANGAN batalkan seluruh proses.
+                        // Kirim warning ke client dan lanjutkan dengan data PG yang sudah ada.
+                        console.warn(`[Kisi-Stream] Step 3 (Isian/Uraian) failed but continuing with partial data:`, step3Err.message);
+                        await stream.writeSSE({
+                            event: 'token',
+                            data: JSON.stringify({ text: `\n⚠️ Soal Isian/Uraian gagal diproses (${step3Err.message?.substring(0, 80)}). Soal PG tetap ditampilkan.\n` })
                         });
-
-                        if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
-                            const maxIsianNo = Math.max(...finalData.isian.data.map((q: any) => q.no || 0));
-                            finalData.uraian.forEach((q: any, i: number) => {
-                                q.no = maxIsianNo + 1 + i;
-                            });
-                        }
-                    } else {
+                        finalData.isian = null;
                         finalData.uraian = [];
                     }
                 }

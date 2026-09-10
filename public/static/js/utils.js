@@ -529,6 +529,9 @@ export async function streamPost(endpoint, data, onEvent) {
 
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
+  let receivedDone = false;
+  let receivedError = false;
+  let lastEventType = '';
 
   while (true) {
     const { done, value } = await reader.read();
@@ -553,6 +556,10 @@ export async function streamPost(endpoint, data, onEvent) {
         }
       }
 
+      lastEventType = eventType;
+      if (eventType === 'done') receivedDone = true;
+      if (eventType === 'error') receivedError = true;
+
       if (dataText) {
         try {
           const parsed = JSON.parse(dataText);
@@ -562,6 +569,14 @@ export async function streamPost(endpoint, data, onEvent) {
         }
       }
     }
+  }
+
+  // Jika stream berakhir tanpa event 'done' atau 'error', koneksi terputus di tengah
+  if (!receivedDone && !receivedError) {
+    throw new Error(
+      `Koneksi streaming terputus sebelum selesai (event terakhir: "${lastEventType || 'none'}"). ` +
+      `Ini biasanya terjadi ketika AI reasoning model membutuhkan waktu terlalu lama. Coba kurangi jumlah soal atau gunakan mode reasoning "Low".`
+    );
   }
 }
 

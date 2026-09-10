@@ -162,7 +162,7 @@ export function healTruncatedJsonArray(str: string): string | null {
 // System prompt shared across text generation
 // ═══════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = `Anda adalah asisten ahli administrasi pendidikan Indonesia yang sangat berpengalaman dalam menyusun dokumen resmi untuk Kelompok Kerja Guru (KKG). Anda memahami format surat dinas pendidikan Indonesia, tata bahasa Indonesia yang baik dan benar, serta pedoman-pedoman dari Kementerian Pendidikan dan Kebudayaan. Selalu gunakan bahasa Indonesia yang formal, sopan, dan profesional. PENTING: Selalu selesaikan dokumen sampai bagian terakhir, jangan berhenti di tengah.`;
+const SYSTEM_PROMPT = `Anda adalah asisten ahli administrasi pendidikan Indonesia yang sangat berpengalaman dalam menyusun dokumen resmi untuk Kelompok Kerja Guru (KKG). Anda memahami format surat dinas pendidikan Indonesia, tata bahasa Indonesia yang baik dan benar, serta pedoman-pedoman dari Kementerian Pendidikan dan Kebudayaan. Selalu gunakan bahasa Indonesia yang formal, sopan, dan profesional. Jika model Anda menggunakan mode penalaran (reasoning/thinking), berpikir secara ringkas dan efisien tanpa pengulangan bertele-tele agar generasi selesai secara penuh tepat waktu. PENTING: Selalu selesaikan dokumen sampai bagian terakhir, jangan berhenti di tengah.`;
 
 // ═══════════════════════════════════════════════════════════════════
 // AIService — Enterprise DB-driven multi-provider with auto-failover,
@@ -395,8 +395,25 @@ export class AIService {
 
         console.error('All 7 JSON parse layers failed.');
         console.error('Parse errors:', parseErrors);
-        console.error('Raw content preview:', clean.substring(0, 1000));
-        throw new Error(`Gagal memproses format JSON dari AI. Silakan coba lagi.`);
+        console.error(`Raw content length: ${content.length} chars, first 500:`, content.substring(0, 500));
+        console.error(`Raw content last 500:`, content.substring(Math.max(0, content.length - 500)));
+        
+        // Layer 8: Last resort — try to find ANY valid JSON object in the content
+        // (useful when model mixes reasoning text with JSON output in the same content stream)
+        try {
+            const jsonBlocks = content.match(/\{[\s\S]*?"(?:pg|isian|uraian|soal|data|no)"[\s\S]*?\}(?=\s*$|\s*[^,\w])/g);
+            if (jsonBlocks && jsonBlocks.length > 0) {
+                const longest = jsonBlocks.reduce((a, b) => a.length >= b.length ? a : b, '');
+                const repaired = repairTruncatedJSON(longest).replace(/,\s*([}\]])/g, '$1');
+                const parsed = JSON.parse(repaired);
+                console.log(`[AI-JSON] Layer 8 (Last Resort): Recovered JSON (${repaired.length} chars) from mixed content.`);
+                return attachMeta(parsed);
+            }
+        } catch (e: any) {
+            parseErrors.push(`Layer 8 (Last Resort Extract): ${e.message}`);
+        }
+        
+        throw new Error(`Gagal memproses format JSON dari AI (${content.length} chars). Silakan coba lagi.`);
     }
 
     // ─── generateJSON ─────────────────────────────────────────────
@@ -811,11 +828,13 @@ CRITICAL JSON RULES:
     // ─── OpenAI Compatible Stream (Sliding Idle Timeout) ──────────
 
     private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
-        const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
+        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
                                  p.model.toLowerCase().includes('reasoner') || 
                                  p.model.toLowerCase().includes('r1') || 
-                                 p.model.toLowerCase().includes('qwq');
+                                 p.model.toLowerCase().includes('qwq') ||
+                                 hasReasoningEffort;
 
         const isTestPing = p.max_tokens <= 32;
         const messages = isTestPing
@@ -827,9 +846,6 @@ CRITICAL JSON RULES:
                     { role: 'user', content: prompt }
                   ]);
 
-        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
-        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
-
         const body: any = {
             model: p.model,
             stream: true,
@@ -839,18 +855,10 @@ CRITICAL JSON RULES:
 
         if (isReasoningModel) {
             body.max_completion_tokens = p.max_tokens;
-        } else if (hasReasoningEffort) {
-            // KRITIS: Saat reasoning_effort aktif (low/medium/high), model mengonsumsi
-            // token berpikir + token konten dari budget yang SAMA jika kita pakai max_tokens.
-            // Solusi: gunakan max_completion_tokens agar token berpikir TIDAK memotong kuota konten.
-            body.max_completion_tokens = p.max_tokens;
-            body.temperature = p.temperature;
-            // Jangan set max_tokens — biarkan model menggunakan budget berpikir tanpa batas
-            // sementara konten akhir (JSON) dijamin mendapatkan alokasi penuh.
-            // Beberapa proxy tidak mendukung max_completion_tokens, set max_tokens tinggi sebagai fallback:
-            body.max_tokens = Math.min(p.max_tokens * 3, 131072);
-            if (jsonMode) {
-                body.response_format = { type: 'json_object' };
+            // OpenAI o1/o3 melarang parameter temperature
+            if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
+                // Untuk DeepSeek/Qwen reasoning, temperature < 0.6 menyebabkan looping repetitif pada pemikiran
+                body.temperature = Math.max(0.6, p.temperature || 0.6);
             }
         } else {
             body.temperature = p.temperature;
@@ -1115,10 +1123,13 @@ CRITICAL JSON RULES:
 
     private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
+        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
                                  p.model.toLowerCase().includes('reasoner') || 
                                  p.model.toLowerCase().includes('r1') || 
-                                 p.model.toLowerCase().includes('qwq');
+                                 p.model.toLowerCase().includes('qwq') ||
+                                 hasReasoningEffort;
 
         const isTestPing = p.max_tokens <= 32;
         const messages = isTestPing
@@ -1130,9 +1141,6 @@ CRITICAL JSON RULES:
                     { role: 'user', content: prompt }
                   ]);
 
-        const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
-        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
-
         const body: any = {
             model: p.model,
             messages,
@@ -1141,13 +1149,8 @@ CRITICAL JSON RULES:
 
         if (isReasoningModel) {
             body.max_completion_tokens = p.max_tokens;
-            // Omit temperature for reasoning models
-        } else if (hasReasoningEffort) {
-            body.max_completion_tokens = p.max_tokens;
-            body.temperature = p.temperature;
-            body.max_tokens = Math.min(p.max_tokens * 3, 131072);
-            if (jsonMode) {
-                body.response_format = { type: 'json_object' };
+            if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
+                body.temperature = Math.max(0.6, p.temperature || 0.6);
             }
         } else {
             body.temperature = p.temperature;

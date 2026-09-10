@@ -1186,6 +1186,7 @@ export async function renderAdmin() {
                 <option value="medium">Medium (Seimbang)</option>
                 <option value="high">High (Maksimal & Teliti)</option>
               </select>
+              <p class="text-[11px] text-slate-500 mt-1">Disarankan <b>Low</b> atau <b>Medium</b> agar streaming responsif dan tidak melampaui batas koneksi server.</p>
             </div>
           </div>
 

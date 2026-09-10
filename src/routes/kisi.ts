@@ -634,6 +634,20 @@ export const resolveQuestionVisualStimulus = async (
     }
 };
 
+// Helper: evaluasi apakah mata pelajaran dan topik relevan menggunakan stimulus gambar
+export const shouldEnableVisualStimulusForTopic = (mataPelajaran: string, topik: string, useGambarFlag: boolean): boolean => {
+    if (!useGambarFlag) return false;
+    const m = String(mataPelajaran || '').toLowerCase();
+    const t = String(topik || '').toLowerCase();
+    const isLanguageSubject = /bahasa|indonesia|inggris|sunda|jawa/i.test(m);
+    if (!isLanguageSubject) return true;
+
+    // Untuk mapel bahasa (Indonesia/Sunda/Jawa/Inggris):
+    // Gambar HANYA diaktifkan jika topiknya eksplisit membutuhkan visual konkret (rambu, iklan, denah, dll)
+    const isExplicitVisual = /rambu|denah|peta|iklan|poster|slogan|komik|cerita\s*bergambar|grafik|tabel|simbol|lambang|gambar/i.test(t);
+    return isExplicitVisual;
+};
+
 // Helper: perumusan prompt asesmen & kisi-kisi terstandar Puspendik & BSKAP 046/2025
 export const buildAssessmentPrompt = (params: {
     type: string;
@@ -736,9 +750,14 @@ export const buildAssessmentPrompt = (params: {
         uraianRule = `\n                6. LARANGAN URAIAN: Pengguna TIDAK MEMBUTUHKAN soal uraian (jumlah = 0). DILARANG KERAS menyertakan field "uraian" dalam output JSON.`;
     }
 
+    const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
+    const isLanguageSubject = /bahasa|indonesia|inggris|sunda|jawa/i.test(mataPelajaran);
+
     let gambarRule = '';
     if (isPG) {
-        if (isGambarEnabled) {
+        if (!effectiveGambarEnabled && isLanguageSubject) {
+            gambarRule = `\n                7. ATURAN STIMULUS MAPEL BAHASA (STIMULUS TEKS / WACANA): Untuk materi kebahasaan/sastra "${topik}", stimulus soal WAJIB berupa teks wacana pendek, kalimat autentik, dialog, atau kutipan sastra yang kaya konteks (BUKAN stimulus gambar). DILARANG KERAS menyertakan stimulus gambar visual dan DILARANG menuliskan frasa "Perhatikan gambar berikut!" di naskah soal. Field "visual_stimulus", "gambar_keyword", dan "gambar_prompt_en" WAJIB diisi null/string kosong.`;
+        } else if (effectiveGambarEnabled) {
             const exactImages = Math.max(1, Math.round(count * 0.2));
             gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
             - PERENCANAAN VARIASI VISUAL (SANGAT PENTING — BACA SEBELUM MULAI MENYUSUN SOAL):
@@ -870,9 +889,10 @@ kisi.post('/generate', async (c) => {
 
         // Generate PG
         if (totalPG > 0) {
-            const exactImageCount = isGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
+            const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
+            const exactImageCount = effectiveGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
             const BATCH_SIZE = 20;
-            const unsplash = isGambarEnabled ? new UnsplashService(c.env) : null;
+            const unsplash = effectiveGambarEnabled ? new UnsplashService(c.env) : null;
 
             for (let i = 0; i < totalPG; i += BATCH_SIZE) {
                 const currentCount = Math.min(BATCH_SIZE, totalPG - i);
@@ -900,7 +920,7 @@ kisi.post('/generate', async (c) => {
             finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
 
             // ENFORCE EXACT IMAGE COUNT: Kunci jumlah soal bergambar TEPAT sesuai kuota (misal 2 untuk 10 soal, 3 untuk 15 soal)
-            if (isGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
+            if (effectiveGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
                 // Beri skor pada setiap butir soal untuk menentukan butir mana yang paling tepat bergambar
                 const scoredQuestions = finalData.pg.map((q: any, index: number) => {
                     let score = 0;
@@ -923,16 +943,25 @@ kisi.post('/generate', async (c) => {
                 for (const q of finalData.pg) {
                     if (targetSelected.has(q)) {
                         await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
-                        // Bersihkan segala artefak sisa prompt dan normalisasi tabel Markdown
-                        q.soal = normalizeSoalMarkdown(q.soal);
                     } else {
                         // Bersihkan field gambar agar soal lain 100% bebas gambar
                         delete q.gambar;
                         delete q.gambar_keyword;
                         delete q.gambar_prompt_en;
                         delete q.visual_stimulus;
-                        q.soal = normalizeSoalMarkdown(q.soal);
                     }
+
+                    // Jika butir soal tidak punya gambar valid, bersihkan rujukan gambar semu
+                    if (!q.gambar && !q.visual_stimulus) {
+                        q.soal = q.soal
+                            .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                            .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                        if (q.soal.length > 0) {
+                            q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+                        }
+                    }
+
+                    q.soal = normalizeSoalMarkdown(q.soal);
                 }
             } else {
                 // Jika useGambar nonaktif, pastikan semua soal bersih dari gambar dan placeholder
@@ -941,6 +970,12 @@ kisi.post('/generate', async (c) => {
                     delete q.gambar_keyword;
                     delete q.gambar_prompt_en;
                     delete q.visual_stimulus;
+                    q.soal = q.soal
+                        .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                        .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                    if (q.soal.length > 0) {
+                        q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+                    }
                     q.soal = normalizeSoalMarkdown(q.soal);
                 }
             }
@@ -1167,9 +1202,10 @@ kisi.post('/generate-stream', async (c) => {
                         })
                     });
 
-                    const exactImageCount = isGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
+                    const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
+                    const exactImageCount = effectiveGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
                     const BATCH_SIZE = 20;
-                    const unsplash = isGambarEnabled ? new UnsplashService(c.env) : null;
+                    const unsplash = effectiveGambarEnabled ? new UnsplashService(c.env) : null;
 
                     for (let i = 0; i < totalPG; i += BATCH_SIZE) {
                         const currentCount = Math.min(BATCH_SIZE, totalPG - i);
@@ -1196,7 +1232,7 @@ kisi.post('/generate-stream', async (c) => {
                     finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
 
                     // Image enrichment
-                    if (isGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
+                    if (effectiveGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
                         const scoredQuestions = finalData.pg.map((q: any, index: number) => {
                             let score = 0;
                             const soalText = String(q.soal || '').toLowerCase();
@@ -1212,15 +1248,24 @@ kisi.post('/generate-stream', async (c) => {
                         for (const q of finalData.pg) {
                             if (targetSelected.has(q)) {
                                 await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
-                                // Bersihkan segala artefak sisa prompt dan normalisasi tabel Markdown
-                                q.soal = normalizeSoalMarkdown(q.soal);
                             } else {
                                 delete q.gambar;
                                 delete q.gambar_keyword;
                                 delete q.gambar_prompt_en;
                                 delete q.visual_stimulus;
-                                q.soal = normalizeSoalMarkdown(q.soal);
                             }
+
+                            // Jika butir soal tidak punya gambar valid, bersihkan rujukan gambar semu
+                            if (!q.gambar && !q.visual_stimulus) {
+                                q.soal = q.soal
+                                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                                if (q.soal.length > 0) {
+                                    q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+                                }
+                            }
+
+                            q.soal = normalizeSoalMarkdown(q.soal);
                         }
                     } else {
                         for (const q of finalData.pg) {
@@ -1228,6 +1273,12 @@ kisi.post('/generate-stream', async (c) => {
                             delete q.gambar_keyword;
                             delete q.gambar_prompt_en;
                             delete q.visual_stimulus;
+                            q.soal = q.soal
+                                .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                                .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                            if (q.soal.length > 0) {
+                                q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+                            }
                             q.soal = normalizeSoalMarkdown(q.soal);
                         }
                     }

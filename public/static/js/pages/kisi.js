@@ -189,6 +189,14 @@ export async function renderKisi() {
               </label>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300">Live</span>
             </div>
+            <!-- Stimulus Gambar / Visual Mode Toggle Switch -->
+            <div class="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-500/30">
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none" title="Sertakan stimulus visual/diagram pada butir soal yang relevan (misal IPA/Matematika). Matikan jika ingin soal berbasis teks/wacana murni.">
+                <input type="checkbox" id="toggle-kisi-gambar" class="rounded accent-indigo-600 w-4 h-4 cursor-pointer" checked>
+                <span><i class="fas fa-images text-indigo-600 dark:text-indigo-400 mr-1"></i>Stimulus Gambar & Diagram</span>
+              </label>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Otomatis</span>
+            </div>
           </div>
           </div>
 
@@ -703,6 +711,21 @@ export async function renderKisi() {
         border: 1px solid #ddd6fe;
       }
 
+      /* Image container & Graceful load failure handling */
+      .soal-image-container.image-load-failed {
+        border: 1px dashed #f59e0b !important;
+        background: #fffbeb !important;
+        padding: 6px 10px !important;
+      }
+      .soal-image-container.image-load-failed img,
+      .soal-image-container.image-load-failed .image-credit-badge,
+      .soal-image-container.image-load-failed .image-hover-actions {
+        display: none !important;
+      }
+      .soal-image-container.image-load-failed .image-failed-alert {
+        display: flex !important;
+      }
+
       @page {
         size: A4 portrait;
         margin: 1.5cm 1.8cm 1.5cm 1.8cm;
@@ -719,6 +742,9 @@ export async function renderKisi() {
           margin: 0 !important;
           padding: 0 !important;
           font-family: 'Times New Roman', 'Noto Sans Sundanese', Times, serif !important;
+        }
+        .soal-image-container.image-load-failed {
+          display: none !important;
         }
         #asesmen-form-view,
         .asesmen-result-toolbar,
@@ -1265,12 +1291,24 @@ export function initKisi() {
     });
   }
 
+  // Synchronize Stimulus Gambar toggle preference
+  const toggleGambarEl = document.getElementById('toggle-kisi-gambar');
+  if (toggleGambarEl) {
+    const isGambarOn = localStorage.getItem('kkg_kisi_use_gambar') !== 'false';
+    toggleGambarEl.checked = isGambarOn;
+    toggleGambarEl.addEventListener('change', () => {
+      localStorage.setItem('kkg_kisi_use_gambar', toggleGambarEl.checked ? 'true' : 'false');
+      showToast(toggleGambarEl.checked ? '🖼️ Stimulus Gambar & Diagram diaktifkan untuk materi yang relevan.' : '📝 Mode Teks Penuh diaktifkan: Soal akan menggunakan stimulus teks/wacana tanpa gambar.', 'info');
+    });
+  }
+
   // Submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries());
-    data.useGambar = true; // Stimulus gambar selalu diikutsertakan jika relevan
+    const toggleGambarInput = document.getElementById('toggle-kisi-gambar');
+    data.useGambar = toggleGambarInput ? toggleGambarInput.checked : (localStorage.getItem('kkg_kisi_use_gambar') !== 'false');
 
     if (!data.topik || !data.topik.trim()) {
       showToast('Harap masukkan Topik/Materi terlebih dahulu.', 'error');
@@ -1710,21 +1748,28 @@ function renderResult(data, formData) {
                 <td style="vertical-align:top; padding:1px 0;">
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 6px 0 8px 0; text-align:left;">
-                    <div class="relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
-                      <img src="${q.gambar.url}" style="max-width:240px; max-height:160px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" crossorigin="anonymous" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}">
+                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
+                      <img src="${q.gambar.url}" style="max-width:240px; max-height:160px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
                       ${q.gambar.credit ? `
-                        <div class="print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
+                        <div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
                           <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>
                           <span>${escapeHtml(q.gambar.credit)}</span>
                         </div>
                       ` : ''}
-                      <div class="absolute top-1.5 right-1.5 flex items-center gap-1 print:hidden opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div class="image-hover-actions absolute top-1.5 right-1.5 flex items-center gap-1 print:hidden opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button" class="btn-change-soal-image bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded flex items-center gap-1 text-[10px] font-bold shadow cursor-pointer" title="Ganti gambar ini (upload / link URL)" data-type="pg" data-qindex="${pgIdx}">
                           <i class="fas fa-camera"></i> Ganti
                         </button>
                         <button type="button" class="btn-remove-soal-image bg-rose-600 hover:bg-rose-700 text-white w-6 h-6 rounded flex items-center justify-center text-[10px] shadow cursor-pointer" title="Hapus gambar dari butir soal ini" data-type="pg" data-qindex="${pgIdx}">
                           <i class="fas fa-trash-alt"></i>
                         </button>
+                      </div>
+                      <div class="image-failed-alert hidden print:hidden items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
+                        <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar tidak dapat dimuat</span>
+                        <div class="flex items-center gap-1.5">
+                          <button type="button" class="btn-change-soal-image px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-camera mr-1"></i>Ganti</button>
+                          <button type="button" class="btn-remove-soal-image px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-trash-alt mr-1"></i>Hapus</button>
+                        </div>
                       </div>
                     </div>
                   </div>

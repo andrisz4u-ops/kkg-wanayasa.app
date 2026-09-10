@@ -391,4 +391,40 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             expect(question.soal).toBe('Perhatikan gambar berikut!\nBerdasarkan gambar, besar sudut tersebut adalah ...');
         });
     });
+
+    describe('shouldEnableVisualStimulusForTopic', () => {
+        it('should suppress visual images for language literature and grammar topics like Majas', async () => {
+            const { shouldEnableVisualStimulusForTopic } = await import('../src/routes/kisi');
+
+            // Bahasa Indonesia with literature / grammatical topics
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Majas Metafora dan Hiperbola', true)).toBe(false);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Puisi dan Pantun', true)).toBe(false);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Kalimat Efektif dan Tanda Baca', true)).toBe(false);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Sunda', 'Kawih dan Pupuh', true)).toBe(false);
+        });
+
+        it('should allow visual images for language topics that explicitly require visual media (rambu, iklan, denah)', async () => {
+            const { shouldEnableVisualStimulusForTopic } = await import('../src/routes/kisi');
+
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Membaca Rambu Lalu Lintas', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Menganalisis Iklan dan Poster', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Denah dan Petunjuk Arah', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Indonesia', 'Cerita Bergambar / Komik', true)).toBe(true);
+        });
+
+        it('should allow visual images for STEM and social subjects by default when toggle is true', async () => {
+            const { shouldEnableVisualStimulusForTopic } = await import('../src/routes/kisi');
+
+            expect(shouldEnableVisualStimulusForTopic('IPAS', 'Sistem Pencernaan Manusia', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Matematika', 'Geometri Bangun Ruang', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Pendidikan Pancasila', 'Simbol Garuda Pancasila', true)).toBe(true);
+        });
+
+        it('should return false if user toggle flag is false regardless of subject', async () => {
+            const { shouldEnableVisualStimulusForTopic } = await import('../src/routes/kisi');
+
+            expect(shouldEnableVisualStimulusForTopic('IPAS', 'Sistem Pencernaan', false)).toBe(false);
+            expect(shouldEnableVisualStimulusForTopic('Matematika', 'Pecahan', false)).toBe(false);
+        });
+    });
 });

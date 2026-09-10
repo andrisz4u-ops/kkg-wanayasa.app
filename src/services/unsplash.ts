@@ -31,13 +31,29 @@ export interface UnsplashImagePayload {
     unsplashId: string;
 }
 
+function extractCoreKeyword(text: string): string {
+    const stopwords = new Set([
+        'yang', 'di', 'ke', 'dari', 'dan', 'untuk', 'pada', 'adalah', 'sedang',
+        'dengan', 'ini', 'itu', 'sebuah', 'suatu', 'oleh', 'karena', 'gambar',
+        'berikut', 'menunjukkan', 'tersebut', 'amatilah', 'perhatikan'
+    ]);
+    const words = text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopwords.has(w));
+    
+    return words.slice(0, 2).join(' ') || text;
+}
+
 /**
  * Helper: Search Wikipedia & Wikimedia Commons for authentic historical photos,
  * Indonesian national heroes, cultural heritage sites, real maps, and biology/nature specimens.
  */
 async function searchWikimediaImage(query: string): Promise<{ url: string; creditName: string } | null> {
     try {
-        const cleanQuery = query.replace(/[\[\]]/g, '').trim();
+        const rawClean = query.replace(/[\[\]]/g, '').trim();
+        const cleanQuery = rawClean.split(/\s+/).length > 2 ? extractCoreKeyword(rawClean) : rawClean;
 
         // 1. Query Wikipedia Bahasa Indonesia (Prioritas untuk sejarah, tokoh, & tempat Indonesia)
         const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
@@ -46,8 +62,9 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
             const data = await res.json() as any;
             const pages = data?.query?.pages;
             if (pages) {
-                for (const pId of Object.keys(pages)) {
-                    const page = pages[pId];
+                const pageList = Object.values(pages) as any[];
+                pageList.sort((a, b) => (a.index || 99) - (b.index || 99));
+                for (const page of pageList) {
                     if (page.thumbnail?.source) {
                         return {
                             url: page.thumbnail.source,
@@ -65,8 +82,10 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
             const commData = await commRes.json() as any;
             const commPages = commData?.query?.pages;
             if (commPages) {
-                for (const pId of Object.keys(commPages)) {
-                    const imgInfo = commPages[pId]?.imageinfo?.[0];
+                const pageList = Object.values(commPages) as any[];
+                pageList.sort((a, b) => (a.index || 99) - (b.index || 99));
+                for (const page of pageList) {
+                    const imgInfo = page?.imageinfo?.[0];
                     if (imgInfo?.thumburl || imgInfo?.url) {
                         return {
                             url: imgInfo.thumburl || imgInfo.url,
@@ -187,24 +206,7 @@ export class UnsplashService {
             }
         }
 
-        // 3. Prioritas Ketiga: Educational Visual Engine (FLUX.1 via Pollinations dengan prompt bahasa Inggris tajam)
-        try {
-            const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=400&height=400&nologo=true`;
-
-            return {
-                source: 'unsplash',
-                url: fallbackUrl,
-                alt: (fallbackAlt || cleanQuery).slice(0, 180),
-                query: cleanQuery,
-                creditName: 'Educational Visual Engine',
-                creditUrl: 'https://pollinations.ai',
-                unsplashId: `gen_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-            };
-        } catch (err) {
-            console.warn('Visual engine fallback note (proceeding to unsplash):', err);
-        }
-
-        // 4. Prioritas Keempat: Unsplash API sebagai cadangan darurat
+        // 3. Prioritas Ketiga: Unsplash API resmi jika token terkonfigurasi
         if (this.accessKey) {
             try {
                 const searchUrl = new URL('https://api.unsplash.com/search/photos');
@@ -248,6 +250,8 @@ export class UnsplashService {
             }
         }
 
+        // Jika tidak ditemukan gambar otentik dari Wikimedia Commons, Cloudflare AI, atau Unsplash, kembalikan null
+        // Jangan gunakan URL generator acak yang lambat/gagal CORS demi kebersihan naskah ujian
         return null;
     }
 }

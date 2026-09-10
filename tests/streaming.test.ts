@@ -116,7 +116,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
         });
 
         it('should configure resilient Sliding Idle Timeout parameters', () => {
-            expect(STREAM_INITIAL_TIMEOUT_MS).toBe(30000); // 30s initial response fail-fast
+            expect(STREAM_INITIAL_TIMEOUT_MS).toBe(60000); // 60s initial response fail-fast (resilient for heavy reasoning models)
             expect(STREAM_IDLE_TIMEOUT_MS).toBe(60000);    // 60s idle sliding per token
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBe(600000); // 10 minutes max ceiling
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBeGreaterThan(STREAM_IDLE_TIMEOUT_MS);

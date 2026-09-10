@@ -66,7 +66,7 @@ export interface CheckResult {
 const DEFAULT_SUBREQUEST_TIMEOUT_MS = 180000;
 
 // Streaming timeout settings (Sliding Idle Timeout / berbasis aktivitas aliran data):
-export const STREAM_INITIAL_TIMEOUT_MS = 30000;    // 30 detik batas waktu tunggu token pertama (TTFT fail-fast jika server antre/mati)
+export const STREAM_INITIAL_TIMEOUT_MS = 60000;    // 60 detik batas waktu tunggu token pertama (TTFT fail-fast jika server antre/mati)
 export const STREAM_IDLE_TIMEOUT_MS = 60000;       // 60 detik jeda maksimal tanpa adanya token/chunk baru (sliding saat AI aktif menulis)
 export const STREAM_MAX_TOTAL_TIMEOUT_MS = 600000; // 10 menit batas pengaman global absolut
 
@@ -784,10 +784,26 @@ CRITICAL JSON RULES:
                 let res: AIResponse;
                 switch (provider.api_type) {
                     case 'openai_compat':
-                        res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken);
+                        try {
+                            res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken);
+                        } catch (streamErr: any) {
+                            console.warn(`[AI-STREAM] Streaming failed for ${provider.name} (${provider.slug}): "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
+                            res = await this.callOpenAICompat(pWithKey, prompt, jsonMode, timeoutMs);
+                            if (onToken && res.content) {
+                                onToken(res.content);
+                            }
+                        }
                         break;
                     case 'gemini_sdk':
-                        res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken);
+                        try {
+                            res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken);
+                        } catch (streamErr: any) {
+                            console.warn(`[AI-STREAM] Gemini streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
+                            res = await this.callGeminiSDK(pWithKey, prompt, jsonMode, timeoutMs);
+                            if (onToken && res.content) {
+                                onToken(res.content);
+                            }
+                        }
                         break;
                     case 'anthropic':
                     case 'bedrock':
@@ -922,6 +938,25 @@ CRITICAL JSON RULES:
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`${p.name} Error ${response.status}: ${errorText.substring(0, 500)}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                // Gateway atau model mengabaikan stream: true dan langsung mengembalikan JSON lengkap
+                const data: any = await response.json();
+                const jsonContent = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+                if (onToken && jsonContent) onToken(jsonContent);
+                const totalTokens = (data.usage?.prompt_tokens || 0) + (data.usage?.completion_tokens || 0) || Math.round(jsonContent.length / 4);
+                return {
+                    content: jsonContent,
+                    provider: p.slug,
+                    model: p.model,
+                    usage: {
+                        prompt_tokens: data.usage?.prompt_tokens || 0,
+                        completion_tokens: data.usage?.completion_tokens || 0,
+                        total_tokens: totalTokens
+                    }
+                };
             }
 
             const reader = response.body?.getReader();

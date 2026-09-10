@@ -1144,12 +1144,14 @@ kisi.post('/generate-stream', async (c) => {
                     })
                 });
 
-                // Callback pengalir token ke client
+                // Callback pengalir token ke client (dilindungi dari error write stream)
                 const onToken = async (token: string) => {
-                    await stream.writeSSE({
-                        event: 'token',
-                        data: JSON.stringify({ text: token })
-                    });
+                    try {
+                        await stream.writeSSE({
+                            event: 'token',
+                            data: JSON.stringify({ text: token })
+                        });
+                    } catch (_) {}
                 };
 
                 // Step 2: Generate Pilihan Ganda (PG)

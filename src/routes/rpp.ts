@@ -309,10 +309,12 @@ rpp.post('/generate-stream', async (c) => {
         });
 
         const onToken = async (token: string) => {
-          await stream.writeSSE({
-            event: 'token',
-            data: JSON.stringify({ text: token })
-          });
+          try {
+            await stream.writeSSE({
+              event: 'token',
+              data: JSON.stringify({ text: token })
+            });
+          } catch (_) {}
         };
 
         const result = await ai.generateJSONStream(prompt, preferredSlug, onToken);

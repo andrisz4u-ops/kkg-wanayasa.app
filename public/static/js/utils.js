@@ -561,12 +561,11 @@ export async function streamPost(endpoint, data, onEvent) {
       if (eventType === 'error') receivedError = true;
 
       if (dataText) {
+        let parsedData = dataText;
         try {
-          const parsed = JSON.parse(dataText);
-          onEvent(eventType, parsed);
-        } catch {
-          onEvent(eventType, dataText);
-        }
+          parsedData = JSON.parse(dataText);
+        } catch {}
+        onEvent(eventType, parsedData);
       }
     }
   }

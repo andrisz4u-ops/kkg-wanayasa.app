@@ -615,7 +615,10 @@ export function initRpp() {
           } else if (event === 'done') {
             finalResultData = payload.data;
           } else if (event === 'error') {
-            throw new Error(payload.message || 'Gagal generate stream RPP');
+            const msg = (typeof payload === 'object' && payload !== null)
+              ? (payload.message || payload.error || JSON.stringify(payload))
+              : String(payload);
+            throw new Error(msg || 'Gagal generate stream RPP');
           }
         });
 

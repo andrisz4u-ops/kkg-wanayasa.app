@@ -878,10 +878,20 @@ window.saveAiProvider = async function saveAiProvider(e) {
     // Terapkan tingkat berpikir (Reasoning Effort / Extended Thinking) ke Extra Body
     const effort = (document.getElementById('aip-reasoning_effort')?.value || '').trim();
     if (effort) {
-      if (api_type === 'anthropic' || model.toLowerCase().includes('claude')) {
+      if (api_type === 'anthropic' || api_type === 'bedrock' || model.toLowerCase().includes('claude')) {
         const budgetMap = { low: 2048, medium: 4096, high: 8192 };
-        bodyObj.thinking = { type: 'enabled', budget_tokens: budgetMap[effort] || 4096 };
+        const budget = budgetMap[effort] || 4096;
+        bodyObj.thinking = { type: 'enabled', budget_tokens: budget };
         delete bodyObj.reasoning_effort;
+        // Aturan ketat Anthropic Claude: max_tokens WAJIB > thinking.budget_tokens dan temperature WAJIB 1.0
+        if (max_tokens <= budget) {
+          max_tokens = budget + 2048;
+          const maxTokensInput = document.getElementById('aip-max_tokens');
+          if (maxTokensInput) maxTokensInput.value = max_tokens;
+        }
+        temperature = 1.0;
+        const tempInput = document.getElementById('aip-temperature');
+        if (tempInput) tempInput.value = '1.0';
       } else {
         bodyObj.reasoning_effort = effort;
         delete bodyObj.thinking;

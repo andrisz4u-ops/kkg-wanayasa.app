@@ -1251,6 +1251,21 @@ CRITICAL JSON RULES:
             ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
 
+        // Claude extended thinking requirements:
+        // 1. Pada test ping (max_tokens <= 32), matikan thinking agar tidak melanggar syarat budget_tokens
+        if (p.max_tokens <= 32 && body.thinking) {
+            delete body.thinking;
+        }
+
+        // 2. Jika thinking aktif, temperature WAJIB 1.0 dan max_tokens WAJIB > thinking.budget_tokens
+        if (body.thinking?.type === 'enabled') {
+            body.temperature = 1.0;
+            const budget = Number(body.thinking.budget_tokens) || 2048;
+            if (body.max_tokens <= budget) {
+                body.max_tokens = budget + Math.max(2048, p.max_tokens || 2048);
+            }
+        }
+
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'x-api-key': p.api_key,
@@ -1339,6 +1354,21 @@ CRITICAL JSON RULES:
             ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
         };
         delete body.region;
+
+        // Claude extended thinking requirements:
+        // 1. Pada test ping (max_tokens <= 32), matikan thinking agar tidak melanggar syarat budget_tokens
+        if (p.max_tokens <= 32 && body.thinking) {
+            delete body.thinking;
+        }
+
+        // 2. Jika thinking aktif, temperature WAJIB 1.0 dan max_tokens WAJIB > thinking.budget_tokens
+        if (body.thinking?.type === 'enabled') {
+            body.temperature = 1.0;
+            const budget = Number(body.thinking.budget_tokens) || 2048;
+            if (body.max_tokens <= budget) {
+                body.max_tokens = budget + Math.max(2048, p.max_tokens || 2048);
+            }
+        }
 
         const maxRetries = 2;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1480,10 +1510,15 @@ CRITICAL JSON RULES:
             return k.substring(0, 4) + '****' + k.substring(k.length - 4);
         };
 
+        // Matikan parameter extended thinking saat uji ping (max_tokens: 16)
+        // agar tidak melanggar aturan Anthropic ("max_tokens must be greater than thinking.budget_tokens")
+        const testExtraBody = { ...(provider.extra_body || {}) };
+        delete testExtraBody.thinking;
+
         // If multiple keys in pool, test all keys concurrently in parallel
         if (keys.length > 1 && provider.api_type !== 'custom_proxy') {
             const checkPromises = keys.map(async (k, i) => {
-                const singleP: DBProvider = { ...provider, api_key: k, max_tokens: 16 };
+                const singleP: DBProvider = { ...provider, api_key: k, max_tokens: 16, extra_body: testExtraBody };
                 const keyStart = Date.now();
                 try {
                     await this.callProvider(singleP, 'Hi', false, 35000);
@@ -1550,7 +1585,7 @@ CRITICAL JSON RULES:
         } else {
             const singleKey = keys[0] || '';
             const keyStart = Date.now();
-            const singleTestP: DBProvider = { ...provider, max_tokens: 16 };
+            const singleTestP: DBProvider = { ...provider, max_tokens: 16, extra_body: testExtraBody };
             try {
                 await this.callProvider(singleTestP, 'Hi', false, 35000);
                 validKeys = 1;

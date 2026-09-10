@@ -821,12 +821,12 @@ window.saveAiProvider = async function saveAiProvider(e) {
     const model = document.getElementById('aip-model').value.trim();
     const api_key = document.getElementById('aip-api_key').value.trim();
     const priority = parseInt(document.getElementById('aip-priority').value) || 100;
-    const max_tokens = parseInt(document.getElementById('aip-max_tokens').value) || 8192;
+    let max_tokens = parseInt(document.getElementById('aip-max_tokens').value) || 8192;
 
     // Handle comma or dot for temperature (e.g. "0,7" -> 0.7)
     const rawTemp = String(document.getElementById('aip-temperature').value).trim().replace(',', '.');
     const parsedTemp = parseFloat(rawTemp);
-    const temperature = isNaN(parsedTemp) ? 0.7 : Math.min(2, Math.max(0, parsedTemp));
+    let temperature = isNaN(parsedTemp) ? 0.7 : Math.min(2, Math.max(0, parsedTemp));
 
     // Client-side quick validations
     if (!name) throw new Error('Nama Provider wajib diisi');

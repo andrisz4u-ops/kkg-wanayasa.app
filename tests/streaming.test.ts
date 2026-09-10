@@ -121,6 +121,109 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBe(600000); // 10 minutes max ceiling
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBeGreaterThan(STREAM_IDLE_TIMEOUT_MS);
         });
+
+        it('should stream tokens in real-time from OpenAI compatible providers without url error', async () => {
+            const ai = new AIService({} as any);
+            (ai as any).providers = [
+                {
+                    id: 11,
+                    name: 'awz',
+                    slug: 'awz',
+                    api_type: 'openai_compat',
+                    model: 'deepseek.v3.2',
+                    base_url: 'https://bedrock-mantle.us-east-1.api.aws/v1',
+                    api_key: 'test-key',
+                    is_active: 1,
+                    priority: 1,
+                    max_tokens: 4096,
+                    temperature: 0.7,
+                }
+            ];
+
+            const tokensReceived: string[] = [];
+            const encoder = new TextEncoder();
+            const mockStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"{\\"status\\": "}}]}\n\n'));
+                    controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"\\"success\\"}"}}]}\n\n'));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            });
+
+            const originalFetch = globalThis.fetch;
+            let requestedUrl = '';
+            globalThis.fetch = async (input: any, init: any) => {
+                requestedUrl = String(input);
+                return new Response(mockStream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/event-stream' }
+                });
+            };
+
+            try {
+                const res = await ai.generateTextStream('buat soal', 'awz', true, (token) => {
+                    tokensReceived.push(token);
+                });
+
+                expect(requestedUrl).toBe('https://bedrock-mantle.us-east-1.api.aws/v1/chat/completions');
+                expect(tokensReceived).toEqual(['{"status": ', '"success"}']);
+                expect(res.content).toBe('{"status": "success"}');
+            } finally {
+                globalThis.fetch = originalFetch;
+            }
+        });
+
+        it('should stream thinking/reasoning_content in real-time during deep reasoning phase', async () => {
+            const ai = new AIService({} as any);
+            (ai as any).providers = [
+                {
+                    id: 11,
+                    name: 'awz',
+                    slug: 'awz',
+                    api_type: 'openai_compat',
+                    model: 'deepseek.v3.2',
+                    base_url: 'https://bedrock-mantle.us-east-1.api.aws/v1',
+                    api_key: 'test-key',
+                    is_active: 1,
+                    priority: 1,
+                    max_tokens: 4096,
+                    temperature: 0.7,
+                    extra_body: { reasoning_effort: 'high' }
+                }
+            ];
+
+            const tokensReceived: string[] = [];
+            const encoder = new TextEncoder();
+            const mockStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"reasoning_content":"Memikirkan langkah 1... "}}]}\n\n'));
+                    controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"reasoning_content":"Selesai berpikir. "}}]}\n\n'));
+                    controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"{\\"hasil\\": \\"OK\\"}"}}]}\n\n'));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            });
+
+            const originalFetch = globalThis.fetch;
+            globalThis.fetch = async () => {
+                return new Response(mockStream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/event-stream' }
+                });
+            };
+
+            try {
+                const res = await ai.generateTextStream('buat soal', 'awz', true, (token) => {
+                    tokensReceived.push(token);
+                });
+
+                expect(tokensReceived).toEqual(['Memikirkan langkah 1... ', 'Selesai berpikir. ', '{"hasil": "OK"}']);
+                expect(res.content).toBe('{"hasil": "OK"}');
+            } finally {
+                globalThis.fetch = originalFetch;
+            }
+        });
     });
 });
 

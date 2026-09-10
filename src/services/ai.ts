@@ -850,6 +850,7 @@ CRITICAL JSON RULES:
     // ─── OpenAI Compatible Stream (Sliding Idle Timeout) ──────────
 
     private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
+        const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
         const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
         const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 

@@ -292,7 +292,10 @@ app.get('/api/ai-diagnostic', requireAdminOnly, async (c) => {
         const data: any = await response.json();
         results.bedrock_test.status = '✅ SUCCESS';
         results.bedrock_test.response_model = data?.model || 'unknown';
-        results.bedrock_test.response_text = data?.content?.[0]?.text || '';
+        const rawText = Array.isArray(data?.content)
+          ? data.content.map((b: any) => b.text || b.thinking || '').filter(Boolean).join('\n')
+          : (data?.content || '');
+        results.bedrock_test.response_text = rawText || '';
         results.bedrock_test.usage = data?.usage || {};
       } else {
         const errorText = await response.text();

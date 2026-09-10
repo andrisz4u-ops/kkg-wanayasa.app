@@ -805,8 +805,14 @@ CRITICAL JSON RULES:
                             }
                         }
                         break;
-                    case 'anthropic':
-                    case 'bedrock':
+                    case 'anthropic': {
+                        res = await this.callAnthropic(pWithKey, prompt, jsonMode, timeoutMs, onToken);
+                        break;
+                    }
+                    case 'bedrock': {
+                        res = await this.callBedrock(pWithKey, prompt, jsonMode, timeoutMs, onToken);
+                        break;
+                    }
                     default: {
                         res = await this.callProvider(pWithKey, prompt, jsonMode, timeoutMs);
                         if (onToken && res.content) {
@@ -1235,8 +1241,9 @@ CRITICAL JSON RULES:
 
     // ─── Anthropic Messages API ───────────────────────────────────
 
-    private async callAnthropic(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
-        const url = `${p.base_url.replace(/\/+$/, '')}/v1/messages`;
+    private async callAnthropic(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS, onToken?: (token: string) => void): Promise<AIResponse> {
+        const baseUrl = p.base_url?.trim() || 'https://api.anthropic.com';
+        const url = `${baseUrl.replace(/\/+$/, '')}/v1/messages`;
 
         const userContent = jsonMode
             ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
@@ -1286,7 +1293,39 @@ CRITICAL JSON RULES:
         }
 
         const data: any = await response.json();
-        const content = data?.content?.[0]?.text || '';
+        let content = '';
+        let thinking = '';
+
+        if (Array.isArray(data?.content)) {
+            for (const block of data.content) {
+                if (block.type === 'thinking') {
+                    thinking += (block.thinking || '');
+                } else if (block.type === 'text') {
+                    content += (block.text || '');
+                } else if (block.text) {
+                    content += block.text;
+                }
+            }
+        } else if (typeof data?.content === 'string') {
+            content = data.content;
+        }
+
+        if (thinking && onToken) {
+            onToken(`[Claude Thinking]\n${thinking}\n\n`);
+        }
+        if (content && onToken) {
+            onToken(content);
+        }
+
+        // Fallback jika text kosong tapi ada thinking yang berisi JSON
+        if (!content.trim() && thinking.trim()) {
+            const jsonMatch = thinking.match(/\{[\s\S]*"(?:pg|isian|uraian|data|soal)"[\s\S]*\}/g);
+            if (jsonMatch) {
+                content = jsonMatch.reduce((a, b) => a.length >= b.length ? a : b, '');
+            } else {
+                content = thinking;
+            }
+        }
 
         const promptTokens = data.usage?.input_tokens || 0;
         const completionTokens = data.usage?.output_tokens || 0;
@@ -1334,7 +1373,7 @@ CRITICAL JSON RULES:
 
     // ─── AWS Bedrock ──────────────────────────────────────────────
 
-    private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+    private async callBedrock(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS, onToken?: (token: string) => void): Promise<AIResponse> {
         const region = p.extra_body?.region || this.env?.BEDROCK_REGION || 'us-east-1';
         let endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke`;
         if (p.base_url && !p.base_url.includes('bedrock-runtime') && !p.base_url.includes('amazonaws.com')) {
@@ -1385,7 +1424,39 @@ CRITICAL JSON RULES:
 
             if (response.ok) {
                 const data: any = await response.json();
-                const content = data?.content?.[0]?.text || '';
+                let content = '';
+                let thinking = '';
+
+                if (Array.isArray(data?.content)) {
+                    for (const block of data.content) {
+                        if (block.type === 'thinking') {
+                            thinking += (block.thinking || '');
+                        } else if (block.type === 'text') {
+                            content += (block.text || '');
+                        } else if (block.text) {
+                            content += block.text;
+                        }
+                    }
+                } else if (typeof data?.content === 'string') {
+                    content = data.content;
+                }
+
+                if (thinking && onToken) {
+                    onToken(`[Claude Thinking]\n${thinking}\n\n`);
+                }
+                if (content && onToken) {
+                    onToken(content);
+                }
+
+                // Fallback jika text kosong tapi ada thinking yang berisi JSON
+                if (!content.trim() && thinking.trim()) {
+                    const jsonMatch = thinking.match(/\{[\s\S]*"(?:pg|isian|uraian|data|soal)"[\s\S]*\}/g);
+                    if (jsonMatch) {
+                        content = jsonMatch.reduce((a, b) => a.length >= b.length ? a : b, '');
+                    } else {
+                        content = thinking;
+                    }
+                }
 
                 const promptTokens = data.usage?.input_tokens || 0;
                 const completionTokens = data.usage?.output_tokens || 0;

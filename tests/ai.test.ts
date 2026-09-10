@@ -275,4 +275,118 @@ describe('AI Multi-Key Pooling & Load Balancing Logic', () => {
             'sk-444444444444dddd'
         ]);
     });
+
+    describe('Claude Extended Thinking Multi-Block Extraction', () => {
+        it('should extract text content and stream thinking when Claude thinking is enabled in Bedrock', async () => {
+            const ai = new AIService();
+            const mockTokens: string[] = [];
+
+            // Mock global fetch to simulate Bedrock Claude response with thinking + text blocks
+            const originalFetch = global.fetch;
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    content: [
+                        {
+                            type: 'thinking',
+                            thinking: 'Let me carefully design the test questions according to Bloom taxonomy...'
+                        },
+                        {
+                            type: 'text',
+                            text: '{"pg": [{"no": 1, "soal": "Apa ibukota Jawa Barat?", "opsi": {"A": "Bandung", "B": "Cimahi"}, "kunci": "A"}]}'
+                        }
+                    ],
+                    usage: { input_tokens: 150, output_tokens: 80 }
+                })
+            } as any);
+
+            try {
+                // Call callBedrock via any casting to test private method
+                const res = await (ai as any).callBedrock(
+                    {
+                        id: 1,
+                        name: 'Bedrock Claude',
+                        slug: 'bedrock-claude',
+                        api_type: 'bedrock',
+                        model: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+                        api_key: 'test-bedrock-key',
+                        max_tokens: 4096,
+                        temperature: 1.0,
+                        extra_body: { thinking: { type: 'enabled', budget_tokens: 2048 } }
+                    },
+                    'Buat soal PG',
+                    true,
+                    10000,
+                    (token: string) => mockTokens.push(token)
+                );
+
+                expect(res.content).toContain('"pg"');
+                expect(res.content).toContain('Apa ibukota Jawa Barat?');
+                expect(mockTokens.length).toBe(2);
+                expect(mockTokens[0]).toContain('[Claude Thinking]');
+                expect(mockTokens[0]).toContain('Bloom taxonomy');
+                expect(mockTokens[1]).toContain('"pg"');
+
+                // Verify parsing succeeds with parseAIJson
+                const parsed = (ai as any).parseAIJson(res.content);
+                expect(parsed.pg).toHaveLength(1);
+                expect(parsed.pg[0].kunci).toBe('A');
+            } finally {
+                global.fetch = originalFetch;
+            }
+        });
+
+        it('should extract text content and stream thinking when Claude thinking is enabled in Anthropic', async () => {
+            const ai = new AIService();
+            const mockTokens: string[] = [];
+
+            const originalFetch = global.fetch;
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    content: [
+                        {
+                            type: 'thinking',
+                            thinking: 'Thinking about the assessment structure...'
+                        },
+                        {
+                            type: 'text',
+                            text: '{"pg": [{"no": 1, "soal": "Contoh soal?", "kunci": "B"}]}'
+                        }
+                    ],
+                    usage: { input_tokens: 100, output_tokens: 50 }
+                })
+            } as any);
+
+            try {
+                const res = await (ai as any).callAnthropic(
+                    {
+                        id: 2,
+                        name: 'Anthropic Claude',
+                        slug: 'anthropic-claude',
+                        api_type: 'anthropic',
+                        model: 'claude-3-7-sonnet-20250219',
+                        api_key: 'test-anthropic-key',
+                        max_tokens: 4096,
+                        temperature: 1.0,
+                        extra_body: { thinking: { type: 'enabled', budget_tokens: 2048 } }
+                    },
+                    'Buat soal',
+                    true,
+                    10000,
+                    (token: string) => mockTokens.push(token)
+                );
+
+                expect(res.content).toContain('"pg"');
+                expect(mockTokens.length).toBe(2);
+                expect(mockTokens[0]).toContain('[Claude Thinking]');
+                expect(mockTokens[1]).toContain('"pg"');
+
+                const parsed = (ai as any).parseAIJson(res.content);
+                expect(parsed.pg[0].kunci).toBe('B');
+            } finally {
+                global.fetch = originalFetch;
+            }
+        });
+    });
 });

@@ -120,7 +120,16 @@ async function callBedrock(apiKey: string, prompt: string): Promise<string> {
    }
 
    const data: any = await response.json();
-   return data.content?.[0]?.text || 'Tidak ada respons dari AWS Bedrock.';
+   let text = '';
+   if (Array.isArray(data?.content)) {
+      for (const block of data.content) {
+         if (block.text) text += block.text;
+         else if (block.thinking) text += block.thinking;
+      }
+   } else if (typeof data?.content === 'string') {
+      text = data.content;
+   }
+   return text || 'Tidak ada respons dari AWS Bedrock.';
 }
 
 export async function callMistral(apiKey: string, prompt: string): Promise<string> {

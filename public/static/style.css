@@ -1534,6 +1534,10 @@ h1,
   margin-top: auto;
 }
 
+.mr-0\.5 {
+  margin-right: 0.125rem;
+}
+
 .line-clamp-1 {
   overflow: hidden;
   display: -webkit-box;

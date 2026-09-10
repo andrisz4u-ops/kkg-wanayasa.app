@@ -2496,6 +2496,15 @@ function openChangeImageModal(type, qIdx, data, formData) {
             <i class="fas fa-magic"></i> Pasang
           </button>
         </div>
+
+        <!-- Panel Interaktif Quick Tweak Parameter & Dimensi -->
+        <div id="modal-svg-param-panel" style="display:none; margin-top:10px; padding:9px 12px; background:#e0f2fe; border-radius:8px; border:1px solid #7dd3fc;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:700; color:#0369a1;"><i class="fas fa-sliders-h mr-1"></i> Sesuaikan Angka Dimensi / Parameter:</span>
+            <span style="font-size:9.5px; color:#0284c7; font-weight:600;"><i class="fas fa-bolt text-amber-500 mr-0.5"></i>Pratinjau Live</span>
+          </div>
+          <div id="modal-svg-param-fields" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:6px;"></div>
+        </div>
       </div>
 
       <!-- Option 1: Upload File -->
@@ -2532,6 +2541,166 @@ function openChangeImageModal(type, qIdx, data, formData) {
   const fileInput = overlay.querySelector('#modal-file-input');
   const urlInput = overlay.querySelector('#modal-url-input');
   const svgSelect = overlay.querySelector('#modal-svg-select');
+  const paramPanel = overlay.querySelector('#modal-svg-param-panel');
+  const paramFields = overlay.querySelector('#modal-svg-param-fields');
+
+  let currentActiveSvgType = '';
+  let currentActiveParams = {};
+  let debounceTimer = null;
+
+  // Kamus definisi kontrol parameter per diagram
+  const paramDefs = {
+    balok: [
+      { key: 'p', label: 'Panjang (p)', type: 'number', def: 12 },
+      { key: 'l', label: 'Lebar (l)', type: 'number', def: 8 },
+      { key: 't', label: 'Tinggi (t)', type: 'number', def: 6 }
+    ],
+    kubus: [
+      { key: 's', label: 'Panjang Rusuk (s)', type: 'number', def: 10 }
+    ],
+    tabung: [
+      { key: 'r', label: 'Jari-jari (r)', type: 'number', def: 7 },
+      { key: 't', label: 'Tinggi (t)', type: 'number', def: 14 }
+    ],
+    kerucut: [
+      { key: 'r', label: 'Jari-jari (r)', type: 'number', def: 7 },
+      { key: 't', label: 'Tinggi (t)', type: 'number', def: 12 },
+      { key: 's', label: 'Pelukis (s)', type: 'number', def: 15 }
+    ],
+    bola: [
+      { key: 'r', label: 'Jari-jari (r)', type: 'number', def: 14 }
+    ],
+    prisma: [
+      { key: 'alas', label: 'Alas Segitiga', type: 'number', def: 10 },
+      { key: 'tinggiSegitiga', label: 'Tinggi Segitiga', type: 'number', def: 8 },
+      { key: 'panjang', label: 'Panjang Prisma', type: 'number', def: 15 }
+    ],
+    limas: [
+      { key: 's', label: 'Sisi Alas (s)', type: 'number', def: 10 },
+      { key: 't', label: 'Tinggi (t)', type: 'number', def: 12 }
+    ],
+    persegi_panjang: [
+      { key: 'p', label: 'Panjang (p)', type: 'number', def: 12 },
+      { key: 'l', label: 'Lebar (l)', type: 'number', def: 8 }
+    ],
+    segitiga_siku: [
+      { key: 'alas', label: 'Alas (a)', type: 'number', def: 6 },
+      { key: 'tinggi', label: 'Tinggi (t)', type: 'number', def: 8 },
+      { key: 'miring', label: 'Miring (c)', type: 'number', def: 10 }
+    ],
+    sudut: [
+      { key: 'derajat', label: 'Besar Derajat (°)', type: 'number', def: 60 }
+    ],
+    pecahan_lingkaran: [
+      { key: 'pembagi', label: 'Penyebut (Total)', type: 'number', def: 4 },
+      { key: 'diarsir', label: 'Pembilang (Arsir)', type: 'number', def: 3 }
+    ],
+    pecahan_persegi: [
+      { key: 'kolom', label: 'Jumlah Kolom', type: 'number', def: 4 },
+      { key: 'baris', label: 'Jumlah Baris', type: 'number', def: 2 },
+      { key: 'diarsir', label: 'Kotak Diarsir', type: 'number', def: 3 }
+    ],
+    jam_analog: [
+      { key: 'jam', label: 'Jam (1-12)', type: 'number', def: 7 },
+      { key: 'menit', label: 'Menit (0-59)', type: 'number', def: 30 }
+    ],
+    organ_pencernaan: [
+      { key: 'pointer', label: 'Organ Sasaran', type: 'select', opts: ['lambung', 'mulut', 'kerongkongan', 'hati', 'usus halus', 'usus besar', 'anus'], def: 'lambung' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    organ_pernapasan: [
+      { key: 'pointer', label: 'Organ Sasaran', type: 'select', opts: ['trakea', 'hidung', 'faring', 'bronkus', 'paru', 'diafragma'], def: 'trakea' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    bagian_bunga: [
+      { key: 'pointer', label: 'Bagian Bunga', type: 'select', opts: ['putik', 'benang sari', 'mahkota', 'kelopak', 'bakal biji'], def: 'putik' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    siklus_air: [
+      { key: 'pointer', label: 'Tahapan Siklus', type: 'select', opts: ['evaporasi', 'kondensasi', 'presipitasi', 'infiltrasi'], def: 'evaporasi' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    metamorfosis: [
+      { key: 'pointer', label: 'Fase Daur Hidup', type: 'select', opts: ['kepompong', 'telur', 'ulat', 'kupu-kupu'], def: 'kepompong' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ]
+  };
+
+  // Fungsi render form kontrol parameter on-the-fly
+  const renderParamControls = (type, existingParams = {}) => {
+    currentActiveSvgType = type;
+    const defs = paramDefs[type];
+    if (!defs || defs.length === 0) {
+      paramPanel.style.display = 'none';
+      paramFields.innerHTML = '';
+      currentActiveParams = {};
+      return;
+    }
+
+    currentActiveParams = { ...existingParams };
+    let html = '';
+    defs.forEach(d => {
+      const val = currentActiveParams[d.key] != null ? currentActiveParams[d.key] : d.def;
+      currentActiveParams[d.key] = val;
+      if (d.type === 'select') {
+        html += `
+          <div>
+            <label style="font-size:9.5px; font-weight:600; color:#0369a1; display:block; margin-bottom:2px;">${d.label}:</label>
+            <select data-param-key="${d.key}" class="svg-param-input w-full text-[11px] bg-white border border-sky-300 rounded p-1">
+              ${d.opts.map(opt => `<option value="${opt}" ${opt === val ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        html += `
+          <div>
+            <label style="font-size:9.5px; font-weight:600; color:#0369a1; display:block; margin-bottom:2px;">${d.label}:</label>
+            <input type="${d.type || 'text'}" data-param-key="${d.key}" value="${escapeHtml(val)}" class="svg-param-input w-full text-[11px] bg-white border border-sky-300 rounded p-1">
+          </div>
+        `;
+      }
+    });
+
+    paramFields.innerHTML = html;
+    paramPanel.style.display = 'block';
+
+    // Pasang live input listeners
+    paramFields.querySelectorAll('.svg-param-input').forEach(input => {
+      input.addEventListener('input', () => triggerLiveParamUpdate());
+      input.addEventListener('change', () => triggerLiveParamUpdate());
+    });
+  };
+
+  const triggerLiveParamUpdate = () => {
+    paramFields.querySelectorAll('.svg-param-input').forEach(input => {
+      const k = input.dataset.paramKey;
+      if (!k) return;
+      if (input.type === 'number') {
+        currentActiveParams[k] = parseFloat(input.value) || 0;
+      } else {
+        currentActiveParams[k] = input.value;
+      }
+    });
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      if (!currentActiveSvgType) return;
+      try {
+        const res = await api('/kisi/visual-render', {
+          method: 'POST',
+          body: { type: currentActiveSvgType, params: currentActiveParams }
+        });
+        if (res?.data?.dataUri) {
+          selectedImageUrl = res.data.dataUri;
+          selectedSvg = res.data.svg;
+          selectedTitle = res.data.title;
+          updatePreview(selectedImageUrl);
+        }
+      } catch (err) {
+        console.warn('Live render tweak error:', err);
+      }
+    }, 180);
+  };
 
   // Load SVG catalog from API
   api('/kisi/visual-catalog').then(res => {
@@ -2550,6 +2719,12 @@ function openChangeImageModal(type, qIdx, data, formData) {
         html += `</optgroup>`;
       }
       svgSelect.innerHTML = html;
+
+      // Jika soal sudah memiliki SVG / tipe stimulus sebelumnya, aktifkan panel kontrol
+      if (q.visual_stimulus?.type) {
+        svgSelect.value = q.visual_stimulus.type;
+        renderParamControls(q.visual_stimulus.type, q.visual_stimulus.params || {});
+      }
     }
   }).catch(() => {
     svgSelect.innerHTML = '<option value="">Gagal memuat katalog SVG</option>';
@@ -2567,6 +2742,16 @@ function openChangeImageModal(type, qIdx, data, formData) {
       emptyText.style.display = 'block';
     }
   };
+
+  // Saat dropdown SVG berubah, tampilkan panel parameter yang sesuai
+  svgSelect.addEventListener('change', () => {
+    const type = svgSelect.value;
+    if (type) {
+      renderParamControls(type);
+    } else {
+      paramPanel.style.display = 'none';
+    }
+  });
 
   // SVG apply
   overlay.querySelector('#modal-btn-apply-svg').addEventListener('click', async () => {
@@ -2660,10 +2845,18 @@ function openChangeImageModal(type, qIdx, data, formData) {
         type: selectedSvg ? 'svg' : (selectedImageUrl.includes('image/svg+xml') ? 'svg' : 'photo'),
         title: selectedTitle || q.gambar?.title || 'Gambar Ilustrasi',
         credit: selectedSvg ? 'Examplate Visual Engine' : (q.gambar?.credit || 'Upload Manual'),
-        deskripsi: q.gambar?.deskripsi || selectedTitle || 'Gambar Ilustrasi'
+        deskripsi: q.gambar?.deskripsi || selectedTitle || 'Gambar Ilustrasi',
+        params: currentActiveSvgType ? { ...currentActiveParams } : (q.gambar?.params || undefined)
       };
+      if (currentActiveSvgType) {
+        q.visual_stimulus = {
+          type: currentActiveSvgType,
+          params: { ...currentActiveParams }
+        };
+      }
     } else {
       delete q.gambar;
+      delete q.visual_stimulus;
     }
     overlay.remove();
     document.removeEventListener('keydown', escImgHandler);

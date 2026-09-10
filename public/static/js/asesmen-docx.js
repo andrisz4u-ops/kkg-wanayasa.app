@@ -760,6 +760,25 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     children.push(makePara('Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!',
       { italics: true, size: 19, spaceAfter: 6 }));
 
+    // Pre-fetch dan rasterisasi seluruh gambar PG secara paralel agar ekspor Word sangat cepat (< 500ms)
+    const pgImageBuffers = new Map();
+    const imageTasks = data.pg
+      .filter(q => q.gambar && q.gambar.url)
+      .map(async (q) => {
+        try {
+          const imgData = await fetchSafeImageBuffer(q.gambar.url, q.gambar.svg);
+          if (imgData && imgData.buffer) {
+            pgImageBuffers.set(q, imgData);
+          }
+        } catch (imgErr) {
+          console.warn(`Gagal memuat gambar soal No. ${q.no} untuk Word:`, imgErr);
+        }
+      });
+
+    if (imageTasks.length > 0) {
+      await Promise.all(imageTasks);
+    }
+
     for (const q of data.pg) {
       const opts = q.opsi || {};
       const vals = Object.values(opts);
@@ -767,16 +786,15 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       const anyLong  = vals.some(v  => (v || '').length > 35);
       let colLayout = allShort ? 4 : anyLong ? 1 : 2;
       // Jika ada gambar, paksa 1 kolom karena space terbatas
-      if (q.gambar && q.gambar.url) colLayout = 1;
+      const imgData = pgImageBuffers.get(q);
+      if (imgData) colLayout = 1;
 
       // Nomor soal + teks (hanging indent)
       const INDENT_LEFT    = CM(0.6);
       const HANGING        = CM(0.6);
 
-      if (q.gambar && q.gambar.url) {
+      if (imgData) {
         try {
-          const imgData = await fetchSafeImageBuffer(q.gambar.url, q.gambar.svg);
-          
           const cell1 = new window.docx.TableCell({
              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
              borders: NO_BORDERS,
@@ -819,7 +837,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           children.push(makePara('', { spaceAfter: 8 }));
           
         } catch (e) {
-          console.error("Gagal load gambar PG docx", e);
+          console.error("Gagal menata tabel gambar PG docx", e);
           const INDENT_LEFT = CM(0.6);
           children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
           children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));

@@ -165,10 +165,26 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       // Test 12 = 4x3 (balanced grid)
       const svg12 = renderPecahanPersegiSvg({ totalKotak: 12, diarsir: 7 });
       expect(svg12).toContain('7 dari 12 kotak diarsir');
+      expect(svg12).toContain('pattern id="diagonalHatch"');
+      expect(svg12).toContain('fill="url(#diagonalHatch)"');
 
       // Test 6 = 3x2
       const svg6 = renderPecahanPersegiSvg({ totalKotak: 6, diarsir: 4 });
       expect(svg6).toContain('4 dari 6 kotak diarsir');
+    });
+
+    it('should render prime numbers as a horizontal fraction strip with high-contrast diagonal hatch pattern', () => {
+      // Prime 5: 1 row of 5 columns (strip model)
+      const svg5 = renderPecahanPersegiSvg({ totalKotak: 5, diarsir: 3 });
+      expect(svg5).toContain('3 dari 5 kotak diarsir');
+      expect(svg5).toContain('pattern id="diagonalHatch"');
+      expect(svg5).toContain('fill="url(#diagonalHatch)"');
+      expect(svg5).toContain('<svg');
+
+      // Prime 7: 1 row of 7 columns
+      const svg7 = renderPecahanPersegiSvg({ totalKotak: 7, diarsir: 4 });
+      expect(svg7).toContain('4 dari 7 kotak diarsir');
+      expect(svg7).toContain('pattern id="diagonalHatch"');
     });
 
     it('should render bar chart with axes and data bars', () => {
@@ -210,19 +226,45 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
   });
 
   describe('Science / IPAS Labeled Diagrams', () => {
-    it('should render respiratory organ with dynamic pointer X', () => {
+    it('should render respiratory organ with realistic cartilage rings, lobes, and dynamic pointer X', () => {
       const svg = renderOrganPernapasanSvg({ pointer: 'trakea', label: 'X' });
       expect(svg).toContain('Sistem Pernapasan Manusia');
       expect(svg).toContain('huruf "X"');
       expect(svg).toContain('marker-end="url(#arrow)"');
+      // Tracheal rings and lungs
+      expect(svg).toContain('stroke="#c2410c" stroke-width="1.8"'); // Cincin tulang rawan trakea
+      expect(svg).toContain('Diafragma');
+
+      // Test pointing to bronkus and alveolus
+      const bronkus = renderOrganPernapasanSvg({ pointer: 'bronkus', label: 'B' });
+      expect(bronkus).toContain('huruf "B"');
+      const pulmo = renderOrganPernapasanSvg({ pointer: 'paru', label: 'P' });
+      expect(pulmo).toContain('huruf "P"');
     });
 
-    it('should render digestive organ with dynamic pointer X', () => {
+    it('should render digestive organ with realistic stomach, liver, pancreas, and haustrated colon', () => {
       const svg = renderOrganPencernaanSvg({ pointer: 'lambung', label: 'X' });
       expect(svg).toContain('Sistem Pencernaan Manusia');
       expect(svg).toContain('huruf "X"');
       expect(svg).toContain('Lambung');
       expect(svg).toContain('Usus');
+      // Liver, gallbladder, and pancreas presence
+      expect(svg).toContain('fill="#22c55e"'); // Kantung empedu
+      expect(svg).toContain('fill="#fef08a"'); // Pankreas
+    });
+
+    it('should render flower diagram with stigma, style, ovary, ovules, and pointer X', () => {
+      const svg = renderBagianBungaSvg({ pointer: 'putik', label: 'X' });
+      expect(svg).toContain('Penampang Bagian-Bagian Bunga');
+      expect(svg).toContain('huruf "X"');
+      expect(svg).toContain('id="petalGradL"'); // Rose petal gradient
+      expect(svg).toContain('circle cx="160" cy="143" r="4.5"'); // Bakal Biji (Ovula)
+      expect(svg).toContain('ellipse cx="165" cy="64"'); // Kepala Putik (Stigma)
+      expect(svg).toContain('ellipse cx="122" cy="78"'); // Benang Sari (Stamen)
+
+      const biji = renderBagianBungaSvg({ pointer: 'biji', label: 'Z' });
+      expect(biji).toContain('huruf "Z"');
+      expect(biji).toContain('marker-end="url(#bArr)"');
     });
 
     it('should render digestive organ pointing to different parts', () => {

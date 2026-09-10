@@ -434,69 +434,108 @@ export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 
   const percentEl = document.getElementById('monitor-percent');
   const stepTitleEl = document.getElementById('monitor-step-title');
 
-  return {
-    updateStep(stepNum, title, message, percent) {
-      if (percent != null) {
-        if (progressBar) progressBar.style.width = `${percent}%`;
-        if (percentEl) percentEl.textContent = `${percent}%`;
-      }
-      if (stepTitleEl && (title || message)) {
-        stepTitleEl.textContent = title || message;
-      }
-      if (stepNum) {
+    let typeQueue = '';
+    let typeTimer = null;
+
+    const drainTypeQueue = (onEmpty) => {
+      if (typeTimer) return;
+      typeTimer = setInterval(() => {
+        if (!typeQueue) {
+          clearInterval(typeTimer);
+          typeTimer = null;
+          if (typeof onEmpty === 'function') onEmpty();
+          return;
+        }
+        const sliceLen = Math.min(typeQueue.length, Math.max(12, Math.floor(typeQueue.length / 15)));
+        const slice = typeQueue.substring(0, sliceLen);
+        typeQueue = typeQueue.substring(sliceLen);
+        if (terminalEl) {
+          terminalEl.appendChild(document.createTextNode(slice));
+          terminalEl.scrollTop = terminalEl.scrollHeight;
+        }
+      }, 16);
+    };
+
+    return {
+      updateStep(stepNum, title, message, percent) {
+        if (percent != null) {
+          if (progressBar) progressBar.style.width = `${percent}%`;
+          if (percentEl) percentEl.textContent = `${percent}%`;
+        }
+        if (stepTitleEl && (title || message)) {
+          stepTitleEl.textContent = title || message;
+        }
+        if (stepNum) {
+          for (let i = 1; i <= 5; i++) {
+            const node = document.getElementById(`step-node-${i}`);
+            if (!node) continue;
+            const circle = node.querySelector('div');
+            if (i < stepNum) {
+              node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
+              if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
+            } else if (i === stepNum) {
+              node.className = 'flex flex-col items-center step-node text-indigo-400 font-bold animate-pulse';
+              if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-indigo-500/30 border-indigo-400 text-indigo-300';
+            } else {
+              node.className = 'flex flex-col items-center step-node text-slate-500';
+              if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-slate-800 border-slate-700 text-slate-400';
+            }
+          }
+        }
+      },
+
+      appendToken(text) {
+        if (!text) return;
+        tokenCount += Math.max(1, Math.round(text.length / 4));
+        if (tokenCountEl) tokenCountEl.textContent = `${tokenCount} token`;
+
+        // Jika chunk kecil (aliran streaming normal 1-60 karakter), langsung cetak
+        if (text.length <= 60 && !typeQueue) {
+          if (terminalEl) {
+            terminalEl.appendChild(document.createTextNode(text));
+            terminalEl.scrollTop = terminalEl.scrollHeight;
+          }
+        } else {
+          // Jika bongkahan besar (misal paket buffer atau fallback), uraikan secara halus (anti-burst)
+          typeQueue += text;
+          drainTypeQueue();
+        }
+      },
+
+      complete(callback) {
+        clearInterval(timerInterval);
+        if (progressBar) progressBar.style.width = '100%';
+        if (percentEl) percentEl.textContent = '100%';
+        if (stepTitleEl) stepTitleEl.textContent = 'Dokumen selesai disusun!';
+
         for (let i = 1; i <= 5; i++) {
           const node = document.getElementById(`step-node-${i}`);
           if (!node) continue;
+          node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
           const circle = node.querySelector('div');
-          if (i < stepNum) {
-            node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
-            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
-          } else if (i === stepNum) {
-            node.className = 'flex flex-col items-center step-node text-indigo-400 font-bold animate-pulse';
-            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-indigo-500/30 border-indigo-400 text-indigo-300';
-          } else {
-            node.className = 'flex flex-col items-center step-node text-slate-500';
-            if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-slate-800 border-slate-700 text-slate-400';
-          }
+          if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
         }
-      }
-    },
 
-    appendToken(text) {
-      if (!text) return;
-      tokenCount += Math.max(1, Math.round(text.length / 4));
-      if (tokenCountEl) tokenCountEl.textContent = `${tokenCount} token`;
-      if (terminalEl) {
-        terminalEl.appendChild(document.createTextNode(text));
-        terminalEl.scrollTop = terminalEl.scrollHeight;
-      }
-    },
+        const finishAndClose = () => {
+          setTimeout(() => {
+            closeAiLiveMonitor();
+            if (typeof callback === 'function') callback();
+          }, 700);
+        };
 
-    complete(callback) {
-      clearInterval(timerInterval);
-      if (progressBar) progressBar.style.width = '100%';
-      if (percentEl) percentEl.textContent = '100%';
-      if (stepTitleEl) stepTitleEl.textContent = 'Dokumen selesai disusun!';
+        if (typeQueue) {
+          drainTypeQueue(finishAndClose);
+        } else {
+          finishAndClose();
+        }
+      },
 
-      for (let i = 1; i <= 5; i++) {
-        const node = document.getElementById(`step-node-${i}`);
-        if (!node) continue;
-        node.className = 'flex flex-col items-center step-node text-emerald-400 font-medium';
-        const circle = node.querySelector('div');
-        if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
-      }
-
-      setTimeout(() => {
+      close() {
+        if (typeTimer) clearInterval(typeTimer);
+        clearInterval(timerInterval);
         closeAiLiveMonitor();
-        if (typeof callback === 'function') callback();
-      }, 700);
-    },
-
-    close() {
-      clearInterval(timerInterval);
-      closeAiLiveMonitor();
-    }
-  };
+      }
+    };
 }
 
 export function closeAiLiveMonitor() {

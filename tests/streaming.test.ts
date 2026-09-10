@@ -224,6 +224,108 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 globalThis.fetch = originalFetch;
             }
         });
+
+        it('should stream tokens in real-time from Anthropic Claude providers', async () => {
+            const ai = new AIService({} as any);
+            (ai as any).providers = [
+                {
+                    id: 4,
+                    name: 'Claude API',
+                    slug: 'claude-direct',
+                    api_type: 'anthropic',
+                    model: 'claude-3-5-sonnet-20241022',
+                    base_url: 'https://api.anthropic.com',
+                    api_key: 'sk-ant-test',
+                    is_active: 1,
+                    priority: 1,
+                    max_tokens: 4096,
+                    temperature: 0.7,
+                }
+            ];
+
+            const tokensReceived: string[] = [];
+            const encoder = new TextEncoder();
+            const mockStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode('event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Modul "}}\n\n'));
+                    controller.enqueue(encoder.encode('event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Ajar Deep Learning"}}\n\n'));
+                    controller.enqueue(encoder.encode('event: message_stop\ndata: {"type":"message_stop"}\n\n'));
+                    controller.close();
+                }
+            });
+
+            const originalFetch = globalThis.fetch;
+            globalThis.fetch = async () => {
+                return new Response(mockStream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/event-stream' }
+                });
+            };
+
+            try {
+                const res = await ai.generateTextStream('buat modul', 'claude-direct', true, (token) => {
+                    tokensReceived.push(token);
+                });
+
+                expect(tokensReceived).toEqual(['Modul ', 'Ajar Deep Learning']);
+                expect(res.content).toBe('Modul Ajar Deep Learning');
+            } finally {
+                globalThis.fetch = originalFetch;
+            }
+        });
+
+        it('should stream tokens in real-time from AWS Bedrock EventStream frames', async () => {
+            const ai = new AIService({} as any);
+            (ai as any).providers = [
+                {
+                    id: 3,
+                    name: 'Claude Bedrock',
+                    slug: 'claude-anthropic',
+                    api_type: 'bedrock',
+                    model: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+                    base_url: 'https://bedrock-runtime.us-east-1.amazonaws.com',
+                    api_key: 'test-bedrock-token',
+                    is_active: 1,
+                    priority: 1,
+                    max_tokens: 4096,
+                    temperature: 0.7,
+                }
+            ];
+
+            const tokensReceived: string[] = [];
+            const encoder = new TextEncoder();
+
+            // Simulate 2 Bedrock EventStream binary chunks containing {"bytes": "<base64>"}
+            const b64Part1 = btoa(JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'Materi ' } }));
+            const b64Part2 = btoa(JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'KPK Kelas 5' } }));
+
+            const mockStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode(`\x00\x00\x00d\x00\x00\x00:{"bytes":"${b64Part1}"}\x00\x00\x00\x00`));
+                    controller.enqueue(encoder.encode(`\x00\x00\x00d\x00\x00\x00:{"bytes":"${b64Part2}"}\x00\x00\x00\x00`));
+                    controller.close();
+                }
+            });
+
+            const originalFetch = globalThis.fetch;
+            globalThis.fetch = async () => {
+                return new Response(mockStream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/vnd.amazon.eventstream' }
+                });
+            };
+
+            try {
+                const res = await ai.generateTextStream('buat RPP', 'claude-anthropic', true, (token) => {
+                    tokensReceived.push(token);
+                });
+
+                expect(tokensReceived).toEqual(['Materi ', 'KPK Kelas 5']);
+                expect(res.content).toBe('Materi KPK Kelas 5');
+            } finally {
+                globalThis.fetch = originalFetch;
+            }
+        });
     });
 });
 

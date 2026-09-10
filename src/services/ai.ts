@@ -806,11 +806,27 @@ CRITICAL JSON RULES:
                         }
                         break;
                     case 'anthropic': {
-                        res = await this.callAnthropic(pWithKey, prompt, jsonMode, timeoutMs, onToken);
+                        try {
+                            res = await this.callAnthropicStream(pWithKey, prompt, jsonMode, onToken);
+                        } catch (streamErr: any) {
+                            console.warn(`[AI-STREAM] Anthropic streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
+                            res = await this.callAnthropic(pWithKey, prompt, jsonMode, timeoutMs);
+                            if (onToken && res.content) {
+                                onToken(res.content);
+                            }
+                        }
                         break;
                     }
                     case 'bedrock': {
-                        res = await this.callBedrock(pWithKey, prompt, jsonMode, timeoutMs, onToken);
+                        try {
+                            res = await this.callBedrockStream(pWithKey, prompt, jsonMode, onToken);
+                        } catch (streamErr: any) {
+                            console.warn(`[AI-STREAM] Bedrock streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
+                            res = await this.callBedrock(pWithKey, prompt, jsonMode, timeoutMs);
+                            if (onToken && res.content) {
+                                onToken(res.content);
+                            }
+                        }
                         break;
                     }
                     default: {
@@ -1339,6 +1355,148 @@ CRITICAL JSON RULES:
         return { content, provider: p.slug, model: p.model, usage };
     }
 
+    // ─── Anthropic Messages Stream API ────────────────────────────
+
+    private async callAnthropicStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
+        const baseUrl = p.base_url?.trim() || 'https://api.anthropic.com';
+        const url = `${baseUrl.replace(/\/+$/, '')}/v1/messages`;
+
+        const userContent = jsonMode
+            ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+            : prompt;
+
+        const body: any = {
+            model: p.model,
+            max_tokens: p.max_tokens,
+            temperature: p.temperature,
+            stream: true,
+            messages: [{ role: 'user', content: userContent }],
+            system: SYSTEM_PROMPT,
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
+        };
+
+        if (p.max_tokens <= 32 && body.thinking) {
+            delete body.thinking;
+        }
+        if (body.thinking?.type === 'enabled') {
+            body.temperature = 1.0;
+            const budget = Number(body.thinking.budget_tokens) || 2048;
+            if (body.max_tokens <= budget) {
+                body.max_tokens = budget + Math.max(2048, p.max_tokens || 2048);
+            }
+        }
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'x-api-key': p.api_key,
+            'anthropic-version': '2023-06-01',
+            ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
+        };
+
+        const controller = new AbortController();
+        let initialTimer: any = setTimeout(() => {
+            controller.abort(new Error(`Timeout: Anthropic (${p.name}) tidak merespons dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`));
+        }, STREAM_INITIAL_TIMEOUT_MS);
+
+        let idleTimer: any = null;
+        const resetIdleTimer = () => {
+            if (initialTimer) {
+                clearTimeout(initialTimer);
+                initialTimer = null;
+            }
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                controller.abort(new Error(`Timeout: Aliran data Anthropic (${p.name}) terhenti lebih dari ${STREAM_IDLE_TIMEOUT_MS / 1000} detik.`));
+            }, STREAM_IDLE_TIMEOUT_MS);
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Anthropic Error ${response.status}: ${errText.substring(0, 500)}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('Anthropic response stream reader unavailable');
+
+            const decoder = new TextDecoder('utf-8');
+            let content = '';
+            let thinking = '';
+            let buffer = '';
+            let promptTokens = 0;
+            let completionTokens = 0;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith(':')) continue;
+                    if (trimmed.startsWith('data: ')) {
+                        try {
+                            const chunk = JSON.parse(trimmed.substring(6));
+                            if (chunk.type === 'content_block_delta') {
+                                const deltaText = chunk.delta?.text || '';
+                                const deltaThinking = chunk.delta?.thinking || '';
+                                const streamToken = deltaThinking || deltaText;
+
+                                if (streamToken) {
+                                    resetIdleTimer();
+                                    if (deltaText) content += deltaText;
+                                    if (deltaThinking) thinking += deltaThinking;
+                                    onToken?.(streamToken);
+                                }
+                            } else if (chunk.type === 'message_start' && chunk.message?.usage) {
+                                promptTokens = chunk.message.usage.input_tokens || promptTokens;
+                            } else if (chunk.type === 'message_delta' && chunk.usage) {
+                                completionTokens = chunk.usage.output_tokens || completionTokens;
+                            }
+                        } catch (_) {}
+                    }
+                }
+            }
+
+            if (!content.trim() && thinking.trim()) {
+                const jsonMatch = thinking.match(/\{[\s\S]*"(?:pg|isian|uraian|data|soal)"[\s\S]*\}/g);
+                if (jsonMatch) {
+                    content = jsonMatch.reduce((a, b) => a.length >= b.length ? a : b, '');
+                } else {
+                    content = thinking;
+                }
+            }
+
+            if (!content.trim()) {
+                throw new Error(`Anthropic (${p.name}) stream selesai tanpa teks konten.`);
+            }
+
+            return {
+                content,
+                provider: p.slug,
+                model: p.model,
+                usage: {
+                    prompt_tokens: promptTokens,
+                    completion_tokens: completionTokens,
+                    total_tokens: promptTokens + completionTokens || Math.round(content.length / 4)
+                }
+            };
+        } finally {
+            if (initialTimer) clearTimeout(initialTimer);
+            if (idleTimer) clearTimeout(idleTimer);
+        }
+    }
+
     // ─── Google Gemini SDK ────────────────────────────────────────
 
     private async callGeminiSDK(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
@@ -1482,6 +1640,148 @@ CRITICAL JSON RULES:
         }
 
         throw new Error(`${p.name}: Max retries exceeded`);
+    }
+
+    // ─── AWS Bedrock Stream API ───────────────────────────────────
+
+    private async callBedrockStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
+        const region = p.extra_body?.region || this.env?.BEDROCK_REGION || 'us-east-1';
+        let endpoint = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(p.model)}/invoke-with-response-stream`;
+        if (p.base_url && !p.base_url.includes('bedrock-runtime') && !p.base_url.includes('amazonaws.com')) {
+            const cleanBase = p.base_url.replace(/\/+$/, '');
+            endpoint = `${cleanBase}/model/${encodeURIComponent(p.model)}/invoke-with-response-stream`;
+        }
+
+        const userContent = jsonMode
+            ? `${prompt}\n\nRespond with valid JSON only. No markdown, no explanation.`
+            : prompt;
+
+        const body: any = {
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: p.max_tokens,
+            temperature: p.temperature,
+            messages: [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + userContent }],
+            ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
+        };
+        delete body.region;
+
+        if (p.max_tokens <= 32 && body.thinking) {
+            delete body.thinking;
+        }
+        if (body.thinking?.type === 'enabled') {
+            body.temperature = 1.0;
+            const budget = Number(body.thinking.budget_tokens) || 2048;
+            if (body.max_tokens <= budget) {
+                body.max_tokens = budget + Math.max(2048, p.max_tokens || 2048);
+            }
+        }
+
+        const controller = new AbortController();
+        let initialTimer: any = setTimeout(() => {
+            controller.abort(new Error(`Timeout: Bedrock (${p.name}) tidak merespons dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`));
+        }, STREAM_INITIAL_TIMEOUT_MS);
+
+        let idleTimer: any = null;
+        const resetIdleTimer = () => {
+            if (initialTimer) {
+                clearTimeout(initialTimer);
+                initialTimer = null;
+            }
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                controller.abort(new Error(`Timeout: Aliran data Bedrock (${p.name}) terhenti lebih dari ${STREAM_IDLE_TIMEOUT_MS / 1000} detik.`));
+            }, STREAM_IDLE_TIMEOUT_MS);
+        };
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${p.api_key}`,
+                    ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Bedrock Error ${response.status}: ${errText.substring(0, 500)}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error('Bedrock response stream reader unavailable');
+
+            const decoder = new TextDecoder('utf-8');
+            let content = '';
+            let thinking = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                const regex = /"bytes"\s*:\s*"([^"]+)"/g;
+                let match;
+                let lastIndex = 0;
+
+                while ((match = regex.exec(buffer)) !== null) {
+                    lastIndex = regex.lastIndex;
+                    try {
+                        const rawB64 = match[1];
+                        const jsonStr = atob(rawB64);
+                        const eventData = JSON.parse(jsonStr);
+
+                        if (eventData.type === 'content_block_delta') {
+                            const deltaText = eventData.delta?.text || '';
+                            const deltaThinking = eventData.delta?.thinking || '';
+                            const streamToken = deltaThinking || deltaText;
+
+                            if (streamToken) {
+                                resetIdleTimer();
+                                if (deltaText) content += deltaText;
+                                if (deltaThinking) thinking += deltaThinking;
+                                onToken?.(streamToken);
+                            }
+                        }
+                    } catch (_) {}
+                }
+
+                if (lastIndex > 0) {
+                    buffer = buffer.substring(lastIndex);
+                }
+            }
+
+            if (!content.trim() && thinking.trim()) {
+                const jsonMatch = thinking.match(/\{[\s\S]*"(?:pg|isian|uraian|data|soal)"[\s\S]*\}/g);
+                if (jsonMatch) {
+                    content = jsonMatch.reduce((a, b) => a.length >= b.length ? a : b, '');
+                } else {
+                    content = thinking;
+                }
+            }
+
+            if (!content.trim()) {
+                throw new Error(`Bedrock (${p.name}) stream selesai tanpa teks konten.`);
+            }
+
+            return {
+                content,
+                provider: p.slug,
+                model: p.model,
+                usage: {
+                    prompt_tokens: Math.round(prompt.length / 4),
+                    completion_tokens: Math.round(content.length / 4),
+                    total_tokens: Math.round((prompt.length + content.length) / 4)
+                }
+            };
+        } finally {
+            if (initialTimer) clearTimeout(initialTimer);
+            if (idleTimer) clearTimeout(idleTimer);
+        }
     }
 
     // ─── Custom Proxy ─────────────────────────────────────────────

@@ -284,6 +284,7 @@ rpp.post('/generate-stream', async (c) => {
     };
     const preferredSlug = slugMap[aiProvider] || aiProvider;
 
+    c.header('X-Accel-Buffering', 'no');
     return streamSSE(c, async (stream) => {
       try {
         await stream.writeSSE({

@@ -1165,6 +1165,7 @@ kisi.post('/generate-stream', async (c) => {
                 isianType, isGambarEnabled
             });
 
+        c.header('X-Accel-Buffering', 'no');
         return streamSSE(c, async (stream) => {
             try {
                 // Step 1: Analisis Kurikulum & CP BSKAP 046/2025

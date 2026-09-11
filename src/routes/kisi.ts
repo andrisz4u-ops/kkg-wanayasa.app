@@ -244,8 +244,16 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
     const m = (mapel || '').toLowerCase();
     if (m.includes('pancasila') || m.includes('pkn') || m.includes('sejarah') || m.includes('ips')) {
         return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
-          * Prioritas: Foto resmi tokoh pahlawan nasional, lambang Garuda Pancasila/lembaga negara, gedung bersejarah, piagam proklamasi, atau peta kepulauan.
-          * "gambar_keyword": Nama tokoh/tempat resmi Bahasa Indonesia (contoh: "Ir. Soekarno", "Garuda Pancasila", "Rumah Laksamana Maeda", "Candi Borobudur").
+          * Untuk stimulus Peta Kepulauan Indonesia, gunakan "visual_stimulus": { "type": "peta_indonesia", "params": { "pointer": "sumatra" (atau kalimantan/sulawesi/papua/maluku/bali_nusra/jawa), "label": "X" } }.
+            SANGAT PENTING: VARIASIKAN pulau sasaran (jangan hanya Pulau Jawa!) dan variasikan topik soal:
+            1. Letak geografis / nama pulau: "Pulau yang ditunjuk huruf X adalah ..."
+            2. Keragaman budaya & rumah adat: Honai (Papua), Tongkonan (Sulawesi), Gadang (Sumatra), Joglo (Jawa), Gapura Candi Bentar (Bali/Nusra).
+            3. Kekayaan alam / rempah-rempah: Kepulauan penghasil cengkih & pala (Maluku).
+            4. Bentang alam / danau / gunung / sungai: Danau Toba (Sumatra), Sungai Kapuas (Kalimantan), Puncak Jaya (Papua).
+            5. Pembagian zona waktu: WIB (Sumatra/Jawa), WITA (Sulawesi/Bali/Nusra/Kalsel/Kaltim), WIT (Maluku/Papua).
+          * Untuk simbol lambang Garuda Pancasila, gunakan: "visual_stimulus": { "type": "perisai_pancasila", "params": { "sila": 1 (atau 2/3/4/5), "label": "X" } }.
+          * Prioritas Foto/Arsip: Tokoh pahlawan nasional, gedung bersejarah, naskah proklamasi, atau peninggalan candi.
+          * "gambar_keyword": Nama tokoh/tempat resmi Bahasa Indonesia (contoh: "Ir. Soekarno", "Rumah Laksamana Maeda", "Candi Borobudur").
           * "gambar_prompt_en": "historic photograph or official emblem of [topic], clean background, high resolution, authentic national archive style"`;
     }
     if (m.includes('sunda') || m.includes('seni') || m.includes('budaya')) {
@@ -338,7 +346,14 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
         - Metamorfosis: { "type": "metamorfosis", "params": { "pointer": "kepompong" (atau telur/ulat/kupu-kupu), "label": "X" } }
         - Bagian Bunga: { "type": "bagian_bunga", "params": { "pointer": "putik" (atau benang sari/mahkota/kelopak/bakal biji), "label": "X" } }
         - Rantai Makanan: { "type": "rantai_makanan", "params": { "pointer": "produsen" (atau konsumen1/konsumen2/konsumen3/pengurai), "label": "X" } }
-        - Peta Indonesia (Tebak Pulau): { "type": "peta_indonesia", "params": { "pointer": "jawa" (atau sumatra/kalimantan/sulawesi/papua/maluku/bali_nusra), "label": "X" } }
+        - Peta Indonesia (Berbagai Variasi Pulau & Soal): { "type": "peta_indonesia", "params": { "pointer": "sulawesi" (atau sumatra/kalimantan/papua/maluku/bali_nusra/jawa), "label": "X" } }
+          * SANGAT PENTING: JANGAN selalu menanyakan Pulau Jawa! VARIASIKAN pulau sasaran ("sumatra", "kalimantan", "sulawesi", "papua", "maluku", "bali_nusra", "jawa") dan variasikan model pertanyaannya:
+            1. Tebak Nama Pulau / Letak: "Pulau yang ditunjuk tanda huruf X pada peta adalah ...."
+            2. Fauna Endemik Khas: "Hewan endemik khas yang mendiami pulau yang ditunjuk oleh huruf X adalah ...." (Komodo di Bali/Nusra, Anoa/Babirusa di Sulawesi, Burung Cendrawasih di Papua, Orangutan/Bekantan di Kalimantan, Harimau Sumatra di Sumatra, Badak Bercula Satu di Jawa).
+            3. Flora Khas: "Tumbuhan khas yang banyak ditemukan di pulau bertanda X adalah ...." (Bunga Rafflesia di Sumatra, Cendana di Nusa Tenggara, Anggrek Hitam di Kalimantan, Cengkih & Pala di Maluku).
+            4. Keragaman Budaya / Rumah Adat: "Rumah adat tradisional Honai/Tongkonan/Gadang berasal dari pulau yang ditunjuk oleh huruf X, yaitu ...."
+            5. Bentang Alam & Kekayaan Alam: Danau Toba (Sumatra), Sungai Kapuas (Kalimantan), Puncak Jayawijaya (Papua), Kepulauan Rempah (Maluku).
+            6. Zona Waktu: "Pulau yang ditunjuk huruf X termasuk dalam zona waktu ...." (WIB / WITA / WIT).
         - Rangkaian Listrik: { "type": "rangkaian_listrik", "params": { "model": "campuran" (atau seri/paralel), "s1": true, "s2": false, "pointer": "L1", "label": "X" } }
         - Perubahan Wujud Zat: { "type": "perubahan_wujud", "params": { "pointer": "1" (atau 1=mencair, 2=membeku, 3=menguap, 4=mengembun, 5=menyublim, 6=mengkristal), "label": "X" } }
         - Pengukuran Panjang Mistar: { "type": "mistar", "params": { "start": 3.0, "end": 8.5, "objectType": "pensil" (atau penghapus/paku), "label": "Panjang = ... cm" } }
@@ -445,9 +460,22 @@ export const resolveQuestionVisualStimulus = async (
         }
     }
 
-    // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal & keyword
+    // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal, opsi, & kunci jawaban
     if (!visualCfg || !visualCfg.type) {
-        visualCfg = detectStimulusFromSoalText(q.soal, mataPelajaran);
+        let fullContext = String(q.soal || '');
+        if (q.opsi && typeof q.opsi === 'object') {
+            fullContext += ' ' + Object.entries(q.opsi).map(([k, v]) => `${k}. ${v}`).join(' ');
+        }
+        if (q.kunci) {
+            fullContext += ` kunci: ${q.kunci}`;
+            if (q.opsi && q.opsi[q.kunci]) {
+                fullContext += ` jawaban: ${q.opsi[q.kunci]}`;
+            }
+        }
+        if (q.pembahasan || q.penjelasan) {
+            fullContext += ` pembahasan: ${q.pembahasan || q.penjelasan}`;
+        }
+        visualCfg = detectStimulusFromSoalText(fullContext, mataPelajaran);
     }
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
@@ -547,9 +575,11 @@ export const resolveQuestionVisualStimulus = async (
                 }
                 if (!foundAlt) visualCfg = null;
             } else if (visualCfg.type === 'peta_indonesia') {
-                const islands = ['jawa', 'sumatra', 'kalimantan', 'sulawesi', 'papua', 'maluku', 'bali_nusra'];
+                const islands = ['sumatra', 'kalimantan', 'sulawesi', 'papua', 'maluku', 'bali_nusra', 'jawa'];
+                const offset = typeof q.no === 'number' ? q.no : 0;
                 let foundAlt = false;
-                for (const isl of islands) {
+                for (let i = 0; i < islands.length; i++) {
+                    const isl = islands[(i + offset) % islands.length];
                     const altSig = `peta_indonesia:ptr=${isl}`;
                     if (!usedStimulusSignatures.has(altSig)) {
                         visualCfg = { type: 'peta_indonesia', params: { pointer: isl, label: 'X' } };

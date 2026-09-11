@@ -541,7 +541,7 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       const pie = detectStimulusFromSoalText('Perhatikan diagram lingkaran berikut yang menunjukkan data hobi siswa kelas 5!', 'Matematika');
       expect(pie?.type).toBe('diagram_lingkaran');
 
-      // Peta Indonesia (Tebak Pulau)
+      // Peta Indonesia (Variasi Soal: Tebak Pulau, Fauna Endemik, Flora, Budaya, Rempah)
       const petaUser = detectStimulusFromSoalText('Perhatikan gambar peta Indonesia berikut! Di pulau manakah kita tinggal? A. Pulau Jawa B. Pulau Papua C. Pulau Kalimantan D. Pulau Sumatra', 'IPAS');
       expect(petaUser?.type).toBe('peta_indonesia');
       expect(petaUser?.params?.pointer).toBe('jawa');
@@ -549,6 +549,26 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       const petaPapua = detectStimulusFromSoalText('Perhatikan peta Indonesia berikut! Pulau Papua ditunjukkan oleh huruf...', 'IPAS');
       expect(petaPapua?.type).toBe('peta_indonesia');
       expect(petaPapua?.params?.pointer).toBe('papua');
+
+      const petaKomodo = detectStimulusFromSoalText('Perhatikan gambar peta Indonesia berikut! Hewan langka Komodo hidup di pulau yang ditunjuk oleh tanda X, yaitu...', 'IPAS');
+      expect(petaKomodo?.type).toBe('peta_indonesia');
+      expect(petaKomodo?.params?.pointer).toBe('bali_nusra');
+
+      const petaOrangutan = detectStimulusFromSoalText('Hewan bekantan dan orangutan merupakan fauna khas dari pulau yang ditunjuk tanda X pada peta Indonesia, yaitu...', 'IPAS');
+      expect(petaOrangutan?.type).toBe('peta_indonesia');
+      expect(petaOrangutan?.params?.pointer).toBe('kalimantan');
+
+      const petaSulawesi = detectStimulusFromSoalText('Perhatikan peta Indonesia! Rumah adat Tongkonan suku Toraja dan hewan Anoa berasal dari pulau yang ditunjuk tanda X, yaitu...', 'IPAS');
+      expect(petaSulawesi?.type).toBe('peta_indonesia');
+      expect(petaSulawesi?.params?.pointer).toBe('sulawesi');
+
+      const petaSumatra = detectStimulusFromSoalText('Bunga langka Rafflesia Arnoldii dan Danau Toba terletak di pulau yang ditunjuk oleh tanda X pada peta Indonesia, yaitu...', 'IPAS');
+      expect(petaSumatra?.type).toBe('peta_indonesia');
+      expect(petaSumatra?.params?.pointer).toBe('sumatra');
+
+      const petaMaluku = detectStimulusFromSoalText('Perhatikan peta kepulauan Indonesia! Kepulauan penghasil rempah-rempah pala dan cengkih serta pahlawan Pattimura ditunjukkan oleh huruf X, yaitu...', 'IPAS');
+      expect(petaMaluku?.type).toBe('peta_indonesia');
+      expect(petaMaluku?.params?.pointer).toBe('maluku');
 
       // Rangkaian Listrik
       const listrik = detectStimulusFromSoalText('Perhatikan rangkaian listrik berikut! Jika saklar S1 dibuka dan S2 ditutup, lampu manakah yang menyala?', 'IPAS');

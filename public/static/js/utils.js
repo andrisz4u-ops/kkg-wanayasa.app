@@ -434,16 +434,24 @@ export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 
   const percentEl = document.getElementById('monitor-percent');
   const stepTitleEl = document.getElementById('monitor-step-title');
 
-    let typeQueue = '';
-    let typeTimer = null;
+  let typeQueue = '';
+  let typeTimer = null;
+  let onQueueEmptyCallback = null;
 
     const drainTypeQueue = (onEmpty) => {
+      if (typeof onEmpty === 'function') {
+        onQueueEmptyCallback = onEmpty;
+      }
       if (typeTimer) return;
       typeTimer = setInterval(() => {
         if (!typeQueue) {
           clearInterval(typeTimer);
           typeTimer = null;
-          if (typeof onEmpty === 'function') onEmpty();
+          if (typeof onQueueEmptyCallback === 'function') {
+            const cb = onQueueEmptyCallback;
+            onQueueEmptyCallback = null;
+            cb();
+          }
           return;
         }
         const sliceLen = Math.min(typeQueue.length, Math.max(12, Math.floor(typeQueue.length / 15)));
@@ -516,23 +524,40 @@ export function openAiLiveMonitor({ title = 'AI Neural Live Stream', subtitle = 
           if (circle) circle.className = 'w-7 h-7 rounded-full flex items-center justify-center text-xs mb-1 border bg-emerald-500/20 border-emerald-500 text-emerald-400';
         }
 
-        const finishAndClose = () => {
-          setTimeout(() => {
-            closeAiLiveMonitor();
-            if (typeof callback === 'function') callback();
-          }, 700);
-        };
-
-        if (typeQueue) {
-          drainTypeQueue(finishAndClose);
-        } else {
-          finishAndClose();
+        // Hentikan timer ketik dan segera flush sisa buffer agar teks selesai seketika
+        if (typeTimer) {
+          clearInterval(typeTimer);
+          typeTimer = null;
         }
+        if (typeQueue) {
+          if (terminalEl) {
+            terminalEl.appendChild(document.createTextNode(typeQueue));
+            terminalEl.scrollTop = terminalEl.scrollHeight;
+          }
+          typeQueue = '';
+        }
+        onQueueEmptyCallback = null;
+
+        // Berikan jeda visual singkat (600ms) agar user melihat status 100% tuntas, lalu tutup modal & panggil callback render canvas
+        setTimeout(() => {
+          closeAiLiveMonitor();
+          try {
+            if (typeof callback === 'function') callback();
+          } catch (renderErr) {
+            console.error('Error executing live monitor complete callback:', renderErr);
+            showToast('Gagal merender dokumen ke canvas: ' + renderErr.message, 'error');
+          }
+        }, 600);
       },
 
       close() {
-        if (typeTimer) clearInterval(typeTimer);
+        if (typeTimer) {
+          clearInterval(typeTimer);
+          typeTimer = null;
+        }
         clearInterval(timerInterval);
+        onQueueEmptyCallback = null;
+        typeQueue = '';
         closeAiLiveMonitor();
       }
     };

@@ -613,7 +613,7 @@ export function initRpp() {
           } else if (event === 'token') {
             monitor.appendToken(payload.text);
           } else if (event === 'done') {
-            finalResultData = payload.data;
+            finalResultData = payload?.data || payload;
           } else if (event === 'error') {
             const msg = (typeof payload === 'object' && payload !== null)
               ? (payload.message || payload.error || JSON.stringify(payload))

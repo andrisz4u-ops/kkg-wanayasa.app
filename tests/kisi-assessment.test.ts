@@ -215,6 +215,16 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             await resolveQuestionVisualStimulus(qRantai, 'IPAS', 'Ekosistem', null);
             expect(qRantai.gambar?.type).toBe('svg');
             expect(qRantai.gambar?.svg).toContain('Rantai Makanan');
+
+            // Peta Indonesia (Kasus nyata user)
+            const qPeta: any = {
+                no: 2,
+                soal: 'Perhatikan gambar peta Indonesia berikut! Di pulau manakah kita tinggal? A. Pulau Jawa B. Pulau Papua C. Pulau Kalimantan D. Pulau Sumatra'
+            };
+            await resolveQuestionVisualStimulus(qPeta, 'IPAS', 'Kondisi Geografis Indonesia', null);
+            expect(qPeta.gambar?.type).toBe('svg');
+            expect(qPeta.gambar?.svg).toContain('Peta Kepulauan Indonesia');
+            expect(qPeta.gambar?.svg).toContain('huruf "X"');
         });
 
         it('should guarantee visual diversity between Soal 1 and Soal 7 in same exam package', async () => {
@@ -277,10 +287,10 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(qA.gambar?.svg).not.toEqual(qB.gambar?.svg);
         });
 
-        it('should provide full visual catalog with 41 distinct templates', async () => {
+        it('should provide full visual catalog with 50 distinct templates', async () => {
             const { getVisualCatalog } = await import('../src/lib/visual-engine');
             const catalog = getVisualCatalog();
-            expect(catalog.length).toBe(41);
+            expect(catalog.length).toBe(50);
             const ids = catalog.map(item => item.id);
             expect(ids).toContain('persegi_panjang');
             expect(ids).toContain('segitiga_sama_sisi');
@@ -291,6 +301,15 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(ids).toContain('pictogram');
             expect(ids).toContain('simetri_lipat');
             expect(ids).toContain('bangun_gabungan');
+            expect(ids).toContain('peta_indonesia');
+            expect(ids).toContain('rangkaian_listrik');
+            expect(ids).toContain('perubahan_wujud');
+            expect(ids).toContain('mistar');
+            expect(ids).toContain('tata_surya');
+            expect(ids).toContain('perisai_pancasila');
+            expect(ids).toContain('busur_derajat');
+            expect(ids).toContain('magnet');
+            expect(ids).toContain('sifat_cahaya');
         });
 
         it('should handle /visual-catalog and /visual-render endpoints via kisi router', async () => {
@@ -300,7 +319,7 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(resCatalog.status).toBe(200);
             const bodyCat = await resCatalog.json();
             expect(bodyCat.success).toBe(true);
-            expect(bodyCat.data.length).toBe(41);
+            expect(bodyCat.data.length).toBe(50);
 
             const resRender = await kisi.request('/visual-render', {
                 method: 'POST',
@@ -312,6 +331,109 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(bodyRender.success).toBe(true);
             expect(bodyRender.data.svg).toContain('Persegi Panjang ABCD');
             expect(bodyRender.data.dataUri).toContain('data:image/svg+xml');
+
+            const resRenderPeta = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'peta_indonesia', params: { pointer: 'jawa', label: 'X' } })
+            });
+            expect(resRenderPeta.status).toBe(200);
+            const bodyRenderPeta = await resRenderPeta.json();
+            expect(bodyRenderPeta.success).toBe(true);
+            expect(bodyRenderPeta.data.svg).toContain('Peta Kepulauan Indonesia');
+            expect(bodyRenderPeta.data.svg).toContain('huruf "X"');
+
+            // Test 5 template SVG sebelumnya:
+            // 1. Rangkaian Listrik
+            const resListrik = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'rangkaian_listrik', params: { model: 'campuran', s1: true, s2: false, pointer: 'L1', label: 'X' } })
+            });
+            const bodyListrik = await resListrik.json();
+            expect(bodyListrik.success).toBe(true);
+            expect(bodyListrik.data.svg).toContain('Rangkaian Listrik');
+            expect(bodyListrik.data.svg).toContain('Baterai');
+
+            // 2. Perubahan Wujud
+            const resWujud = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'perubahan_wujud', params: { pointer: '1', label: 'X' } })
+            });
+            const bodyWujud = await resWujud.json();
+            expect(bodyWujud.success).toBe(true);
+            expect(bodyWujud.data.svg).toContain('Perubahan Wujud Zat');
+            expect(bodyWujud.data.svg).toContain('PADAT');
+            expect(bodyWujud.data.svg).toContain('CAIR');
+            expect(bodyWujud.data.svg).toContain('GAS');
+
+            // 3. Mistar
+            const resMistar = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'mistar', params: { start: 2.5, end: 8.5, objectType: 'pensil', label: 'Panjang = ... cm' } })
+            });
+            const bodyMistar = await resMistar.json();
+            expect(bodyMistar.success).toBe(true);
+            expect(bodyMistar.data.svg).toContain('Pengukuran Panjang dengan Mistar');
+            expect(bodyMistar.data.svg).toContain('cm');
+
+            // 4. Tata Surya
+            const resSurya = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'tata_surya', params: { pointer: 'bumi', label: 'X' } })
+            });
+            const bodySurya = await resSurya.json();
+            expect(bodySurya.success).toBe(true);
+            expect(bodySurya.data.svg).toContain('Sistem Tata Surya');
+            expect(bodySurya.data.svg).toContain('Matahari');
+
+            // 5. Perisai Pancasila
+            const resPerisai = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'perisai_pancasila', params: { sila: 1, label: 'X' } })
+            });
+            const bodyPerisai = await resPerisai.json();
+            expect(bodyPerisai.success).toBe(true);
+            expect(bodyPerisai.data.svg).toContain('Perisai Garuda Pancasila');
+
+            // Test 3 template SVG baru:
+            // 6. Busur Derajat
+            const resBusur = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'busur_derajat', params: { derajat: 60, label: 'X' } })
+            });
+            const bodyBusur = (await resBusur.json()) as any;
+            expect(bodyBusur.success).toBe(true);
+            expect(bodyBusur.data.svg).toContain('Pengukuran Sudut Busur Derajat');
+            expect(bodyBusur.data.svg).toContain('0°');
+            expect(bodyBusur.data.svg).toContain('180°');
+
+            // 7. Magnet
+            const resMagnet = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'magnet', params: { interaksi: 'tarik', pointer: 'kanan2', label: 'X' } })
+            });
+            const bodyMagnet = (await resMagnet.json()) as any;
+            expect(bodyMagnet.success).toBe(true);
+            expect(bodyMagnet.data.svg).toContain('Interaksi Gaya Magnet');
+            expect(bodyMagnet.data.svg).toContain('[X]');
+
+            // 8. Sifat Cahaya
+            const resCahaya = await kisi.request('/visual-render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'sifat_cahaya', params: { peristiwa: 'pembiasan', pointer: 'X', label: 'X' } })
+            });
+            const bodyCahaya = (await resCahaya.json()) as any;
+            expect(bodyCahaya.success).toBe(true);
+            expect(bodyCahaya.data.svg).toContain('Diagram Sifat Cahaya (Pembiasan)');
+            expect(bodyCahaya.data.svg).toContain('Garis Normal');
         });
     });
 
@@ -383,7 +505,8 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             expect(question.visual_stimulus.type).toBe('sudut');
             expect(question.gambar).toBeDefined();
             expect(question.gambar.type).toBe('svg');
-            expect(question.gambar.svg).toContain('Sudut 90');
+            expect(question.gambar.svg).toContain('Sudut ABC');
+            expect(question.gambar.svg).toContain('90°');
 
             // Then cleaning normalizeSoalMarkdown cleans question.soal completely
             question.soal = normalizeSoalMarkdown(question.soal);
@@ -425,6 +548,23 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
 
             expect(shouldEnableVisualStimulusForTopic('IPAS', 'Sistem Pencernaan', false)).toBe(false);
             expect(shouldEnableVisualStimulusForTopic('Matematika', 'Pecahan', false)).toBe(false);
+        });
+    });
+
+    describe('Wikimedia Query Sanitization & Jane Austen Bug Prevention', () => {
+        it('should block generic question instruction phrases from searching Wikimedia', async () => {
+            const { UnsplashService } = await import('../src/services/unsplash');
+            const unsplash = new UnsplashService({});
+
+            // Searching generic prompt phrases should return null, not Jane Austen
+            const res1 = await unsplash.searchImage('Perhatikan gambar', 'Perhatikan gambar berikut!');
+            expect(res1).toBeNull();
+
+            const res2 = await unsplash.searchImage('perhatikan gambar berikut', 'soal');
+            expect(res2).toBeNull();
+
+            const res3 = await unsplash.searchImage('gambar berikut', 'diagram');
+            expect(res3).toBeNull();
         });
     });
 });

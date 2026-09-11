@@ -260,7 +260,7 @@ export function renderSegitigaSikuSvg(params: {
 /** Render Sudut dengan busur derajat */
 export function renderSudutSvg(params: { derajat?: number; jenis?: string; label?: string }): string {
   const deg = params.derajat || 60;
-  const label = params.label || `Sudut ${deg}°`;
+  const label = params.label || 'Sudut ABC';
   const rad = (deg * Math.PI) / 180;
 
   // Jika sudut tumpul (> 90°), geser titik sudut cx ke tengah agar kaki kiri tidak terpotong (x < 0)
@@ -307,12 +307,69 @@ export function renderSudutSvg(params: { derajat?: number; jenis?: string; label
 // 2. PECAHAN (MATEMATIKA)
 // =========================================================================
 
-/** Render Pecahan Lingkaran dengan n bagian, k bagian diarsir */
-export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: number; caption?: string }): string {
+/** Render Pecahan Lingkaran dengan n bagian, k bagian diarsir (Mendukung Pecahan Campuran) */
+export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: number; utuh?: number; caption?: string }): string {
   const n = Math.max(2, Math.min(16, params.pembagi || 4));
-  const k = Math.max(1, Math.min(n, params.diarsir || 3));
-  const caption = params.caption || `Pecahan ${k}/${n}`;
+  const k = Math.max(0, Math.min(n, params.diarsir != null ? params.diarsir : 3));
+  const utuh = Math.max(0, Math.min(3, params.utuh || 0));
 
+  if (utuh > 0) {
+    const totalCircles = utuh + 1;
+    const r = 55;
+    const cy = 90;
+    const spacing = 135;
+    const w = totalCircles * spacing + 40;
+    const h = 210;
+
+    let circlesSvg = '';
+    for (let c = 0; c < utuh; c++) {
+      const cx = 80 + c * spacing;
+      let fullSlices = '';
+      for (let i = 0; i < n; i++) {
+        const startAngle = (i * 2 * Math.PI) / n - Math.PI / 2;
+        const endAngle = ((i + 1) * 2 * Math.PI) / n - Math.PI / 2;
+        const x1 = cx + r * Math.cos(startAngle);
+        const y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle);
+        const y2 = cy + r * Math.sin(endAngle);
+        fullSlices += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="#38bdf8" stroke="#0f172a" stroke-width="1.8"/>`;
+      }
+      circlesSvg += `
+        <g>${fullSlices}</g>
+        <circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a"/>
+        <text x="${cx}" y="${cy + r + 22}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">1 Bagian Utuh</text>
+      `;
+    }
+
+    const cxFrac = 80 + utuh * spacing;
+    let fracSlices = '';
+    for (let i = 0; i < n; i++) {
+      const startAngle = (i * 2 * Math.PI) / n - Math.PI / 2;
+      const endAngle = ((i + 1) * 2 * Math.PI) / n - Math.PI / 2;
+      const x1 = cxFrac + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cxFrac + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      const isShaded = i < k;
+      const fill = isShaded ? '#38bdf8' : '#ffffff';
+      fracSlices += `<path d="M ${cxFrac},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="${fill}" stroke="#0f172a" stroke-width="1.8"/>`;
+    }
+    circlesSvg += `
+      <g>${fracSlices}</g>
+      <circle cx="${cxFrac}" cy="${cy}" r="3" fill="#0f172a"/>
+    `;
+
+    // Zero-spoiler: default caption netral tanpa membocorkan nilai pecahan
+    const caption = params.caption !== undefined ? params.caption : 'Daerah yang Diarsir';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="6"/>
+  ${circlesSvg}
+  ${caption ? `<text x="${w / 2}" y="${h - 10}" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
+</svg>`;
+  }
+
+  // Zero-spoiler: default caption netral tanpa membocorkan nilai pecahan k/n
+  const caption = params.caption !== undefined ? params.caption : 'Daerah yang Diarsir';
   const cx = 160;
   const cy = 110;
   const r = 85;
@@ -336,7 +393,7 @@ export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <g>${slices}</g>
   <circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a"/>
-  <text x="160" y="225" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${escapeXml(caption)} (${k} dari ${n} bagian diarsir)</text>
+  ${caption ? `<text x="160" y="225" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
 </svg>`;
 }
 
@@ -375,7 +432,8 @@ export function renderPecahanPersegiSvg(params: { totalKotak?: number; diarsir?:
   }
 
   const shaded = Math.min(total, params.diarsir || 3);
-  const caption = params.caption || `Pecahan ${shaded}/${total}`;
+  // Zero-spoiler: default caption netral tanpa membocorkan nilai pecahan
+  const caption = params.caption !== undefined ? params.caption : 'Daerah yang Diarsir';
 
   // Tentukan geometri kotak yang proporsional
   const isStrip = rows === 1;
@@ -410,7 +468,7 @@ export function renderPecahanPersegiSvg(params: { totalKotak?: number; diarsir?:
     </pattern>
   </defs>
   <g>${boxes}</g>
-  <text x="160" y="${isStrip ? startY + boxH + 40 : 205}" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">${escapeXml(caption)} (${shaded} dari ${total} kotak diarsir)</text>
+  ${caption ? `<text x="160" y="${isStrip ? startY + boxH + 40 : 205}" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
 </svg>`;
 }
 
@@ -820,7 +878,8 @@ export function renderBagianBungaSvg(params: { pointer?: string; label?: string 
 export function renderJamAnalogSvg(params: { jam?: number; menit?: number; caption?: string }): string {
   const jam = params.jam != null ? params.jam : 7;
   const menit = params.menit != null ? params.menit : 30;
-  const caption = params.caption || `Pukul ${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')}`;
+  // Zero-spoiler: default caption netral, tidak mencetak jawaban jam/menit
+  const caption = params.caption !== undefined ? params.caption : 'Jam Dinding Analog';
 
   const cx = 150;
   const cy = 110;
@@ -855,7 +914,7 @@ export function renderJamAnalogSvg(params: { jam?: number; menit?: number; capti
   <line x1="${cx}" y1="${cy}" x2="${mX}" y2="${mY}" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/>
   <circle cx="${cx}" cy="${cy}" r="5" fill="#e11d48"/>
 
-  <text x="${cx}" y="215" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${escapeXml(caption)}</text>
+  ${caption ? `<text x="${cx}" y="215" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
 </svg>`;
 }
 
@@ -1405,28 +1464,53 @@ export function renderSegitigaSamaKakiSvg(params: {
 </svg>`;
 }
 
-/** Render Jaring-jaring Kubus (bentuk salib/plus) */
-export function renderJaringKubusSvg(params: { s?: number; unit?: string }): string {
+/** Render Jaring-jaring Kubus (Mendukung variasi pola salib, tangga 1-4-1, dan pola T) */
+export function renderJaringKubusSvg(params: { s?: number; unit?: string; pola?: 'salib' | 'tangga' | 't' }): string {
   const s = params.s || 5;
   const unit = params.unit || 'cm';
-  const cs = 60; // ukuran kotak visual
+  const pola = (params.pola || 'salib').toLowerCase();
+  const cs = 55;
   const gap = 1;
 
-  // Posisi salib: 1 atas, 4 tengah berjajar, 1 bawah
-  const faces = [
-    { x: cs + gap, y: 0, label: 'Atas' },           // atas
-    { x: 0, y: cs + gap, label: 'Kiri' },             // kiri
-    { x: cs + gap, y: cs + gap, label: 'Depan' },     // depan (tengah)
-    { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' }, // kanan
-    { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' }, // belakang
-    { x: cs + gap, y: 2 * (cs + gap), label: 'Bawah' }, // bawah
-  ];
+  let faces: { x: number; y: number; label: string }[] = [];
+
+  if (pola === 'tangga') {
+    faces = [
+      { x: cs + gap, y: 0, label: 'Atas' },
+      { x: 0, y: cs + gap, label: 'Kiri' },
+      { x: cs + gap, y: cs + gap, label: 'Depan' },
+      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' },
+      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' },
+      { x: 3 * (cs + gap), y: 2 * (cs + gap), label: 'Bawah' },
+    ];
+  } else if (pola === 't') {
+    faces = [
+      { x: 0, y: 0, label: 'Kiri' },
+      { x: cs + gap, y: 0, label: 'Depan' },
+      { x: 2 * (cs + gap), y: 0, label: 'Kanan' },
+      { x: cs + gap, y: cs + gap, label: 'Bawah' },
+      { x: cs + gap, y: 2 * (cs + gap), label: 'Belakang' },
+      { x: cs + gap, y: 3 * (cs + gap), label: 'Atas' },
+    ];
+  } else {
+    faces = [
+      { x: cs + gap, y: 0, label: 'Atas' },
+      { x: 0, y: cs + gap, label: 'Kiri' },
+      { x: cs + gap, y: cs + gap, label: 'Depan' },
+      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' },
+      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' },
+      { x: cs + gap, y: 2 * (cs + gap), label: 'Bawah' },
+    ];
+  }
 
   const colors = ['#dbeafe', '#fce7f3', '#d1fae5', '#fef3c7', '#e0e7ff', '#fecaca'];
-  const w = 4 * (cs + gap) + 40;
-  const h = 3 * (cs + gap) + 60;
+  const maxCols = Math.max(...faces.map(f => f.x / (cs + gap))) + 1;
+  const maxRows = Math.max(...faces.map(f => f.y / (cs + gap))) + 1;
+
+  const w = maxCols * (cs + gap) + 40;
+  const h = maxRows * (cs + gap) + 55;
   const ox = 20;
-  const oy = 20;
+  const oy = 15;
 
   let rects = '';
   faces.forEach((f, i) => {
@@ -1436,8 +1520,7 @@ export function renderJaringKubusSvg(params: { s?: number; unit?: string }): str
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   ${rects}
-  <text x="${ox + cs + gap + cs / 2}" y="${oy + 3 * (cs + gap) + 26}" text-anchor="middle" font-size="12" font-weight="bold" fill="#e11d48">s = ${s} ${unit}</text>
-  <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Kubus (sisi ${s} ${unit})</text>
+  <text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Kubus Pola ${pola.toUpperCase()} (s = ${s} ${unit})</text>
 </svg>`;
 }
 
@@ -1621,8 +1704,10 @@ export function renderPictogramSvg(params: { judul?: string; labels?: string[]; 
     for (let j = 0; j < val; j++) {
       rows += `<text x="${labelW + 10 + j * iconW}" y="${ry + 16}" font-size="16" fill="${color}">${ikon}</text>`;
     }
-    // Value
-    rows += `<text x="${labelW + 10 + val * iconW + 5}" y="${ry + 14}" font-size="11" fill="#64748b">(${val * nilaiIkon})</text>`;
+    // Value hanya jika diminta eksplisit (Zero-spoiler: default jangan bocorkan hasil kali)
+    if (params.showValues) {
+      rows += `<text x="${labelW + 10 + val * iconW + 5}" y="${ry + 14}" font-size="11" fill="#64748b">(${val * nilaiIkon})</text>`;
+    }
   });
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
@@ -1698,11 +1783,10 @@ export function renderSimetriLipatSvg(params: { bangun?: string; jumlahGaris?: n
   const garisText = garis === -1 ? '∞ (tak terhingga)' : String(garis);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" width="360" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="180" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Simetri Lipat: ${escapeXml(labelBangun)}</text>
+  <text x="180" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Sumbu Simetri Lipat</text>
   ${shape}
   ${lines}
-  <text x="180" y="240" text-anchor="middle" font-size="12" fill="#64748b">Jumlah garis simetri = <tspan font-weight="bold" fill="#e11d48">${garisText}</tspan></text>
-  <text x="180" y="256" text-anchor="middle" font-size="10" fill="#94a3b8">--- garis simetri lipat (putus-putus)</text>
+  <text x="180" y="246" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Garis putus-putus menunjukkan sumbu simetri lipat</text>
 </svg>`;
 }
 
@@ -2365,6 +2449,1043 @@ export function renderRantaiMakananSvg(params: { pointer?: string; label?: strin
 </svg>`;
 }
 
+/** Render Peta Kepulauan Indonesia Vektor SVG dengan Sorotan & Penunjuk Huruf X */
+export function renderPetaIndonesiaSvg(params: { pointer?: string; label?: string; highlight?: boolean }): string {
+  const pointer = (params.pointer || 'jawa').toLowerCase().trim();
+  const labelChar = params.label || 'X';
+  const highlight = params.highlight !== false;
+
+  // Koordinat target dan posisi leader line marker [X]
+  let target = { x: 180, y: 212, name: 'Pulau Jawa', badgeX: 180, badgeY: 244, dir: 'down' };
+  let isTarget = {
+    sumatra: false,
+    jawa: false,
+    kalimantan: false,
+    sulawesi: false,
+    papua: false,
+    maluku: false,
+    baliNusra: false
+  };
+
+  if (pointer.includes('sumat')) {
+    target = { x: 92, y: 125, name: 'Pulau Sumatra', badgeX: 50, badgeY: 155, dir: 'left' };
+    isTarget.sumatra = true;
+  } else if (pointer.includes('kalim') || pointer.includes('borneo')) {
+    target = { x: 212, y: 118, name: 'Pulau Kalimantan', badgeX: 212, badgeY: 48, dir: 'up' };
+    isTarget.kalimantan = true;
+  } else if (pointer.includes('sulaw') || pointer.includes('celebes')) {
+    target = { x: 308, y: 122, name: 'Pulau Sulawesi', badgeX: 308, badgeY: 48, dir: 'up' };
+    isTarget.sulawesi = true;
+  } else if (pointer.includes('papua') || pointer.includes('irian')) {
+    target = { x: 475, y: 138, name: 'Pulau Papua', badgeX: 475, badgeY: 60, dir: 'up' };
+    isTarget.papua = true;
+  } else if (pointer.includes('maluku') || pointer.includes('seram') || pointer.includes('halmahera') || pointer.includes('ambon')) {
+    target = { x: 395, y: 122, name: 'Kepulauan Maluku', badgeX: 395, badgeY: 52, dir: 'up' };
+    isTarget.maluku = true;
+  } else if (pointer.includes('bali') || pointer.includes('nusa') || pointer.includes('lombok') || pointer.includes('flores') || pointer.includes('timor') || pointer.includes('ntb') || pointer.includes('ntt')) {
+    target = { x: 295, y: 226, name: 'Kepulauan Nusa Tenggara & Bali', badgeX: 295, badgeY: 246, dir: 'down' };
+    isTarget.baliNusra = true;
+  } else {
+    // Default Pulau Jawa
+    isTarget.jawa = true;
+  }
+
+  // Palet Warna: pulau sasaran di-highlight oranye-merah menyala jika highlight aktif
+  const colTargetFill = highlight ? '#e11d48' : '#10b981';
+  const colTargetStroke = highlight ? '#9f1239' : '#047857';
+  const swTarget = highlight ? 2.5 : 1.2;
+
+  const colNormalFill = '#10b981';
+  const colNormalStroke = '#047857';
+  const swNormal = 1.2;
+
+  const fillSumatra = isTarget.sumatra ? colTargetFill : colNormalFill;
+  const strokeSumatra = isTarget.sumatra ? colTargetStroke : colNormalStroke;
+  const swSumatra = isTarget.sumatra ? swTarget : swNormal;
+
+  const fillJawa = isTarget.jawa ? colTargetFill : colNormalFill;
+  const strokeJawa = isTarget.jawa ? colTargetStroke : colNormalStroke;
+  const swJawa = isTarget.jawa ? swTarget : swNormal;
+
+  const fillKalimantan = isTarget.kalimantan ? colTargetFill : colNormalFill;
+  const strokeKalimantan = isTarget.kalimantan ? colTargetStroke : colNormalStroke;
+  const swKalimantan = isTarget.kalimantan ? swTarget : swNormal;
+
+  const fillSulawesi = isTarget.sulawesi ? colTargetFill : colNormalFill;
+  const strokeSulawesi = isTarget.sulawesi ? colTargetStroke : colNormalStroke;
+  const swSulawesi = isTarget.sulawesi ? swTarget : swNormal;
+
+  const fillPapua = isTarget.papua ? colTargetFill : colNormalFill;
+  const strokePapua = isTarget.papua ? colTargetStroke : colNormalStroke;
+  const swPapua = isTarget.papua ? swTarget : swNormal;
+
+  const fillMaluku = isTarget.maluku ? colTargetFill : colNormalFill;
+  const strokeMaluku = isTarget.maluku ? colTargetStroke : colNormalStroke;
+  const swMaluku = isTarget.maluku ? swTarget : swNormal;
+
+  const fillBaliNusra = isTarget.baliNusra ? colTargetFill : colNormalFill;
+  const strokeBaliNusra = isTarget.baliNusra ? colTargetStroke : colNormalStroke;
+  const swBaliNusra = isTarget.baliNusra ? swTarget : swNormal;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 260" width="540" height="260" style="background:#f0f9ff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <marker id="arrPeta" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+    <filter id="shadowPeta" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Latar Belakang Samudra & Grid Koordinat Kartografi Halus -->
+  <rect width="540" height="260" fill="url(#oceanGrad)" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <line x1="20" y1="90" x2="520" y2="90" stroke="#bae6fd" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+  <line x1="20" y1="160" x2="520" y2="160" stroke="#bae6fd" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+  <line x1="140" y1="35" x2="140" y2="230" stroke="#bae6fd" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+  <line x1="270" y1="35" x2="270" y2="230" stroke="#bae6fd" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+  <line x1="400" y1="35" x2="400" y2="230" stroke="#bae6fd" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+
+  <!-- Judul Kartografi -->
+  <text x="270" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Peta Kepulauan Indonesia</text>
+
+  <!-- Kompas Mata Angin (Wind Rose) di Pojok Kanan Atas -->
+  <g transform="translate(508, 40)">
+    <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
+    <polygon points="0,-12 3,-3 0,0 -3,-3" fill="#e11d48"/>
+    <polygon points="0,12 3,3 0,0 -3,3" fill="#64748b"/>
+    <polygon points="12,0 3,3 0,0 3,-3" fill="#64748b"/>
+    <polygon points="-12,0 -3,3 0,0 -3,-3" fill="#64748b"/>
+    <text x="0" y="-15" text-anchor="middle" font-size="9" font-weight="bold" fill="#e11d48">U</text>
+  </g>
+
+  <!-- Skala Batang Simbolis di Pojok Kiri Bawah -->
+  <g transform="translate(26, 240)">
+    <rect x="0" y="-6" width="30" height="4" fill="#0f172a"/>
+    <rect x="30" y="-6" width="30" height="4" fill="#ffffff" stroke="#0f172a" stroke-width="0.8"/>
+    <text x="0" y="5" font-size="7.5" fill="#475569" font-weight="600">0</text>
+    <text x="50" y="5" font-size="7.5" fill="#475569" font-weight="600">500 km</text>
+  </g>
+
+  <!-- KEPULAUAN INDONESIA (VEKTOR PRESISI) -->
+  <g filter="url(#shadowPeta)">
+    <!-- 1. Pulau Sumatra & Kepulauan Sekitarnya -->
+    <path d="M 44,66 C 54,62 66,74 76,86 C 88,100 102,122 118,146 C 132,168 144,186 142,192 C 138,196 130,190 122,176 C 108,154 92,126 78,106 C 66,88 52,78 42,70 Z" fill="${fillSumatra}" stroke="${strokeSumatra}" stroke-width="${swSumatra}"/>
+    <!-- Pulau Nias & Mentawai -->
+    <ellipse cx="48" cy="112" rx="4" ry="10" transform="rotate(30 48 112)" fill="${fillSumatra}" stroke="${strokeSumatra}" stroke-width="0.8"/>
+    <ellipse cx="80" cy="158" rx="3.5" ry="14" transform="rotate(32 80 158)" fill="${fillSumatra}" stroke="${strokeSumatra}" stroke-width="0.8"/>
+    <!-- Bangka & Belitung -->
+    <ellipse cx="146" cy="148" rx="8" ry="14" transform="rotate(-15 146 148)" fill="${fillSumatra}" stroke="${strokeSumatra}" stroke-width="0.9"/>
+    <ellipse cx="166" cy="160" rx="7" ry="6" fill="${fillSumatra}" stroke="${strokeSumatra}" stroke-width="0.9"/>
+
+    <!-- 2. Pulau Kalimantan -->
+    <path d="M 174,120 C 172,96 186,76 210,72 C 234,68 252,78 254,102 C 256,122 252,148 244,166 C 236,172 214,170 196,164 C 182,158 176,140 174,120 Z" fill="${fillKalimantan}" stroke="${strokeKalimantan}" stroke-width="${swKalimantan}"/>
+
+    <!-- 3. Pulau Jawa & Madura -->
+    <path d="M 124,204 C 142,200 170,202 196,204 C 218,206 236,212 240,218 C 236,222 216,222 194,220 C 168,218 144,216 126,214 C 120,212 120,206 124,204 Z" fill="${fillJawa}" stroke="${strokeJawa}" stroke-width="${swJawa}"/>
+    <!-- Madura -->
+    <ellipse cx="228" cy="202" rx="10" ry="3.5" fill="${fillJawa}" stroke="${strokeJawa}" stroke-width="0.8"/>
+
+    <!-- 4. Kepulauan Bali & Nusa Tenggara -->
+    <!-- Bali -->
+    <ellipse cx="250" cy="221" rx="5" ry="4" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+    <!-- Lombok -->
+    <ellipse cx="264" cy="222" rx="5" ry="4.5" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+    <!-- Sumbawa -->
+    <path d="M 274,220 Q 284,216 294,222 Q 288,228 276,226 Z" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+    <!-- Flores -->
+    <path d="M 302,220 Q 316,218 332,222 Q 320,226 304,224 Z" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+    <!-- Sumba -->
+    <ellipse cx="308" cy="236" rx="9" ry="5" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+    <!-- Timor Barat -->
+    <path d="M 338,226 Q 352,228 360,234 Q 348,238 336,232 Z" fill="${fillBaliNusra}" stroke="${strokeBaliNusra}" stroke-width="${swBaliNusra * 0.8}"/>
+
+    <!-- 5. Pulau Sulawesi (K-Shape 4 Semenanjung) -->
+    <path d="M 288,96 C 298,72 328,66 346,64 C 342,74 322,82 308,98 C 304,108 326,118 338,126 C 330,132 314,128 304,128 C 300,138 318,154 326,172 C 318,176 306,162 298,146 C 292,156 290,172 284,178 C 280,172 284,152 288,136 C 284,122 282,106 288,96 Z" fill="${fillSulawesi}" stroke="${strokeSulawesi}" stroke-width="${swSulawesi}"/>
+    <!-- Kepulauan Selayar & Buton -->
+    <ellipse cx="288" cy="186" rx="2.5" ry="5" fill="${fillSulawesi}" stroke="${strokeSulawesi}" stroke-width="0.7"/>
+    <ellipse cx="330" cy="178" rx="4" ry="9" fill="${fillSulawesi}" stroke="${strokeSulawesi}" stroke-width="0.8"/>
+
+    <!-- 6. Kepulauan Maluku -->
+    <!-- Halmahera -->
+    <path d="M 374,76 Q 386,72 390,84 Q 382,90 388,102 Q 378,98 374,88 Z" fill="${fillMaluku}" stroke="${strokeMaluku}" stroke-width="${swMaluku * 0.8}"/>
+    <!-- Buru -->
+    <ellipse cx="372" cy="135" rx="8" ry="6" fill="${fillMaluku}" stroke="${strokeMaluku}" stroke-width="${swMaluku * 0.8}"/>
+    <!-- Seram & Ambon -->
+    <path d="M 388,130 Q 404,128 418,134 Q 406,138 390,136 Z" fill="${fillMaluku}" stroke="${strokeMaluku}" stroke-width="${swMaluku * 0.8}"/>
+
+    <!-- 7. Pulau Papua (Doberai Bird's Head & Badan Utama) -->
+    <path d="M 426,96 C 438,84 452,86 450,102 C 460,98 492,106 518,118 L 518,184 C 496,182 466,168 454,148 C 444,146 430,138 434,122 C 436,114 422,108 426,96 Z" fill="${fillPapua}" stroke="${strokePapua}" stroke-width="${swPapua}"/>
+    <!-- Biak & Yapen -->
+    <ellipse cx="468" cy="94" rx="7" ry="3.5" fill="${fillPapua}" stroke="${strokePapua}" stroke-width="0.7"/>
+  </g>
+
+  <!-- Garis Penunjuk & Badge Lingkaran Target Huruf X -->
+  <g>
+    <line x1="${target.badgeX}" y1="${target.badgeY}" x2="${target.x}" y2="${target.y}" stroke="#e11d48" stroke-width="2.5" marker-end="url(#arrPeta)"/>
+    <circle cx="${target.badgeX}" cy="${target.badgeY}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${target.badgeX}" y="${target.badgeY + 4.5}" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Instruksi Soal Bawah -->
+  <text x="270" y="252" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan pulau yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderRangkaianListrikSvg(params: any): string {
+  const model = (params.model || 'campuran').toLowerCase();
+  const pointer = String(params.pointer || 'L1').toUpperCase();
+  const labelChar = params.label || 'X';
+
+  // State Saklar:
+  // S1: default tertutup (true), kecuali eksplisit false / 'terbuka' / 'open'
+  const isS1Closed = params.s1 === false || params.s1 === 'terbuka' || params.s1 === 'open' ? false : true;
+  // S2: default terbuka (false), kecuali eksplisit true / 'tertutup' / 'closed'
+  const isS2Closed = params.s2 === true || params.s2 === 'tertutup' || params.s2 === 'closed' ? true : false;
+
+  // Logika nyala lampu otomatis
+  let l1Lit = false;
+  let l2Lit = false;
+  let l3Lit = false;
+
+  if (model === 'seri') {
+    l1Lit = isS1Closed;
+    l2Lit = isS1Closed;
+  } else if (model === 'paralel') {
+    l1Lit = isS1Closed;
+    l2Lit = isS2Closed;
+  } else {
+    // Campuran: Garis utama ada Baterai, Saklar S1, Lampu L1
+    // Cabang Atas: Lampu L2
+    // Cabang Bawah: Saklar S2, Lampu L3
+    if (isS1Closed) {
+      l1Lit = true;
+      l2Lit = true;
+      l3Lit = isS2Closed;
+    } else {
+      l1Lit = false;
+      l2Lit = false;
+      l3Lit = false;
+    }
+  }
+
+  // Override manual jika ditentukan
+  if (params.l1 != null) l1Lit = Boolean(params.l1);
+  if (params.l2 != null) l2Lit = Boolean(params.l2);
+  if (params.l3 != null) l3Lit = Boolean(params.l3);
+
+  // Helper bulb
+  const drawBulb = (cx: number, cy: number, name: string, isLit: boolean, targetId: string) => {
+    const isTarget = pointer === targetId || pointer === name;
+    const bulbFill = isLit ? '#fef08a' : '#f1f5f9';
+    const bulbStroke = isLit ? '#eab308' : '#64748b';
+    const filColor = isLit ? '#ca8a04' : '#64748b';
+
+    let rays = '';
+    if (isLit) {
+      const rayCoords = [
+        [cx, cy - 20, cx, cy - 27],
+        [cx + 14, cy - 14, cx + 19, cy - 19],
+        [cx + 20, cy, cx + 27, cy],
+        [cx + 14, cy + 14, cx + 19, cy + 19],
+        [cx, cy + 20, cx, cy + 27],
+        [cx - 14, cy + 14, cx - 19, cy + 19],
+        [cx - 20, cy, cx - 27, cy],
+        [cx - 14, cy - 14, cx - 19, cy - 19],
+      ];
+      rays = rayCoords.map(([x1, y1, x2, y2]) =>
+        `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>`
+      ).join('');
+    }
+
+    let targetBadge = '';
+    if (isTarget) {
+      targetBadge = `
+        <circle cx="${cx}" cy="${cy - 28}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+        <text x="${cx}" y="${cy - 24}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+      `;
+    }
+
+    return `
+      <g>
+        ${rays}
+        <circle cx="${cx}" cy="${cy}" r="14" fill="${bulbFill}" stroke="${bulbStroke}" stroke-width="2.5"/>
+        <path d="M ${cx - 5} ${cy + 6} L ${cx - 3} ${cy - 4} L ${cx} ${cy - 1} L ${cx + 3} ${cy - 4} L ${cx + 5} ${cy + 6}" stroke="${filColor}" stroke-width="1.8" fill="none"/>
+        <rect x="${cx - 5}" y="${cy + 13}" width="10" height="4" fill="#94a3b8" rx="1"/>
+        <text x="${cx}" y="${cy + 27}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${name}</text>
+        <text x="${cx}" y="${cy + 38}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${isLit ? '#16a34a' : '#64748b'}">${isLit ? 'Nyala' : 'Padam'}</text>
+        ${targetBadge}
+      </g>
+    `;
+  };
+
+  // Helper switch
+  const drawSwitch = (x1: number, y: number, x2: number, name: string, isClosed: boolean, targetId: string) => {
+    const isTarget = pointer === targetId || pointer === name;
+    const leverY2 = isClosed ? y : y - 14;
+    const leverX2 = isClosed ? x2 : x1 + (x2 - x1) * 0.85;
+    const leverColor = isClosed ? '#16a34a' : '#e11d48';
+
+    let targetBadge = '';
+    if (isTarget) {
+      targetBadge = `
+        <circle cx="${(x1 + x2) / 2}" cy="${y - 25}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+        <text x="${(x1 + x2) / 2}" y="${y - 21}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+      `;
+    }
+
+    return `
+      <g>
+        <circle cx="${x1}" cy="${y}" r="3.5" fill="#0f172a"/>
+        <circle cx="${x2}" cy="${y}" r="3.5" fill="#0f172a"/>
+        <line x1="${x1}" y1="${y}" x2="${leverX2}" y2="${leverY2}" stroke="${leverColor}" stroke-width="2.8" stroke-linecap="round"/>
+        <text x="${(x1 + x2) / 2}" y="${y - 12}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${name}</text>
+        <rect x="${(x1 + x2) / 2 - 24}" y="${y + 6}" width="48" height="15" rx="3" fill="${isClosed ? '#dcfce7' : '#fee2e2'}"/>
+        <text x="${(x1 + x2) / 2}" y="${y + 17}" text-anchor="middle" font-size="9" font-weight="bold" fill="${isClosed ? '#15803d' : '#b91c1c'}">${isClosed ? 'Tertutup' : 'Terbuka'}</text>
+        ${targetBadge}
+      </g>
+    `;
+  };
+
+  // Battery helper
+  const drawBattery = (cx: number, cy: number) => `
+    <g>
+      <line x1="${cx - 16}" y1="${cy - 12}" x2="${cx + 16}" y2="${cy - 12}" stroke="#0f172a" stroke-width="1.8"/>
+      <line x1="${cx - 10}" y1="${cy - 4}" x2="${cx + 10}" y2="${cy - 4}" stroke="#0f172a" stroke-width="4"/>
+      <line x1="${cx - 16}" y1="${cy + 4}" x2="${cx + 16}" y2="${cy + 4}" stroke="#0f172a" stroke-width="1.8"/>
+      <line x1="${cx - 10}" y1="${cy + 12}" x2="${cx + 10}" y2="${cy + 12}" stroke="#0f172a" stroke-width="4"/>
+      <text x="${cx + 22}" y="${cy - 9}" font-size="14" font-weight="bold" fill="#e11d48">+</text>
+      <text x="${cx + 22}" y="${cy + 15}" font-size="16" font-weight="bold" fill="#0f172a">−</text>
+      <text x="${cx - 24}" y="${cy + 4}" text-anchor="end" font-size="11" font-weight="600" fill="#475569">Baterai</text>
+    </g>
+  `;
+
+  let circuitContent = '';
+  let modelTitle = 'Rangkaian Listrik Campuran';
+
+  if (model === 'seri') {
+    modelTitle = 'Rangkaian Listrik Seri';
+    circuitContent = `
+      <path d="M 60,130 L 60,60 L 400,60 L 400,200 L 60,200 L 60,130" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${drawBattery(60, 130)}
+      ${drawSwitch(130, 60, 180, 'S₁', isS1Closed, 'S1')}
+      ${drawBulb(260, 60, 'L₁', l1Lit, 'L1')}
+      ${drawBulb(350, 60, 'L₂', l2Lit, 'L2')}
+    `;
+  } else if (model === 'paralel') {
+    modelTitle = 'Rangkaian Listrik Paralel';
+    circuitContent = `
+      <path d="M 60,130 L 60,80 L 150,80" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+      <path d="M 60,130 L 60,180 L 150,180" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+      <line x1="150" y1="80" x2="150" y2="180" stroke="#1e293b" stroke-width="2.5"/>
+      <circle cx="150" cy="80" r="3.5" fill="#0f172a"/>
+      <circle cx="150" cy="180" r="3.5" fill="#0f172a"/>
+      ${drawBattery(60, 130)}
+
+      <line x1="150" y1="80" x2="380" y2="80" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawSwitch(180, 80, 230, 'S₁', isS1Closed, 'S1')}
+      ${drawBulb(300, 80, 'L₁', l1Lit, 'L1')}
+
+      <line x1="150" y1="180" x2="380" y2="180" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawSwitch(180, 180, 230, 'S₂', isS2Closed, 'S2')}
+      ${drawBulb(300, 180, 'L₂', l2Lit, 'L2')}
+
+      <line x1="380" y1="80" x2="380" y2="180" stroke="#1e293b" stroke-width="2.5"/>
+      <circle cx="380" cy="80" r="3.5" fill="#0f172a"/>
+      <circle cx="380" cy="180" r="3.5" fill="#0f172a"/>
+    `;
+  } else {
+    // Campuran
+    circuitContent = `
+      <path d="M 60,135 L 60,60 L 120,60" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+      <path d="M 60,135 L 60,210 L 390,210 L 390,135" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawBattery(60, 135)}
+
+      ${drawSwitch(120, 60, 170, 'S₁', isS1Closed, 'S1')}
+      <line x1="170" y1="60" x2="220" y2="60" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawBulb(235, 60, 'L₁', l1Lit, 'L1')}
+      <line x1="250" y1="60" x2="280" y2="60" stroke="#1e293b" stroke-width="2.5"/>
+
+      <circle cx="280" cy="60" r="3.5" fill="#0f172a"/>
+      <path d="M 280,60 L 280,135" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+
+      <line x1="280" y1="60" x2="390" y2="60" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawBulb(335, 60, 'L₂', l2Lit, 'L2')}
+
+      <line x1="280" y1="135" x2="390" y2="135" stroke="#1e293b" stroke-width="2.5"/>
+      ${drawSwitch(295, 135, 335, 'S₂', isS2Closed, 'S2')}
+      ${drawBulb(365, 135, 'L₃', l3Lit, 'L3')}
+
+      <circle cx="390" cy="60" r="3.5" fill="#0f172a"/>
+      <circle cx="390" cy="135" r="3.5" fill="#0f172a"/>
+    `;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 260" width="460" height="260" style="background:#f8fafc; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="460" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${modelTitle}</text>
+  ${circuitContent}
+  <text x="230" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Perhatikan komponen yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderPerubahanWujudSvg(params: any): string {
+  const pointer = String(params.pointer || '1').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let activeNum = 1;
+  if (pointer === '1' || (pointer.includes('cair') && !pointer.includes('padat')) || pointer.includes('mencair')) activeNum = 1;
+  else if (pointer === '2' || pointer.includes('beku') || pointer.includes('membeku')) activeNum = 2;
+  else if (pointer === '3' || pointer.includes('uap') || pointer.includes('menguap')) activeNum = 3;
+  else if (pointer === '4' || pointer.includes('embun') || pointer.includes('mengembun')) activeNum = 4;
+  else if (pointer === '5' || pointer.includes('sublim') || pointer.includes('menyublim')) activeNum = 5;
+  else if (pointer === '6' || pointer.includes('kristal') || pointer.includes('deposisi')) activeNum = 6;
+  else if (params.pointer && !isNaN(Number(params.pointer))) activeNum = Number(params.pointer);
+
+  const drawArrowBadge = (x: number, y: number, num: number) => {
+    const isActive = activeNum === num;
+    if (isActive) {
+      return `
+        <circle cx="${x}" cy="${y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+        <text x="${x}" y="${y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+      `;
+    }
+    return `
+      <circle cx="${x}" cy="${y}" r="11" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${num}</text>
+    `;
+  };
+
+  const getArrowColor = (num: number) => activeNum === num ? '#e11d48' : '#64748b';
+  const getArrowWidth = (num: number) => activeNum === num ? '3' : '2';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 280" width="440" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrWujudNormal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#64748b" />
+    </marker>
+    <marker id="arrWujudActive" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <rect width="440" height="280" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="220" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Perubahan Wujud Zat</text>
+
+  <!-- KOTAK WUJUD ZAT -->
+  <!-- 1. CAIR (Atas Tengah) -->
+  <g transform="translate(170, 42)">
+    <rect width="100" height="46" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#065f46">CAIR</text>
+  </g>
+
+  <!-- 2. PADAT (Kiri Bawah) -->
+  <g transform="translate(35, 190)">
+    <rect width="100" height="46" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e3a8a">PADAT</text>
+  </g>
+
+  <!-- 3. GAS (Kanan Bawah) -->
+  <g transform="translate(305, 190)">
+    <rect width="100" height="46" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="2"/>
+    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b21a8">GAS</text>
+  </g>
+
+  <!-- 6 PANAH PERUBAHAN WUJUD (ZERO-SPOILER) -->
+  <!-- Panah 1: Padat -> Cair (Mencair) -->
+  <path d="M 90,185 Q 115,115 170,80" fill="none" stroke="${getArrowColor(1)}" stroke-width="${getArrowWidth(1)}" marker-end="url(#${activeNum === 1 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(118, 125, 1)}
+
+  <!-- Panah 2: Cair -> Padat (Membeku) -->
+  <path d="M 165,70 Q 75,100 70,185" fill="none" stroke="${getArrowColor(2)}" stroke-width="${getArrowWidth(2)}" marker-end="url(#${activeNum === 2 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(150, 150, 2)}
+
+  <!-- Panah 3: Cair -> Gas (Menguap) -->
+  <path d="M 270,80 Q 325,115 350,185" fill="none" stroke="${getArrowColor(3)}" stroke-width="${getArrowWidth(3)}" marker-end="url(#${activeNum === 3 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(322, 125, 3)}
+
+  <!-- Panah 4: Gas -> Cair (Mengembun) -->
+  <path d="M 370,185 Q 365,100 275,70" fill="none" stroke="${getArrowColor(4)}" stroke-width="${getArrowWidth(4)}" marker-end="url(#${activeNum === 4 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(290, 150, 4)}
+
+  <!-- Panah 5: Padat -> Gas (Menyublim) -->
+  <path d="M 140,205 Q 220,185 300,205" fill="none" stroke="${getArrowColor(5)}" stroke-width="${getArrowWidth(5)}" marker-end="url(#${activeNum === 5 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(220, 190, 5)}
+
+  <!-- Panah 6: Gas -> Padat (Mengkristal) -->
+  <path d="M 300,225 Q 220,245 140,225" fill="none" stroke="${getArrowColor(6)}" stroke-width="${getArrowWidth(6)}" marker-end="url(#${activeNum === 6 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
+  ${drawArrowBadge(220, 240, 6)}
+
+  <!-- Keterangan Soal di Bawah -->
+  <text x="220" y="270" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan proses perubahan wujud zat yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderMistarSvg(params: any): string {
+  const start = Math.max(0, Math.min(10, Number(params.start ?? 3.0)));
+  const end = Math.max(start + 0.5, Math.min(12, Number(params.end ?? 8.5)));
+  const objectType = (params.objectType || 'pensil').toLowerCase();
+  const label = params.label || 'Panjang = ... cm';
+
+  const rulerX = 40;
+  const rulerY = 100;
+  const maxCm = 10;
+  const pxPerCm = 40;
+  const rulerWidth = maxCm * pxPerCm;
+
+  let ticks = '';
+  for (let i = 0; i <= maxCm * 10; i++) {
+    const x = rulerX + i * 4;
+    if (i % 10 === 0) {
+      const cmVal = i / 10;
+      ticks += `
+        <line x1="${x}" y1="${rulerY}" x2="${x}" y2="${rulerY + 20}" stroke="#0f172a" stroke-width="1.5"/>
+        <text x="${x}" y="${rulerY + 34}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${cmVal}</text>
+      `;
+    } else if (i % 5 === 0) {
+      ticks += `<line x1="${x}" y1="${rulerY}" x2="${x}" y2="${rulerY + 14}" stroke="#334155" stroke-width="1.2"/>`;
+    } else {
+      ticks += `<line x1="${x}" y1="${rulerY}" x2="${x}" y2="${rulerY + 8}" stroke="#64748b" stroke-width="0.8"/>`;
+    }
+  }
+
+  const objStartX = rulerX + start * pxPerCm;
+  const objEndX = rulerX + end * pxPerCm;
+  const objWidth = objEndX - objStartX;
+  const objY = 62;
+  const objHeight = 22;
+
+  let objectSvg = '';
+  if (objectType === 'paku') {
+    objectSvg = `
+      <rect x="${objStartX}" y="${objY - 3}" width="4" height="${objHeight + 6}" fill="#475569" rx="1"/>
+      <rect x="${objStartX + 4}" y="${objY + 6}" width="${objWidth - 14}" height="10" fill="#94a3b8" stroke="#475569" stroke-width="1"/>
+      <polygon points="${objEndX - 10},${objY + 6} ${objEndX},${objY + 11} ${objEndX - 10},${objY + 16}" fill="#64748b"/>
+    `;
+  } else if (objectType === 'penghapus') {
+    objectSvg = `
+      <rect x="${objStartX}" y="${objY}" width="${objWidth * 0.5}" height="${objHeight}" fill="#3b82f6" rx="3"/>
+      <rect x="${objStartX + objWidth * 0.5}" y="${objY}" width="${objWidth * 0.5}" height="${objHeight}" fill="#ef4444" rx="3"/>
+      <text x="${objStartX + objWidth / 2}" y="${objY + 15}" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">ERASER</text>
+    `;
+  } else {
+    // Pensil (Default)
+    const eraserW = Math.min(18, objWidth * 0.15);
+    const ferruleW = Math.min(10, objWidth * 0.1);
+    const tipW = Math.min(22, objWidth * 0.2);
+    const bodyW = objWidth - eraserW - ferruleW - tipW;
+
+    objectSvg = `
+      <rect x="${objStartX}" y="${objY}" width="${eraserW}" height="${objHeight}" fill="#fb7185" rx="3"/>
+      <rect x="${objStartX + eraserW}" y="${objY}" width="${ferruleW}" height="${objHeight}" fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.8"/>
+      <rect x="${objStartX + eraserW + ferruleW}" y="${objY}" width="${bodyW}" height="${objHeight}" fill="#f59e0b"/>
+      <line x1="${objStartX + eraserW + ferruleW}" y1="${objY + 7}" x2="${objStartX + eraserW + ferruleW + bodyW}" y2="${objY + 7}" stroke="#d97706" stroke-width="1.2"/>
+      <line x1="${objStartX + eraserW + ferruleW}" y1="${objY + 15}" x2="${objStartX + eraserW + ferruleW + bodyW}" y2="${objY + 15}" stroke="#b45309" stroke-width="1.2"/>
+      <polygon points="${objEndX - tipW},${objY} ${objEndX},${objY + objHeight / 2} ${objEndX - tipW},${objY + objHeight}" fill="#fde68a" stroke="#d97706" stroke-width="0.8"/>
+      <polygon points="${objEndX - 7},${objY + 7} ${objEndX},${objY + objHeight / 2} ${objEndX - 7},${objY + 15}" fill="#0f172a"/>
+    `;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 200" width="480" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrMistar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <rect width="480" height="200" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="240" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Panjang dengan Mistar</text>
+
+  <line x1="${objStartX}" y1="42" x2="${objEndX}" y2="42" stroke="#e11d48" stroke-width="2" marker-start="url(#arrMistar)" marker-end="url(#arrMistar)"/>
+  <rect x="${(objStartX + objEndX) / 2 - 50}" y="31" width="100" height="20" rx="4" fill="#e11d48"/>
+  <text x="${(objStartX + objEndX) / 2}" y="45" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(label)}</text>
+
+  <line x1="${objStartX}" y1="52" x2="${objStartX}" y2="${rulerY}" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="${objEndX}" y1="52" x2="${objEndX}" y2="${rulerY}" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+  ${objectSvg}
+
+  <rect x="${rulerX - 5}" y="${rulerY}" width="${rulerWidth + 10}" height="65" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="3" opacity="0.85"/>
+  <text x="${rulerX + rulerWidth - 10}" y="${rulerY + 54}" text-anchor="end" font-size="12" font-weight="bold" fill="#78350f">cm</text>
+  ${ticks}
+
+  <text x="240" y="190" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b">Tentukan panjang benda berdasarkan skala pada mistar!</text>
+</svg>`;
+}
+
+export function renderTataSuryaSvg(params: any): string {
+  const pointer = String(params.pointer || '3').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  const planets = [
+    { id: 'merkurius', num: 1, name: 'Merkurius', x: 80, r: 4.5, fill: '#94a3b8', stroke: '#64748b' },
+    { id: 'venus', num: 2, name: 'Venus', x: 115, r: 7.5, fill: '#fbbf24', stroke: '#d97706' },
+    { id: 'bumi', num: 3, name: 'Bumi', x: 160, r: 8, fill: '#38bdf8', stroke: '#0284c7', isBumi: true },
+    { id: 'mars', num: 4, name: 'Mars', x: 205, r: 6, fill: '#ef4444', stroke: '#b91c1c' },
+    { id: 'yupiter', num: 5, name: 'Yupiter', x: 280, r: 18, fill: '#d97706', stroke: '#b45309', isJup: true },
+    { id: 'saturnus', num: 6, name: 'Saturnus', x: 360, r: 13, fill: '#fde047', stroke: '#ca8a04', isSat: true },
+    { id: 'uranus', num: 7, name: 'Uranus', x: 430, r: 10, fill: '#67e8f9', stroke: '#06b6d4' },
+    { id: 'neptunus', num: 8, name: 'Neptunus', x: 485, r: 9.5, fill: '#3b82f6', stroke: '#1d4ed8' }
+  ];
+
+  let targetIndex = 2; // Default Bumi (ke-3)
+  planets.forEach((p, idx) => {
+    if (pointer === String(p.num) || pointer === p.id || pointer === p.name.toLowerCase() || (pointer === 'jupiter' && p.id === 'yupiter')) {
+      targetIndex = idx;
+    }
+  });
+
+  const cy = 135;
+
+  const starDots = [
+    [50, 40], [90, 230], [140, 50], [190, 240], [230, 45],
+    [260, 220], [310, 35], [370, 235], [420, 55], [470, 225], [510, 40]
+  ].map(([sx, sy]) => `<circle cx="${sx}" cy="${sy}" r="1" fill="#ffffff" opacity="0.7"/>`).join('');
+
+  const asteroids = [
+    [236, 60], [242, 90], [238, 120], [244, 150], [237, 180], [243, 210]
+  ].map(([ax, ay]) => `<circle cx="${ax}" cy="${ay}" r="1.5" fill="#64748b" opacity="0.75"/>`).join('');
+
+  const renderedPlanets = planets.map((p, idx) => {
+    const isTarget = idx === targetIndex;
+    let planetGraphic = '';
+
+    if (p.isBumi) {
+      planetGraphic = `
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
+        <circle cx="${p.x - 2}" cy="${cy - 2}" r="3" fill="#22c55e" opacity="0.8"/>
+        <circle cx="${p.x + 3}" cy="${cy + 2}" r="2.5" fill="#22c55e" opacity="0.8"/>
+      `;
+    } else if (p.isJup) {
+      planetGraphic = `
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
+        <line x1="${p.x - 17}" y1="${cy - 6}" x2="${p.x + 17}" y2="${cy - 6}" stroke="#fef3c7" stroke-width="2" opacity="0.6"/>
+        <line x1="${p.x - 17}" y1="${cy}" x2="${p.x + 17}" y2="${cy}" stroke="#78350f" stroke-width="2.5" opacity="0.7"/>
+        <line x1="${p.x - 16}" y1="${cy + 7}" x2="${p.x + 16}" y2="${cy + 7}" stroke="#fef3c7" stroke-width="2" opacity="0.6"/>
+        <ellipse cx="${p.x + 6}" cy="${cy + 7}" rx="3.5" ry="2" fill="#dc2626"/>
+      `;
+    } else if (p.isSat) {
+      planetGraphic = `
+        <ellipse cx="${p.x}" cy="${cy}" rx="25" ry="6" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="3.5" opacity="0.9"/>
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
+        <path d="M ${p.x - 22},${cy + 7} A 25 6 0 0 0 ${p.x + 22},${cy - 7}" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="3.5" opacity="0.9"/>
+      `;
+    } else {
+      planetGraphic = `<circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>`;
+    }
+
+    const numberText = `<text x="${p.x}" y="240" text-anchor="middle" font-size="10" font-weight="600" fill="#94a3b8">(${p.num})</text>`;
+
+    let targetBadge = '';
+    if (isTarget) {
+      const badgeY = cy - p.r - 28;
+      targetBadge = `
+        <circle cx="${p.x}" cy="${cy}" r="${p.r + 7}" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="3,2"/>
+        <line x1="${p.x}" y1="${badgeY + 12}" x2="${p.x}" y2="${cy - p.r - 7}" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrSurya)"/>
+        <circle cx="${p.x}" cy="${badgeY}" r="12" fill="#f43f5e" stroke="#ffffff" stroke-width="2"/>
+        <text x="${p.x}" y="${badgeY + 4}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+      `;
+    }
+
+    return `
+      <path d="M ${p.x},35 A ${p.x * 2} 400 0 0 1 ${p.x},235" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+      ${planetGraphic}
+      ${numberText}
+      ${targetBadge}
+    `;
+  }).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 270" width="520" height="270" style="background:#090d1a; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <radialGradient id="sunGlow" cx="20%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </radialGradient>
+    <marker id="arrSurya" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#f43f5e" />
+    </marker>
+  </defs>
+
+  <rect width="520" height="270" fill="#090d1a" stroke="#334155" stroke-width="1.5" rx="6"/>
+  ${starDots}
+  ${asteroids}
+
+  <text x="260" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#f8fafc">Diagram Sistem Tata Surya</text>
+
+  <circle cx="0" cy="${cy}" r="52" fill="url(#sunGlow)"/>
+  <text x="22" y="${cy + 4}" font-size="10" font-weight="bold" fill="#ffffff" opacity="0.9">Matahari</text>
+
+  ${renderedPlanets}
+
+  <text x="260" y="260" text-anchor="middle" font-size="10.5" font-weight="600" fill="#94a3b8">Perhatikan planet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderPerisaiPancasilaSvg(params: any): string {
+  const silaParam = String(params.sila || params.pointer || '1').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let targetSila = 1;
+  if (silaParam === '1' || silaParam.includes('bintang') || silaParam.includes('ketuhanan')) targetSila = 1;
+  else if (silaParam === '2' || silaParam.includes('rantai') || silaParam.includes('kemanusiaan')) targetSila = 2;
+  else if (silaParam === '3' || silaParam.includes('beringin') || silaParam.includes('persatuan')) targetSila = 3;
+  else if (silaParam === '4' || silaParam.includes('banteng') || silaParam.includes('kerakyatan')) targetSila = 4;
+  else if (silaParam === '5' || silaParam.includes('padi') || silaParam.includes('kapas') || silaParam.includes('keadilan')) targetSila = 5;
+
+  const targetCoords: Record<number, { x: number, y: number, bx: number, by: number }> = {
+    1: { x: 190, y: 175, bx: 190, by: 120 },
+    2: { x: 250, y: 245, bx: 320, by: 250 },
+    3: { x: 250, y: 110, bx: 320, by: 105 },
+    4: { x: 130, y: 110, bx: 60, by: 105 },
+    5: { x: 130, y: 245, bx: 60, by: 250 }
+  };
+
+  const target = targetCoords[targetSila] || targetCoords[1];
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 370" width="380" height="370" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <clipPath id="shieldOuterClip">
+      <path d="M 70,35 L 310,35 Q 318,160 285,240 Q 240,310 190,335 Q 140,310 95,240 Q 62,160 70,35 Z"/>
+    </clipPath>
+    <marker id="arrPerisai" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+  </defs>
+
+  <rect width="380" height="340" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Perisai Garuda Pancasila</text>
+
+  <!-- KONTUR PERISAI DAN RUANG 4 BAGIAN -->
+  <g clip-path="url(#shieldOuterClip)">
+    <!-- Ruang Kiri Atas: Merah (Sila 4 - Banteng) -->
+    <rect x="70" y="35" width="120" height="140" fill="#dc2626"/>
+    <!-- Ruang Kanan Atas: Putih (Sila 3 - Beringin) -->
+    <rect x="190" y="35" width="120" height="140" fill="#ffffff"/>
+    <!-- Ruang Kiri Bawah: Putih (Sila 5 - Padi Kapas) -->
+    <rect x="70" y="175" width="120" height="160" fill="#ffffff"/>
+    <!-- Ruang Kanan Bawah: Merah (Sila 2 - Rantai) -->
+    <rect x="190" y="175" width="120" height="160" fill="#dc2626"/>
+
+    <!-- Garis Tebal Khatulistiwa di Tengah -->
+    <rect x="70" y="170" width="240" height="10" fill="#0f172a"/>
+
+    <!-- SIMBOL SILA 4: KEPALA BANTENG (Kiri Atas, x=130, y=110) -->
+    <g transform="translate(130, 105)">
+      <path d="M -22,-14 C -26,-28 -14,-32 0,-24 C 14,-32 26,-28 22,-14 C 15,-20 8,-20 0,-16 C -8,-20 -15,-20 -22,-14 Z" fill="#1e293b"/>
+      <path d="M -16,-12 L 16,-12 L 12,12 L -12,12 Z" fill="#0f172a"/>
+      <ellipse cx="-18" cy="-6" rx="6" ry="3" transform="rotate(-20 -18 -6)" fill="#1e293b"/>
+      <ellipse cx="18" cy="-6" rx="6" ry="3" transform="rotate(20 18 -6)" fill="#1e293b"/>
+      <rect x="-8" y="4" width="16" height="8" rx="3" fill="#cbd5e1"/>
+      <circle cx="-3" cy="8" r="1.5" fill="#0f172a"/>
+      <circle cx="3" cy="8" r="1.5" fill="#0f172a"/>
+      <polygon points="-8,-4 -4,-2 -8,0" fill="#ffffff"/>
+      <polygon points="8,-4 4,-2 8,0" fill="#ffffff"/>
+    </g>
+
+    <!-- SIMBOL SILA 3: POHON BERINGIN (Kanan Atas, x=250, y=110) -->
+    <g transform="translate(250, 110)">
+      <path d="M -6,18 L -3,0 L 3,0 L 6,18 L 2,18 L 0,6 L -2,18 Z" fill="#78350f"/>
+      <line x1="-12" y1="4" x2="-10" y2="16" stroke="#92400e" stroke-width="1.5"/>
+      <line x1="12" y1="4" x2="10" y2="16" stroke="#92400e" stroke-width="1.5"/>
+      <circle cx="0" cy="-12" r="14" fill="#15803d"/>
+      <circle cx="-14" cy="-4" r="11" fill="#16a34a"/>
+      <circle cx="14" cy="-4" r="11" fill="#16a34a"/>
+      <circle cx="-8" cy="4" r="9" fill="#15803d"/>
+      <circle cx="8" cy="4" r="9" fill="#15803d"/>
+    </g>
+
+    <!-- SIMBOL SILA 5: PADI DAN KAPAS (Kiri Bawah, x=130, y=245) -->
+    <g transform="translate(130, 245)">
+      <path d="M -6,22 Q -12,4 -16,-16" fill="none" stroke="#ca8a04" stroke-width="1.8"/>
+      <ellipse cx="-16" cy="-16" rx="2.5" ry="5" transform="rotate(-30 -16 -16)" fill="#eab308"/>
+      <ellipse cx="-14" cy="-7" rx="2.5" ry="5" transform="rotate(-30 -14 -7)" fill="#eab308"/>
+      <ellipse cx="-11" cy="2" rx="2.5" ry="5" transform="rotate(-30 -11 2)" fill="#eab308"/>
+      <ellipse cx="-7" cy="11" rx="2.5" ry="5" transform="rotate(-30 -7 11)" fill="#eab308"/>
+      <path d="M 4,22 Q 10,4 16,-16" fill="none" stroke="#16a34a" stroke-width="1.8"/>
+      <circle cx="16" cy="-16" r="4.5" fill="#ffffff" stroke="#10b981" stroke-width="1"/>
+      <circle cx="13" cy="-5" r="4.5" fill="#ffffff" stroke="#10b981" stroke-width="1"/>
+      <circle cx="9" cy="6" r="4.5" fill="#ffffff" stroke="#10b981" stroke-width="1"/>
+    </g>
+
+    <!-- SIMBOL SILA 2: RANTAI EMAS (Kanan Bawah, x=250, y=245) -->
+    <g transform="translate(250, 245)">
+      <ellipse cx="0" cy="0" rx="19" ry="14" fill="none" stroke="#f59e0b" stroke-width="3.5"/>
+      <circle cx="-16" cy="0" r="4" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+      <rect x="-4" y="-16" width="8" height="7" rx="1.5" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+      <circle cx="16" cy="0" r="4" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+      <rect x="-4" y="9" width="8" height="7" rx="1.5" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+    </g>
+
+    <!-- RUANG TENGAH (SILA 1): PERISAI KECIL HITAM & BINTANG EMAS -->
+    <g transform="translate(190, 175)">
+      <path d="M -26,-26 L 26,-26 Q 28,5 18,18 Q 0,30 0,30 Q 0,30 -18,18 Q -28,5 -26,-26 Z" fill="#0f172a" stroke="#f59e0b" stroke-width="2.5"/>
+      <polygon points="0,-16 4.5,-5 16,-5 7,2 10.5,13 0,6 -10.5,13 -7,2 -16,-5 -4.5,-5" fill="#facc15" stroke="#eab308" stroke-width="0.8"/>
+    </g>
+  </g>
+
+  <!-- BINGKAI EMAS PERISAI UTAMA -->
+  <path d="M 70,35 L 310,35 Q 318,160 285,240 Q 240,310 190,335 Q 140,310 95,240 Q 62,160 70,35 Z" fill="none" stroke="#f59e0b" stroke-width="6"/>
+  <path d="M 73,38 L 307,38 Q 314,160 282,238 Q 238,307 190,331 Q 142,307 98,238 Q 66,160 73,38 Z" fill="none" stroke="#b45309" stroke-width="1.5"/>
+
+  <!-- PENUNJUK TARGET (ZERO-SPOILER DENGAN BADGE HURUF X) -->
+  <g>
+    <circle cx="${target.x}" cy="${target.y}" r="26" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4,3"/>
+    <line x1="${target.bx}" y1="${target.by}" x2="${target.x}" y2="${target.y}" stroke="#e11d48" stroke-width="2.5" marker-end="url(#arrPerisai)"/>
+    <circle cx="${target.bx}" cy="${target.by}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${target.bx}" y="${target.by + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+  <text x="190" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan lambang yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderMagnetSvg(params: any): string {
+  const interaksi = (params.interaksi || 'tarik').toLowerCase();
+  const labelChar = params.label || 'X';
+  const pointer = String(params.pointer || 'kanan2').toLowerCase();
+
+  const isTarik = interaksi === 'tarik';
+  const m2Kiri = isTarik ? 'U' : 'S';
+  const m2Kanan = isTarik ? 'S' : 'U';
+
+  const m1X = 45;
+  const m1Y = 75;
+  const m2X = 300;
+  const m2Y = 75;
+  const mw = 135;
+  const mh = 56;
+  const halfW = mw / 2;
+
+  const isTargetM1Kiri = pointer === 'kiri1' || pointer === 'm1kiri';
+  const isTargetM1Kanan = pointer === 'kanan1' || pointer === 'm1kanan';
+  const isTargetM2Kiri = pointer === 'kiri2' || pointer === 'm2kiri';
+  const isTargetM2Kanan = pointer === 'kanan2' || pointer === 'x' || pointer === 'm2kanan' || (!isTargetM1Kiri && !isTargetM1Kanan && !isTargetM2Kiri);
+
+  const drawPoleBadge = (bx: number, by: number) => `
+    <circle cx="${bx}" cy="${by}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${bx}" y="${by + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  `;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 230" width="480" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrMagR" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0f172a" />
+    </marker>
+  </defs>
+
+  <rect width="480" height="230" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="240" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Interaksi Gaya Magnet</text>
+
+  <!-- MAGNET 1 (KIRI) -->
+  <g>
+    <rect x="${m1X}" y="${m1Y}" width="${halfW}" height="${mh}" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" rx="3"/>
+    ${isTargetM1Kiri ? drawPoleBadge(m1X + halfW / 2, m1Y + mh / 2) : `
+      <text x="${m1X + halfW / 2}" y="${m1Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">U</text>
+    `}
+    <rect x="${m1X + halfW}" y="${m1Y}" width="${halfW}" height="${mh}" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5" rx="3"/>
+    ${isTargetM1Kanan ? drawPoleBadge(m1X + halfW * 1.5, m1Y + mh / 2) : `
+      <text x="${m1X + halfW * 1.5}" y="${m1Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">S</text>
+    `}
+    <text x="${m1X + halfW}" y="${m1Y + mh + 18}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Magnet 1</text>
+  </g>
+
+  <!-- INTERAKSI GAYA (TENGAH) -->
+  <g>
+    ${isTarik ? `
+      <line x1="200" y1="${m1Y + mh / 2 - 8}" x2="235" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
+      <line x1="280" y1="${m1Y + mh / 2 - 8}" x2="245" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
+      <rect x="200" y="${m1Y + mh / 2 + 6}" width="80" height="20" rx="4" fill="#dcfce7"/>
+      <text x="240" y="${m1Y + mh / 2 + 20}" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">Tarik-Menarik</text>
+    ` : `
+      <line x1="225" y1="${m1Y + mh / 2 - 8}" x2="195" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
+      <line x1="255" y1="${m1Y + mh / 2 - 8}" x2="285" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
+      <rect x="200" y="${m1Y + mh / 2 + 6}" width="80" height="20" rx="4" fill="#fee2e2"/>
+      <text x="240" y="${m1Y + mh / 2 + 20}" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">Tolak-Menolak</text>
+    `}
+  </g>
+
+  <!-- MAGNET 2 (KANAN) -->
+  <g>
+    <rect x="${m2X}" y="${m2Y}" width="${halfW}" height="${mh}" fill="${m2Kiri === 'U' ? '#ef4444' : '#3b82f6'}" stroke="#1e293b" stroke-width="1.5" rx="3"/>
+    ${isTargetM2Kiri ? drawPoleBadge(m2X + halfW / 2, m2Y + mh / 2) : `
+      <text x="${m2X + halfW / 2}" y="${m2Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">${m2Kiri}</text>
+    `}
+
+    <rect x="${m2X + halfW}" y="${m2Y}" width="${halfW}" height="${mh}" fill="${m2Kanan === 'U' ? '#ef4444' : '#3b82f6'}" stroke="#1e293b" stroke-width="1.5" rx="3"/>
+    ${isTargetM2Kanan ? drawPoleBadge(m2X + halfW * 1.5, m2Y + mh / 2) : `
+      <text x="${m2X + halfW * 1.5}" y="${m2Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">${m2Kanan}</text>
+    `}
+    <text x="${m2X + halfW}" y="${m2Y + mh + 18}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Magnet 2</text>
+  </g>
+
+  <text x="240" y="215" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan kutub magnet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderSifatCahayaSvg(params: any): string {
+  const peristiwa = (params.peristiwa || 'pembiasan').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  if (peristiwa === 'pemantulan') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 250" width="460" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrCahaya" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#d97706" />
+    </marker>
+  </defs>
+
+  <rect width="460" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pemantulan)</text>
+
+  <line x1="230" y1="40" x2="230" y2="180" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,4"/>
+  <text x="230" y="34" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#475569">Garis Normal</text>
+
+  <rect x="50" y="180" width="360" height="8" fill="#94a3b8" rx="1"/>
+  <g stroke="#cbd5e1" stroke-width="1.5">
+    ${[70, 110, 150, 190, 230, 270, 310, 350, 390].map(x => `<line x1="${x}" y1="188" x2="${x - 10}" y2="200"/>`).join('')}
+  </g>
+  <text x="230" y="210" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cermin Datar</text>
+
+  <line x1="100" y1="65" x2="230" y2="180" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahaya)"/>
+  <text x="120" y="105" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
+
+  <line x1="230" y1="180" x2="360" y2="65" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahaya)"/>
+  <text x="310" y="105" font-size="11" font-weight="bold" fill="#b45309">Sinar Pantul</text>
+
+  <path d="M 210,160 A 30 30 0 0 1 230,150" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="215" y="152" font-size="12" font-weight="bold" fill="#dc2626">i</text>
+  <path d="M 230,150 A 30 30 0 0 1 250,160" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="240" y="152" font-size="12" font-weight="bold" fill="#dc2626">r</text>
+
+  <circle cx="370" cy="55" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="370" y="59.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <text x="230" y="238" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan sifat pemantulan cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 260" width="460" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrCahayaBias" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#d97706" />
+    </marker>
+  </defs>
+
+  <rect width="460" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pembiasan)</text>
+
+  <rect x="20" y="130" width="420" height="95" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1" rx="2"/>
+  <text x="40" y="160" font-size="11" font-weight="bold" fill="#0369a1">Medium 2: Air</text>
+  <text x="40" y="100" font-size="11" font-weight="bold" fill="#475569">Medium 1: Udara</text>
+
+  <line x1="20" y1="130" x2="440" y2="130" stroke="#0284c7" stroke-width="1.8"/>
+
+  <line x1="230" y1="40" x2="230" y2="220" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="230" y="38" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Garis Normal</text>
+
+  <line x1="110" y1="45" x2="230" y2="130" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBias)"/>
+  <text x="125" y="80" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
+
+  <line x1="230" y1="130" x2="295" y2="215" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBias)"/>
+  <text x="310" y="195" font-size="11" font-weight="bold" fill="#b45309">Sinar Bias</text>
+
+  <path d="M 215,115 A 25 25 0 0 1 230,105" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="220" y="112" font-size="11" font-weight="bold" fill="#dc2626">i</text>
+
+  <path d="M 230,155 A 25 25 0 0 1 245,150" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="235" y="166" font-size="11" font-weight="bold" fill="#dc2626">r</text>
+
+  <g>
+    <circle cx="340" cy="180" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="340" y="184.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <line x1="326" y1="182" x2="280" y2="190" stroke="#e11d48" stroke-width="1.8"/>
+  </g>
+
+  <text x="230" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan jalannya berkas cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+</svg>`;
+}
+
+export function renderBusurDerajatSvg(params: any): string {
+  const deg = Math.max(10, Math.min(170, Number(params.derajat ?? 60)));
+  const labelChar = params.label || 'X';
+
+  const cx = 240;
+  const cy = 195;
+  const R = 145;
+  const rHole = 18;
+
+  let ticks = '';
+  for (let a = 0; a <= 180; a += 1) {
+    const rad = (a * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    if (a % 10 === 0) {
+      const x1 = cx - R * cos;
+      const y1 = cy - R * sin;
+      const x2 = cx - (R - 14) * cos;
+      const y2 = cy - (R - 14) * sin;
+      ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#0f172a" stroke-width="1.2"/>`;
+
+      const xText = cx - (R - 24) * cos;
+      const yText = cy - (R - 24) * sin + 3.5;
+      const val = 180 - a;
+      const numLabel = (val === 0 || val === 90 || val === 180) ? `${val}°` : `${val}`;
+      ticks += `<text x="${xText}" y="${yText}" text-anchor="middle" font-size="7" font-weight="600" fill="#0f172a">${numLabel}</text>`;
+    } else if (a % 5 === 0) {
+      const x1 = cx - R * cos;
+      const y1 = cy - R * sin;
+      const x2 = cx - (R - 9) * cos;
+      const y2 = cy - (R - 9) * sin;
+      ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#334155" stroke-width="1"/>`;
+    } else {
+      const x1 = cx - R * cos;
+      const y1 = cy - R * sin;
+      const x2 = cx - (R - 5) * cos;
+      const y2 = cy - (R - 5) * sin;
+      ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#94a3b8" stroke-width="0.7"/>`;
+    }
+  }
+
+  const baseRayX = cx + R + 25;
+  const targetRad = (deg * Math.PI) / 180;
+  const rayLen = R + 22;
+  const rayEndX = cx + rayLen * Math.cos(targetRad);
+  const rayEndY = cy - rayLen * Math.sin(targetRad);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 260" width="480" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <marker id="arrBusur" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#dc2626" />
+    </marker>
+  </defs>
+
+  <rect width="480" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="240" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Sudut Busur Derajat</text>
+
+  <path d="M ${cx - R},${cy} A ${R} ${R} 0 0,1 ${cx + R},${cy} Z" fill="#fef3c7" fill-opacity="0.6" stroke="#d97706" stroke-width="1.5"/>
+  <path d="M ${cx - rHole},${cy} A ${rHole} ${rHole} 0 0,1 ${cx + rHole},${cy} Z" fill="#ffffff" stroke="#d97706" stroke-width="1"/>
+
+  ${ticks}
+
+  <line x1="${cx - 10}" y1="${cy}" x2="${cx + 10}" y2="${cy}" stroke="#0f172a" stroke-width="1.5"/>
+  <line x1="${cx}" y1="${cy - 10}" x2="${cx}" y2="${cy + 5}" stroke="#0f172a" stroke-width="1.5"/>
+  <circle cx="${cx}" cy="${cy}" r="3" fill="#dc2626"/>
+
+  <line x1="${cx}" y1="${cy}" x2="${baseRayX}" y2="${cy}" stroke="#dc2626" stroke-width="3" marker-end="url(#arrBusur)"/>
+  <line x1="${cx}" y1="${cy}" x2="${rayEndX}" y2="${rayEndY}" stroke="#dc2626" stroke-width="3" marker-end="url(#arrBusur)"/>
+
+  <path d="M ${cx + 40},${cy} A 40 40 0 0,0 ${cx + 40 * Math.cos(targetRad)},${cy - 40 * Math.sin(targetRad)}" fill="none" stroke="#dc2626" stroke-width="2"/>
+  <circle cx="${cx + 25 * Math.cos(targetRad / 2)}" cy="${cy - 25 * Math.sin(targetRad / 2)}" r="10" fill="#e11d48"/>
+  <text x="${cx + 25 * Math.cos(targetRad / 2)}" y="${cy - 25 * Math.sin(targetRad / 2) + 3.5}" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <text x="240" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Tentukan besar sudut yang ditunjukkan oleh busur derajat!</text>
+</svg>`;
+}
+
 // =========================================================================
 // 10. DISPATCHER & PARSER CERDAS
 // =========================================================================
@@ -2456,9 +3577,9 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
     title = title || 'Bangun Datar Gabungan';
   }
   // Pecahan
-  else if (type === 'pecahan_lingkaran' || type === 'pecahan_pie') {
+  else if (type === 'pecahan_lingkaran' || type === 'pecahan_pie' || type === 'pecahan_campuran') {
     svg = renderPecahanLingkaranSvg(params);
-    title = title || 'Visualisasi Pecahan Lingkaran';
+    title = title || (params.utuh ? 'Visualisasi Pecahan Campuran' : 'Visualisasi Pecahan Lingkaran');
   } else if (type === 'pecahan_persegi' || type === 'pecahan_grid') {
     svg = renderPecahanPersegiSvg(params);
     title = title || 'Visualisasi Pecahan Persegi';
@@ -2505,6 +3626,27 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   } else if (type === 'bagian_bunga' || type === 'bunga') {
     svg = renderBagianBungaSvg(params);
     title = title || 'Penampang Bagian Bunga';
+  } else if (type === 'peta_indonesia' || type === 'peta' || type === 'peta_nusantara') {
+    svg = renderPetaIndonesiaSvg(params);
+    title = title || 'Peta Kepulauan Indonesia';
+  } else if (type === 'rangkaian_listrik' || type === 'listrik' || type === 'rangkaian') {
+    svg = renderRangkaianListrikSvg(params);
+    title = title || 'Diagram Rangkaian Listrik';
+  } else if (type === 'perubahan_wujud' || type === 'wujud_zat' || type === 'perubahan_wujud_zat') {
+    svg = renderPerubahanWujudSvg(params);
+    title = title || 'Diagram Perubahan Wujud Zat';
+  } else if (type === 'tata_surya' || type === 'planet' || type === 'sistem_tata_surya') {
+    svg = renderTataSuryaSvg(params);
+    title = title || 'Diagram Sistem Tata Surya';
+  } else if (type === 'perisai_pancasila' || type === 'pancasila' || type === 'garuda_pancasila' || type === 'lambang_pancasila') {
+    svg = renderPerisaiPancasilaSvg(params);
+    title = title || 'Perisai Garuda Pancasila';
+  } else if (type === 'magnet' || type === 'gaya_magnet' || type === 'kutub_magnet') {
+    svg = renderMagnetSvg(params);
+    title = title || 'Interaksi Batang Magnet';
+  } else if (type === 'sifat_cahaya' || type === 'cahaya' || type === 'pembiasan' || type === 'pemantulan') {
+    svg = renderSifatCahayaSvg(params);
+    title = title || 'Diagram Sifat Cahaya';
   }
   // Pengukuran & Waktu
   else if (type === 'jam_analog' || type === 'jam' || type === 'clock') {
@@ -2513,6 +3655,12 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   } else if (type === 'garis_bilangan') {
     svg = renderGarisBilanganSvg(params);
     title = title || 'Garis Bilangan';
+  } else if (type === 'mistar' || type === 'penggaris' || type === 'pengukuran_panjang') {
+    svg = renderMistarSvg(params);
+    title = title || 'Pengukuran Panjang Mistar';
+  } else if (type === 'busur_derajat' || type === 'busur' || type === 'pengukuran_busur') {
+    svg = renderBusurDerajatSvg(params);
+    title = title || 'Pengukuran Sudut Busur Derajat';
   }
 
   if (!svg) return null;
@@ -2567,7 +3715,10 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
     const sMatch = stemText.match(/(?:rusuk|sisi)\D*(\d+)/i) || stemText.match(/s\s*=\s*(\d+)/i);
     const nums = stemText.match(/\b(\d+)\s*(?:cm|m)\b/g);
     const s = sMatch ? parseInt(sMatch[1]) : (nums && nums.length >= 1 ? parseInt(nums[0]) : 5);
-    return { type: 'jaring_kubus', params: { s, unit: 'cm' } };
+    let pola: 'salib' | 'tangga' | 't' = 'salib';
+    if (text.includes('tangga') || text.includes('1-4-1')) pola = 'tangga';
+    else if (text.includes('huruf t') || text.includes('pola t')) pola = 't';
+    return { type: 'jaring_kubus', params: { s, unit: 'cm', pola } };
   }
 
   // 0d. Jaring-jaring Balok
@@ -2838,8 +3989,17 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
     };
   }
 
-  // 13. Pecahan
+  // 13. Pecahan (Biasa & Campuran)
   if (text.includes('pecahan') || text.includes('diarsir') || text.includes('arsiran')) {
+    const mixedMatch = text.match(/(\d+)\s+(\d+)\s*\/\s*(\d+)/);
+    if (mixedMatch) {
+      const u = parseInt(mixedMatch[1]);
+      const k = parseInt(mixedMatch[2]);
+      const n = parseInt(mixedMatch[3]);
+      if (u >= 1 && u <= 3 && n > 1 && n <= 12) {
+        return { type: 'pecahan_lingkaran', params: { pembagi: n, diarsir: k, utuh: u } };
+      }
+    }
     const fracMatch = text.match(/(\d+)\s*\/\s*(\d+)/);
     if (fracMatch) {
       const k = parseInt(fracMatch[1]);
@@ -2850,10 +4010,13 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
     }
   }
 
-  // 14. Sudut
-  if (text.includes('sudut') && (text.includes('derajat') || text.includes('°') || text.includes('lancip') || text.includes('tumpul'))) {
+  // 14. Sudut & Busur Derajat
+  if (text.includes('busur') || (text.includes('sudut') && (text.includes('derajat') || text.includes('°') || text.includes('lancip') || text.includes('tumpul')))) {
     const degMatch = text.match(/(\d+)\s*(?:derajat|°)/i);
     const deg = degMatch ? parseInt(degMatch[1]) : 60;
+    if (text.includes('busur derajat') || text.includes('busur')) {
+      return { type: 'busur_derajat', params: { derajat: deg, label: 'X' } };
+    }
     return { type: 'sudut', params: { derajat: deg } };
   }
 
@@ -2962,6 +4125,120 @@ export function detectStimulusFromSoalText(soalText: string, mapel: string): Vis
     return { type: 'diagram_lingkaran', params: {} };
   }
 
+  // 23. Peta Indonesia (Tebak Pulau / Lokasi Geografis)
+  if ((text.includes('peta') || text.includes('pulau')) && (text.includes('indonesia') || text.includes('pulau') || text.includes('tinggal') || text.includes('geografis') || text.includes('nusantara'))) {
+    let pointer = 'jawa';
+    if (stemText.includes('sumatra') || stemText.includes('sumatera')) pointer = 'sumatra';
+    else if (stemText.includes('kalimantan') || stemText.includes('borneo')) pointer = 'kalimantan';
+    else if (stemText.includes('sulawesi') || stemText.includes('celebes')) pointer = 'sulawesi';
+    else if (stemText.includes('papua') || stemText.includes('irian')) pointer = 'papua';
+    else if (stemText.includes('maluku') || stemText.includes('ambon') || stemText.includes('seram') || stemText.includes('halmahera')) pointer = 'maluku';
+    else if (stemText.includes('bali') || stemText.includes('nusa tenggara') || stemText.includes('ntb') || stemText.includes('ntt')) pointer = 'bali_nusra';
+    else if (stemText.includes('jawa') || stemText.includes('tinggal')) pointer = 'jawa';
+    else {
+      pointer = 'jawa';
+    }
+    return { type: 'peta_indonesia', params: { pointer, label: 'X' } };
+  }
+
+  // 24. Rangkaian Listrik (Seri / Paralel / Campuran / Saklar & Lampu)
+  if (text.includes('rangkaian listrik') || (text.includes('saklar') && text.includes('lampu')) || (text.includes('lampu') && (text.includes('menyala') || text.includes('padam')) && (text.includes('s1') || text.includes('s2') || text.includes('baterai')))) {
+    let model = 'campuran';
+    if (text.includes('seri')) model = 'seri';
+    else if (text.includes('paralel')) model = 'paralel';
+
+    const s1 = !(text.includes('s1 dibuka') || text.includes('s1 terbuka'));
+    const s2 = text.includes('s2 ditutup') || text.includes('s2 tertutup');
+
+    let pointer = 'L1';
+    if (stemText.includes('l2') || stemText.includes('lampu 2')) pointer = 'L2';
+    else if (stemText.includes('l3') || stemText.includes('lampu 3')) pointer = 'L3';
+    else if (stemText.includes('s1') || stemText.includes('saklar 1')) pointer = 'S1';
+    else if (stemText.includes('s2') || stemText.includes('saklar 2')) pointer = 'S2';
+
+    return { type: 'rangkaian_listrik', params: { model, s1, s2, pointer, label: 'X' } };
+  }
+
+  // 25. Perubahan Wujud Zat (Segitiga Padat-Cair-Gas)
+  if (text.includes('perubahan wujud') || (text.includes('wujud zat') && (text.includes('padat') || text.includes('cair') || text.includes('gas')))) {
+    let pointer = '1';
+    if (stemText.includes('mencair') || stemText.includes('melebur')) pointer = '1';
+    else if (stemText.includes('membeku')) pointer = '2';
+    else if (stemText.includes('menguap')) pointer = '3';
+    else if (stemText.includes('mengembun')) pointer = '4';
+    else if (stemText.includes('menyublim')) pointer = '5';
+    else if (stemText.includes('kristal') || stemText.includes('deposisi')) pointer = '6';
+    else if (stemText.includes('nomor 2') || stemText.includes('panah 2')) pointer = '2';
+    else if (stemText.includes('nomor 3') || stemText.includes('panah 3')) pointer = '3';
+    else if (stemText.includes('nomor 4') || stemText.includes('panah 4')) pointer = '4';
+    else if (stemText.includes('nomor 5') || stemText.includes('panah 5')) pointer = '5';
+    else if (stemText.includes('nomor 6') || stemText.includes('panah 6')) pointer = '6';
+
+    return { type: 'perubahan_wujud', params: { pointer, label: 'X' } };
+  }
+
+  // 26. Pengukuran Panjang Mistar / Penggaris
+  if (text.includes('mistar') || text.includes('penggaris') || ((text.includes('pensil') || text.includes('penghapus') || text.includes('paku')) && (text.includes('panjang') || text.includes('skala') || text.includes('cm')) && (text.includes('ukur') || text.includes('gambar')))) {
+    let objectType = 'pensil';
+    if (text.includes('paku')) objectType = 'paku';
+    else if (text.includes('penghapus')) objectType = 'penghapus';
+
+    let start = 3.0;
+    let end = 8.5;
+    const startMatch = text.match(/(?:dari|pada|angka|skala)\s*([0-9]+(?:[\.,][0-9]+)?)\s*cm/);
+    if (startMatch) start = parseFloat(startMatch[1].replace(',', '.'));
+    const endMatch = text.match(/(?:sampai|hingga|ujung)\s*([0-9]+(?:[\.,][0-9]+)?)\s*cm/);
+    if (endMatch) end = parseFloat(endMatch[1].replace(',', '.'));
+
+    return { type: 'mistar', params: { start, end, objectType, label: 'Panjang = ... cm' } };
+  }
+
+  // 27. Tata Surya (Orbit & Karakteristik Planet)
+  if (text.includes('tata surya') || (text.includes('planet') && (text.includes('matahari') || text.includes('orbit') || text.includes('cincin') || text.includes('terbesar') || text.includes('urutan') || text.includes('ketiga')))) {
+    let pointer = 'bumi';
+    if (stemText.includes('merkurius') || stemText.includes('pertama') || stemText.includes('terdekat')) pointer = 'merkurius';
+    else if (stemText.includes('venus') || stemText.includes('kejora') || stemText.includes('kedua')) pointer = 'venus';
+    else if (stemText.includes('mars') || stemText.includes('merah') || stemText.includes('keempat')) pointer = 'mars';
+    else if (stemText.includes('yupiter') || stemText.includes('jupiter') || stemText.includes('terbesar') || stemText.includes('kelima')) pointer = 'yupiter';
+    else if (stemText.includes('saturnus') || stemText.includes('cincin') || stemText.includes('keenam')) pointer = 'saturnus';
+    else if (stemText.includes('uranus') || stemText.includes('ketujuh')) pointer = 'uranus';
+    else if (stemText.includes('neptunus') || stemText.includes('terjauh') || stemText.includes('kedelapan')) pointer = 'neptunus';
+    else if (stemText.includes('bumi') || stemText.includes('ketiga') || stemText.includes('kehidupan')) pointer = 'bumi';
+
+    return { type: 'tata_surya', params: { pointer, label: 'X' } };
+  }
+
+  // 28. Perisai Garuda Pancasila (Simbol 5 Sila)
+  if (text.includes('pancasila') || text.includes('perisai') || text.includes('lambang negara') || text.includes('burung garuda') || (text.includes('sila') && (text.includes('pertama') || text.includes('kedua') || text.includes('ketiga') || text.includes('keempat') || text.includes('kelima') || text.includes('ke-') || text.includes('bintang') || text.includes('rantai') || text.includes('beringin') || text.includes('banteng') || text.includes('padi')))) {
+    let sila = 1;
+    if (stemText.includes('bintang') || stemText.includes('ketuhanan') || stemText.includes('pertama') || stemText.includes('ke-1') || stemText.includes('sila 1')) sila = 1;
+    else if (stemText.includes('rantai') || stemText.includes('kemanusiaan') || stemText.includes('kedua') || stemText.includes('ke-2') || stemText.includes('sila 2')) sila = 2;
+    else if (stemText.includes('beringin') || stemText.includes('persatuan') || stemText.includes('ketiga') || stemText.includes('ke-3') || stemText.includes('sila 3')) sila = 3;
+    else if (stemText.includes('banteng') || stemText.includes('kerakyatan') || stemText.includes('keempat') || stemText.includes('ke-4') || stemText.includes('sila 4')) sila = 4;
+    else if (stemText.includes('padi') || stemText.includes('kapas') || stemText.includes('keadilan') || stemText.includes('kelima') || stemText.includes('ke-5') || stemText.includes('sila 5')) sila = 5;
+
+    return { type: 'perisai_pancasila', params: { sila, label: 'X' } };
+  }
+
+  // 29. Kemagnetan (Kutub & Gaya Tarik/Tolak Magnet)
+  if (text.includes('magnet') || (text.includes('kutub') && (text.includes('utara') || text.includes('selatan') || text.includes('tarik') || text.includes('tolak')))) {
+    let interaksi: 'tarik' | 'tolak' = 'tarik';
+    if (text.includes('tolak') || text.includes('menolak')) interaksi = 'tolak';
+    else if (text.includes('tarik') || text.includes('menarik')) interaksi = 'tarik';
+
+    let pointer: 'kanan2' | 'kiri1' = 'kanan2';
+    if (text.includes('kiri') || text.includes('pertama')) pointer = 'kiri1';
+
+    return { type: 'magnet', params: { interaksi, pointer, label: 'X' } };
+  }
+
+  // 30. Sifat Cahaya (Pembiasan & Pemantulan)
+  if (text.includes('cahaya') && (text.includes('pembiasan') || text.includes('bias') || text.includes('pemantulan') || text.includes('pantul') || text.includes('cermin') || text.includes('medium') || text.includes('sudut datang') || text.includes('sudut bias') || text.includes('sudut pantul'))) {
+    let peristiwa: 'pembiasan' | 'pemantulan' = 'pembiasan';
+    if (text.includes('pemantulan') || text.includes('pantul') || text.includes('cermin')) peristiwa = 'pemantulan';
+    return { type: 'sifat_cahaya', params: { peristiwa, pointer: 'X', label: 'X' } };
+  }
+
   return null;
 }
 
@@ -2974,7 +4251,7 @@ export interface VisualCatalogItem {
 }
 
 /**
- * Katalog lengkap 41 template visual stimulus SVG untuk API dan UI selector
+ * Katalog lengkap 50 template visual stimulus SVG untuk API dan UI selector
  */
 export function getVisualCatalog(): VisualCatalogItem[] {
   return [
@@ -2986,7 +4263,7 @@ export function getVisualCatalog(): VisualCatalogItem[] {
     { id: 'bola', category: 'Geometri 3D', name: 'Bola 3D', description: 'Bola berarsir radial dengan jari-jari r', sampleParams: { r: 14, unit: 'cm' } },
     { id: 'prisma', category: 'Geometri 3D', name: 'Prisma Segitiga 3D', description: 'Prisma segitiga isometrik dengan alas, tinggi, panjang', sampleParams: { alas: 10, tinggiSegitiga: 8, panjang: 15, unit: 'cm' } },
     { id: 'limas', category: 'Geometri 3D', name: 'Limas Segiempat 3D', description: 'Limas piramida dengan alas persegi s dan tinggi t', sampleParams: { s: 10, t: 12, unit: 'cm' } },
-    { id: 'jaring_kubus', category: 'Geometri 3D', name: 'Jaring-jaring Kubus', description: 'Pola salib 6 muka kubus berlabel sisi', sampleParams: { s: 5, unit: 'cm' } },
+    { id: 'jaring_kubus', category: 'Geometri 3D', name: 'Jaring-jaring Kubus', description: 'Pola jaring-jaring 6 muka kubus (variasi salib, tangga, atau pola T)', sampleParams: { s: 5, unit: 'cm', pola: 'salib' } },
     { id: 'jaring_balok', category: 'Geometri 3D', name: 'Jaring-jaring Balok', description: 'Pola unfolded balok p × l × t berlabel muka', sampleParams: { p: 6, l: 4, t: 3, unit: 'cm' } },
 
     // Geometri 2D
@@ -3005,7 +4282,7 @@ export function getVisualCatalog(): VisualCatalogItem[] {
     { id: 'koordinat', category: 'Geometri 2D', name: 'Koordinat Kartesius', description: 'Bidang kartesius 4 kuadran dengan titik berlabel', sampleParams: { titik: [{ x: 3, y: 4, label: 'P' }, { x: -2, y: 3, label: 'Q' }] } },
 
     // Pecahan
-    { id: 'pecahan_lingkaran', category: 'Pecahan', name: 'Pecahan Lingkaran', description: 'Pecahan juring lingkaran terarsir', sampleParams: { pembagi: 4, diarsir: 3 } },
+    { id: 'pecahan_lingkaran', category: 'Pecahan', name: 'Pecahan Lingkaran', description: 'Pecahan juring lingkaran terarsir (mendukung pecahan biasa & campuran)', sampleParams: { pembagi: 4, diarsir: 3, utuh: 0 } },
     { id: 'pecahan_persegi', category: 'Pecahan', name: 'Pecahan Persegi (Grid)', description: 'Matriks grid kotak terarsir proporsional', sampleParams: { kolom: 4, baris: 2, diarsir: 3 } },
 
     // Statistik
@@ -3018,6 +4295,8 @@ export function getVisualCatalog(): VisualCatalogItem[] {
     // Pengukuran
     { id: 'jam_analog', category: 'Pengukuran', name: 'Jam Analog', description: 'Jam dinding analog dengan jarum jam dan menit presisi', sampleParams: { jam: 7, menit: 30 } },
     { id: 'garis_bilangan', category: 'Pengukuran', name: 'Garis Bilangan', description: 'Garis bilangan bulat berlabel titik P', sampleParams: { min: -5, max: 5, titik: [{ x: 2, label: 'P' }] } },
+    { id: 'mistar', category: 'Pengukuran', name: 'Pengukuran Panjang Mistar', description: 'Penggaris berskala milimeter dengan benda offset berlabel panjang', sampleParams: { start: 3, end: 8.5, objectType: 'pensil', label: 'Panjang = ... cm' } },
+    { id: 'busur_derajat', category: 'Pengukuran', name: 'Busur Derajat (Pengukuran Sudut)', description: 'Busur derajat transparan setengah lingkaran 0°-180° untuk membaca sudut', sampleParams: { derajat: 60, label: 'X' } },
 
     // Sains / IPAS
     { id: 'organ_pencernaan', category: 'Sains / IPAS', name: 'Sistem Pencernaan', description: 'Organ pencernaan makro manusia berlabel target X', sampleParams: { pointer: 'lambung', label: 'X' } },
@@ -3029,7 +4308,14 @@ export function getVisualCatalog(): VisualCatalogItem[] {
     { id: 'siklus_air', category: 'Sains / IPAS', name: 'Siklus Air', description: 'Daur air (evaporasi, kondensasi, presipitasi, infiltrasi)', sampleParams: { pointer: 'evaporasi', label: 'X' } },
     { id: 'metamorfosis', category: 'Sains / IPAS', name: 'Metamorfosis Kupu-kupu', description: 'Daur hidup telur, ulat, kepompong, kupu-kupu berlabel X', sampleParams: { pointer: 'kepompong', label: 'X' } },
     { id: 'bagian_bunga', category: 'Sains / IPAS', name: 'Bagian Bunga', description: 'Penampang putik, benang sari, mahkota, kelopak berlabel X', sampleParams: { pointer: 'putik', label: 'X' } },
-    { id: 'rantai_makanan', category: 'Sains / IPAS', name: 'Rantai Makanan', description: 'Alur produsen -> konsumen 1, 2, 3 -> pengurai berlabel X', sampleParams: { pointer: 'produsen', label: 'X' } }
+    { id: 'rantai_makanan', category: 'Sains / IPAS', name: 'Rantai Makanan', description: 'Alur produsen -> konsumen 1, 2, 3 -> pengurai berlabel X', sampleParams: { pointer: 'produsen', label: 'X' } },
+    { id: 'peta_indonesia', category: 'Sains / IPAS', name: 'Peta Kepulauan Indonesia', description: 'Peta siluet kepulauan Indonesia berlabel pulau target X', sampleParams: { pointer: 'jawa', label: 'X' } },
+    { id: 'rangkaian_listrik', category: 'Sains / IPAS', name: 'Rangkaian Listrik (Seri/Paralel)', description: 'Baterai, saklar, dan lampu rangkaian seri, paralel, atau campuran', sampleParams: { model: 'campuran', s1: true, s2: false, pointer: 'L1', label: 'X' } },
+    { id: 'perubahan_wujud', category: 'Sains / IPAS', name: 'Perubahan Wujud Zat', description: 'Diagram segitiga wujud zat padat, cair, gas dengan 6 panah proses berlabel X', sampleParams: { pointer: '1', label: 'X' } },
+    { id: 'tata_surya', category: 'Sains / IPAS', name: 'Sistem Tata Surya & Planet', description: 'Matahari dan 8 planet dalam orbit dengan penunjuk planet target X', sampleParams: { pointer: 'bumi', label: 'X' } },
+    { id: 'magnet', category: 'Sains / IPAS', name: 'Kutub & Gaya Magnet', description: 'Dua batang magnet interaksi tarik-menarik / tolak-menolak berlabel target kutub X', sampleParams: { interaksi: 'tarik', pointer: 'kanan2', label: 'X' } },
+    { id: 'sifat_cahaya', category: 'Sains / IPAS', name: 'Sifat Cahaya (Pembiasan & Pemantulan)', description: 'Diagram jalannya berkas cahaya pembiasan medium udara-air atau pemantulan cermin berlabel target X', sampleParams: { peristiwa: 'pembiasan', pointer: 'X', label: 'X' } },
+    { id: 'perisai_pancasila', category: 'Geometri 2D', name: 'Perisai Garuda Pancasila', description: 'Perisai 5 ruang simbol sila Pancasila dengan penunjuk sila target X', sampleParams: { sila: 1, label: 'X' } }
   ];
 }
 

@@ -41,6 +41,15 @@ import {
   renderLambungDetailSvg,
   renderAlveolusSvg,
   renderRantaiMakananSvg,
+  renderPetaIndonesiaSvg,
+  renderRangkaianListrikSvg,
+  renderPerubahanWujudSvg,
+  renderMistarSvg,
+  renderTataSuryaSvg,
+  renderPerisaiPancasilaSvg,
+  renderMagnetSvg,
+  renderSifatCahayaSvg,
+  renderBusurDerajatSvg,
   generateVisualStimulus,
   detectStimulusFromSoalText
 } from '../src/lib/visual-engine';
@@ -154,36 +163,41 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
   });
 
   describe('Fractions & Charts', () => {
-    it('should render fraction circles with shaded portions', () => {
+    it('should render fraction circles with shaded portions without answer spoilers', () => {
       const svg = renderPecahanLingkaranSvg({ pembagi: 4, diarsir: 3 });
       expect(svg).toContain('<svg');
-      expect(svg).toContain('3 dari 4 bagian diarsir');
+      expect(svg).toContain('Daerah yang Diarsir');
+      expect(svg).not.toContain('3 dari 4 bagian diarsir');
       expect(svg).toContain('#38bdf8'); // warna arsiran
     });
 
-    it('should render fraction grid with smart auto-calculation', () => {
+    it('should render fraction grid with smart auto-calculation without answer spoilers', () => {
       // Test 12 = 4x3 (balanced grid)
       const svg12 = renderPecahanPersegiSvg({ totalKotak: 12, diarsir: 7 });
-      expect(svg12).toContain('7 dari 12 kotak diarsir');
+      expect(svg12).toContain('Daerah yang Diarsir');
+      expect(svg12).not.toContain('7 dari 12 kotak diarsir');
       expect(svg12).toContain('pattern id="diagonalHatch"');
       expect(svg12).toContain('fill="url(#diagonalHatch)"');
 
       // Test 6 = 3x2
       const svg6 = renderPecahanPersegiSvg({ totalKotak: 6, diarsir: 4 });
-      expect(svg6).toContain('4 dari 6 kotak diarsir');
+      expect(svg6).toContain('Daerah yang Diarsir');
+      expect(svg6).not.toContain('4 dari 6 kotak diarsir');
     });
 
-    it('should render prime numbers as a horizontal fraction strip with high-contrast diagonal hatch pattern', () => {
+    it('should render prime numbers as a horizontal fraction strip with high-contrast diagonal hatch pattern without spoilers', () => {
       // Prime 5: 1 row of 5 columns (strip model)
       const svg5 = renderPecahanPersegiSvg({ totalKotak: 5, diarsir: 3 });
-      expect(svg5).toContain('3 dari 5 kotak diarsir');
+      expect(svg5).toContain('Daerah yang Diarsir');
+      expect(svg5).not.toContain('3 dari 5 kotak diarsir');
       expect(svg5).toContain('pattern id="diagonalHatch"');
       expect(svg5).toContain('fill="url(#diagonalHatch)"');
       expect(svg5).toContain('<svg');
 
       // Prime 7: 1 row of 7 columns
       const svg7 = renderPecahanPersegiSvg({ totalKotak: 7, diarsir: 4 });
-      expect(svg7).toContain('4 dari 7 kotak diarsir');
+      expect(svg7).toContain('Daerah yang Diarsir');
+      expect(svg7).not.toContain('4 dari 7 kotak diarsir');
       expect(svg7).toContain('pattern id="diagonalHatch"');
     });
 
@@ -352,12 +366,33 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       expect(meta).toContain('Metamorfosis Kupu-Kupu');
       expect(meta).toContain('huruf "X"');
     });
+
+    it('should render Indonesian map with vector archipelago and dynamic pointer X', () => {
+      const jawa = renderPetaIndonesiaSvg({ pointer: 'jawa', label: 'X' });
+      expect(jawa).toContain('Peta Kepulauan Indonesia');
+      expect(jawa).toContain('huruf "X"');
+      expect(jawa).toContain('arrPeta');
+      expect(jawa).toContain('500 km'); // Skala
+
+      const sumatra = renderPetaIndonesiaSvg({ pointer: 'sumatra', label: 'A' });
+      expect(sumatra).toContain('huruf "A"');
+
+      const kalimantan = renderPetaIndonesiaSvg({ pointer: 'kalimantan', label: 'B' });
+      expect(kalimantan).toContain('huruf "B"');
+
+      const sulawesi = renderPetaIndonesiaSvg({ pointer: 'sulawesi', label: 'C' });
+      expect(sulawesi).toContain('huruf "C"');
+
+      const papua = renderPetaIndonesiaSvg({ pointer: 'papua', label: 'D' });
+      expect(papua).toContain('huruf "D"');
+    });
   });
 
   describe('Measurement & Time', () => {
-    it('should render analog clock with accurate hands for given time', () => {
+    it('should render analog clock with accurate hands for given time without spoiling time in default caption', () => {
       const svg = renderJamAnalogSvg({ jam: 8, menit: 15 });
-      expect(svg).toContain('Pukul 08.15');
+      expect(svg).toContain('Jam Dinding Analog');
+      expect(svg).not.toContain('Pukul 08.15');
       expect(svg).toContain('<circle');
       expect(svg).toContain('<line');
     });
@@ -407,7 +442,9 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       const types = [
         'bola', 'prisma', 'limas', 'lingkaran', 'trapesium',
         'jajar_genjang', 'belah_ketupat', 'layang_layang',
-        'diagram_lingkaran', 'organ_pencernaan', 'rantai_makanan'
+        'diagram_lingkaran', 'organ_pencernaan', 'rantai_makanan',
+        'peta_indonesia', 'rangkaian_listrik', 'perubahan_wujud',
+        'mistar', 'tata_surya', 'perisai_pancasila'
       ];
       for (const type of types) {
         const result = generateVisualStimulus({ type, params: {} });
@@ -503,6 +540,41 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       // Diagram Lingkaran (Pie Chart)
       const pie = detectStimulusFromSoalText('Perhatikan diagram lingkaran berikut yang menunjukkan data hobi siswa kelas 5!', 'Matematika');
       expect(pie?.type).toBe('diagram_lingkaran');
+
+      // Peta Indonesia (Tebak Pulau)
+      const petaUser = detectStimulusFromSoalText('Perhatikan gambar peta Indonesia berikut! Di pulau manakah kita tinggal? A. Pulau Jawa B. Pulau Papua C. Pulau Kalimantan D. Pulau Sumatra', 'IPAS');
+      expect(petaUser?.type).toBe('peta_indonesia');
+      expect(petaUser?.params?.pointer).toBe('jawa');
+
+      const petaPapua = detectStimulusFromSoalText('Perhatikan peta Indonesia berikut! Pulau Papua ditunjukkan oleh huruf...', 'IPAS');
+      expect(petaPapua?.type).toBe('peta_indonesia');
+      expect(petaPapua?.params?.pointer).toBe('papua');
+
+      // Rangkaian Listrik
+      const listrik = detectStimulusFromSoalText('Perhatikan rangkaian listrik berikut! Jika saklar S1 dibuka dan S2 ditutup, lampu manakah yang menyala?', 'IPAS');
+      expect(listrik?.type).toBe('rangkaian_listrik');
+      expect(listrik?.params?.s1).toBe(false);
+      expect(listrik?.params?.s2).toBe(true);
+
+      // Perubahan Wujud Zat
+      const wujud = detectStimulusFromSoalText('Perhatikan diagram perubahan wujud zat berikut! Perubahan wujud saat air membeku menjadi es ditunjukkan oleh nomor...', 'IPAS');
+      expect(wujud?.type).toBe('perubahan_wujud');
+      expect(wujud?.params?.pointer).toBe('2');
+
+      // Mistar Pengukuran Panjang
+      const mistar = detectStimulusFromSoalText('Perhatikan gambar pengukuran pensil dengan mistar berikut! Panjang pensil tersebut adalah...', 'Matematika');
+      expect(mistar?.type).toBe('mistar');
+      expect(mistar?.params?.objectType).toBe('pensil');
+
+      // Tata Surya
+      const planet = detectStimulusFromSoalText('Perhatikan gambar sistem tata surya berikut! Planet Mars ditunjukkan oleh huruf...', 'IPAS');
+      expect(planet?.type).toBe('tata_surya');
+      expect(planet?.params?.pointer).toBe('mars');
+
+      // Perisai Pancasila
+      const sila = detectStimulusFromSoalText('Perhatikan lambang burung Garuda Pancasila berikut! Simbol sila ketiga (persatuan Indonesia) adalah...', 'Pendidikan Pancasila');
+      expect(sila?.type).toBe('perisai_pancasila');
+      expect(sila?.params?.sila).toBe(3);
     });
 
     it('should detect all 10 expanded math topics from question text', () => {
@@ -647,7 +719,7 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       expect(svg).toContain('S'); // universal set symbol
     });
 
-    it('8. renderPictogramSvg should render pictogram with custom icons and legend', () => {
+    it('8. renderPictogramSvg should render pictogram with custom icons and legend without value spoilers unless enabled', () => {
       const svg = renderPictogramSvg({
         judul: 'Hasil Panen Jeruk',
         labels: ['Senin', 'Selasa'],
@@ -661,18 +733,33 @@ describe('Examplate Visual Stimulus Engine Tests', () => {
       expect(svg).toContain('Selasa');
       expect(svg).toContain('🍊');
       expect(svg).toContain('Keterangan: 🍊 = 10');
-      expect(svg).toContain('(30)');
-      expect(svg).toContain('(50)');
+      // Zero-spoiler: numbers not shown by default
+      expect(svg).not.toContain('(30)');
+      expect(svg).not.toContain('(50)');
+
+      // If showValues: true is explicitly passed, show them
+      const svgWithValues = renderPictogramSvg({
+        judul: 'Hasil Panen Jeruk',
+        labels: ['Senin', 'Selasa'],
+        data: [3, 5],
+        ikon: '🍊',
+        nilaiIkon: 10,
+        showValues: true
+      });
+      expect(svgWithValues).toContain('(30)');
+      expect(svgWithValues).toContain('(50)');
     });
 
-    it('9. renderSimetriLipatSvg should render symmetry axes with dash lines', () => {
+    it('9. renderSimetriLipatSvg should render symmetry axes with dash lines without spoiling answer count', () => {
       const svgPersegi = renderSimetriLipatSvg({ bangun: 'persegi' });
       expect(svgPersegi).toContain('<svg');
-      expect(svgPersegi).toContain('Persegi');
-      expect(svgPersegi).toContain('Jumlah garis simetri = <tspan font-weight="bold" fill="#e11d48">4</tspan>');
+      expect(svgPersegi).toContain('Sumbu Simetri Lipat');
+      expect(svgPersegi).toContain('Garis putus-putus menunjukkan sumbu simetri lipat');
+      expect(svgPersegi).not.toContain('Jumlah garis simetri =');
 
       const svgLingkaran = renderSimetriLipatSvg({ bangun: 'lingkaran' });
-      expect(svgLingkaran).toContain('∞ (tak terhingga)');
+      expect(svgLingkaran).toContain('Garis putus-putus menunjukkan sumbu simetri lipat');
+      expect(svgLingkaran).not.toContain('∞ (tak terhingga)');
     });
 
     it('10. renderBangunGabunganSvg should render L-shape and T-shape with dimensions', () => {
@@ -796,6 +883,185 @@ D. 32 cm`;
       const svg = renderSegitigaSamaKakiSvg(detected?.params || {});
       expect(svg).not.toContain('NaN');
       expect(svg).toContain('Segitiga Sama Kaki ABC');
+    });
+
+    it('should render Rangkaian Listrik correctly with proper switch and bulb states', () => {
+      // Seri
+      const seri = renderRangkaianListrikSvg({ model: 'seri', s1: true });
+      expect(seri).toContain('Rangkaian Listrik Seri');
+      expect(seri).toContain('Baterai');
+      expect(seri).toContain('Nyala');
+
+      // Seri with open switch
+      const seriOff = renderRangkaianListrikSvg({ model: 'seri', s1: false });
+      expect(seriOff).toContain('Padam');
+      expect(seriOff).toContain('Terbuka');
+
+      // Paralel
+      const paralel = renderRangkaianListrikSvg({ model: 'paralel', s1: true, s2: false });
+      expect(paralel).toContain('Rangkaian Listrik Paralel');
+      expect(paralel).toContain('Tertutup');
+      expect(paralel).toContain('Terbuka');
+
+      // Campuran with pointer
+      const campuran = renderRangkaianListrikSvg({ model: 'campuran', s1: true, s2: false, pointer: 'L3', label: 'X' });
+      expect(campuran).toContain('Rangkaian Listrik Campuran');
+      expect(campuran).toContain('huruf "X"');
+    });
+
+    it('should render Perubahan Wujud Zat with 6 cycle arrows and zero spoilers', () => {
+      const wujud = renderPerubahanWujudSvg({ pointer: '1', label: 'X' });
+      expect(wujud).toContain('Diagram Perubahan Wujud Zat');
+      expect(wujud).toContain('PADAT');
+      expect(wujud).toContain('CAIR');
+      expect(wujud).toContain('GAS');
+      expect(wujud).toContain('huruf "X"');
+      // Zero-spoiler check: The diagram should NOT display raw textual answer strings on the arrows
+      expect(wujud).not.toContain('>Mencair<');
+      expect(wujud).not.toContain('>Membeku<');
+
+      // All 6 transitions should render valid numbers
+      for (let i = 1; i <= 6; i++) {
+        const svg = renderPerubahanWujudSvg({ pointer: String(i) });
+        expect(svg).toContain('<svg');
+        expect(svg).not.toContain('NaN');
+      }
+    });
+
+    it('should render Mistar with millimeter precision, offset start, and zero spoilers', () => {
+      const mistar = renderMistarSvg({ start: 3.0, end: 8.5, objectType: 'pensil', label: 'Panjang = ... cm' });
+      expect(mistar).toContain('Pengukuran Panjang dengan Mistar');
+      expect(mistar).toContain('cm');
+      expect(mistar).toContain('Panjang = ... cm');
+      // Zero spoiler: should NOT print the computed difference "5.5 cm"
+      expect(mistar).not.toContain('5.5 cm');
+
+      // Test different object types
+      const paku = renderMistarSvg({ start: 1.0, end: 6.0, objectType: 'paku' });
+      expect(paku).toContain('<polygon');
+      const penghapus = renderMistarSvg({ start: 2.0, end: 5.0, objectType: 'penghapus' });
+      expect(penghapus).toContain('ERASER');
+    });
+
+    it('should render Tata Surya with 8 planetary orbits and zero spoilers', () => {
+      const surya = renderTataSuryaSvg({ pointer: 'saturnus', label: 'X' });
+      expect(surya).toContain('Diagram Sistem Tata Surya');
+      expect(surya).toContain('Matahari');
+      expect(surya).toContain('huruf "X"');
+      // Zero spoiler: Should NOT print "Saturnus" or "Bumi" directly next to the planets
+      expect(surya).not.toContain('>Saturnus<');
+      expect(surya).not.toContain('>Bumi<');
+
+      // Verify orbital numbering (1) to (8) exists
+      for (let i = 1; i <= 8; i++) {
+        expect(surya).toContain(`(${i})`);
+      }
+    });
+
+    it('should render Perisai Pancasila with 5 distinct sila symbols and zero spoilers', () => {
+      for (let sila = 1; sila <= 5; sila++) {
+        const svg = renderPerisaiPancasilaSvg({ sila, label: 'X' });
+        expect(svg).toContain('Perisai Garuda Pancasila');
+        expect(svg).toContain('huruf "X"');
+        // Zero spoiler: Should NOT print the textual sila names
+        expect(svg).not.toContain('Ketuhanan Yang Maha Esa');
+        expect(svg).not.toContain('Persatuan Indonesia');
+        expect(svg).not.toContain('Keadilan Sosial');
+      }
+    });
+
+    it('should render Magnet SVG with tarik/tolak interactions and zero spoilers', () => {
+      // Test tarik-menarik
+      const svgTarik = renderMagnetSvg({ interaksi: 'tarik', pointer: 'kanan2', label: 'X' });
+      expect(svgTarik).toContain('Interaksi Gaya Magnet');
+      expect(svgTarik).toContain('Tarik-Menarik');
+      expect(svgTarik).toContain('[X]');
+      expect(svgTarik).toContain('huruf "X"');
+
+      // Test tolak-menolak
+      const svgTolak = renderMagnetSvg({ interaksi: 'tolak', pointer: 'kiri1', label: 'Y' });
+      expect(svgTolak).toContain('Tolak-Menolak');
+      expect(svgTolak).toContain('[Y]');
+      expect(svgTolak).toContain('Magnet 1');
+      expect(svgTolak).toContain('Magnet 2');
+    });
+
+    it('should render Sifat Cahaya SVG with pembiasan and pemantulan', () => {
+      // Test Pembiasan
+      const svgBias = renderSifatCahayaSvg({ peristiwa: 'pembiasan', pointer: 'X', label: 'X' });
+      expect(svgBias).toContain('Diagram Sifat Cahaya (Pembiasan)');
+      expect(svgBias).toContain('Medium 1: Udara');
+      expect(svgBias).toContain('Medium 2: Air');
+      expect(svgBias).toContain('Garis Normal');
+      expect(svgBias).toContain('Sinar Datang');
+      expect(svgBias).toContain('Sinar Bias');
+      expect(svgBias).toContain('huruf "X"');
+
+      // Test Pemantulan
+      const svgPantul = renderSifatCahayaSvg({ peristiwa: 'pemantulan', pointer: 'X', label: 'X' });
+      expect(svgPantul).toContain('Diagram Sifat Cahaya (Pemantulan)');
+      expect(svgPantul).toContain('Cermin Datar');
+      expect(svgPantul).toContain('Sinar Pantul');
+    });
+
+    it('should render Busur Derajat SVG with accurate scale and zero degree spoiler', () => {
+      const svgBusur = renderBusurDerajatSvg({ derajat: 65, label: 'X' });
+      expect(svgBusur).toContain('Pengukuran Sudut Busur Derajat');
+      expect(svgBusur).toContain('0°');
+      expect(svgBusur).toContain('90°');
+      expect(svgBusur).toContain('180°');
+      expect(svgBusur).toContain('arrBusur');
+      // Zero-spoiler: target angle label is 'X', not literal degree value "65°"
+      expect(svgBusur).toContain('>X<');
+      expect(svgBusur).not.toContain('>65°<');
+    });
+
+    it('should render Pecahan Campuran (multi-lingkaran) properly without spoiler', () => {
+      const svg = renderPecahanLingkaranSvg({ utuh: 2, pembagi: 4, diarsir: 3 });
+      expect(svg).toContain('Daerah yang Diarsir');
+      expect(svg).toContain('1 Bagian Utuh');
+      expect(svg).not.toContain('3/4 Bagian');
+      expect(svg).toContain('viewBox="0 0 445 210"');
+    });
+
+    it('should render Jaring-jaring Kubus with pola salib, tangga, and t', () => {
+      const salib = renderJaringKubusSvg({ s: 6, unit: 'cm', pola: 'salib' });
+      expect(salib).toContain('Pola SALIB');
+
+      const tangga = renderJaringKubusSvg({ s: 6, unit: 'cm', pola: 'tangga' });
+      expect(tangga).toContain('Pola TANGGA');
+
+      const polaT = renderJaringKubusSvg({ s: 6, unit: 'cm', pola: 't' });
+      expect(polaT).toContain('Pola T');
+    });
+
+    it('should detect new stimulus types from soal text', () => {
+      // 1. Busur derajat
+      const detBusur = detectStimulusFromSoalText('Perhatikan gambar busur derajat berikut! Besar sudut yang terukur adalah 60 derajat.', 'matematika');
+      expect(detBusur?.type).toBe('busur_derajat');
+      expect(detBusur?.params?.derajat).toBe(60);
+
+      // 2. Magnet
+      const detMagnet = detectStimulusFromSoalText('Dua buah kutub magnet saling tolak-menolak jika didekatkan...', 'ipas');
+      expect(detMagnet?.type).toBe('magnet');
+      expect(detMagnet?.params?.interaksi).toBe('tolak');
+
+      // 3. Sifat Cahaya
+      const detCahaya = detectStimulusFromSoalText('Perhatikan jalannya berkas cahaya pada peristiwa pembiasan berikut...', 'ipas');
+      expect(detCahaya?.type).toBe('sifat_cahaya');
+      expect(detCahaya?.params?.peristiwa).toBe('pembiasan');
+
+      // 4. Pecahan Campuran
+      const detCampuran = detectStimulusFromSoalText('Berapakah nilai pecahan campuran 2 3/4 yang diarsir pada gambar?', 'matematika');
+      expect(detCampuran?.type).toBe('pecahan_lingkaran');
+      expect(detCampuran?.params?.utuh).toBe(2);
+      expect(detCampuran?.params?.diarsir).toBe(3);
+      expect(detCampuran?.params?.pembagi).toBe(4);
+
+      // 5. Jaring-jaring Kubus Pola Tangga
+      const detTangga = detectStimulusFromSoalText('Gambar jaring-jaring kubus dengan pola tangga 1-4-1 di bawah ini...', 'matematika');
+      expect(detTangga?.type).toBe('jaring_kubus');
+      expect(detTangga?.params?.pola).toBe('tangga');
     });
   });
 });

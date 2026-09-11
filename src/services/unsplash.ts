@@ -35,7 +35,9 @@ function extractCoreKeyword(text: string): string {
     const stopwords = new Set([
         'yang', 'di', 'ke', 'dari', 'dan', 'untuk', 'pada', 'adalah', 'sedang',
         'dengan', 'ini', 'itu', 'sebuah', 'suatu', 'oleh', 'karena', 'gambar',
-        'berikut', 'menunjukkan', 'tersebut', 'amatilah', 'perhatikan'
+        'berikut', 'menunjukkan', 'tersebut', 'amatilah', 'perhatikan', 'soal',
+        'nomor', 'manakah', 'apakah', 'bagaimanakah', 'tuliskan', 'sebutkan',
+        'pilihan', 'pertanyaan', 'diagram', 'ilustrasi', 'foto', 'bagan'
     ]);
     const words = text
         .toLowerCase()
@@ -43,7 +45,7 @@ function extractCoreKeyword(text: string): string {
         .split(/\s+/)
         .filter(w => w.length > 2 && !stopwords.has(w));
     
-    return words.slice(0, 2).join(' ') || text;
+    return words.slice(0, 3).join(' ');
 }
 
 /**
@@ -53,7 +55,18 @@ function extractCoreKeyword(text: string): string {
 async function searchWikimediaImage(query: string): Promise<{ url: string; creditName: string } | null> {
     try {
         const rawClean = query.replace(/[\[\]]/g, '').trim();
-        const cleanQuery = rawClean.split(/\s+/).length > 2 ? extractCoreKeyword(rawClean) : rawClean;
+        const extracted = extractCoreKeyword(rawClean);
+        const cleanQuery = extracted || rawClean.replace(/[^\w\s-]/g, '').trim();
+
+        // Validasi ketat: Cegah pencarian frasa instruksi/debris soal ke Wikipedia (mencegah bug Jane Austen)
+        const genericBlocklist = new Set([
+            'perhatikan gambar', 'gambar berikut', 'perhatikan gambar berikut',
+            'perhatikan', 'gambar', 'berikut', 'amatilah', 'diagram', 'ilustrasi',
+            'soal', 'nomor', 'pertanyaan', 'manakah', 'apakah', 'pilihan'
+        ]);
+        if (!cleanQuery || cleanQuery.length < 3 || genericBlocklist.has(cleanQuery.toLowerCase())) {
+            return null;
+        }
 
         // 1. Query Wikipedia Bahasa Indonesia (Prioritas untuk sejarah, tokoh, & tempat Indonesia)
         const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;

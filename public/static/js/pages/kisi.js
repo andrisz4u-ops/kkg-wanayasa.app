@@ -2579,6 +2579,15 @@ function openChangeImageModal(type, qIdx, data, formData) {
       { key: 's', label: 'Sisi Alas (s)', type: 'number', def: 10 },
       { key: 't', label: 'Tinggi (t)', type: 'number', def: 12 }
     ],
+    jaring_kubus: [
+      { key: 's', label: 'Panjang Rusuk (s)', type: 'number', def: 5 },
+      { key: 'pola', label: 'Pola Jaring-jaring', type: 'select', opts: ['salib', 'tangga', 't'], def: 'salib' }
+    ],
+    jaring_balok: [
+      { key: 'p', label: 'Panjang (p)', type: 'number', def: 6 },
+      { key: 'l', label: 'Lebar (l)', type: 'number', def: 4 },
+      { key: 't', label: 'Tinggi (t)', type: 'number', def: 3 }
+    ],
     persegi_panjang: [
       { key: 'p', label: 'Panjang (p)', type: 'number', def: 12 },
       { key: 'l', label: 'Lebar (l)', type: 'number', def: 8 }
@@ -2591,9 +2600,14 @@ function openChangeImageModal(type, qIdx, data, formData) {
     sudut: [
       { key: 'derajat', label: 'Besar Derajat (°)', type: 'number', def: 60 }
     ],
+    busur_derajat: [
+      { key: 'derajat', label: 'Besar Derajat (°)', type: 'number', def: 60 },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
     pecahan_lingkaran: [
       { key: 'pembagi', label: 'Penyebut (Total)', type: 'number', def: 4 },
-      { key: 'diarsir', label: 'Pembilang (Arsir)', type: 'number', def: 3 }
+      { key: 'diarsir', label: 'Pembilang (Arsir)', type: 'number', def: 3 },
+      { key: 'utuh', label: 'Bagian Utuh (Campuran)', type: 'number', def: 0 }
     ],
     pecahan_persegi: [
       { key: 'kolom', label: 'Jumlah Kolom', type: 'number', def: 4 },
@@ -2622,6 +2636,42 @@ function openChangeImageModal(type, qIdx, data, formData) {
     ],
     metamorfosis: [
       { key: 'pointer', label: 'Fase Daur Hidup', type: 'select', opts: ['kepompong', 'telur', 'ulat', 'kupu-kupu'], def: 'kepompong' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    peta_indonesia: [
+      { key: 'pointer', label: 'Pulau Sasaran', type: 'select', opts: ['jawa', 'sumatra', 'kalimantan', 'sulawesi', 'papua', 'maluku', 'bali_nusra'], def: 'jawa' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    rangkaian_listrik: [
+      { key: 'model', label: 'Model Rangkaian', type: 'select', opts: ['campuran', 'seri', 'paralel'], def: 'campuran' },
+      { key: 'pointer', label: 'Komponen Sasaran', type: 'select', opts: ['L1', 'L2', 'L3', 'S1', 'S2', 'Baterai'], def: 'L1' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    perubahan_wujud: [
+      { key: 'pointer', label: 'Proses Wujud Sasaran', type: 'select', opts: ['1', '2', '3', '4', '5', '6', 'mencair', 'membeku', 'menguap', 'mengembun', 'menyublim', 'mengkristal'], def: '1' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    mistar: [
+      { key: 'start', label: 'Titik Pangkal (cm)', type: 'number', def: 3 },
+      { key: 'end', label: 'Titik Ujung (cm)', type: 'number', def: 8.5 },
+      { key: 'objectType', label: 'Jenis Objek', type: 'select', opts: ['pensil', 'penghapus', 'paku'], def: 'pensil' },
+      { key: 'label', label: 'Label Dimensi', type: 'text', def: 'Panjang = ... cm' }
+    ],
+    tata_surya: [
+      { key: 'pointer', label: 'Planet Sasaran', type: 'select', opts: ['bumi', 'merkurius', 'venus', 'mars', 'yupiter', 'saturnus', 'uranus', 'neptunus'], def: 'bumi' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    magnet: [
+      { key: 'interaksi', label: 'Gaya Interaksi', type: 'select', opts: ['tarik', 'tolak'], def: 'tarik' },
+      { key: 'pointer', label: 'Kutub Sasaran', type: 'select', opts: ['kanan2', 'kiri1'], def: 'kanan2' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    sifat_cahaya: [
+      { key: 'peristiwa', label: 'Peristiwa Cahaya', type: 'select', opts: ['pembiasan', 'pemantulan'], def: 'pembiasan' },
+      { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
+    ],
+    perisai_pancasila: [
+      { key: 'sila', label: 'Sila Pancasila', type: 'select', opts: ['1', '2', '3', '4', '5'], def: '1' },
       { key: 'label', label: 'Huruf Label', type: 'text', def: 'X' }
     ]
   };
@@ -2710,7 +2760,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
         if (!categories[item.category]) categories[item.category] = [];
         categories[item.category].push(item);
       });
-      let html = '<option value="">-- Pilih Template Diagram SVG (41 Pilihan) --</option>';
+      let html = `<option value="">-- Pilih Template Diagram SVG (${res.data.length} Pilihan) --</option>`;
       for (const [cat, items] of Object.entries(categories)) {
         html += `<optgroup label="${cat}">`;
         items.forEach(it => {

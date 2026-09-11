@@ -278,12 +278,13 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
             - Layang-Layang: { "type": "layang_layang", "params": { "d1": 10, "d2": 18, "unit": "cm" } }
             - Segitiga Siku: { "type": "segitiga_siku", "params": { "alas": 6, "tinggi": 8, "miring": 10, "unit": "cm" } }
             - Sudut: { "type": "sudut", "params": { "derajat": 60 } }
-            - Pecahan Lingkaran: { "type": "pecahan_lingkaran", "params": { "pembagi": 4, "diarsir": 3 } }
+            - Busur Derajat: { "type": "busur_derajat", "params": { "derajat": 60, "label": "X" } }
+            - Pecahan Lingkaran: { "type": "pecahan_lingkaran", "params": { "pembagi": 4, "diarsir": 3, "utuh": 0 } }
             - Pecahan Persegi: { "type": "pecahan_persegi", "params": { "kolom": 4, "baris": 2, "diarsir": 3 } }
             - Persegi Panjang: { "type": "persegi_panjang", "params": { "p": 12, "l": 8, "unit": "cm" } }
             - Segitiga Sama Sisi: { "type": "segitiga_sama_sisi", "params": { "s": 10, "unit": "cm" } }
             - Segitiga Sama Kaki: { "type": "segitiga_sama_kaki", "params": { "kaki": 10, "alas": 8, "unit": "cm" } }
-            - Jaring-jaring Kubus: { "type": "jaring_kubus", "params": { "s": 5, "unit": "cm" } }
+            - Jaring-jaring Kubus: { "type": "jaring_kubus", "params": { "s": 5, "unit": "cm", "pola": "salib" } }
             - Jaring-jaring Balok: { "type": "jaring_balok", "params": { "p": 6, "l": 4, "t": 3, "unit": "cm" } }
             - Koordinat Kartesius: { "type": "koordinat", "params": { "titik": [{"x": 3, "y": 4, "label": "P"}, {"x": -2, "y": 3, "label": "Q"}] } }
             - Diagram Venn: { "type": "diagram_venn", "params": { "judul": "Hobi Siswa", "labelA": "Sepak Bola", "labelB": "Basket", "aSaja": 12, "irisan": 5, "bSaja": 8 } }
@@ -337,6 +338,14 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
         - Metamorfosis: { "type": "metamorfosis", "params": { "pointer": "kepompong" (atau telur/ulat/kupu-kupu), "label": "X" } }
         - Bagian Bunga: { "type": "bagian_bunga", "params": { "pointer": "putik" (atau benang sari/mahkota/kelopak/bakal biji), "label": "X" } }
         - Rantai Makanan: { "type": "rantai_makanan", "params": { "pointer": "produsen" (atau konsumen1/konsumen2/konsumen3/pengurai), "label": "X" } }
+        - Peta Indonesia (Tebak Pulau): { "type": "peta_indonesia", "params": { "pointer": "jawa" (atau sumatra/kalimantan/sulawesi/papua/maluku/bali_nusra), "label": "X" } }
+        - Rangkaian Listrik: { "type": "rangkaian_listrik", "params": { "model": "campuran" (atau seri/paralel), "s1": true, "s2": false, "pointer": "L1", "label": "X" } }
+        - Perubahan Wujud Zat: { "type": "perubahan_wujud", "params": { "pointer": "1" (atau 1=mencair, 2=membeku, 3=menguap, 4=mengembun, 5=menyublim, 6=mengkristal), "label": "X" } }
+        - Pengukuran Panjang Mistar: { "type": "mistar", "params": { "start": 3.0, "end": 8.5, "objectType": "pensil" (atau penghapus/paku), "label": "Panjang = ... cm" } }
+        - Tata Surya: { "type": "tata_surya", "params": { "pointer": "bumi" (atau merkurius/venus/mars/yupiter/saturnus/uranus/neptunus), "label": "X" } }
+        - Kutub & Gaya Magnet: { "type": "magnet", "params": { "interaksi": "tarik" (atau tolak), "pointer": "kanan2" (atau kiri1), "label": "X" } }
+        - Sifat Cahaya: { "type": "sifat_cahaya", "params": { "peristiwa": "pembiasan" (atau pemantulan), "pointer": "X", "label": "X" } }
+        - Perisai Pancasila: { "type": "perisai_pancasila", "params": { "sila": 1 (atau 2/3/4/5), "label": "X" } }
       * Untuk flora, fauna, atau objek nyata: kosongkan "visual_stimulus" (set null), dan isi "gambar_keyword" dengan nama entitas Indonesia resmi (contoh: "Kelinci", "Bunga Rafflesia", "Kucing Anggora").`;
 };
 
@@ -346,6 +355,11 @@ export const buildStimulusSignature = (cfg: { type: string; params?: Record<stri
     const p = cfg.params || {};
     let sig = cfg.type;
     if (p.pointer) sig += `:ptr=${p.pointer}`;
+    if (p.model) sig += `:mod=${p.model}`;
+    if (p.sila != null) sig += `:sila=${p.sila}`;
+    if (p.start != null) sig += `:st=${p.start}`;
+    if (p.end != null) sig += `:end=${p.end}`;
+    if (p.objectType) sig += `:obj=${p.objectType}`;
     if (p.r != null) sig += `:r=${p.r}`;
     if (p.d != null) sig += `:d=${p.d}`;
     if (p.p != null) sig += `:p=${p.p}`;
@@ -383,6 +397,10 @@ export const buildStimulusSignature = (cfg: { type: string; params?: Record<stri
     if (p.judul) sig += `:jdl=${p.judul}`;
     if (p.min != null) sig += `:min=${p.min}`;
     if (p.max != null) sig += `:max=${p.max}`;
+    if (p.pola) sig += `:pola=${p.pola}`;
+    if (p.utuh != null) sig += `:utuh=${p.utuh}`;
+    if (p.interaksi) sig += `:int=${p.interaksi}`;
+    if (p.peristiwa) sig += `:prst=${p.peristiwa}`;
     return sig;
 };
 
@@ -523,6 +541,106 @@ export const resolveQuestionVisualStimulus = async (
                     const altSig = `rantai_makanan:ptr=${role}`;
                     if (!usedStimulusSignatures.has(altSig)) {
                         visualCfg = { type: 'rantai_makanan', params: { pointer: role, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'peta_indonesia') {
+                const islands = ['jawa', 'sumatra', 'kalimantan', 'sulawesi', 'papua', 'maluku', 'bali_nusra'];
+                let foundAlt = false;
+                for (const isl of islands) {
+                    const altSig = `peta_indonesia:ptr=${isl}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'peta_indonesia', params: { pointer: isl, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'tata_surya') {
+                const planets = ['bumi', 'mars', 'saturnus', 'yupiter', 'merkurius', 'venus', 'uranus', 'neptunus'];
+                let foundAlt = false;
+                for (const pl of planets) {
+                    const altSig = `tata_surya:ptr=${pl}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'tata_surya', params: { pointer: pl, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'perubahan_wujud') {
+                const processes = ['1', '2', '3', '4', '5', '6'];
+                let foundAlt = false;
+                for (const proc of processes) {
+                    const altSig = `perubahan_wujud:ptr=${proc}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'perubahan_wujud', params: { pointer: proc, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'perisai_pancasila') {
+                const silas = [1, 2, 3, 4, 5];
+                let foundAlt = false;
+                for (const s of silas) {
+                    const altSig = `perisai_pancasila:sila=${s}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'perisai_pancasila', params: { sila: s, label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'rangkaian_listrik') {
+                const models = ['seri', 'paralel', 'campuran'];
+                let foundAlt = false;
+                for (const m of models) {
+                    const altSig = `rangkaian_listrik:mod=${m}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'rangkaian_listrik', params: { model: m, s1: true, s2: false, pointer: 'L1', label: 'X' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'mistar') {
+                const objects = ['pensil', 'penghapus', 'paku'];
+                let foundAlt = false;
+                for (const obj of objects) {
+                    const altSig = `mistar:obj=${obj}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'mistar', params: { start: 2.0, end: 7.5, objectType: obj, label: 'Panjang = ... cm' } };
+                        foundAlt = true;
+                        break;
+                    }
+                }
+                if (!foundAlt) visualCfg = null;
+            } else if (visualCfg.type === 'magnet') {
+                const altInteraksi = visualCfg.params?.interaksi === 'tolak' ? 'tarik' : 'tolak';
+                const altSig = `magnet:int=${altInteraksi}`;
+                if (!usedStimulusSignatures.has(altSig)) {
+                    visualCfg = { type: 'magnet', params: { interaksi: altInteraksi, pointer: 'kanan2', label: 'X' } };
+                } else {
+                    visualCfg = null;
+                }
+            } else if (visualCfg.type === 'sifat_cahaya') {
+                const altPeristiwa = visualCfg.params?.peristiwa === 'pemantulan' ? 'pembiasan' : 'pemantulan';
+                const altSig = `sifat_cahaya:prst=${altPeristiwa}`;
+                if (!usedStimulusSignatures.has(altSig)) {
+                    visualCfg = { type: 'sifat_cahaya', params: { peristiwa: altPeristiwa, pointer: 'X', label: 'X' } };
+                } else {
+                    visualCfg = null;
+                }
+            } else if (visualCfg.type === 'busur_derajat') {
+                const altDegs = [30, 45, 60, 90, 120, 135];
+                let foundAlt = false;
+                for (const deg of altDegs) {
+                    const altSig = `busur_derajat:deg=${deg}`;
+                    if (!usedStimulusSignatures.has(altSig)) {
+                        visualCfg = { type: 'busur_derajat', params: { derajat: deg, label: 'X' } };
                         foundAlt = true;
                         break;
                     }

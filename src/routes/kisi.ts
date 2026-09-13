@@ -1108,6 +1108,180 @@ async function saveAssessmentTelemetryAndBankSoal(
     }
 }
 
+// Pipeline 1: Deduplikasi, Image Scoring & Stimulus Enrichment untuk Soal Pilihan Ganda
+export async function enrichAndNormalizePG(
+    pgArray: any[],
+    options: {
+        mataPelajaran: string;
+        topik: string;
+        isGambarEnabled: boolean;
+        unsplash: UnsplashService | null;
+        exactImageCount: number;
+    }
+): Promise<any[]> {
+    const { mataPelajaran, topik, isGambarEnabled, unsplash, exactImageCount } = options;
+
+    // Deduplication: hapus soal yang teks awalnya sama (normalize lowercase, 100 char pertama)
+    const seenSoal = new Set<string>();
+    const deduped = pgArray.filter((q: any) => {
+        const normalized = cleanPromptDebris(String(q.soal || ''))
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 100);
+        if (seenSoal.has(normalized)) return false;
+        seenSoal.add(normalized);
+        return true;
+    });
+
+    // Renumber setelah dedup
+    deduped.forEach((q: any, i: number) => { q.no = i + 1; });
+
+    // Enforce exact image count jika visual stimulus aktif
+    if (isGambarEnabled && unsplash && exactImageCount > 0 && deduped.length > 0) {
+        const scoredQuestions = deduped.map((q: any, index: number) => {
+            let score = 0;
+            const soalText = String(q.soal || '').toLowerCase();
+            if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
+            if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik')) score += 5;
+            if (soalText.includes('perhatikan') || soalText.includes('berikut')) score += 3;
+            return { q, index, score };
+        });
+
+        scoredQuestions.sort((a: any, b: any) => b.score - a.score);
+        const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
+        const usedStimulusSignatures = new Set<string>();
+
+        for (const q of deduped) {
+            if (targetSelected.has(q)) {
+                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
+            } else {
+                delete q.gambar;
+                delete q.gambar_keyword;
+                delete q.gambar_prompt_en;
+                delete q.visual_stimulus;
+            }
+
+            if (!q.gambar && !q.visual_stimulus) {
+                q.soal = q.soal
+                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                if (q.soal.length > 0) {
+                    q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+                }
+            }
+            q.soal = normalizeSoalMarkdown(q.soal);
+        }
+    } else {
+        for (const q of deduped) {
+            delete q.gambar;
+            delete q.gambar_keyword;
+            delete q.gambar_prompt_en;
+            delete q.visual_stimulus;
+            q.soal = q.soal
+                .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
+                .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+            if (q.soal.length > 0) {
+                q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
+            }
+            q.soal = normalizeSoalMarkdown(q.soal);
+        }
+    }
+
+    return deduped;
+}
+
+// Pipeline 2: Normalisasi Soal Isian (Crossword / Menjodohkan / Isian Singkat) dan Soal Uraian
+export function processIsianAndUraian(
+    finalData: any,
+    result: any,
+    options: {
+        totalPG: number;
+        totalIsian: number;
+        totalUraian: number;
+        isianType?: string;
+    }
+) {
+    const { totalPG, totalIsian, totalUraian, isianType } = options;
+    const startNoIsian = totalPG + 1;
+
+    // Handle Isian
+    if (totalIsian > 0 && result?.isian) {
+        finalData.isian = result.isian;
+        finalData.isian.type = isianType || 'Standard';
+
+        if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
+            finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
+            finalData.isian.data.forEach((q: any) => {
+                delete q.gambar;
+                delete q.gambar_keyword;
+                q.soal = normalizeSoalMarkdown(q.soal);
+            });
+        }
+
+        if (isianType === 'Crossword' && finalData.isian.data) {
+            const words = finalData.isian.data.map((q: any) => String(q.kunci));
+            const cw = generateCrossword(words, startNoIsian);
+            if (cw.success) {
+                finalData.isian.crossword = cw;
+                for (const p of cw.placements) {
+                    if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
+                        finalData.isian.data[p.originalIndex].no = p.number;
+                    }
+                }
+            }
+        }
+    } else {
+        finalData.isian = null;
+    }
+
+    // Handle Uraian
+    if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
+        finalData.uraian = result.uraian.slice(0, totalUraian);
+        finalData.uraian.forEach((q: any) => {
+            delete q.gambar;
+            delete q.gambar_keyword;
+            q.soal = normalizeSoalMarkdown(q.soal);
+        });
+
+        if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
+            const maxIsianNo = Math.max(...finalData.isian.data.map((x: any) => x.no || 0));
+            finalData.uraian.forEach((q: any, i: number) => {
+                q.no = maxIsianNo + 1 + i;
+            });
+        }
+    } else {
+        finalData.uraian = [];
+    }
+}
+
+// Pipeline 3: Finalisasi Matriks Kisi-Kisi & Simpan Telemetri/Bank Soal
+export async function finalizeAssessmentPackage(
+    finalData: any,
+    options: {
+        resolvedCP: string;
+        topik: string;
+        isianType?: string;
+        totalPG: number;
+        db?: D1Database;
+        user?: any;
+        bodyConfig?: any;
+        preferredSlug?: string | null;
+    }
+) {
+    const { resolvedCP, topik, isianType, totalPG, db, user, bodyConfig, preferredSlug } = options;
+
+    // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
+    normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
+
+    // Telemetri & Bank Soal Persistence (non-blocking)
+    if (db && bodyConfig) {
+        await saveAssessmentTelemetryAndBankSoal(db, user, bodyConfig, finalData, preferredSlug || null);
+    }
+
+    return finalData;
+}
+
 // Generate Asesmen (Soal) via AI (Standar)
 kisi.post('/generate', async (c) => {
     try {
@@ -1176,81 +1350,14 @@ kisi.post('/generate', async (c) => {
                 }
             }
 
-            // Deduplication: hapus soal yang teks awalnya sama (normalize lowercase, 100 char pertama)
-            const seenSoal = new Set<string>();
-            finalData.pg = finalData.pg.filter((q: any) => {
-                const normalized = cleanPromptDebris(String(q.soal || ''))
-                    .toLowerCase()
-                    .replace(/\s+/g, ' ')
-                    .trim()
-                    .substring(0, 100);
-                if (seenSoal.has(normalized)) return false;
-                seenSoal.add(normalized);
-                return true;
+            // Jalankan pipeline dedup, image scoring, & stimulus enrichment
+            finalData.pg = await enrichAndNormalizePG(finalData.pg, {
+                mataPelajaran,
+                topik,
+                isGambarEnabled: effectiveGambarEnabled,
+                unsplash,
+                exactImageCount
             });
-            // Renumber setelah dedup
-            finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
-
-            // ENFORCE EXACT IMAGE COUNT: Kunci jumlah soal bergambar TEPAT sesuai kuota (misal 2 untuk 10 soal, 3 untuk 15 soal)
-            if (effectiveGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
-                // Beri skor pada setiap butir soal untuk menentukan butir mana yang paling tepat bergambar
-                const scoredQuestions = finalData.pg.map((q: any, index: number) => {
-                    let score = 0;
-                    const soalText = String(q.soal || '').toLowerCase();
-                    if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
-                    if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik')) score += 5;
-                    if (soalText.includes('perhatikan') || soalText.includes('berikut')) score += 3;
-                    return { q, index, score };
-                });
-
-                // Urutkan berdasarkan relevansi visual tertinggi
-                scoredQuestions.sort((a: any, b: any) => b.score - a.score);
-
-                // Ambil TEPAT sebanyak exactImageCount butir soal
-                const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
-
-                // Pasang gambar HANYA pada targetSelected, dan hapus gambar dari butir soal lainnya
-                // Gunakan usedStimulusSignatures untuk Diversity Guard agar tidak pernah ada 2 gambar kembar
-                const usedStimulusSignatures = new Set<string>();
-                for (const q of finalData.pg) {
-                    if (targetSelected.has(q)) {
-                        await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
-                    } else {
-                        // Bersihkan field gambar agar soal lain 100% bebas gambar
-                        delete q.gambar;
-                        delete q.gambar_keyword;
-                        delete q.gambar_prompt_en;
-                        delete q.visual_stimulus;
-                    }
-
-                    // Jika butir soal tidak punya gambar valid, bersihkan rujukan gambar semu
-                    if (!q.gambar && !q.visual_stimulus) {
-                        q.soal = q.soal
-                            .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                            .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
-                        if (q.soal.length > 0) {
-                            q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                        }
-                    }
-
-                    q.soal = normalizeSoalMarkdown(q.soal);
-                }
-            } else {
-                // Jika useGambar nonaktif, pastikan semua soal bersih dari gambar dan placeholder
-                for (const q of finalData.pg) {
-                    delete q.gambar;
-                    delete q.gambar_keyword;
-                    delete q.gambar_prompt_en;
-                    delete q.visual_stimulus;
-                    q.soal = q.soal
-                        .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                        .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
-                    if (q.soal.length > 0) {
-                        q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                    }
-                    q.soal = normalizeSoalMarkdown(q.soal);
-                }
-            }
         }
 
         // Generate Isian + Uraian
@@ -1260,68 +1367,25 @@ kisi.post('/generate', async (c) => {
             const result = await ai.generateJSON(prompt, preferredSlug);
             if (result?._ai_meta) finalData._meta = result._ai_meta;
 
-            // Handle Isian (hanya jika totalIsian > 0)
-            if (totalIsian > 0 && result?.isian) {
-                finalData.isian = result.isian;
-                finalData.isian.type = isianType || 'Standard';
-
-                // Pastikan tidak ada field gambar yang bocor dari AI ke soal isian
-                if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
-                    finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
-                    finalData.isian.data.forEach((q: any) => {
-                        delete q.gambar;
-                        delete q.gambar_keyword;
-                        q.soal = normalizeSoalMarkdown(q.soal);
-                    });
-                }
-
-                if (isianType === 'Crossword' && finalData.isian.data) {
-                    const words = finalData.isian.data.map((q: any) => String(q.kunci));
-                    const cw = generateCrossword(words, startNoIsian);
-                    if (cw.success) {
-                        finalData.isian.crossword = cw;
-                        // Sync isian data numbers with crossword placement numbers
-                        // so the answer key matches the grid numbering
-                        for (const p of cw.placements) {
-                            if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
-                                finalData.isian.data[p.originalIndex].no = p.number;
-                            }
-                        }
-                    }
-                }
-            } else {
-                finalData.isian = null;
-            }
-
-            // Handle Uraian (hanya jika totalUraian > 0)
-            if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
-                finalData.uraian = result.uraian.slice(0, totalUraian);
-                // Pastikan tidak ada field gambar yang bocor dari AI ke soal uraian
-                finalData.uraian.forEach((q: any) => {
-                    delete q.gambar;
-                    delete q.gambar_keyword;
-                    q.soal = normalizeSoalMarkdown(q.soal);
-                });
-
-                // Renumber uraian to continue from the last isian number
-                // (important for Crossword where isian numbers come from placement)
-                if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
-                    const maxIsianNo = Math.max(...finalData.isian.data.map((q: any) => q.no || 0));
-                    finalData.uraian.forEach((q: any, i: number) => {
-                        q.no = maxIsianNo + 1 + i;
-                    });
-                }
-            } else {
-                finalData.uraian = [];
-            }
+            processIsianAndUraian(finalData, result, {
+                totalPG,
+                totalIsian,
+                totalUraian,
+                isianType
+            });
         }
 
-        // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
-        // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
-        normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
-
-        // Telemetry & Bank Soal Persistence (non-blocking)
-        await saveAssessmentTelemetryAndBankSoal(c.env.DB, user, body, finalData, preferredSlug || null);
+        // Finalisasi paket asesmen (Normalisasi matriks kisi-kisi, Telemetri, & Bank Soal)
+        await finalizeAssessmentPackage(finalData, {
+            resolvedCP,
+            topik,
+            isianType: isianType || 'Standard',
+            totalPG,
+            db: c.env.DB,
+            user,
+            bodyConfig: body,
+            preferredSlug: preferredSlug || null
+        });
 
         return successResponse(c, finalData);
 
@@ -1433,71 +1497,14 @@ kisi.post('/generate-stream', async (c) => {
                         }
                     }
 
-                    // Deduplication
-                    const seenSoal = new Set<string>();
-                    finalData.pg = finalData.pg.filter((q: any) => {
-                        const normalized = cleanPromptDebris(String(q.soal || ''))
-                            .toLowerCase()
-                            .replace(/\s+/g, ' ')
-                            .trim()
-                            .substring(0, 100);
-                        if (seenSoal.has(normalized)) return false;
-                        seenSoal.add(normalized);
-                        return true;
+                    // Deduplikasi, image scoring & visual stimulus enrichment via pipeline terpadu
+                    finalData.pg = await enrichAndNormalizePG(finalData.pg, {
+                        mataPelajaran,
+                        topik,
+                        isGambarEnabled: effectiveGambarEnabled,
+                        unsplash,
+                        exactImageCount
                     });
-                    finalData.pg.forEach((q: any, i: number) => { q.no = i + 1; });
-
-                    // Image enrichment
-                    if (effectiveGambarEnabled && unsplash && exactImageCount > 0 && finalData.pg.length > 0) {
-                        const scoredQuestions = finalData.pg.map((q: any, index: number) => {
-                            let score = 0;
-                            const soalText = String(q.soal || '').toLowerCase();
-                            if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
-                            if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik')) score += 5;
-                            if (soalText.includes('perhatikan') || soalText.includes('berikut')) score += 3;
-                            return { q, index, score };
-                        });
-                        scoredQuestions.sort((a: any, b: any) => b.score - a.score);
-                        const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
-                        const usedStimulusSignatures = new Set<string>();
-
-                        for (const q of finalData.pg) {
-                            if (targetSelected.has(q)) {
-                                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
-                            } else {
-                                delete q.gambar;
-                                delete q.gambar_keyword;
-                                delete q.gambar_prompt_en;
-                                delete q.visual_stimulus;
-                            }
-
-                            // Jika butir soal tidak punya gambar valid, bersihkan rujukan gambar semu
-                            if (!q.gambar && !q.visual_stimulus) {
-                                q.soal = q.soal
-                                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
-                                if (q.soal.length > 0) {
-                                    q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                                }
-                            }
-
-                            q.soal = normalizeSoalMarkdown(q.soal);
-                        }
-                    } else {
-                        for (const q of finalData.pg) {
-                            delete q.gambar;
-                            delete q.gambar_keyword;
-                            delete q.gambar_prompt_en;
-                            delete q.visual_stimulus;
-                            q.soal = q.soal
-                                .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                                .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
-                            if (q.soal.length > 0) {
-                                q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                            }
-                            q.soal = normalizeSoalMarkdown(q.soal);
-                        }
-                    }
                 }
 
                 // Step 3: Generate Isian + Uraian
@@ -1519,52 +1526,12 @@ kisi.post('/generate-stream', async (c) => {
                         const result = await ai.generateJSONStream(prompt, preferredSlug, onToken);
                         if (result?._ai_meta) finalData._meta = result._ai_meta;
 
-                        if (totalIsian > 0 && result?.isian) {
-                            finalData.isian = result.isian;
-                            finalData.isian.type = isianType || 'Standard';
-
-                            if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
-                                finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
-                                finalData.isian.data.forEach((q: any) => {
-                                    delete q.gambar;
-                                    delete q.gambar_keyword;
-                                    q.soal = normalizeSoalMarkdown(q.soal);
-                                });
-                            }
-
-                            if (isianType === 'Crossword' && finalData.isian.data) {
-                                const words = finalData.isian.data.map((q: any) => String(q.kunci));
-                                const cw = generateCrossword(words, startNoIsian);
-                                if (cw.success) {
-                                    finalData.isian.crossword = cw;
-                                    for (const p of cw.placements) {
-                                        if (p.originalIndex != null && finalData.isian.data[p.originalIndex]) {
-                                            finalData.isian.data[p.originalIndex].no = p.number;
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            finalData.isian = null;
-                        }
-
-                        if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
-                            finalData.uraian = result.uraian.slice(0, totalUraian);
-                            finalData.uraian.forEach((q: any) => {
-                                delete q.gambar;
-                                delete q.gambar_keyword;
-                                q.soal = normalizeSoalMarkdown(q.soal);
-                            });
-
-                            if (finalData.isian && finalData.isian.data && finalData.isian.data.length > 0) {
-                                const maxIsianNo = Math.max(...finalData.isian.data.map((x: any) => x.no || 0));
-                                finalData.uraian.forEach((q: any, i: number) => {
-                                    q.no = maxIsianNo + 1 + i;
-                                });
-                            }
-                        } else {
-                            finalData.uraian = [];
-                        }
+                        processIsianAndUraian(finalData, result, {
+                            totalPG,
+                            totalIsian,
+                            totalUraian,
+                            isianType
+                        });
                     } catch (step3Err: any) {
                         // Step 3 gagal (biasanya karena reasoning model menghabiskan token budget).
                         // Jika Step 2 (PG) sudah berhasil, JANGAN batalkan seluruh proses.
@@ -1591,11 +1558,17 @@ kisi.post('/generate-stream', async (c) => {
                     })
                 });
 
-                // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
-                normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
-
-                // Telemetry & Bank Soal Persistence (non-blocking)
-                await saveAssessmentTelemetryAndBankSoal(c.env.DB, user, body, finalData, preferredSlug || null);
+                // Finalisasi paket asesmen (Normalisasi matriks kisi-kisi, Telemetri, & Bank Soal)
+                await finalizeAssessmentPackage(finalData, {
+                    resolvedCP,
+                    topik,
+                    isianType: isianType || 'Standard',
+                    totalPG,
+                    db: c.env.DB,
+                    user,
+                    bodyConfig: body,
+                    preferredSlug: preferredSlug || null
+                });
 
                 // Step 5: Selesai & Kirimkan Payload Final
                 await stream.writeSSE({

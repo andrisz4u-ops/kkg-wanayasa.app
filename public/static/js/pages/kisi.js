@@ -31,12 +31,17 @@ export async function renderKisi() {
               <p class="asesmen-subtitle">NEURAL QUESTION ARCHITECT A4EDU</p>
             </div>
           </div>
-          <button type="button" id="btn-kisi-archive" class="px-5 py-2.5 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
-            <i class="fas fa-folder-open text-amber-500"></i> Riwayat Lokal
-          </button>
-          <button type="button" id="btn-bank-soal" class="px-5 py-2.5 rounded-2xl bg-violet-50 dark:bg-violet-950/40 text-violet-800 dark:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm mt-3 sm:mt-0 cursor-pointer">
-            <i class="fas fa-database text-violet-500"></i> Bank Soal Kolaboratif <span id="bank-soal-count-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-violet-600 text-white font-bold ml-1"></span>
-          </button>
+          <div class="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
+            <button type="button" id="btn-visual-gallery" class="px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer" title="Jelajahi 200 pustaka template visual SVG">
+              <i class="fas fa-shapes text-emerald-500"></i> Galeri Visual (200 SVG)
+            </button>
+            <button type="button" id="btn-kisi-archive" class="px-4 py-2.5 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <i class="fas fa-folder-open text-amber-500"></i> Riwayat Lokal
+            </button>
+            <button type="button" id="btn-bank-soal" class="px-4 py-2.5 rounded-2xl bg-violet-50 dark:bg-violet-950/40 text-violet-800 dark:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <i class="fas fa-database text-violet-500"></i> Bank Soal Kolaboratif <span id="bank-soal-count-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-violet-600 text-white font-bold ml-1"></span>
+            </button>
+          </div>
         </div>
 
         <!-- 3-Column Form -->
@@ -114,7 +119,12 @@ export async function renderKisi() {
               <option>AKPK</option>
             </select>
 
-            <label class="asesmen-label">RUANG LINGKUP / TOPIK</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="asesmen-label mb-0">RUANG LINGKUP / TOPIK</label>
+              <button type="button" id="btn-quick-visual-catalog" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer transition-colors" title="Pilih stimulus visual dari katalog 200 template SVG">
+                <i class="fas fa-shapes text-emerald-500"></i> Pilih Visual SVG
+              </button>
+            </div>
             <textarea name="topik" rows="3" placeholder="Tuliskan topik bahasan di sini..." class="asesmen-input asesmen-textarea" required></textarea>
 
             <div class="flex items-center justify-between mb-1 mt-3">
@@ -1448,6 +1458,10 @@ export function initKisi() {
       }
     });
   };
+
+  // Visual Stimulus Gallery Modal (200 SVG Templates)
+  document.getElementById('btn-visual-gallery')?.addEventListener('click', openVisualCatalogModal);
+  document.getElementById('btn-quick-visual-catalog')?.addEventListener('click', openVisualCatalogModal);
 
   document.getElementById('btn-kisi-archive')?.addEventListener('click', handleOpenKisiArchive);
   document.getElementById('btn-kisi-history')?.addEventListener('click', handleOpenKisiArchive);
@@ -4077,3 +4091,566 @@ function openBankSoalRatingModal(soalId, existingReview) {
     }
   });
 }
+
+/* =========================================================================
+   VISUAL STIMULUS GALLERY (200 SVG TEMPLATES) MODAL & PREVIEW CONTROLLER
+   ========================================================================= */
+
+let _cachedVisualCatalog = null;
+
+const VC_CATEGORIES = [
+  { id: 'all', name: 'Semua', icon: 'fa-layer-group' },
+  { id: 'Geometri 2D', name: 'Geometri 2D', icon: 'fa-shapes' },
+  { id: 'Geometri 3D', name: 'Geometri 3D', icon: 'fa-cube' },
+  { id: 'Pecahan', name: 'Pecahan', icon: 'fa-chart-pie' },
+  { id: 'Matematika Bilangan', name: 'Matematika Bilangan', icon: 'fa-calculator' },
+  { id: 'Statistik', name: 'Statistik', icon: 'fa-chart-bar' },
+  { id: 'Pengukuran', name: 'Pengukuran', icon: 'fa-ruler-combined' },
+  { id: 'Sains / IPAS', name: 'Sains / IPAS', icon: 'fa-flask' },
+  { id: 'Literasi & Sosial', name: 'Literasi & Sosial', icon: 'fa-earth-asia' },
+  { id: 'Koding & Komputasi', name: 'Koding & Komputasi', icon: 'fa-laptop-code' },
+  { id: 'PJOK & Kesehatan', name: 'PJOK & Kesehatan', icon: 'fa-heart-pulse' },
+  { id: 'Bahasa', name: 'Bahasa', icon: 'fa-book-open' },
+  { id: 'Seni & Budaya (SBdP)', name: 'Seni & Budaya', icon: 'fa-palette' },
+  { id: 'Pancasila & Kewarganegaraan', name: 'Pancasila & PKn', icon: 'fa-shield-halved' }
+];
+
+function getVcCategoryBadge(category) {
+  switch (category) {
+    case 'Geometri 2D': return 'bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border-sky-300/60 dark:border-sky-800';
+    case 'Geometri 3D': return 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/60 dark:border-indigo-800';
+    case 'Pecahan': return 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/60 dark:border-amber-800';
+    case 'Matematika Bilangan': return 'bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-300 border-orange-300/60 dark:border-orange-800';
+    case 'Statistik': return 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 border-cyan-300/60 dark:border-cyan-800';
+    case 'Pengukuran': return 'bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-300/60 dark:border-teal-800';
+    case 'Sains / IPAS': return 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/60 dark:border-emerald-800';
+    case 'Literasi & Sosial': return 'bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300 border-yellow-300/60 dark:border-yellow-800';
+    case 'Koding & Komputasi': return 'bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border-violet-300/60 dark:border-violet-800';
+    case 'PJOK & Kesehatan': return 'bg-lime-100 dark:bg-lime-950/60 text-lime-800 dark:text-lime-300 border-lime-300/60 dark:border-lime-800';
+    case 'Bahasa': return 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300/60 dark:border-purple-800';
+    case 'Seni & Budaya (SBdP)': return 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/60 dark:border-rose-800';
+    case 'Pancasila & Kewarganegaraan': return 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-300/60 dark:border-red-800';
+    default: return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300/60';
+  }
+}
+
+export async function openVisualCatalogModal() {
+  // Remove stale modal if present
+  const existing = document.getElementById('visual-catalog-modal-root');
+  if (existing) existing.remove();
+
+  const root = document.createElement('div');
+  root.id = 'visual-catalog-modal-root';
+  root.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in';
+
+  root.innerHTML = `
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-md" id="vc-modal-backdrop"></div>
+    <div class="bg-white dark:bg-slate-900 w-full max-w-6xl xl:max-w-7xl h-[92vh] max-h-[95vh] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 relative z-10 flex flex-col overflow-hidden animate-scale-up">
+      <!-- Header -->
+      <div class="px-6 py-4 sm:px-8 sm:py-4.5 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white flex items-center justify-between border-b border-emerald-800/40 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shadow-inner">
+            <i class="fas fa-shapes text-lg"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-base sm:text-lg text-white font-display">Katalog Stimulus Visual Edukasi</h3>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">200 SVG DINAMIS</span>
+            </div>
+            <p class="text-xs text-emerald-200/80" id="vc-header-subtitle">Pustaka stimulus visual cerdas untuk Matematika, Sains/IPAS, Seni, Bahasa, dan Komputasi</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="vc-modal-refresh" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Segarkan pustaka katalog">
+            <i class="fas fa-rotate text-xs"></i>
+          </button>
+          <button id="vc-modal-close" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Tutup">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Category Toolbar -->
+      <div class="p-4 sm:px-6 sm:py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3 shrink-0">
+        <!-- Row 1: Search & Counter -->
+        <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+          <div class="relative flex-1">
+            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="vc-search-input" placeholder="Cari template visual (misal: fotosintesis, jaring kubus, pecahan, rantai makanan, jangka sorong, aksara)..." class="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+            <button id="vc-clear-search" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="flex items-center gap-2 justify-between sm:justify-end text-xs text-slate-500 dark:text-slate-400">
+            <span>Menampilkan <strong id="vc-count-visible" class="text-emerald-600 dark:text-emerald-400 font-bold">0</strong> dari <strong id="vc-count-total">200</strong> template</span>
+          </div>
+        </div>
+
+        <!-- Row 2: Category Filter Pills -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none text-xs" id="vc-category-pills">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+
+      <!-- Card Grid Container -->
+      <div id="vc-grid-container" class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/40 dark:bg-slate-900/40">
+        <div id="vc-grid-loading" class="py-20 text-center text-slate-400">
+          <i class="fas fa-circle-notch fa-spin text-3xl text-emerald-500 mb-3"></i>
+          <p class="text-sm font-medium">Memuat pustaka 200 template visual SVG...</p>
+        </div>
+        <div id="vc-items-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <!-- Injected cards -->
+        </div>
+        <div id="vc-empty-state" class="hidden py-16 text-center text-slate-400">
+          <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mx-auto flex items-center justify-center text-slate-400 mb-3">
+            <i class="fas fa-search text-2xl"></i>
+          </div>
+          <h4 class="font-bold text-slate-700 dark:text-slate-300 text-sm mb-1">Tidak Ada Template yang Cocok</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">Coba ubah kata kunci pencarian atau pilih kategori lain.</p>
+          <button id="vc-reset-filters-btn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer">
+            <i class="fas fa-rotate-left mr-1.5"></i>Reset Filter
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer Note & Quick Action -->
+      <div class="px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-lightbulb text-amber-500 text-sm"></i>
+          <span><strong>Tips Praktis:</strong> Klik <strong>"Sisipkan"</strong> untuk langsung menambahkan tag stimulus ke topik asesmen. AI akan otomatis menyematkan diagram tersebut ke dalam butir soal.</span>
+        </div>
+        <button id="vc-modal-close-bottom" class="px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer">
+          Tutup
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(root);
+
+  let activeCategory = 'all';
+  let searchQuery = '';
+
+  const closeModal = () => {
+    window.removeEventListener('keydown', handleKeyEsc);
+    root.remove();
+  };
+
+  const handleKeyEsc = (e) => {
+    if (e.key === 'Escape') {
+      const preview = document.getElementById('vc-preview-modal-root');
+      if (preview) {
+        preview.remove();
+      } else {
+        closeModal();
+      }
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyEsc);
+  document.getElementById('vc-modal-close')?.addEventListener('click', closeModal);
+  document.getElementById('vc-modal-close-bottom')?.addEventListener('click', closeModal);
+  document.getElementById('vc-modal-backdrop')?.addEventListener('click', closeModal);
+
+  // Load catalog data
+  async function loadCatalog(forceRefresh = false) {
+    const loadingEl = document.getElementById('vc-grid-loading');
+    const gridEl = document.getElementById('vc-items-grid');
+    const emptyEl = document.getElementById('vc-empty-state');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (gridEl) gridEl.classList.add('hidden');
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    try {
+      if (!_cachedVisualCatalog || forceRefresh) {
+        const resp = await api('/kisi/visual-catalog');
+        if (resp && resp.success && Array.isArray(resp.data)) {
+          _cachedVisualCatalog = resp.data;
+        } else {
+          throw new Error('Format data katalog tidak sesuai');
+        }
+      }
+
+      renderCategoryPills();
+      filterAndRenderGrid();
+    } catch (e) {
+      if (loadingEl) {
+        loadingEl.innerHTML = `
+          <div class="text-rose-500 dark:text-rose-400">
+            <i class="fas fa-triangle-exclamation text-3xl mb-2"></i>
+            <p class="text-sm font-bold">Gagal memuat katalog stimulus visual: ${escBs(e.message)}</p>
+            <button id="vc-retry-load" class="mt-3 px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold cursor-pointer">Coba Lagi</button>
+          </div>
+        `;
+        document.getElementById('vc-retry-load')?.addEventListener('click', () => loadCatalog(true));
+      }
+    }
+  }
+
+  document.getElementById('vc-modal-refresh')?.addEventListener('click', () => {
+    showToast('Memperbarui katalog visual...', 'info');
+    loadCatalog(true);
+  });
+
+  function renderCategoryPills() {
+    const pillsContainer = document.getElementById('vc-category-pills');
+    if (!pillsContainer || !_cachedVisualCatalog) return;
+
+    // Count templates per category
+    const catCounts = { all: _cachedVisualCatalog.length };
+    _cachedVisualCatalog.forEach(item => {
+      const cat = item.category || 'Lainnya';
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+    });
+
+    const totalCountEl = document.getElementById('vc-count-total');
+    if (totalCountEl) totalCountEl.textContent = _cachedVisualCatalog.length;
+
+    pillsContainer.innerHTML = VC_CATEGORIES.map(cat => {
+      const count = catCounts[cat.id] || 0;
+      const isActive = activeCategory === cat.id;
+      return `
+        <button type="button" class="vc-cat-btn px-3 py-1.5 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none ${isActive ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-slate-700/60'}" data-category="${escBs(cat.id)}">
+          <i class="fas ${cat.icon} text-[11px] ${isActive ? 'text-white' : 'text-emerald-500'}"></i>
+          <span>${escBs(cat.name)}</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-emerald-700/80 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}">${count}</span>
+        </button>
+      `;
+    }).join('');
+
+    pillsContainer.querySelectorAll('.vc-cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.dataset.category || 'all';
+        renderCategoryPills();
+        filterAndRenderGrid();
+      });
+    });
+  }
+
+  function filterAndRenderGrid() {
+    if (!_cachedVisualCatalog) return;
+
+    const loadingEl = document.getElementById('vc-grid-loading');
+    const gridEl = document.getElementById('vc-items-grid');
+    const emptyEl = document.getElementById('vc-empty-state');
+    const countVisibleEl = document.getElementById('vc-count-visible');
+
+    if (loadingEl) loadingEl.classList.add('hidden');
+
+    const q = searchQuery.toLowerCase().trim();
+    const filtered = _cachedVisualCatalog.filter(item => {
+      const matchCat = (activeCategory === 'all' || item.category === activeCategory);
+      if (!matchCat) return false;
+      if (!q) return true;
+      const inName = (item.name || '').toLowerCase().includes(q);
+      const inId = (item.id || '').toLowerCase().includes(q);
+      const inDesc = (item.description || '').toLowerCase().includes(q);
+      const inCat = (item.category || '').toLowerCase().includes(q);
+      return inName || inId || inDesc || inCat;
+    });
+
+    if (countVisibleEl) countVisibleEl.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+      if (gridEl) gridEl.classList.add('hidden');
+      if (emptyEl) emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (gridEl) {
+      gridEl.classList.remove('hidden');
+      gridEl.innerHTML = filtered.map(item => {
+        const badgeClass = getVcCategoryBadge(item.category);
+        const sampleChips = Object.entries(item.sampleParams || {})
+          .slice(0, 3)
+          .map(([k, v]) => {
+            let valStr = typeof v === 'object' ? '...' : String(v);
+            if (valStr.length > 9) valStr = valStr.substring(0, 9) + '..';
+            return `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-mono">${escBs(k)}:${escBs(valStr)}</span>`;
+          })
+          .join(' ');
+
+        return `
+          <div class="bg-white dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700/60 shadow-xs hover:shadow-lg hover:border-emerald-500/40 transition-all flex flex-col justify-between group">
+            <div>
+              <div class="flex items-center justify-between gap-1.5 mb-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">
+                  ${escBs(item.category)}
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 font-medium truncate max-w-[120px]" title="${escBs(item.id)}">
+                  ${escBs(item.id)}
+                </span>
+              </div>
+              <h4 class="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                ${escBs(item.name)}
+              </h4>
+              <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1 mb-2.5 leading-relaxed" title="${escBs(item.description)}">
+                ${escBs(item.description)}
+              </p>
+              <div class="flex flex-wrap gap-1 mb-3">
+                ${sampleChips || '<span class="text-[10px] text-slate-400 italic">Parameter otomatis</span>'}
+              </div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-1.5">
+              <button type="button" class="btn-vc-preview flex-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700/70 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer" data-id="${escBs(item.id)}">
+                <i class="fas fa-eye text-[11px] text-emerald-500"></i> Pratinjau
+              </button>
+              <button type="button" class="btn-vc-insert flex-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" data-id="${escBs(item.id)}">
+                <i class="fas fa-plus-circle text-[11px]"></i> Sisipkan
+              </button>
+              <button type="button" class="btn-vc-copy w-8 h-8 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs flex items-center justify-center transition-all cursor-pointer" title="Salin Tag Stimulus" data-id="${escBs(item.id)}">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Card action event handlers
+      gridEl.querySelectorAll('.btn-vc-preview').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const item = _cachedVisualCatalog.find(x => x.id === id);
+          if (item) openVisualPreviewModal(item);
+        });
+      });
+
+      gridEl.querySelectorAll('.btn-vc-insert').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const item = _cachedVisualCatalog.find(x => x.id === id);
+          if (item) insertVisualStimulusToForm(item);
+        });
+      });
+
+      gridEl.querySelectorAll('.btn-vc-copy').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const item = _cachedVisualCatalog.find(x => x.id === id);
+          if (item) {
+            const tag = `[Stimulus: ${item.name} (${item.id})]`;
+            navigator.clipboard.writeText(tag).then(() => {
+              showToast(`Tag stimulus disalin: ${tag}`, 'success');
+            }).catch(() => {
+              showToast(`Gagal menyalin: ${tag}`, 'error');
+            });
+          }
+        });
+      });
+    }
+  }
+
+  // Search input handler
+  const searchInput = document.getElementById('vc-search-input');
+  const clearSearchBtn = document.getElementById('vc-clear-search');
+
+  searchInput?.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    if (clearSearchBtn) {
+      if (searchQuery) clearSearchBtn.classList.remove('hidden');
+      else clearSearchBtn.classList.add('hidden');
+    }
+    filterAndRenderGrid();
+  });
+
+  clearSearchBtn?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    searchQuery = '';
+    clearSearchBtn.classList.add('hidden');
+    filterAndRenderGrid();
+    searchInput?.focus();
+  });
+
+  document.getElementById('vc-reset-filters-btn')?.addEventListener('click', () => {
+    activeCategory = 'all';
+    searchQuery = '';
+    if (searchInput) searchInput.value = '';
+    if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+    renderCategoryPills();
+    filterAndRenderGrid();
+  });
+
+  // Start load
+  loadCatalog();
+}
+
+/**
+ * Preview Modal for individual SVG visual stimulus
+ */
+export async function openVisualPreviewModal(item) {
+  const existing = document.getElementById('vc-preview-modal-root');
+  if (existing) existing.remove();
+
+  const previewRoot = document.createElement('div');
+  previewRoot.id = 'vc-preview-modal-root';
+  previewRoot.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-hidden animate-fade-in';
+
+  const badgeClass = getVcCategoryBadge(item.category);
+
+  previewRoot.innerHTML = `
+    <div class="fixed inset-0 bg-black/75 backdrop-blur-md" id="vc-preview-backdrop"></div>
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 relative z-10 flex flex-col overflow-hidden animate-scale-up">
+      <!-- Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white flex items-center justify-between border-b border-emerald-800/40 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">
+            ${escBs(item.category)}
+          </span>
+          <h3 class="font-bold text-base text-white font-display">${escBs(item.name)}</h3>
+        </div>
+        <button id="vc-preview-close" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Tutup">
+          <i class="fas fa-times text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Preview Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-4 flex-1">
+        <!-- SVG Canvas Area -->
+        <div id="vc-svg-display-area" class="w-full min-h-[220px] max-h-[340px] bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center p-4 overflow-hidden relative shadow-inner">
+          <div id="vc-preview-spinner" class="py-12 text-center text-slate-400">
+            <i class="fas fa-circle-notch fa-spin text-3xl text-emerald-500 mb-2"></i>
+            <p class="text-xs font-semibold">Merender vektor SVG...</p>
+          </div>
+        </div>
+
+        <!-- Description & Metadata -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400">Tipe ID: <code class="font-mono text-emerald-600 dark:text-emerald-400 font-bold">${escBs(item.id)}</code></span>
+            <span id="vc-preview-dimensions" class="text-slate-500 dark:text-slate-400 font-mono">Resolusi: Menghitung...</span>
+          </div>
+          <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+            ${escBs(item.description)}
+          </p>
+        </div>
+
+        <!-- Sample Parameters Inspector -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300"><i class="fas fa-code text-emerald-500 mr-1.5"></i>Parameter Contoh:</span>
+            <button id="vc-copy-params" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+              <i class="fas fa-copy"></i> Salin JSON
+            </button>
+          </div>
+          <pre class="text-[11px] font-mono bg-slate-900 text-emerald-300 p-3 rounded-xl overflow-x-auto max-h-32 border border-slate-800">${escBs(JSON.stringify(item.sampleParams || {}, null, 2))}</pre>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0">
+        <button id="vc-preview-cancel" class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer">
+          Tutup Pratinjau
+        </button>
+        <button id="vc-preview-insert" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer">
+          <i class="fas fa-plus-circle"></i> Sisipkan ke Asesmen
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(previewRoot);
+
+  const closePreview = () => previewRoot.remove();
+  document.getElementById('vc-preview-close')?.addEventListener('click', closePreview);
+  document.getElementById('vc-preview-cancel')?.addEventListener('click', closePreview);
+  document.getElementById('vc-preview-backdrop')?.addEventListener('click', closePreview);
+
+  // Copy params handler
+  document.getElementById('vc-copy-params')?.addEventListener('click', () => {
+    const jsonStr = JSON.stringify(item.sampleParams || {}, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      showToast('Parameter JSON berhasil disalin!', 'success');
+    }).catch(() => {
+      showToast('Gagal menyalin parameter', 'error');
+    });
+  });
+
+  // Insert button handler
+  document.getElementById('vc-preview-insert')?.addEventListener('click', () => {
+    insertVisualStimulusToForm(item);
+    closePreview();
+  });
+
+  // Render SVG on demand
+  try {
+    const renderRes = await api('/kisi/visual-render', {
+      method: 'POST',
+      body: {
+        type: item.id,
+        params: item.sampleParams,
+        caption: item.name
+      }
+    });
+
+    const displayArea = document.getElementById('vc-svg-display-area');
+    const dimEl = document.getElementById('vc-preview-dimensions');
+
+    if (renderRes && renderRes.success && renderRes.data) {
+      const data = renderRes.data;
+      if (dimEl && data.width && data.height) {
+        dimEl.textContent = `Resolusi: ${data.width} × ${data.height} px`;
+      }
+
+      if (displayArea) {
+        if (data.dataUri) {
+          displayArea.innerHTML = `
+            <img src="${data.dataUri}" alt="${escBs(item.name)}" class="max-h-[280px] w-auto object-contain mx-auto transition-transform hover:scale-105 duration-200" />
+          `;
+        } else if (data.svg) {
+          displayArea.innerHTML = `
+            <div class="max-h-[280px] w-full flex items-center justify-center">${data.svg}</div>
+          `;
+        }
+      }
+    } else {
+      throw new Error(renderRes?.error || 'Gagal memuat rendering stimulus visual');
+    }
+  } catch (err) {
+    const displayArea = document.getElementById('vc-svg-display-area');
+    if (displayArea) {
+      displayArea.innerHTML = `
+        <div class="text-center text-rose-500 py-6">
+          <i class="fas fa-circle-exclamation text-2xl mb-1.5"></i>
+          <p class="text-xs font-bold">Gagal merender stimulus: ${escBs(err.message)}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+/**
+ * Insert stimulus tag to form topik textarea
+ */
+function insertVisualStimulusToForm(item) {
+  const form = document.getElementById('asesmen-form');
+  if (!form) return;
+
+  const topikEl = form.querySelector('[name="topik"]');
+  if (!topikEl) return;
+
+  const tag = `[Stimulus: ${item.name} (${item.id})]`;
+
+  if (!topikEl.value.trim()) {
+    topikEl.value = tag;
+  } else if (!topikEl.value.includes(item.id)) {
+    topikEl.value = `${topikEl.value.trim()}\n${tag}`;
+  }
+
+  // Ensure Stimulus Gambar toggle is ON
+  const toggleGambar = document.getElementById('toggle-kisi-gambar');
+  if (toggleGambar && !toggleGambar.checked) {
+    toggleGambar.checked = true;
+    localStorage.setItem('kkg_kisi_use_gambar', 'true');
+  }
+
+  // Highlight effect on the topic field
+  topikEl.classList.add('ring-2', 'ring-emerald-500', 'border-emerald-500');
+  setTimeout(() => {
+    topikEl.classList.remove('ring-2', 'ring-emerald-500', 'border-emerald-500');
+  }, 2500);
+
+  showToast(`Stimulus visual "${item.name}" berhasil disisipkan ke Topik Asesmen!`, 'success');
+}
+

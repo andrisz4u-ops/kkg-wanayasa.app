@@ -2679,3 +2679,639 @@ export function renderKartuPeluangSvg(params: { label?: string }): string {
 </svg>`;
 }
 
+/** 39. Render Segitiga Bilangan Pascal */
+export function renderSegitigaPascalSvg(params: { baris?: number; rumpang?: number; label?: string }): string {
+  const labelChar = params.label || 'X';
+
+  // Baris 1 sampai 6 Segitiga Pascal
+  const rows = [
+    [1],
+    [1, 1],
+    [1, 2, 1],
+    [1, 3, 3, 1],
+    [1, 4, 6, 4, 1],
+    [1, 5, 10, 10, 5, 1]
+  ];
+
+  const cy0 = 50;
+  const dy = 32;
+  const cx0 = 200;
+  const dx = 32;
+
+  let rowsSvg = '';
+  rows.forEach((r, rIdx) => {
+    const y = cy0 + rIdx * dy;
+    const startX = cx0 - ((r.length - 1) * dx) / 2;
+
+    r.forEach((val, cIdx) => {
+      const x = startX + cIdx * dx;
+      const isTarget = rIdx === 4 && cIdx === 2; // Angka 6 di Baris 5 dibuat rumpang
+
+      if (isTarget) {
+        rowsSvg += `
+          <circle cx="${x}" cy="${y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+          <text x="${x}" y="${y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+        `;
+      } else {
+        rowsSvg += `
+          <circle cx="${x}" cy="${y}" r="12" fill="#f8fafc" stroke="#0284c7" stroke-width="1.2"/>
+          <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">${val}</text>
+        `;
+      }
+    });
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pola Bilangan Segitiga Pascal (Baris 1–6)</text>
+
+  <!-- Node Segitiga Pascal -->
+  <g>${rowsSvg}</g>
+
+  <text x="200" y="246" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bilangan yang tepat untuk menggantikan huruf "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+/** 40. Render Perbandingan Skala Termometer (C, R, F, K) */
+export function renderSkalaTermometerKomparasiSvg(params: { suhuC?: number; pointer?: string; label?: string }): string {
+  const suhuC = params.suhuC != null ? params.suhuC : 50;
+  const pointer = (params.pointer || 'fahrenheit').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  const suhuR = Math.round(suhuC * 0.8);
+  const suhuF = Math.round(suhuC * 1.8 + 32);
+  const suhuK = Math.round(suhuC + 273);
+
+  let activeIdx = 2; // 0: C, 1: R, 2: F, 3: K
+  if (pointer.includes('celcius') || pointer.includes('celsius')) activeIdx = 0;
+  else if (pointer.includes('reamur')) activeIdx = 1;
+  else if (pointer.includes('kelvin')) activeIdx = 3;
+
+  const scales = [
+    { x: 55, name: 'Celsius (°C)', min: '0°', max: '100°', val: `${suhuC}°C`, rasio: '5' },
+    { x: 145, name: 'Reamur (°R)', min: '0°', max: '80°', val: `${suhuR}°R`, rasio: '4' },
+    { x: 235, name: 'Fahrenheit (°F)', min: '32°', max: '212°', val: `${suhuF}°F`, rasio: '9' },
+    { x: 325, name: 'Kelvin (K)', min: '273', max: '373', val: `${suhuK} K`, rasio: '5' }
+  ];
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Perbandingan 4 Skala Termometer (C : R : F : K)</text>
+
+  <!-- 4 Kolom Termometer -->
+  ${scales.map((s, idx) => `
+    <g>
+      <!-- Judul Skala -->
+      <text x="${s.x + 10}" y="45" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">${s.name}</text>
+      <!-- Tabung Termometer -->
+      <rect x="${s.x + 4}" y="55" width="12" height="115" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="1.2"/>
+      <!-- Cairan Merah Proporsional 50% -->
+      <rect x="${s.x + 6}" y="112" width="8" height="58" rx="4" fill="#ef4444"/>
+      <circle cx="${s.x + 10}" cy="170" r="10" fill="#ef4444"/>
+      <!-- Titik Didih & Titik Beku -->
+      <text x="${s.x - 8}" y="65" font-size="8" fill="#64748b">${s.max}</text>
+      <line x1="${s.x - 2}" y1="62" x2="${s.x + 4}" y2="62" stroke="#64748b" stroke-width="1"/>
+      <text x="${s.x - 8}" y="165" font-size="8" fill="#64748b">${s.min}</text>
+      <line x1="${s.x - 2}" y1="162" x2="${s.x + 4}" y2="162" stroke="#64748b" stroke-width="1"/>
+      <!-- Angka Suhu -->
+      ${idx === activeIdx ? `
+        <circle cx="${s.x + 10}" cy="112" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+        <text x="${s.x + 10}" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+      ` : `
+        <text x="${s.x + 22}" y="115" font-size="9" font-weight="bold" fill="#0f172a">${s.val}</text>
+      `}
+      <text x="${s.x + 10}" y="200" text-anchor="middle" font-size="8.5" fill="#475569">Rasio: ${s.rasio}</text>
+    </g>
+  `).join('')}
+
+  <!-- Garis Sejajar Suhu Pengukuran -->
+  <line x1="45" y1="112" x2="355" y2="112" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <text x="200" y="246" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Nilai suhu pada skala termometer bertanda "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+/** 41. Render Diagram Batang dan Daun (Stem-and-Leaf Plot) */
+export function renderDiagramBatangDaunSvg(params: { label?: string }): string {
+  const labelChar = params.label || 'X';
+
+  const rows = [
+    { stem: '4', leaves: ['5', '8'] },
+    { stem: '5', leaves: ['2', '5', '7'] },
+    { stem: '6', leaves: ['0', '3', '4', '8'] },
+    { stem: '7', leaves: ['1', '5', `[${labelChar}]`] },
+    { stem: '8', leaves: ['2', '6'] },
+    { stem: '9', leaves: ['0'] }
+  ];
+
+  const y0 = 65;
+  const dy = 24;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 255" width="380" height="255" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="255" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Batang dan Daun (Stem-and-Leaf Plot)</text>
+  <text x="190" y="42" text-anchor="middle" font-size="9.5" fill="#64748b">Data Nilai Asesmen Matematika Kelas VI</text>
+
+  <!-- Header Tabel Batang vs Daun -->
+  <rect x="50" y="52" width="280" height="155" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="95" y="70" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">Batang (Puluhan)</text>
+  <text x="235" y="70" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">Daun (Satuan)</text>
+  <line x1="50" y1="76" x2="330" y2="76" stroke="#cbd5e1" stroke-width="1.2"/>
+  <line x1="140" y1="52" x2="140" y2="207" stroke="#0284c7" stroke-width="2"/>
+
+  <!-- Baris Data -->
+  ${rows.map((r, idx) => `
+    <text x="95" y="${95 + idx * 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${r.stem}</text>
+    <text x="160" y="${95 + idx * 18}" font-size="11" font-weight="600" fill="${r.leaves.includes(`[${labelChar}]`) ? '#e11d48' : '#334155'}">${r.leaves.join('   ')}</text>
+  `).join('')}
+
+  <!-- Keterangan Pembacaan Kunci (Legend) -->
+  <rect x="50" y="214" width="280" height="22" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="190" y="229" text-anchor="middle" font-size="9" font-weight="600" fill="#1e40af">Kunci Pembacaan: 4 | 5 artinya nilai 45</text>
+
+  <text x="190" y="247" text-anchor="middle" font-size="9.5" font-weight="600" fill="#475569">Jika nilai peserta didik tersebut adalah 78, angka pada [${escapeXml(labelChar)}] adalah ...</text>
+</svg>`;
+}
+
+/** 42. Render Diagram Kotak Garis (Box-and-Whisker Plot) */
+export function renderDiagramBoxPlotSvg(params: { min?: number; q1?: number; q2?: number; q3?: number; max?: number; pointer?: string; label?: string }): string {
+  const minVal = params.min || 20;
+  const q1Val = params.q1 || 35;
+  const q2Val = params.q2 || 50; // Median
+  const q3Val = params.q3 || 70;
+  const maxVal = params.max || 85;
+  const pointer = (params.pointer || 'q2').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  // Skala horizontal: 0 di x=50, 100 di x=330 (panjang 280px, faktor 2.8)
+  const toX = (val: number) => 50 + val * 2.8;
+
+  const xMin = toX(minVal);
+  const xQ1 = toX(q1Val);
+  const xQ2 = toX(q2Val);
+  const xQ3 = toX(q3Val);
+  const xMax = toX(maxVal);
+
+  const boxY = 85;
+  const boxH = 50;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 250" width="380" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Kotak Garis (Box-and-Whisker Plot)</text>
+  <text x="190" y="42" text-anchor="middle" font-size="9.5" fill="#64748b">Statistik Lima Serangkai (Min, Q1, Q2/Median, Q3, Max)</text>
+
+  <!-- Garis Whisker Kiri (Min ke Q1) -->
+  <line x1="${xMin}" y1="${boxY + boxH / 2}" x2="${xQ1}" y2="${boxY + boxH / 2}" stroke="#0f172a" stroke-width="2"/>
+  <line x1="${xMin}" y1="${boxY + 10}" x2="${xMin}" y2="${boxY + boxH - 10}" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- Kotak Interkuartil (Q1 ke Q3) -->
+  <rect x="${xQ1}" y="${boxY}" width="${xQ3 - xQ1}" height="${boxH}" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+
+  <!-- Garis Median Q2 di Dalam Kotak -->
+  <line x1="${xQ2}" y1="${boxY}" x2="${xQ2}" y2="${boxY + boxH}" stroke="#e11d48" stroke-width="3"/>
+
+  <!-- Garis Whisker Kanan (Q3 ke Max) -->
+  <line x1="${xQ3}" y1="${boxY + boxH / 2}" x2="${xMax}" y2="${boxY + boxH / 2}" stroke="#0f172a" stroke-width="2"/>
+  <line x1="${xMax}" y1="${boxY + 10}" x2="${xMax}" y2="${boxY + boxH - 10}" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- Label Parameter 5 Serangkai -->
+  <text x="${xMin}" y="${boxY - 8}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#475569">Min (${minVal})</text>
+  <text x="${xQ1}" y="${boxY - 8}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Q1 (${q1Val})</text>
+  <text x="${xQ2}" y="${boxY - 8}" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">Q2 / Median</text>
+  <text x="${xQ3}" y="${boxY - 8}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Q3 (${q3Val})</text>
+  <text x="${xMax}" y="${boxY - 8}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#475569">Max (${maxVal})</text>
+
+  <!-- Garis Bilangan Sumbu Horizontal Bawah -->
+  <line x1="50" y1="175" x2="330" y2="175" stroke="#64748b" stroke-width="1.5"/>
+  ${[0, 20, 40, 60, 80, 100].map(v => `
+    <line x1="${toX(v)}" y1="172" x2="${toX(v)}" y2="178" stroke="#64748b" stroke-width="1.5"/>
+    <text x="${toX(v)}" y="192" text-anchor="middle" font-size="8.5" fill="#64748b">${v}</text>
+  `).join('')}
+
+  <!-- Target Badge X pada Titik Median Q2 -->
+  <circle cx="${xQ2}" cy="${boxY + boxH / 2}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+  <text x="${xQ2}" y="${boxY + boxH / 2 + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <text x="190" y="235" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Nilai kuartil tengah (median) pada huruf "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+/** 43. Render Diagram Pohon Peluang (Probability Tree) */
+export function renderPohonPeluangSvg(params: { label?: string }): string {
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Pohon Peluang: Pelemparan 2 Koin</text>
+
+  <!-- Kolom Label -->
+  <text x="50" y="45" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#64748b">Mulai</text>
+  <text x="140" y="45" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0284c7">Koin 1</text>
+  <text x="240" y="45" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0284c7">Koin 2</text>
+  <text x="330" y="45" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#15803d">Hasil (Titik Sampel)</text>
+
+  <!-- Titik Awal Mulai -->
+  <circle cx="50" cy="135" r="7" fill="#0f172a"/>
+
+  <!-- Cabang Level 1: Koin 1 (Angka & Gambar) -->
+  <line x1="50" y1="135" x2="140" y2="90" stroke="#0284c7" stroke-width="2"/>
+  <text x="85" y="105" font-size="8.5" fill="#64748b">½</text>
+  <circle cx="140" cy="90" r="13" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="140" y="94" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">A</text>
+
+  <line x1="50" y1="135" x2="140" y2="180" stroke="#0284c7" stroke-width="2"/>
+  <text x="85" y="165" font-size="8.5" fill="#64748b">½</text>
+  <circle cx="140" cy="180" r="13" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="140" y="184" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">G</text>
+
+  <!-- Cabang Level 2: Koin 2 dari A -->
+  <line x1="140" y1="90" x2="240" y2="65" stroke="#0284c7" stroke-width="1.8"/>
+  <circle cx="240" cy="65" r="11" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="240" y="69" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">A</text>
+
+  <line x1="140" y1="90" x2="240" y2="115" stroke="#0284c7" stroke-width="1.8"/>
+  <circle cx="240" cy="115" r="11" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="240" y="119" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">G</text>
+
+  <!-- Cabang Level 2: Koin 2 dari G -->
+  <line x1="140" y1="180" x2="240" y2="155" stroke="#0284c7" stroke-width="1.8"/>
+  <circle cx="240" cy="155" r="11" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="240" y="159" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">A</text>
+
+  <line x1="140" y1="180" x2="240" y2="205" stroke="#0284c7" stroke-width="1.8"/>
+  <circle cx="240" cy="205" r="11" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="240" y="209" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">G</text>
+
+  <!-- Titik Sampel Hasil Akhir -->
+  <text x="330" y="69" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">(A, A)</text>
+  <!-- Target X pada hasil kedua (A, G) -->
+  <circle cx="330" cy="115" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="330" y="119.5" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <text x="330" y="159" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">(G, A)</text>
+  <text x="330" y="209" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">(G, G)</text>
+
+  <text x="200" y="246" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Hasil titik sampel pada tanda "${escapeXml(labelChar)}" adalah pasangan ...</text>
+</svg>`;
+}
+
+/** 44. Render Koding Scratch: Blok Percabangan (If - Else) */
+export function renderKodingBlokPercabanganSvg(params: { kondisi?: string; label?: string }): string {
+  const kondisi = params.kondisi || 'nilai > 75';
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Koding Scratch: Blok Logika Percabangan (If-Else)</text>
+
+  <!-- Scratch C-Block Background Oranye (#f59e0b) -->
+  <g transform="translate(45, 45)">
+    <!-- Header Block Jika -->
+    <path d="M 0,0 L 40,0 L 46,6 L 58,6 L 64,0 L 280,0 L 280,32 L 60,32 L 60,68 L 280,68 L 280,95 L 60,95 L 60,132 L 280,132 L 280,158 L 0,158 Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
+
+    <text x="20" y="22" font-size="11.5" font-weight="bold" fill="#ffffff">jika</text>
+    <!-- Boolean Hexagon Operator Hijau -->
+    <polygon points="50,11 60,22 170,22 180,11 170,0 60,0" transform="translate(0, 5)" fill="#59c059" stroke="#389438" stroke-width="1.2"/>
+    <text x="115" y="22" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">&lt; ${escapeXml(kondisi)} &gt;</text>
+    <text x="195" y="22" font-size="11.5" font-weight="bold" fill="#ffffff">maka</text>
+
+    <!-- Nested Block Then (Katakan Selamat) Ungu -->
+    <rect x="68" y="38" width="195" height="24" rx="4" fill="#9966ff" stroke="#7744dd" stroke-width="1.2"/>
+    <text x="165" y="54" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">katakan [Hebat, Lulus!] selama (2) dtk</text>
+
+    <!-- Pembatas Else -->
+    <text x="20" y="86" font-size="11.5" font-weight="bold" fill="#ffffff">jika tidak</text>
+
+    <!-- Target Block Else (Rumpang X) Merah -->
+    <rect x="68" y="102" width="195" height="24" rx="4" fill="#fee2e2" stroke="#e11d48" stroke-width="1.8"/>
+    <text x="165" y="118" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#e11d48">[ ${escapeXml(labelChar)} ]</text>
+  </g>
+
+  <text x="190" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Perintah yang tepat untuk blok kode [${escapeXml(labelChar)}] jika kondisi tidak terpenuhi adalah ...</text>
+</svg>`;
+}
+
+/** 45. Render Koding Scratch: Blok Perulangan (Loop / Repeat) */
+export function renderKodingBlokPerulanganSvg(params: { loopCount?: number; label?: string }): string {
+  const loopCount = params.loopCount || 4;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Koding Scratch: Blok Perulangan (Loop Geometri)</text>
+
+  <!-- Scratch Repeat Block Oranye (#ffab19) -->
+  <g transform="translate(45, 50)">
+    <!-- Body Repeat Loop -->
+    <path d="M 0,0 L 40,0 L 46,6 L 58,6 L 64,0 L 200,0 L 200,32 L 50,32 L 50,110 L 200,110 L 200,135 L 0,135 Z" fill="#ffab19" stroke="#cf8500" stroke-width="1.5"/>
+
+    <text x="15" y="22" font-size="11.5" font-weight="bold" fill="#ffffff">ulangi</text>
+    <!-- Lingkaran Input Putih Jumlah Loop -->
+    <circle cx="75" cy="16" r="10" fill="#ffffff" stroke="#cf8500" stroke-width="1"/>
+    <text x="75" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${loopCount}</text>
+    <text x="95" y="22" font-size="11.5" font-weight="bold" fill="#ffffff">kali</text>
+
+    <!-- Perintah 1: Maju 100 Langkah (Biru Motion) -->
+    <rect x="58" y="38" width="180" height="26" rx="4" fill="#4c97ff" stroke="#2870d4" stroke-width="1.2"/>
+    <text x="148" y="55" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">gerak (100) langkah</text>
+
+    <!-- Perintah 2: Putar Kanan 90 Derajat (Biru Motion) -->
+    <rect x="58" y="72" width="180" height="26" rx="4" fill="#4c97ff" stroke="#2870d4" stroke-width="1.2"/>
+    <text x="148" y="89" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">putar ↻ (90) derajat</text>
+  </g>
+
+  <!-- Target Badge X di Sisi Kanan -->
+  <g transform="translate(315, 115)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <text x="0" y="26" text-anchor="middle" font-size="9" font-weight="bold" fill="#e11d48">Bentuk Bangun</text>
+  </g>
+
+  <text x="190" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bentuk bangun datar yang terbentuk oleh algoritma "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+// =========================================================================
+// BATCH 3: MATEMATIKA LANJUT, LOGIKA, PENGUKURAN & KODING (7 TEMPLATES)
+// =========================================================================
+
+// 39. Gerbang Logika Komputasional (Logic Gates AND, OR, NOT)
+export function renderDiagramAlurLogikaGerbangSvg(params: any): string {
+  const gerbang = String(params.gerbang || 'AND').toUpperCase();
+  const a = params.inputA ?? 1;
+  const b = params.inputB ?? 0;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 200" width="380" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="200" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Gerbang Logika Komputasional: Gerbang ${escapeXml(gerbang)}</text>
+
+  <!-- Input A -->
+  <line x1="60" y1="80" x2="140" y2="80" stroke="#0284c7" stroke-width="2.5"/>
+  <text x="50" y="84" text-anchor="end" font-size="9.5" font-weight="bold" fill="#0284c7">A = ${a}</text>
+
+  <!-- Input B -->
+  <line x1="60" y1="120" x2="140" y2="120" stroke="#0284c7" stroke-width="2.5"/>
+  <text x="50" y="124" text-anchor="end" font-size="9.5" font-weight="bold" fill="#0284c7">B = ${b}</text>
+
+  <!-- Simbol Gerbang AND / OR -->
+  ${gerbang === 'OR' ? `
+    <path d="M 140 65 Q 165 100 140 135 Q 190 135 225 100 Q 190 65 140 65 Z" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+    <text x="175" y="104" text-anchor="middle" font-size="10" font-weight="bold" fill="#1e40af">OR</text>
+  ` : gerbang === 'NOT' ? `
+    <polygon points="140,70 200,100 140,130" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <circle cx="206" cy="100" r="6" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+    <text x="165" y="104" text-anchor="middle" font-size="9" font-weight="bold" fill="#991b1b">NOT</text>
+  ` : `
+    <path d="M 140 65 L 175 65 A 35 35 0 0 1 175 135 L 140 135 Z" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+    <text x="170" y="104" text-anchor="middle" font-size="10" font-weight="bold" fill="#166534">AND</text>
+  `}
+
+  <!-- Output Line -->
+  <line x1="${gerbang === 'NOT' ? 212 : 210}" y1="100" x2="280" y2="100" stroke="#e11d48" stroke-width="2.5"/>
+
+  <!-- Target Badge X -->
+  <circle cx="295" cy="100" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="295" y="104" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="175" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Nilai output biner (0 atau 1) pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
+</svg>`;
+}
+
+// 40. Koding Scratch: Variabel & Operator Logika
+export function renderKodingVariabelOperatorSvg(params: any): string {
+  const varName = params.varName || 'skor';
+  const op = params.op || '+';
+  const nilai = params.nilai || 10;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 200" width="380" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="200" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Koding Scratch: Blok Variabel &amp; Operator</text>
+
+  <!-- Blok Hijau Operator Matematika -->
+  <g transform="translate(60, 65)">
+    <rect x="0" y="0" width="260" height="46" rx="23" fill="#59c059" stroke="#389438" stroke-width="2"/>
+    <!-- Slot Kiri: Variabel Oranye -->
+    <rect x="18" y="8" width="85" height="30" rx="15" fill="#ff8c1a" stroke="#db6e00" stroke-width="1.5"/>
+    <text x="60" y="27" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">(${escapeXml(varName)})</text>
+
+    <!-- Simbol Operator -->
+    <text x="130" y="29" text-anchor="middle" font-size="16" font-weight="bold" fill="#ffffff">${escapeXml(op)}</text>
+
+    <!-- Slot Kanan: Angka Putih -->
+    <rect x="155" y="8" width="85" height="30" rx="15" fill="#ffffff" stroke="#389438" stroke-width="1.5"/>
+    <text x="197" y="27" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${nilai}</text>
+  </g>
+
+  <!-- Target Badge -->
+  <circle cx="335" cy="88" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="335" y="92" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="165" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Jika nilai awal (${escapeXml(varName)}) = 50, maka hasil blok kode di atas adalah ...</text>
+</svg>`;
+}
+
+// 41. Operasi Hitung pada Garis Bilangan Bulat
+export function renderGarisBilanganBulatOperasiSvg(params: any): string {
+  const a = params.a ?? 3;
+  const b = params.b ?? -5;
+  const labelChar = params.label || 'X';
+
+  const originX = 190;
+  const scale = 20;
+
+  const posA = originX + a * scale;
+  const posAkhir = originX + (a + b) * scale;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <marker id="jumpArr1" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7" />
+    </marker>
+    <marker id="jumpArr2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626" />
+    </marker>
+  </defs>
+
+  <rect width="400" height="200" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="200" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Operasi Penjumlahan Bilangan Bulat</text>
+
+  <!-- Garis Bilangan Horizontal -->
+  <line x1="30" y1="130" x2="370" y2="130" stroke="#0f172a" stroke-width="2"/>
+  <!-- Titik-titik Skala -->
+  ${[-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => {
+    const x = originX + n * scale;
+    return `
+    <line x1="${x}" y1="125" x2="${x}" y2="135" stroke="#0f172a" stroke-width="1.5"/>
+    <text x="${x}" y="148" text-anchor="middle" font-size="7.5" font-weight="${n === 0 ? 'bold' : 'normal'}" fill="${n === 0 ? '#0f172a' : '#64748b'}">${n}</text>`;
+  }).join('')}
+
+  <!-- Lompatan 1: Dari 0 ke A (Biru) -->
+  <path d="M ${originX} 120 Q ${(originX + posA) / 2} 85 ${posA} 120" fill="none" stroke="#0284c7" stroke-width="2" marker-end="url(#jumpArr1)"/>
+  <text x="${(originX + posA) / 2}" y="78" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">+${a}</text>
+
+  <!-- Lompatan 2: Dari A sejauh B (Merah) -->
+  <path d="M ${posA} 115 Q ${(posA + posAkhir) / 2} 55 ${posAkhir} 115" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#jumpArr2)"/>
+  <text x="${(posA + posAkhir) / 2}" y="48" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#dc2626">${b}</text>
+
+  <!-- Target Badge di Posisi Akhir -->
+  <circle cx="${posAkhir}" cy="130" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="${posAkhir}" y="134" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="200" y="184" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Hasil operasi hitung ${a} + (${b}) pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
+</svg>`;
+}
+
+// 42. Ekuivalensi Pecahan, Desimal, dan Persen Senilai
+export function renderPecahanDesimalPersenSenilaiSvg(params: any): string {
+  const pecahan = params.pecahan || '1/4';
+  const desimal = params.desimal || '0.25';
+  const persen = params.persen || '25%';
+  const target = String(params.target || 'persen').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 210" width="360" height="210" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="360" height="210" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Ekuivalensi Pecahan, Desimal &amp; Persen Senilai</text>
+
+  <!-- Lingkaran Pusat Hubungan Senilai -->
+  <circle cx="180" cy="115" r="70" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="180" y="119" text-anchor="middle" font-size="9" font-weight="bold" fill="#64748b">SENILAI</text>
+
+  <!-- Kartu 1: Pecahan Biasa (Atas) -->
+  <rect x="145" y="45" width="70" height="36" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="180" y="58" text-anchor="middle" font-size="7" fill="#1e40af">Pecahan</text>
+  <text x="180" y="73" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e40af">${target === 'pecahan' ? `[${escapeXml(labelChar)}]` : pecahan}</text>
+
+  <!-- Kartu 2: Desimal (Kiri Bawah) -->
+  <rect x="65" y="130" width="70" height="36" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="100" y="143" text-anchor="middle" font-size="7" fill="#166534">Desimal</text>
+  <text x="100" y="158" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">${target === 'desimal' ? `[${escapeXml(labelChar)}]` : desimal}</text>
+
+  <!-- Kartu 3: Persen (Kanan Bawah) -->
+  <rect x="225" y="130" width="70" height="36" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <text x="260" y="143" text-anchor="middle" font-size="7" fill="#92400e">Persen</text>
+  <text x="260" y="158" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400e">${target === 'persen' ? `[${escapeXml(labelChar)}]` : persen}</text>
+
+  <text x="180" y="196" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Nilai ekuivalen pada kotak bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+</svg>`;
+}
+
+// 43. Komparasi Jam Digital (Selisih Waktu & Durasi)
+export function renderJamDigitalKomparasiSvg(params: any): string {
+  const jamAwal = params.jamAwal || '07:30';
+  const jamAkhir = params.jamAkhir || '09:15';
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 200" width="380" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <marker id="timeArr" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7" />
+    </marker>
+  </defs>
+
+  <rect width="380" height="200" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Perhitungan Durasi / Selisih Waktu</text>
+
+  <!-- Jam Awal (Kiri) -->
+  <g transform="translate(60, 60)">
+    <rect width="95" height="50" rx="6" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <text x="47.5" y="32" text-anchor="middle" font-size="18" font-family="'Courier New', monospace" font-weight="bold" fill="#38bdf8">${jamAwal}</text>
+    <text x="47.5" y="65" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#475569">Waktu Mulai</text>
+  </g>
+
+  <!-- Panah Durasi ke Kanan -->
+  <line x1="175" y1="85" x2="205" y2="85" stroke="#0284c7" stroke-width="2.5" marker-end="url(#timeArr)"/>
+
+  <!-- Jam Akhir (Kanan) -->
+  <g transform="translate(225, 60)">
+    <rect width="95" height="50" rx="6" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <text x="47.5" y="32" text-anchor="middle" font-size="18" font-family="'Courier New', monospace" font-weight="bold" fill="#4ade80">${jamAkhir}</text>
+    <text x="47.5" y="65" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#475569">Waktu Selesai</text>
+  </g>
+
+  <!-- Target Badge X -->
+  <circle cx="190" cy="85" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="190" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="165" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Lama waktu kegiatan dari ${jamAwal} sampai ${jamAkhir} adalah ...</text>
+</svg>`;
+}
+
+// 44. Diagram Sankey Aliran Energi
+export function renderDiagramSankeyEnergiSvg(params: any): string {
+  const masuk = params.masuk || 100;
+  const berguna = params.berguna || 75;
+  const terbuang = params.terbuang || 25;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 220" width="380" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="220" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Diagram Sankey: Efisiensi Aliran Energi</text>
+
+  <!-- Aliran Energi Masuk (Kiri) -->
+  <path d="M 40 85 L 140 85 Q 180 85 220 70 L 300 70 L 300 110 L 220 110 Q 180 135 220 165 L 300 165 L 300 185 Q 160 185 140 145 L 40 145 Z" fill="#93c5fd" stroke="#2563eb" stroke-width="1.5"/>
+
+  <!-- Teks Energi Masuk -->
+  <text x="85" y="118" text-anchor="middle" font-size="9" font-weight="bold" fill="#1e40af">Energi Masuk</text>
+  <text x="85" y="130" text-anchor="middle" font-size="8" fill="#1e40af">${masuk} Joule</text>
+
+  <!-- Cabang Atas: Energi Berguna -->
+  <text x="260" y="62" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#15803d">Energi Berguna (${berguna} J)</text>
+
+  <!-- Cabang Bawah: Energi Terbuang Panas -->
+  <text x="260" y="200" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#b91c1c">Kalor Terbuang (${terbuang} J)</text>
+
+  <!-- Target Badge -->
+  <circle cx="315" cy="90" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="315" y="94" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="214" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Efisiensi energi pada diagram di atas adalah ...</text>
+</svg>`;
+}
+
+// 45. Skala Peta Batang (Skala Garis / Grafis)
+export function renderSkalaPetaBatangSvg(params: any): string {
+  const kmPerCm = params.kmPerCm || 5;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 190" width="380" height="190" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="190" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Skala Grafis / Garis pada Peta</text>
+
+  <!-- Skala Batang Berselang-seling Hitam Putih -->
+  <g transform="translate(60, 80)">
+    <!-- Ruas 1 (Hitam) -->
+    <rect x="0" y="0" width="65" height="14" fill="#0f172a" stroke="#0f172a"/>
+    <!-- Ruas 2 (Putih) -->
+    <rect x="65" y="0" width="65" height="14" fill="#ffffff" stroke="#0f172a"/>
+    <!-- Ruas 3 (Hitam) -->
+    <rect x="130" y="0" width="65" height="14" fill="#0f172a" stroke="#0f172a"/>
+    <!-- Ruas 4 (Putih) -->
+    <rect x="195" y="0" width="65" height="14" fill="#ffffff" stroke="#0f172a"/>
+
+    <!-- Angka Skala KM di Atas -->
+    <text x="0" y="-8" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0f172a">0</text>
+    <text x="65" y="-8" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0f172a">${kmPerCm}</text>
+    <text x="130" y="-8" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0f172a">${kmPerCm * 2}</text>
+    <text x="195" y="-8" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0f172a">${kmPerCm * 3}</text>
+    <text x="260" y="-8" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0f172a">${kmPerCm * 4} km</text>
+
+    <!-- Angka Jarak CM di Bawah -->
+    <text x="0" y="28" text-anchor="middle" font-size="8" fill="#64748b">0</text>
+    <text x="65" y="28" text-anchor="middle" font-size="8" fill="#64748b">1 cm</text>
+    <text x="130" y="28" text-anchor="middle" font-size="8" fill="#64748b">2 cm</text>
+    <text x="195" y="28" text-anchor="middle" font-size="8" fill="#64748b">3 cm</text>
+    <text x="260" y="28" text-anchor="middle" font-size="8" fill="#64748b">4 cm</text>
+  </g>
+
+  <!-- Target Badge -->
+  <circle cx="345" cy="87" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="345" y="91" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="155" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Jarak sebenarnya di bumi jika pada peta berjarak 3 cm adalah ...</text>
+</svg>`;
+}
+
+
+

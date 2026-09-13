@@ -287,10 +287,10 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(qA.gambar?.svg).not.toEqual(qB.gambar?.svg);
         });
 
-        it('should provide full visual catalog with 110 distinct templates', async () => {
+        it('should provide full visual catalog with 200 distinct templates', async () => {
             const { getVisualCatalog } = await import('../src/lib/visual-engine');
             const catalog = getVisualCatalog();
-            expect(catalog.length).toBe(110);
+            expect(catalog.length).toBe(200);
             const ids = catalog.map(item => item.id);
             expect(ids).toContain('persegi_panjang');
             expect(ids).toContain('segitiga_sama_sisi');
@@ -343,6 +343,34 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(ids).toContain('sempoa_abakus');
             expect(ids).toContain('diagram_batang_ganda');
             expect(ids).toContain('papan_galton_peluang');
+            // Batch 2 templates
+            expect(ids).toContain('rangka_manusia');
+            expect(ids).toContain('sendi_gerak');
+            expect(ids).toContain('metamorfosis_katak');
+            expect(ids).toContain('fase_bulan');
+            expect(ids).toContain('lapisan_bumi');
+            expect(ids).toContain('baterai_buah');
+            expect(ids).toContain('rumah_adat_nusantara');
+            expect(ids).toContain('alat_musik_tradisional');
+            expect(ids).toContain('trias_politika');
+            expect(ids).toContain('sudut_berpelurus_berpenyiku');
+            expect(ids).toContain('teorema_pythagoras');
+            expect(ids).toContain('segitiga_pascal');
+            expect(ids).toContain('koding_blok_percabangan');
+            // Batch 3 templates (Target 200 SVG Catalog!)
+            expect(ids).toContain('rantai_makanan_laut');
+            expect(ids).toContain('daur_hidup_kupu_detail');
+            expect(ids).toContain('bagian_akar_tumbuhan');
+            expect(ids).toContain('macam_macam_gaya');
+            expect(ids).toContain('pesawat_sederhana_bidang_miring');
+            expect(ids).toContain('pembangkit_listrik_plta');
+            expect(ids).toContain('garis_wallace_weber');
+            expect(ids).toContain('candi_dan_peninggalan_sejarah');
+            expect(ids).toContain('motif_batik_nusantara');
+            expect(ids).toContain('sudut_luar_segitiga');
+            expect(ids).toContain('jaring_kerucut');
+            expect(ids).toContain('diagram_alur_logika_gerbang');
+            expect(ids).toContain('pecahan_desimal_persen_senilai');
         });
 
         it('should handle /visual-catalog and /visual-render endpoints via kisi router', async () => {
@@ -352,7 +380,7 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(resCatalog.status).toBe(200);
             const bodyCat = await resCatalog.json();
             expect(bodyCat.success).toBe(true);
-            expect(bodyCat.data.length).toBe(110);
+            expect(bodyCat.data.length).toBe(200);
 
             const resRender = await kisi.request('/visual-render', {
                 method: 'POST',

@@ -1746,3 +1746,372 @@ export function renderSegiEnamBeraturanSvg(params: {
 </svg>`;
 }
 
+/** 35. Render Sudut Berpelurus (Suplemen) dan Sudut Berpenyiku (Komplemen) */
+export function renderSudutBerpelurusBerpenyikuSvg(params: { tipe?: 'pelurus' | 'penyiku'; sudutA?: number; label?: string }): string {
+  const tipe = (params.tipe || 'pelurus').toLowerCase() as 'pelurus' | 'penyiku';
+  const labelChar = params.label || 'X';
+
+  if (tipe === 'penyiku') {
+    // Sudut Berpenyiku (90 Derajat)
+    const ox = 110;
+    const oy = 180;
+    const len = 110;
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 250" width="380" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri: Sudut Berpenyiku (Komplemen = 90°)</text>
+
+  <!-- Garis Siku Vertikal & Horizontal -->
+  <line x1="${ox}" y1="${oy}" x2="${ox + len}" y2="${oy}" stroke="#0f172a" stroke-width="2.5"/>
+  <line x1="${ox}" y1="${oy}" x2="${ox}" y2="${oy - len}" stroke="#0f172a" stroke-width="2.5"/>
+
+  <!-- Tanda Siku-Siku (Kotak Kecil) -->
+  <rect x="${ox}" y="${oy - 16}" width="16" height="16" fill="none" stroke="#64748b" stroke-width="1.5"/>
+
+  <!-- Garis Sinar Pembagi Miring 40 Derajat -->
+  <line x1="${ox}" y1="${oy}" x2="${ox + 80}" y2="${oy - 85}" stroke="#2563eb" stroke-width="2.5"/>
+
+  <!-- Busur Sudut 1 & 2 -->
+  <path d="M ${ox + 45},${oy} A 45 45 0 0 0 ${ox + 35},${oy - 37}" fill="none" stroke="#ef4444" stroke-width="1.8"/>
+  <text x="${ox + 50}" y="${oy - 15}" font-size="11" font-weight="bold" fill="#dc2626">3x°</text>
+
+  <path d="M ${ox + 30},${oy - 32} A 45 45 0 0 0 ${ox},${oy - 45}" fill="none" stroke="#0284c7" stroke-width="1.8"/>
+  <text x="${ox + 18}" y="${oy - 55}" font-size="11" font-weight="bold" fill="#0369a1">2x°</text>
+
+  <!-- Huruf Titik Sudut -->
+  <text x="${ox - 15}" y="${oy + 15}" font-size="11" font-weight="bold" fill="#0f172a">O</text>
+  <text x="${ox + len + 8}" y="${oy + 5}" font-size="11" font-weight="bold" fill="#0f172a">A</text>
+  <text x="${ox + 85}" y="${oy - 88}" font-size="11" font-weight="bold" fill="#2563eb">B</text>
+  <text x="${ox - 5}" y="${oy - len - 6}" font-size="11" font-weight="bold" fill="#0f172a">C</text>
+
+  <!-- Target Badge X -->
+  <g transform="translate(305, 105)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <text x="0" y="26" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#e11d48">Cari nilai x</text>
+  </g>
+
+  <text x="190" y="236" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Nilai x pada sudut berpenyiku di atas adalah ...</text>
+</svg>`;
+  }
+
+  // Sudut Berpelurus (180 Derajat)
+  const ox = 180;
+  const oy = 160;
+  const len = 120;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 250" width="380" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri: Sudut Berpelurus (Suplemen = 180°)</text>
+
+  <!-- Garis Lurus Horizontal 180 Derajat -->
+  <line x1="${ox - len}" y1="${oy}" x2="${ox + len}" y2="${oy}" stroke="#0f172a" stroke-width="2.5"/>
+  <circle cx="${ox}" cy="${oy}" r="3.5" fill="#0f172a"/>
+
+  <!-- Garis Sinar Miring Pembagi Sudut -->
+  <line x1="${ox}" y1="${oy}" x2="${ox - 55}" y2="${oy - 95}" stroke="#2563eb" stroke-width="2.5"/>
+
+  <!-- Busur Sudut Kanan (Tumpul / Lancip) -->
+  <path d="M ${ox + 45},${oy} A 45 45 0 0 0 ${ox - 24},${oy - 41}" fill="none" stroke="#0284c7" stroke-width="2"/>
+  <text x="${ox + 15}" y="${oy - 22}" font-size="11" font-weight="bold" fill="#0369a1">(3x + 15)°</text>
+
+  <!-- Busur Sudut Kiri -->
+  <path d="M ${ox - 24},${oy - 41} A 45 45 0 0 0 ${ox - 45},${oy}" fill="none" stroke="#ef4444" stroke-width="2"/>
+  <text x="${ox - 65}" y="${oy - 22}" font-size="11" font-weight="bold" fill="#dc2626">2x°</text>
+
+  <!-- Label Titik Sudut -->
+  <text x="${ox - len - 14}" y="${oy + 5}" font-size="11" font-weight="bold" fill="#0f172a">P</text>
+  <text x="${ox}" y="${oy + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">O</text>
+  <text x="${ox + len + 6}" y="${oy + 5}" font-size="11" font-weight="bold" fill="#0f172a">Q</text>
+  <text x="${ox - 65}" y="${oy - 100}" font-size="11" font-weight="bold" fill="#2563eb">R</text>
+
+  <!-- Target Badge X -->
+  <g transform="translate(325, 75)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <text x="190" y="236" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Besar sudut ∠ROQ pada gambar berpelurus di atas adalah ...</text>
+</svg>`;
+}
+
+/** 36. Render Dua Garis Sejajar Dipotong Garis Transversal */
+export function renderGarisSejajarTransversalSvg(params: { pointer?: string; label?: string }): string {
+  const pointer = (params.pointer || 'sehadap').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  let target = { x: 195, y: 155, name: 'Sudut Sehadap' }; // Sudut 5 vs 1
+  if (pointer.includes('berseberangan_dalam') || pointer.includes('dalam')) target = { x: 175, y: 145, name: 'Berseberangan Dalam' };
+  else if (pointer.includes('berseberangan_luar') || pointer.includes('luar')) target = { x: 235, y: 180, name: 'Berseberangan Luar' };
+  else if (pointer.includes('sepihak')) target = { x: 215, y: 165, name: 'Sudut Sepihak' };
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Dua Garis Sejajar Dipotong Garis Transversal</text>
+
+  <!-- Garis Sejajar k (Atas) dan l (Bawah) -->
+  <line x1="45" y1="95" x2="355" y2="95" stroke="#0284c7" stroke-width="2.5"/>
+  <text x="365" y="99" font-size="12" font-weight="bold" fill="#0284c7">k</text>
+
+  <line x1="45" y1="165" x2="355" y2="165" stroke="#0284c7" stroke-width="2.5"/>
+  <text x="365" y="169" font-size="12" font-weight="bold" fill="#0284c7">l</text>
+
+  <!-- Garis Transversal m Miring Memotong k dan l -->
+  <line x1="115" y1="45" x2="265" y2="215" stroke="#0f172a" stroke-width="2.5"/>
+  <text x="275" y="222" font-size="12" font-weight="bold" fill="#0f172a">m</text>
+
+  <!-- Sudut Titik Atas A: (cx=159, cy=95) -->
+  <text x="140" y="85" font-size="10" font-weight="bold" fill="#dc2626">∠1</text>
+  <text x="175" y="85" font-size="10" font-weight="bold" fill="#2563eb">∠2 (75°)</text>
+  <text x="138" y="115" font-size="10" font-weight="bold" fill="#475569">∠3</text>
+  <text x="175" y="115" font-size="10" font-weight="bold" fill="#dc2626">∠4</text>
+
+  <!-- Sudut Titik Bawah B: (cx=221, cy=165) -->
+  <text x="202" y="155" font-size="10" font-weight="bold" fill="#dc2626">∠5</text>
+  <text x="238" y="155" font-size="10" font-weight="bold" fill="#2563eb">∠6</text>
+  <text x="200" y="185" font-size="10" font-weight="bold" fill="#475569">∠7</text>
+  <text x="238" y="185" font-size="10" font-weight="bold" fill="#dc2626">∠8</text>
+
+  <!-- Target Badge X -->
+  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <text x="200" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Jika ∠2 = 75°, besar sudut pada tanda "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+/** 37. Render Pembuktian Grafis Teorema Pythagoras */
+export function renderTeoremaPythagorasSvg(params: { a?: number; b?: number; label?: string }): string {
+  const a = params.a || 3;
+  const b = params.b || 4;
+  const c = Math.round(Math.sqrt(a * a + b * b));
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pembuktian Grafis Teorema Pythagoras: a² + b² = c²</text>
+
+  <!-- Segitiga Siku-Siku di Tengah -->
+  <!-- Siku di (150, 150) -->
+  <polygon points="150,150 230,150 150,90" fill="#f1f5f9" stroke="#0f172a" stroke-width="2"/>
+  <rect x="150" y="138" width="12" height="12" fill="none" stroke="#475569" stroke-width="1.2"/>
+
+  <!-- Persegi Sisi a (Tinggi = 60px) di Kiri Segitiga -->
+  <rect x="90" y="90" width="60" height="60" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="120" y="125" text-anchor="middle" font-size="11" font-weight="bold" fill="#b91c1c">a² = 3²</text>
+  <text x="120" y="139" text-anchor="middle" font-size="9.5" fill="#dc2626">(9 petak)</text>
+
+  <!-- Persegi Sisi b (Alas = 80px) di Bawah Segitiga -->
+  <rect x="150" y="150" width="80" height="80" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="190" y="195" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d4ed8">b² = 4²</text>
+  <text x="190" y="209" text-anchor="middle" font-size="9.5" fill="#2563eb">(16 petak)</text>
+
+  <!-- Persegi Hipotenusa c di Sisi Miring -->
+  <!-- Transform rotasi mengikuti sisi miring -->
+  <g transform="translate(150, 90) rotate(36.87)">
+    <rect x="0" y="-100" width="100" height="100" fill="#fef08a" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="50" y="-55" text-anchor="middle" font-size="11" font-weight="bold" fill="#854d0e">c² = 5²</text>
+    <text x="50" y="-40" text-anchor="middle" font-size="9.5" fill="#a16207">(25 petak)</text>
+  </g>
+
+  <!-- Target Badge X -->
+  <g transform="translate(330, 125)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <text x="0" y="25" text-anchor="middle" font-size="9" font-weight="bold" fill="#e11d48">9 + 16 = c²</text>
+  </g>
+
+  <text x="200" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Berdasarkan grid petak di atas, panjang sisi miring (c) adalah ...</text>
+</svg>`;
+}
+
+/** 38. Render Juring dan Busur Lingkaran */
+export function renderJuringBusurLingkaranSvg(params: { r?: number; sudut?: number; unit?: string; label?: string }): string {
+  const rVal = params.r || 14;
+  const sudutVal = params.sudut || 60;
+  const unit = params.unit || 'cm';
+  const labelChar = params.label || 'X';
+
+  const cx = 170;
+  const cy = 135;
+  const radPx = 80;
+
+  // Koordinat ujung busur
+  const radAngle = (sudutVal * Math.PI) / 180;
+  const xEnd = (cx + radPx * Math.cos(-radAngle)).toFixed(1);
+  const yEnd = (cy + radPx * Math.sin(-radAngle)).toFixed(1);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="380" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
+  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Unsur Lingkaran: Luas Juring &amp; Panjang Busur</text>
+
+  <!-- Lingkaran Luar Tipis -->
+  <circle cx="${cx}" cy="${cy}" r="${radPx}" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+  <!-- Juring Lingkaran Berarsir Berwarna -->
+  <path d="M ${cx},${cy} L ${cx + radPx},${cy} A ${radPx} ${radPx} 0 0 0 ${xEnd},${yEnd} Z" fill="#bae6fd" fill-opacity="0.8" stroke="#0284c7" stroke-width="2"/>
+
+  <!-- Busur Tebal Berwarna Merah di Lengkungan AB -->
+  <path d="M ${cx + radPx},${cy} A ${radPx} ${radPx} 0 0 0 ${xEnd},${yEnd}" fill="none" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Titik Pusat O, A, dan B -->
+  <circle cx="${cx}" cy="${cy}" r="3.5" fill="#0f172a"/>
+  <text x="${cx - 12}" y="${cy + 14}" font-size="11" font-weight="bold" fill="#0f172a">O</text>
+  <text x="${cx + radPx + 8}" y="${cy + 5}" font-size="11" font-weight="bold" fill="#0f172a">A</text>
+  <text x="${parseFloat(xEnd) + 8}" y="${parseFloat(yEnd) - 4}" font-size="11" font-weight="bold" fill="#0f172a">B</text>
+
+  <!-- Sudut Pusat Busur -->
+  <text x="${cx + 32}" y="${cy - 12}" font-size="11" font-weight="bold" fill="#0369a1">${sudutVal}°</text>
+
+  <!-- Jari-Jari (r) -->
+  <text x="${cx + 35}" y="${cy + 18}" font-size="10" font-weight="600" fill="#475569">r = ${rVal} ${escapeXml(unit)}</text>
+
+  <!-- Legenda Kanan (Anti-Overlap) -->
+  <g>
+    <rect x="270" y="65" width="95" height="24" rx="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+    <text x="317.5" y="81" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">Busur AB (Merah)</text>
+  </g>
+  <g>
+    <rect x="270" y="100" width="95" height="24" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1"/>
+    <text x="317.5" y="116" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Juring OAB (Biru)</text>
+  </g>
+
+  <!-- Target Badge X -->
+  <circle cx="317.5" cy="155" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="317.5" y="159.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <text x="190" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Panjang busur AB atau luas juring pada huruf "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
+}
+
+// =========================================================================
+// BATCH 3: GEOMETRI LANJUT & BANGUN RUANG GABUNGAN (4 TEMPLATES)
+// =========================================================================
+
+// 35. Teorema Sudut Luar Segitiga
+export function renderSudutLuarSegitigaSvg(params: any): string {
+  const a = params.sudutA || 50;
+  const b = params.sudutB || 60;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 220" width="380" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="220" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Teorema Sudut Luar Segitiga</text>
+
+  <!-- Segitiga dengan Garis Perpanjangan Alas -->
+  <polygon points="60,160 250,160 140,70" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <!-- Perpanjangan Garis Alas ke Kanan -->
+  <line x1="250" y1="160" x2="340" y2="160" stroke="#0284c7" stroke-width="2" stroke-dasharray="4,3"/>
+
+  <!-- Sudut A di Atas (140, 70) -->
+  <text x="140" y="95" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">${a}°</text>
+
+  <!-- Sudut B di Kiri Bawah (60, 160) -->
+  <text x="90" y="152" font-size="10" font-weight="bold" fill="#0369a1">${b}°</text>
+
+  <!-- Busur Sudut Luar di Kanan (250, 160) -->
+  <path d="M 280 160 A 30 30 0 0 0 230 143" fill="none" stroke="#e11d48" stroke-width="2"/>
+
+  <!-- Target Badge Sudut Luar -->
+  <circle cx="270" cy="135" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="270" y="139" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="200" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Besar sudut luar segitiga pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
+</svg>`;
+}
+
+// 36. Jaring-jaring Kerucut (Bukaan Juring & Alas)
+export function renderJaringKerucutSvg(params: any): string {
+  const r = params.r || 7;
+  const s = params.s || 25;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 230" width="360" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="360" height="230" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Jaring-jaring Kerucut</text>
+
+  <!-- Juring Selimut Kerucut (Atas) -->
+  <path d="M 180,45 L 260,125 A 115 115 0 0 1 100,125 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+  <text x="180" y="95" text-anchor="middle" font-size="9" font-weight="bold" fill="#9a3412">Selimut Kerucut</text>
+  <text x="235" y="80" font-size="8.5" font-weight="bold" fill="#c2410c">s = ${s} cm</text>
+
+  <!-- Lingkaran Alas (Bawah) -->
+  <circle cx="180" cy="165" r="30" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <line x1="180" y1="165" x2="210" y2="165" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="2,2"/>
+  <text x="180" y="160" text-anchor="middle" font-size="8" font-weight="bold" fill="#1e40af">Alas</text>
+  <text x="195" y="178" font-size="8" font-weight="bold" fill="#1d4ed8">r = ${r} cm</text>
+
+  <!-- Target Badge -->
+  <circle cx="280" cy="165" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="280" y="169" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="180" y="214" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Luas juring selimut kerucut pada gambar di atas adalah ...</text>
+</svg>`;
+}
+
+// 37. Jaring-jaring Tabung (Bukaan Selimut & 2 Lingkaran)
+export function renderJaringTabungSvg(params: any): string {
+  const r = params.r || 7;
+  const t = params.t || 10;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 230" width="380" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="380" height="230" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Jaring-jaring Tabung (Silinder)</text>
+
+  <!-- Lingkaran Tutup Atas -->
+  <circle cx="190" cy="55" r="22" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="190" y="58" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#166534">Tutup (r=${r})</text>
+
+  <!-- Persegi Panjang Selimut -->
+  <rect x="70" y="78" width="240" height="65" fill="#fef3c7" stroke="#d97706" stroke-width="1.8" rx="2"/>
+  <text x="190" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400e">Selimut Tabung (Persegi Panjang)</text>
+  <text x="190" y="128" text-anchor="middle" font-size="7.5" fill="#b45309">Panjang = 2πr | Lebar = t = ${t} cm</text>
+
+  <!-- Lingkaran Alas Bawah -->
+  <circle cx="190" cy="166" r="22" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="190" y="169" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#166534">Alas (r=${r})</text>
+
+  <!-- Target Badge -->
+  <circle cx="335" cy="110" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="335" y="114" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="190" y="210" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Panjang selimut tabung jika jari-jari r = ${r} cm adalah ...</text>
+</svg>`;
+}
+
+// 38. Luas Permukaan Bangun Gabungan (Balok + Limas)
+export function renderLuasPermukaanGabunganSvg(params: any): string {
+  const p = params.p || 10;
+  const l = params.l || 8;
+  const t = params.t || 12;
+  const labelChar = params.label || 'X';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 240" width="360" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="360" height="240" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Bangun Ruang Gabungan (Balok &amp; Limas)</text>
+
+  <!-- Balok Bawah Isometrik -->
+  <polygon points="120,130 200,130 230,110 150,110" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.8"/>
+  <polygon points="120,130 120,185 200,185 200,130" fill="#93c5fd" stroke="#1d4ed8" stroke-width="1.8"/>
+  <polygon points="200,130 200,185 230,165 230,110" fill="#60a5fa" stroke="#1d4ed8" stroke-width="1.8"/>
+
+  <!-- Atap Limas Segiempat di Atas Balok -->
+  <polygon points="120,130 200,130 175,60" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
+  <polygon points="200,130 230,110 175,60" fill="#fdba74" stroke="#ea580c" stroke-width="1.8"/>
+
+  <!-- Dimensi -->
+  <text x="160" y="198" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1e40af">p = ${p} cm</text>
+  <text x="225" y="180" font-size="8.5" font-weight="bold" fill="#1e40af">l = ${l} cm</text>
+  <text x="95" y="155" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1e40af">t = ${t} cm</text>
+
+  <!-- Target Badge -->
+  <circle cx="175" cy="60" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="175" y="64" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <text x="180" y="222" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Luas permukaan gabungan bangun ruang di atas adalah ...</text>
+</svg>`;
+}
+
+
+

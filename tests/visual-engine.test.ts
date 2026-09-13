@@ -73,7 +73,12 @@ import {
   renderStrukturPemdaSvg,
   renderGridMazeKodingSvg,
   generateVisualStimulus,
-  detectStimulusFromSoalText
+  detectStimulusFromSoalText,
+  getVisualCatalog,
+  VISUAL_RENDERER_REGISTRY,
+  isKnownVisualType,
+  getRegisteredVisualTypes,
+  DETECTION_RULES
 } from '../src/lib/visual-engine';
 import { buildStimulusSignature } from '../src/routes/kisi';
 
@@ -1429,4 +1434,80 @@ D. 32 cm`;
       expect(dMaze?.type).toBe('grid_maze_koding');
     });
   });
+
+  describe('Enterprise Architecture & Registry Integrity Tests', () => {
+    it('should register 100% of all 200 catalog templates into VISUAL_RENDERER_REGISTRY with zero gaps', () => {
+      const catalog = getVisualCatalog();
+      expect(catalog.length).toBe(200);
+
+      const registeredTypes = getRegisteredVisualTypes();
+      expect(registeredTypes.length).toBeGreaterThanOrEqual(200);
+
+      for (const item of catalog) {
+        expect(isKnownVisualType(item.id), `Template ID "${item.id}" must be registered in VISUAL_RENDERER_REGISTRY`).toBe(true);
+        expect(VISUAL_RENDERER_REGISTRY[item.id], `Registry entry for "${item.id}" must be defined`).toBeDefined();
+        expect(typeof VISUAL_RENDERER_REGISTRY[item.id].render, `Renderer for "${item.id}" must be a function`).toBe('function');
+      }
+    });
+
+    it('should correctly handle isKnownVisualType for valid and invalid types', () => {
+      expect(isKnownVisualType('balok')).toBe(true);
+      expect(isKnownVisualType('BALOK')).toBe(true);
+      expect(isKnownVisualType('rantai_makanan_laut')).toBe(true);
+      expect(isKnownVisualType('non_existent_visual_type_xyz')).toBe(false);
+      expect(isKnownVisualType('')).toBe(false);
+    });
+
+    it('should validate that all 200 catalog items use valid consolidated VisualCategory types', () => {
+      const allowedCategories = new Set([
+        'Geometri 2D',
+        'Geometri 3D',
+        'Pecahan',
+        'Matematika Bilangan',
+        'Statistik',
+        'Pengukuran',
+        'Sains / IPAS',
+        'Literasi & Sosial',
+        'Koding & Komputasi',
+        'PJOK & Kesehatan',
+        'Bahasa',
+        'Seni & Budaya (SBdP)',
+        'Pancasila & Kewarganegaraan'
+      ]);
+
+      const catalog = getVisualCatalog();
+      const usedCategories = new Set(catalog.map(item => item.category));
+
+      expect(usedCategories.size).toBe(13);
+      for (const cat of usedCategories) {
+        expect(allowedCategories.has(cat), `Category "${cat}" must be a member of consolidated VisualCategory union`).toBe(true);
+      }
+    });
+
+    it('should contain a declarative DETECTION_RULES array with valid match & extract handlers', () => {
+      expect(Array.isArray(DETECTION_RULES)).toBe(true);
+      expect(DETECTION_RULES.length).toBeGreaterThanOrEqual(200);
+
+      for (const rule of DETECTION_RULES) {
+        expect(typeof rule.id).toBe('string');
+        expect(typeof rule.match).toBe('function');
+        expect(typeof rule.extract).toBe('function');
+      }
+    });
+
+    it('should detect fallback catalog templates in detectStimulusFromSoalText', () => {
+      const detBatang = detectStimulusFromSoalText('Perhatikan sajian diagram batang data penjualan buku berikut!', 'Matematika');
+      expect(detBatang?.type).toBe('diagram_batang');
+
+      const detGaris = detectStimulusFromSoalText('Perhatikan grafik diagram garis suhu badan pasien selama dirawat!', 'Matematika');
+      expect(detGaris?.type).toBe('diagram_garis');
+
+      const detPecahanPersegi = detectStimulusFromSoalText('Perhatikan arsiran persegi pada gambar berikut untuk menyatakan pecahan!', 'Matematika');
+      expect(detPecahanPersegi?.type).toBe('pecahan_persegi');
+
+      const detGarisBilangan = detectStimulusFromSoalText('Tentukan titik P pada garis bilangan berikut!', 'Matematika');
+      expect(detGarisBilangan?.type).toBe('garis_bilangan');
+    });
+  });
 });
+

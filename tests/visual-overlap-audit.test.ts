@@ -359,9 +359,9 @@ describe('SVG Visual Stimulus Text Overlap & Collision Audit', () => {
     assertNoTextOverlap(svg, 'Grid Maze Koding');
   });
 
-  it('23. Comprehensive Catalog Audit: All 110 templates with sampleParams must have zero text collision', () => {
+  it('23. Comprehensive Catalog Audit: All 200 templates with sampleParams must have zero text collision', () => {
     const catalog = getVisualCatalog();
-    expect(catalog.length).toBe(110);
+    expect(catalog.length).toBe(200);
 
     for (const item of catalog) {
       const result = generateVisualStimulus({
@@ -376,7 +376,7 @@ describe('SVG Visual Stimulus Text Overlap & Collision Audit', () => {
     }
   });
 
-  it('24. Comprehensive Catalog Audit: All 110 templates with default empty params must have zero text collision', () => {
+  it('24. Comprehensive Catalog Audit: All 200 templates with default empty params must have zero text collision', () => {
     const catalog = getVisualCatalog();
 
     for (const item of catalog) {
@@ -640,6 +640,359 @@ describe('SVG Visual Stimulus Text Overlap & Collision Audit', () => {
 
     for (const item of stems) {
       const detected = detectStimulusFromSoalText(item.text, 'Matematika');
+      expect(detected, `Stem "${item.text}" should be detected`).not.toBeNull();
+      expect(detected?.type, `Stem "${item.text}" should detect type ${item.expected}`).toBe(item.expected);
+    }
+  });
+
+  it('31. Batch 2 - Kluster A: IPAS Biologi, Anatomi & Ekosistem: zero text collision and zero spoiler check', () => {
+    const bioTypes = [
+      'rangka_manusia',
+      'sendi_gerak',
+      'metamorfosis_katak',
+      'metamorfosis_nyamuk',
+      'paruh_burung',
+      'kaki_burung',
+      'simbiosis',
+      'jaring_makanan_sawah',
+      'adaptasi_tumbuhan',
+      'pernapasan_hewan',
+      'perkembangbiakan_tumbuhan',
+      'sel_hewan_tumbuhan'
+    ];
+
+    expect(bioTypes.length).toBe(12);
+
+    for (const t of bioTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Biology template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Biology [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('32. Batch 2 - Kluster B: IPAS Fisika, Energi, Optik & Kebumian: zero text collision and valid dimensions', () => {
+    const physicsTypes = [
+      'fase_bulan',
+      'lapisan_bumi',
+      'lapisan_tanah',
+      'baterai_buah',
+      'optik_periskop',
+      'kaca_pembesar_lup',
+      'pemuaian_bimetal',
+      'gelombang_bunyi',
+      'perubahan_energi',
+      'zona_waktu_indonesia',
+      'siklus_batuan'
+    ];
+
+    expect(physicsTypes.length).toBe(11);
+
+    for (const t of physicsTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Physics template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Physics [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('33. Batch 2 - Kluster C: IPS Budaya Nusantara, Geografi, PKn, PJOK & Literasi: zero text collision', () => {
+    const socialTypes = [
+      'simbol_kartografi',
+      'garis_lintang_bujur',
+      'rumah_adat_nusantara',
+      'alat_musik_tradisional',
+      'trias_politika',
+      'alur_kegiatan_ekonomi',
+      'norma_masyarakat',
+      'rambu_bahaya_lab',
+      'piramida_aktivitas_fisik',
+      'lapangan_atletik',
+      'diagram_mindmap_paragraf'
+    ];
+
+    expect(socialTypes.length).toBe(11);
+
+    for (const t of socialTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Social template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Social [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('34. Batch 2 - Kluster D: Matematika Lanjut, Geometri & Koding Scratch: zero text collision', () => {
+    const mathGeomTypes = [
+      'sudut_berpelurus_berpenyiku',
+      'garis_sejajar_transversal',
+      'teorema_pythagoras',
+      'juring_busur_lingkaran',
+      'segitiga_pascal',
+      'skala_termometer_komparasi',
+      'diagram_batang_daun',
+      'diagram_box_plot',
+      'pohon_peluang',
+      'koding_blok_percabangan',
+      'koding_blok_perulangan'
+    ];
+
+    expect(mathGeomTypes.length).toBe(11);
+
+    for (const t of mathGeomTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Math/Geom template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `MathGeom [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('35. Batch 2 - NLP Heuristic Detectors: All 45 new types correctly mapped from question stem', () => {
+    const stems = [
+      // Kluster D
+      { text: 'Besar sudut berpelurus pada gambar di samping jika sudut A diketahui 65 derajat...', expected: 'sudut_berpelurus_berpenyiku' },
+      { text: 'Perhatikan pasangan sudut sehadap pada dua garis sejajar yang dipotong garis transversal...', expected: 'garis_sejajar_transversal' },
+      { text: 'Hitunglah panjang hipotenusa segitiga siku-siku menggunakan teorema pythagoras...', expected: 'teorema_pythagoras' },
+      { text: 'Hitunglah panjang busur lingkaran dengan sudut pusat 60 derajat dan jari-jari 14 cm...', expected: 'juring_busur_lingkaran' },
+      { text: 'Berdasarkan pola segitiga pascal baris ke-5, berapakah jumlah bilangan pada baris tersebut?', expected: 'segitiga_pascal' },
+      { text: 'Lakukan komparasi termometer untuk mengubah 40 derajat celcius ke skala reamur...', expected: 'skala_termometer_komparasi' },
+      { text: 'Perhatikan diagram batang daun hasil ulangan matematika berikut...', expected: 'diagram_batang_daun' },
+      { text: 'Berdasarkan diagram box plot di atas, berapakah nilai median (Q2) data tersebut?', expected: 'diagram_box_plot' },
+      { text: 'Tentukan ruang sampel pelemparan dua koin pada diagram pohon peluang...', expected: 'pohon_peluang' },
+      { text: 'Dalam pemrograman visual Scratch, blok koding jika maka (if-then) digunakan untuk...', expected: 'koding_blok_percabangan' },
+      { text: 'Blok koding ulangi sebanyak 4 kali pada Scratch berfungsi untuk membuat...', expected: 'koding_blok_perulangan' },
+      // Kluster A
+      { text: 'Perhatikan rangka manusia berikut, bagian tulang rusuk berfungsi untuk melindungi...', expected: 'rangka_manusia' },
+      { text: 'Persendian pada gelang bahu yang memungkinkan gerak ke segala arah adalah sendi peluru...', expected: 'sendi_gerak' },
+      { text: 'Daur hidup katak dari berudu hingga katak dewasa mengalami proses metamorfosis...', expected: 'metamorfosis_katak' },
+      { text: 'Fase jentik nyamuk pada daur hidup nyamuk hidup di genangan air sebelum menjadi pupa...', expected: 'metamorfosis_nyamuk' },
+      { text: 'Bentuk paruh burung elang yang tajam dan bengkok beradaptasi untuk mencabik makanan...', expected: 'paruh_burung' },
+      { text: 'Kaki burung pemanjat seperti burung pelatuk memiliki susunan jari khas untuk...', expected: 'kaki_burung' },
+      { text: 'Hubungan antara lebah madu dengan bunga merupakan bentuk simbiosis mutualisme karena...', expected: 'simbiosis' },
+      { text: 'Pada jaring-jaring makanan sawah, belalang berperan sebagai konsumen tingkat pertama...', expected: 'jaring_makanan_sawah' },
+      { text: 'Tumbuhan kaktus melakukan adaptasi xerofit dengan daun berduri untuk mengurangi penguapan...', expected: 'adaptasi_tumbuhan' },
+      { text: 'Alat pernapasan hewan serangga belalang berupa sistem pembuluh trakea...', expected: 'pernapasan_hewan' },
+      { text: 'Perkembangbiakan vegetatif buatan dengan cara mencangkok batang tanaman bertujuan untuk...', expected: 'perkembangbiakan_tumbuhan' },
+      { text: 'Organel kloroplas dan dinding sel hanya ditemukan pada sel tumbuhan...', expected: 'sel_hewan_tumbuhan' },
+      // Kluster B
+      { text: 'Perhatikan fase bulan saat permukaan bulan tampak bulat utuh bercahaya yaitu bulan purnama...', expected: 'fase_bulan' },
+      { text: 'Lapisan bumi terluar tempat berlangsungnya kehidupan manusia disebut kerak bumi...', expected: 'lapisan_bumi' },
+      { text: 'Horizon tanah bagian atas yang kaya humus disebut lapisan tanah topsoil...', expected: 'lapisan_tanah' },
+      { text: 'Rangkaian baterai buah menggunakan elektroda tembaga dan seng pada buah lemon menghasilkan arus listrik...', expected: 'baterai_buah' },
+      { text: 'Alat optik periskop pada kapal selam menggunakan dua cermin datar yang dipasang sejajar bersudut 45 derajat...', expected: 'optik_periskop' },
+      { text: 'Penggunaan kaca pembesar lup memanfaatkan lensa cembung untuk mengamati benda kecil...', expected: 'kaca_pembesar_lup' },
+      { text: 'Keping bimetal akan melengkung saat dipanaskan karena perbedaan pemuaian panjang dua logam...', expected: 'pemuaian_bimetal' },
+      { text: 'Perambatan gelombang bunyi di udara merupakan gelombang longitudinal berupa rapatan dan renggangan...', expected: 'gelombang_bunyi' },
+      { text: 'Pada setrika listrik terjadi perubahan energi dari energi listrik menjadi energi panas...', expected: 'perubahan_energi' },
+      { text: 'Wilayah zona waktu Indonesia terbagi atas WIB, WITA, dan WIT dengan selisih waktu 1 jam...', expected: 'zona_waktu_indonesia' },
+      { text: 'Dalam siklus batuan, magma yang membeku akan membentuk batuan beku...', expected: 'siklus_batuan' },
+      // Kluster C
+      { text: 'Pada peta rupa bumi, simbol kartografi berupa garis biru meliuk digunakan untuk menandai...', expected: 'simbol_kartografi' },
+      { text: 'Garis khatulistiwa membagi bumi menjadi belahan utara dan selatan pada sistem garis lintang...', expected: 'garis_lintang_bujur' },
+      { text: 'Arsitektur rumah adat gadang khas Minangkabau memiliki atap melengkung menyerupai tanduk kerbau...', expected: 'rumah_adat_nusantara' },
+      { text: 'Alat musik tradisional angklung dari bambu dimainkan dengan cara digetarkan...', expected: 'alat_musik_tradisional' },
+      { text: 'Konsep trias politika membagi kekuasaan negara menjadi lembaga legislatif, eksekutif, dan yudikatif...', expected: 'trias_politika' },
+      { text: 'Alur kegiatan ekonomi berawal dari pabrik sebagai tempat produksi hingga barang sampai ke konsumen...', expected: 'alur_kegiatan_ekonomi' },
+      { text: 'Berperilaku sopan santun kepada orang yang lebih tua merupakan pengamalan norma kesopanan...', expected: 'norma_masyarakat' },
+      { text: 'Piktogram simbol laboratorium dengan gambar tengkorak menandakan bahan kimia bersifat beracun...', expected: 'rambu_bahaya_lab' },
+      { text: 'Berdasarkan piramida aktivitas fisik, kegiatan duduk diam atau sedentari sebaiknya dibatasi...', expected: 'piramida_aktivitas_fisik' },
+      { text: 'Lintasan lari 400 meter pada lapangan atletik standar memiliki jalur lurus dan tikungan...', expected: 'lapangan_atletik' },
+      { text: 'Bagan mind map paragraf di atas memetakan ide pokok dan beberapa kalimat penjelas...', expected: 'diagram_mindmap_paragraf' }
+    ];
+
+    expect(stems.length).toBe(45);
+
+    for (const item of stems) {
+      const detected = detectStimulusFromSoalText(item.text, 'Umum');
+      expect(detected, `Stem "${item.text}" should be detected`).not.toBeNull();
+      expect(detected?.type, `Stem "${item.text}" should detect type ${item.expected}`).toBe(item.expected);
+    }
+  });
+
+  it('36. Batch 3 - Kluster 1: IPAS Biologi Lanjut, Ekosistem & Anatomi (12 Templates): zero text collision', () => {
+    const bioTypes = [
+      'rantai_makanan_laut',
+      'rantai_makanan_hutan',
+      'daur_hidup_kupu_detail',
+      'daur_hidup_belalang',
+      'daur_hidup_kecoa',
+      'bagian_akar_tumbuhan',
+      'bagian_batang_dikotil_monokotil',
+      'bagian_daun_anatomi',
+      'alat_ekskresi_ginjal',
+      'piramida_makanan_ekologi',
+      'indra_pengecap_lidah',
+      'indra_pembau_hidung'
+    ];
+
+    expect(bioTypes.length).toBe(12);
+
+    for (const t of bioTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Biologi template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Biologi [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('37. Batch 3 - Kluster 2: IPAS Fisika, Gaya, Energi Terbarukan & Astronomi (11 Templates): zero text collision', () => {
+    const physicsTypes = [
+      'macam_macam_gaya',
+      'pesawat_sederhana_bidang_miring',
+      'pesawat_sederhana_roda_berporos',
+      'pembangkit_listrik_plta',
+      'panel_surya_plts',
+      'energi_angin_pltb',
+      'termos_air_panas',
+      'perpindahan_panas_konduksi_konveksi_radiasi',
+      'gerak_semu_matahari',
+      'musim_dan_revolusi_bumi',
+      'siklus_karbon_oksigen'
+    ];
+
+    expect(physicsTypes.length).toBe(11);
+
+    for (const t of physicsTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Physics template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Physics [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('38. Batch 3 - Kluster 3: IPS, Sejarah, Budaya, Literasi & Seni (11 Templates): zero text collision', () => {
+    const socialTypes = [
+      'garis_wallace_weber',
+      'candi_dan_peninggalan_sejarah',
+      'motif_batik_nusantara',
+      'senjata_tradisional_nusantara',
+      'tarian_daerah_nusantara',
+      'piramida_penduduk',
+      'struktur_fabel_alur_cerita',
+      'jenis_paragraf_induktif_deduktif',
+      'unsur_iklan_media_cetak',
+      'pohon_keluarga_genealogi',
+      'koperasi_sekolah'
+    ];
+
+    expect(socialTypes.length).toBe(11);
+
+    for (const t of socialTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Social template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Social [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('39. Batch 3 - Kluster 4: Matematika Lanjut, Logika, Pengukuran & Koding (11 Templates): zero text collision', () => {
+    const mathTypes = [
+      'sudut_luar_segitiga',
+      'jaring_kerucut',
+      'jaring_tabung',
+      'luas_permukaan_gabungan',
+      'diagram_alur_logika_gerbang',
+      'koding_variabel_operator',
+      'garis_bilangan_bulat_operasi',
+      'pecahan_desimal_persen_senilai',
+      'jam_digital_komparasi',
+      'diagram_sankey_energi',
+      'skala_peta_batang'
+    ];
+
+    expect(mathTypes.length).toBe(11);
+
+    for (const t of mathTypes) {
+      const res = generateVisualStimulus({ type: t, params: { label: 'X' } });
+      expect(res, `Math template ${t} should produce non-null SVG`).not.toBeNull();
+      if (res) {
+        assertNoTextOverlap(res.svg, `Math [${t}]`);
+        expect(res.width).toBeGreaterThan(0);
+        expect(res.height).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('40. Batch 3 - NLP Heuristic Detectors: All 45 Batch 3 question stems detected correctly', () => {
+    const stems = [
+      // Kluster 1 (12)
+      { text: 'Fitoplankton merupakan produsen utama dalam rantai makanan laut di samudera...', expected: 'rantai_makanan_laut' },
+      { text: 'Dalam rantai makanan hutan tropis, harimau memangsa rusa sebagai predator puncak...', expected: 'rantai_makanan_hutan' },
+      { text: 'Daur hidup kupu-kupu yang lengkap melalui tahap krisalis atau kepompong...', expected: 'daur_hidup_kupu_detail' },
+      { text: 'Metamorfosis belalang tergolong metamorfosis tidak sempurna karena nimfa mirip dewasa...', expected: 'daur_hidup_belalang' },
+      { text: 'Daur hidup kecoa dimulai dari kapsul telur ooteka hingga menjadi nimfa...', expected: 'daur_hidup_kecoa' },
+      { text: 'Struktur bagian akar tumbuhan yang bertugas menyerap air adalah rambut akar...', expected: 'bagian_akar_tumbuhan' },
+      { text: 'Irisan melintang batang dikotil memiliki berkas kambium pembuluh teratur...', expected: 'bagian_batang_dikotil_monokotil' },
+      { text: 'Struktur jaringan anatomi daun tempat fotosintesis berlangsung yaitu jaringan palisade...', expected: 'bagian_daun_anatomi' },
+      { text: 'Bagian organ ekskresi ginjal yang berfungsi menyaring darah pada bagian korteks...', expected: 'alat_ekskresi_ginjal' },
+      { text: 'Piramida makanan ekologi menunjukkan perpindahan biomassa dari tingkat trofik produsen...', expected: 'piramida_makanan_ekologi' },
+      { text: 'Reseptor papila indra pengecap lidah di bagian pangkal paling peka terhadap rasa pahit...', expected: 'indra_pengecap_lidah' },
+      { text: 'Organ indra pembau hidung memiliki serabut saraf olfaktori untuk mendeteksi aroma...', expected: 'indra_pembau_hidung' },
+
+      // Kluster 2 (11)
+      { text: 'Perhatikan gambar macam-macam gaya yang bekerja saat menarik busur panah dengan gaya pegas...', expected: 'macam_macam_gaya' },
+      { text: 'Keuntungan mekanis sebuah bidang miring dengan rampa miring sepanjang s dan tinggi h...', expected: 'pesawat_sederhana_bidang_miring' },
+      { text: 'Prinsip kerja roda berporos pada gir sepeda memudahkan gaya kayuhan...', expected: 'pesawat_sederhana_roda_berporos' },
+      { text: 'Skema PLTA memanfaatkan arus air dari bendungan waduk untuk memutar turbin air generator...', expected: 'pembangkit_listrik_plta' },
+      { text: 'Pembangkit PLTS memanfaatkan panel surya fotovoltaik dan inverter untuk menghasilkan listrik...', expected: 'panel_surya_plts' },
+      { text: 'Turbin pembangkit PLTB digerakkan oleh kincir angin raksasa untuk memutar generator...', expected: 'energi_angin_pltb' },
+      { text: 'Dinding ruang hampa pada termos air panas berfungsi mencegah perpindahan kalor konveksi...', expected: 'termos_air_panas' },
+      { text: 'Peristiwa memasak air menunjukkan tiga jalur perpindahan kalor konduksi konveksi radiasi...', expected: 'perpindahan_panas_konduksi_konveksi_radiasi' },
+      { text: 'Pergeseran semu tahunan matahari dari lintasan khatulistiwa menuju utara dinamakan gerak semu matahari...', expected: 'gerak_semu_matahari' },
+      { text: 'Pergantian empat musim di bumi disebabkan oleh sudut kemiringan sumbu bumi dan revolusi bumi...', expected: 'musim_dan_revolusi_bumi' },
+      { text: 'Dalam siklus karbon dan oksigen, fotosintesis menyerap karbon dioksida dan melepaskan oksigen...', expected: 'siklus_karbon_oksigen' },
+
+      // Kluster 3 (11)
+      { text: 'Persebaran fauna Indonesia dibatasi oleh garis Wallace dan Weber...', expected: 'garis_wallace_weber' },
+      { text: 'Perbedaan arsitektur candi Hindu yang ramping dengan candi Buddha yang memiliki stupa...', expected: 'candi_dan_peninggalan_sejarah' },
+      { text: 'Motif batik mega mendung khas daerah Cirebon berbentuk gumpalan awan...', expected: 'motif_batik_nusantara' },
+      { text: 'Senjata tradisional adat keris Jawa memiliki bilah luk bergelombang...', expected: 'senjata_tradisional_nusantara' },
+      { text: 'Tarian daerah tari saman asal Aceh ditarikan secara serempak dan dinamis...', expected: 'tarian_daerah_nusantara' },
+      { text: 'Piramida penduduk bentuk ekspansif menunjukkan persentase usia muda lebih besar...', expected: 'piramida_penduduk' },
+      { text: 'Tahap puncak konflik masalah dalam alur struktur cerita fabel disebut komplikasi...', expected: 'struktur_fabel_alur_cerita' },
+      { text: 'Paragraf deduktif menempatkan kalimat utama di awal paragraf sedangkan induktif di akhir...', expected: 'jenis_paragraf_induktif_deduktif' },
+      { text: 'Unsur iklan media cetak terdiri atas headline judul, gambar ilustrasi menarik, dan pesan penjelas...', expected: 'unsur_iklan_media_cetak' },
+      { text: 'Bagan diagram silsilah pohon keluarga tiga generasi dari kakek hingga cucu...', expected: 'pohon_keluarga_genealogi' },
+      { text: 'Rapat anggota tahunan merupakan pemegang kekuasaan tertinggi pada koperasi sekolah...', expected: 'koperasi_sekolah' },
+
+      // Kluster 4 (11)
+      { text: 'Berdasarkan teorema sudut luar segitiga, besar sudut luar sama dengan jumlah sudut...', expected: 'sudut_luar_segitiga' },
+      { text: 'Bentuk bentangan jaring-jaring kerucut terdiri atas juring selimut dan lingkaran alas...', expected: 'jaring_kerucut' },
+      { text: 'Sebuah jaring-jaring tabung memiliki dua lingkaran dan sebuah selimut persegi panjang...', expected: 'jaring_tabung' },
+      { text: 'Hitunglah luas permukaan gabungan balok dan limas segiempat berikut...', expected: 'luas_permukaan_gabungan' },
+      { text: 'Simbol belah ketupat keputusan pada flowchart alir logika berfungsi untuk...', expected: 'diagram_alur_logika_gerbang' },
+      { text: 'Penggunaan blok variabel dan blok operator matematika pada Scratch berfungsi untuk...', expected: 'koding_variabel_operator' },
+      { text: 'Garis bilangan penjumlahan bilangan bulat menunjukkan lompatan panah ke kanan...', expected: 'garis_bilangan_bulat_operasi' },
+      { text: 'Mengubah nilai senilai pecahan desimal persen dari 3/4 menjadi 0,75 dan 75%...', expected: 'pecahan_desimal_persen_senilai' },
+      { text: 'Tentukan perbandingan penunjukan waktu antara jam analog jarum dan jam digital 24 jam...', expected: 'jam_digital_komparasi' },
+      { text: 'Berdasarkan diagram sankey alir energi, energi input yang masuk terbagi menjadi energi berguna dan rugi...', expected: 'diagram_sankey_energi' },
+      { text: 'Skala batang peta grafis menunjukkan bahwa 1 cm pada peta setara dengan 5 km...', expected: 'skala_peta_batang' }
+    ];
+
+    expect(stems.length).toBe(45);
+
+    for (const item of stems) {
+      const detected = detectStimulusFromSoalText(item.text, 'Umum');
       expect(detected, `Stem "${item.text}" should be detected`).not.toBeNull();
       expect(detected?.type, `Stem "${item.text}" should detect type ${item.expected}`).toBe(item.expected);
     }

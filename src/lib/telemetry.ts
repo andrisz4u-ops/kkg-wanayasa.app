@@ -7,7 +7,7 @@ export interface LogAIOptions {
     user_id?: number;
     user_nama?: string;
     sekolah?: string;
-    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE';
+    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE' | 'TTS';
     mata_pelajaran?: string;
     topik?: string;
     jenjang_kelas?: string;

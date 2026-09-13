@@ -287,10 +287,10 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(qA.gambar?.svg).not.toEqual(qB.gambar?.svg);
         });
 
-        it('should provide full visual catalog with 50 distinct templates', async () => {
+        it('should provide full visual catalog with 110 distinct templates', async () => {
             const { getVisualCatalog } = await import('../src/lib/visual-engine');
             const catalog = getVisualCatalog();
-            expect(catalog.length).toBe(50);
+            expect(catalog.length).toBe(110);
             const ids = catalog.map(item => item.id);
             expect(ids).toContain('persegi_panjang');
             expect(ids).toContain('segitiga_sama_sisi');
@@ -310,6 +310,39 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(ids).toContain('busur_derajat');
             expect(ids).toContain('magnet');
             expect(ids).toContain('sifat_cahaya');
+            expect(ids).toContain('peredaran_darah');
+            expect(ids).toContain('gerhana');
+            expect(ids).toContain('pesawat_sederhana');
+            expect(ids).toContain('pancaindra');
+            expect(ids).toContain('timbangan_neraca');
+            expect(ids).toContain('mata_angin');
+            expect(ids).toContain('tabel_turus');
+            expect(ids).toContain('spinner_peluang');
+            expect(ids).toContain('pola_gambar');
+            expect(ids).toContain('flowchart');
+            // Stage 3 & 4 templates
+            expect(ids).toContain('termometer');
+            expect(ids).toContain('gelas_ukur');
+            expect(ids).toContain('pohon_faktor');
+            expect(ids).toContain('grid_matriks_100');
+            expect(ids).toContain('rambu_lalu_lintas');
+            expect(ids).toContain('piring_gizi_seimbang');
+            expect(ids).toContain('lapangan_olahraga');
+            expect(ids).toContain('preposition_place');
+            expect(ids).toContain('tangga_nada');
+            expect(ids).toContain('lingkaran_warna');
+            expect(ids).toContain('struktur_pemda');
+            expect(ids).toContain('grid_maze_koding');
+            // Batch 1 templates
+            expect(ids).toContain('stopwatch_analog');
+            expect(ids).toContain('jangka_sorong');
+            expect(ids).toContain('neraca_pasar');
+            expect(ids).toContain('tangga_satuan_panjang');
+            expect(ids).toContain('jaring_limas_segiempat');
+            expect(ids).toContain('blok_dienes');
+            expect(ids).toContain('sempoa_abakus');
+            expect(ids).toContain('diagram_batang_ganda');
+            expect(ids).toContain('papan_galton_peluang');
         });
 
         it('should handle /visual-catalog and /visual-render endpoints via kisi router', async () => {
@@ -319,7 +352,7 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(resCatalog.status).toBe(200);
             const bodyCat = await resCatalog.json();
             expect(bodyCat.success).toBe(true);
-            expect(bodyCat.data.length).toBe(50);
+            expect(bodyCat.data.length).toBe(110);
 
             const resRender = await kisi.request('/visual-render', {
                 method: 'POST',

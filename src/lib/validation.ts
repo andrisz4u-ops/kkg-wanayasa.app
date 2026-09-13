@@ -552,3 +552,29 @@ export const createAiProviderSchema = z.object({
 
 export const updateAiProviderSchema = createAiProviderSchema.partial();
 
+// ============================================
+// Asesmen / Kisi-Kisi Schemas
+// ============================================
+
+export const createAssessmentSchema = z.object({
+    topik: z.string().min(2, 'Topik/Materi minimal 2 karakter').max(255, 'Topik/Materi terlalu panjang'),
+    mataPelajaran: z.string().min(1, 'Mata Pelajaran wajib diisi').max(100, 'Mata Pelajaran terlalu panjang').optional().default('Tematik'),
+    namaSekolah: z.string().max(150, 'Nama sekolah terlalu panjang').optional().nullable(),
+    namaGuru: z.string().max(100, 'Nama guru terlalu panjang').optional().nullable(),
+    nipGuru: z.string().max(50, 'NIP guru terlalu panjang').optional().nullable(),
+    jenjangKelas: z.string().max(50, 'Jenjang kelas terlalu panjang').optional().default('Kelas 5'),
+    semester: z.string().max(50, 'Semester terlalu panjang').optional().default('Semester 1'),
+    jenisUjian: z.string().max(100, 'Jenis ujian terlalu panjang').optional().default('Sumatif Akhir Materi'),
+    capaianPembelajaran: z.string().max(2500, 'Capaian pembelajaran terlalu panjang').optional().nullable(),
+    jumlahPG: z.coerce.number().int('Jumlah PG harus bilangan bulat').min(0, 'Jumlah PG minimal 0').max(50, 'Maksimal 50 soal pilihan ganda').optional().default(10),
+    jumlahIsian: z.coerce.number().int('Jumlah Isian harus bilangan bulat').min(0, 'Jumlah Isian minimal 0').max(30, 'Maksimal 30 soal isian').optional().default(0),
+    jumlahUraian: z.coerce.number().int('Jumlah Uraian harus bilangan bulat').min(0, 'Jumlah Uraian minimal 0').max(20, 'Maksimal 20 soal uraian').optional().default(0),
+    hotsRatio: z.string().max(50).optional().default('30:40:30'),
+    isianType: z.string().max(50).optional().default('Standard'),
+    aiProvider: z.string().max(50).optional(),
+    useGambar: z.union([z.boolean(), z.string(), z.number()]).optional().default(true),
+    isPublic: z.union([z.boolean(), z.string(), z.number()]).optional().default(true)
+});
+
+export type CreateAssessmentInput = z.infer<typeof createAssessmentSchema>;
+

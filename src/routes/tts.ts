@@ -90,7 +90,16 @@ ttsRoutes.post('/generate', async (c) => {
         // Record telemetry (silent)
         try {
             const user = c.get('user');
-            await recordAIGeneration(c.env.DB, 'tts', user);
+            await recordAIGeneration(c.env.DB, {
+                user_id: user?.id || 1,
+                user_nama: user?.nama || 'Guru',
+                sekolah: user?.sekolah || 'SDN 2 Nangerang',
+                feature_type: 'TTS',
+                mata_pelajaran: mataPelajaran,
+                topik: topik,
+                jenjang_kelas: jenjangKelas,
+                ai_provider: preferredSlug
+            });
         } catch (_) {}
 
         return successResponse(c, {

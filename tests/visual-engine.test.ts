@@ -50,6 +50,28 @@ import {
   renderMagnetSvg,
   renderSifatCahayaSvg,
   renderBusurDerajatSvg,
+  renderPeredaranDarahSvg,
+  renderGerhanaSvg,
+  renderPesawatSederhanaSvg,
+  renderPancaindraSvg,
+  renderTimbanganNeracaSvg,
+  renderMataAnginSvg,
+  renderTabelTurusSvg,
+  renderSpinnerPeluangSvg,
+  renderPolaGambarSvg,
+  renderFlowchartSvg,
+  renderTermometerSvg,
+  renderGelasUkurSvg,
+  renderPohonFaktorSvg,
+  renderGridMatriks100Svg,
+  renderRambuLaluLintasSvg,
+  renderPiringGiziSeimbangSvg,
+  renderLapanganOlahragaSvg,
+  renderPrepositionPlaceSvg,
+  renderTanggaNadaSvg,
+  renderLingkaranWarnaSvg,
+  renderStrukturPemdaSvg,
+  renderGridMazeKodingSvg,
   generateVisualStimulus,
   detectStimulusFromSoalText
 } from '../src/lib/visual-engine';
@@ -1082,6 +1104,329 @@ D. 32 cm`;
       const detTangga = detectStimulusFromSoalText('Gambar jaring-jaring kubus dengan pola tangga 1-4-1 di bawah ini...', 'matematika');
       expect(detTangga?.type).toBe('jaring_kubus');
       expect(detTangga?.params?.pola).toBe('tangga');
+
+      // 6. Peredaran Darah
+      const detDarah = detectStimulusFromSoalText('Perhatikan gambar sistem peredaran darah manusia berikut! Bagian bilik kiri jantung memompa darah kaya oksigen menuju aorta.', 'ipas');
+      expect(detDarah?.type).toBe('peredaran_darah');
+      expect(detDarah?.params?.pointer).toBe('bilik_kiri');
+
+      // 7. Gerhana
+      const detGerhana = detectStimulusFromSoalText('Perhatikan gambar peristiwa gerhana matahari berikut! Daerah bayangan inti yang gelap gulita (umbra) ditunjukkan oleh huruf X.', 'ipas');
+      expect(detGerhana?.type).toBe('gerhana');
+      expect(detGerhana?.params?.jenis).toBe('matahari');
+      expect(detGerhana?.params?.pointer).toBe('umbra');
+
+      // 8. Pesawat Sederhana (Tuas & Katrol)
+      const detTuas = detectStimulusFromSoalText('Sebuah batu besar dipindahkan menggunakan alat tuas / pengungkit dengan titik tumpu berada di antara beban dan kuasa.', 'ipas');
+      expect(detTuas?.type).toBe('pesawat_sederhana');
+      expect(detTuas?.params?.jenis).toBe('tuas');
+
+      const detKatrol = detectStimulusFromSoalText('Beban seberat 50 kg diangkat menggunakan katrol bebas yang bergerak bersama beban.', 'ipas');
+      expect(detKatrol?.type).toBe('pesawat_sederhana');
+      expect(detKatrol?.params?.jenis).toBe('katrol');
+      expect(detKatrol?.params?.tipeKatrol).toBe('bebas');
+
+      // 9. Pancaindra (Mata & Telinga)
+      const detMata = detectStimulusFromSoalText('Perhatikan gambar penampang bola mata berikut! Bagian retina yang peka terhadap cahaya ditunjuk oleh huruf X.', 'ipas');
+      expect(detMata?.type).toBe('pancaindra');
+      expect(detMata?.params?.organ).toBe('mata');
+      expect(detMata?.params?.pointer).toBe('retina');
+
+      const detTelinga = detectStimulusFromSoalText('Bagian telinga indra pendengaran yang meneruskan getaran ke koklea (rumah siput) adalah...', 'ipas');
+      expect(detTelinga?.type).toBe('pancaindra');
+      expect(detTelinga?.params?.organ).toBe('telinga');
+      expect(detTelinga?.params?.pointer).toBe('koklea');
+    });
+
+    it('should directly render and dispatch 4 new science diagrams without text overlaps', () => {
+      // 1. Peredaran Darah
+      const darah = renderPeredaranDarahSvg({ pointer: 'bilik_kiri', label: 'X' });
+      expect(darah).toContain('Skema Peredaran Darah Manusia');
+      expect(darah).toContain('Serambi Kanan');
+      expect(darah).toContain('Bilik Kiri');
+      expect(darah).toContain('Paru-Paru (Pulmo)');
+      expect(darah).toContain('Seluruh Tubuh');
+      expect(darah).toContain('Aorta');
+      expect(darah).toContain('Vena Cava');
+      expect(darah).toContain('huruf "X"');
+      expect(darah).not.toContain('NaN');
+
+      // 2. Gerhana Matahari & Bulan
+      const gerhanaM = renderGerhanaSvg({ jenis: 'matahari', pointer: 'umbra', label: 'X' });
+      expect(gerhanaM).toContain('Gerhana Matahari');
+      expect(gerhanaM).toContain('Matahari');
+      expect(gerhanaM).toContain('Bulan');
+      expect(gerhanaM).toContain('Bumi');
+      expect(gerhanaM).toContain('1. Umbra');
+      expect(gerhanaM).toContain('2. Penumbra');
+      expect(gerhanaM).toContain('huruf "X"');
+
+      const gerhanaB = renderGerhanaSvg({ jenis: 'bulan', pointer: 'penumbra', label: 'Y' });
+      expect(gerhanaB).toContain('Gerhana Bulan');
+      expect(gerhanaB).toContain('huruf "Y"');
+
+      // 3. Pesawat Sederhana (Tuas & Katrol)
+      const tuas = renderPesawatSederhanaSvg({ jenis: 'tuas', tipeTuas: 1, pointer: 'tumpu', label: 'X' });
+      expect(tuas).toContain('Pesawat Sederhana: Tuas / Pengungkit');
+      expect(tuas).toContain('Titik Tumpu');
+      expect(tuas).toContain('Beban');
+      expect(tuas).toContain('Kuasa (F)');
+      expect(tuas).toContain('huruf "X"');
+
+      const katrol = renderPesawatSederhanaSvg({ jenis: 'katrol', tipeKatrol: 'tetap', pointer: 'kuasa', label: 'F' });
+      expect(katrol).toContain('Katrol Tetap');
+      expect(katrol).toContain('Kuasa');
+      expect(katrol).toContain('huruf "F"');
+
+      // 4. Pancaindra (Mata & Telinga)
+      const mata = renderPancaindraSvg({ organ: 'mata', pointer: 'kornea', label: 'X' });
+      expect(mata).toContain('Bola Mata Manusia');
+      expect(mata).toContain('1. Kornea');
+      expect(mata).toContain('2. Iris');
+      expect(mata).toContain('3. Lensa');
+      expect(mata).toContain('4. Retina');
+      expect(mata).toContain('5. Saraf Optik');
+      expect(mata).toContain('huruf "X"');
+
+      const telinga = renderPancaindraSvg({ organ: 'telinga', pointer: 'koklea', label: 'Y' });
+      expect(telinga).toContain('Indra Pendengaran (Telinga)');
+      expect(telinga).toContain('Daun Telinga');
+      expect(telinga).toContain('Gendang Telinga');
+      expect(telinga).toContain('Koklea (Rumah Siput)');
+      expect(telinga).toContain('Saluran Eustachius');
+      expect(telinga).toContain('huruf "Y"');
+
+      // Dispatcher check for all 4
+      const d1 = generateVisualStimulus({ type: 'peredaran_darah', params: {} });
+      expect(d1).not.toBeNull();
+      expect(d1?.width).toBe(440);
+      expect(d1?.height).toBe(350);
+
+      const d2 = generateVisualStimulus({ type: 'gerhana', params: { jenis: 'matahari' } });
+      expect(d2).not.toBeNull();
+      expect(d2?.width).toBe(480);
+      expect(d2?.height).toBe(260);
+
+      const d3 = generateVisualStimulus({ type: 'pesawat_sederhana', params: { jenis: 'tuas' } });
+      expect(d3).not.toBeNull();
+      expect(d3?.width).toBe(420);
+      expect(d3?.height).toBe(250);
+
+      const d4 = generateVisualStimulus({ type: 'pancaindra', params: { organ: 'mata' } });
+      expect(d4).not.toBeNull();
+      expect(d4?.width).toBe(450);
+      expect(d4?.height).toBe(260);
+    });
+
+    it('should directly render and dispatch 6 new Stage 2 math/coding diagrams without text overlaps', () => {
+      // 1. Timbangan Neraca
+      const neraca = renderTimbanganNeracaSvg({ status: 'seimbang', pointer: 'kiri', label: 'X' });
+      expect(neraca).toContain('Pengukuran Massa: Neraca Dua Lengan');
+      expect(neraca).toContain('Anak Timbangan');
+      expect(neraca).toContain('Benda X');
+      expect(neraca).toContain('huruf "X"');
+      expect(neraca).not.toContain('NaN');
+
+      const neracaMiring = renderTimbanganNeracaSvg({ status: 'miring_kiri', pointer: 'kiri' });
+      expect(neracaMiring).toContain('miring kiri');
+
+      // 2. Mata Angin (Kompas & Denah)
+      const kompas = renderMataAnginSvg({ mode: 'kompas', targetArah: 'TL', label: 'X' });
+      expect(kompas).toContain('Delapan Arah Mata Angin');
+      expect(kompas).toContain('huruf "X"');
+      expect(kompas).toContain('>U<');
+      expect(kompas).toContain('>T<');
+      expect(kompas).toContain('>S<');
+      expect(kompas).toContain('>B<');
+
+      const denah = renderMataAnginSvg({ mode: 'denah' });
+      expect(denah).toContain('Denah Wilayah & Arah Mata Angin');
+      expect(denah).toContain('SD Wanayasa');
+      expect(denah).toContain('Masjid');
+      expect(denah).toContain('Alun-Alun');
+      expect(denah).toContain('Puskesmas');
+
+      // 3. Tabel Turus
+      const turus = renderTabelTurusSvg({
+        judul: 'Data Kegemaran Siswa',
+        kategoriLabel: 'Olahraga',
+        data: [
+          { label: 'Sepak Bola', count: 12 },
+          { label: 'Renang', count: 7, targetField: 'frekuensi' }
+        ],
+        label: 'X'
+      });
+      expect(turus).toContain('Data Kegemaran Siswa');
+      expect(turus).toContain('Turus (Tally)');
+      expect(turus).toContain('Sepak Bola');
+      expect(turus).toContain('Renang');
+      expect(turus).toContain('huruf "X"');
+
+      // 4. Spinner Peluang
+      const spinner = renderSpinnerPeluangSvg({ bagian: 6, jarumKe: 2, label: 'X' });
+      expect(spinner).toContain('Peluang: Roda Putar');
+      expect(spinner).toContain('Spinner 6 Juring');
+      expect(spinner).toContain('Legenda');
+      expect(spinner).not.toContain('NaN');
+
+      // 5. Pola Gambar
+      const pola = renderPolaGambarSvg({ counts: [1, 3, 5, 7], targetSuku: 4, label: 'X' });
+      expect(pola).toContain('Barisan Pola Gambar Geometri');
+      expect(pola).toContain('Pola 1');
+      expect(pola).toContain('Pola 2');
+      expect(pola).toContain('Pola 3');
+      expect(pola).toContain('Pola 4');
+      expect(pola).toContain('huruf "X"');
+
+      // 6. Flowchart (Diagram Alir)
+      const flow = renderFlowchartSvg({ pointer: 'kondisi', label: 'X' });
+      expect(flow).toContain('Diagram Alir Algoritma (Flowchart)');
+      expect(flow).toContain('Mulai');
+      expect(flow).toContain('Input Nilai N');
+      expect(flow).toContain('Selesai');
+      expect(flow).toContain('Ya');
+      expect(flow).toContain('Tidak');
+      expect(flow).toContain('huruf "X"');
+
+      // Dispatcher check for all 6
+      const dNeraca = generateVisualStimulus({ type: 'timbangan_neraca', params: {} });
+      expect(dNeraca).not.toBeNull();
+      expect(dNeraca?.width).toBe(440);
+      expect(dNeraca?.height).toBe(260);
+
+      const dMataAngin = generateVisualStimulus({ type: 'mata_angin', params: { mode: 'denah' } });
+      expect(dMataAngin).not.toBeNull();
+      expect(dMataAngin?.width).toBe(500);
+      expect(dMataAngin?.height).toBe(295);
+
+      const dTurus = generateVisualStimulus({ type: 'tabel_turus', params: {} });
+      expect(dTurus).not.toBeNull();
+      expect(dTurus?.width).toBe(440);
+
+      const dSpinner = generateVisualStimulus({ type: 'spinner_peluang', params: {} });
+      expect(dSpinner).not.toBeNull();
+      expect(dSpinner?.width).toBe(420);
+      expect(dSpinner?.height).toBe(260);
+
+      const dPola = generateVisualStimulus({ type: 'pola_gambar', params: {} });
+      expect(dPola).not.toBeNull();
+      expect(dPola?.width).toBe(450);
+      expect(dPola?.height).toBe(220);
+
+      const dFlow = generateVisualStimulus({ type: 'flowchart', params: {} });
+      expect(dFlow).not.toBeNull();
+      expect(dFlow?.width).toBe(440);
+      expect(dFlow?.height).toBe(310);
+    });
+
+    it('should detect Stage 2 stimulus types from soal text', () => {
+      // 1. Timbangan Neraca
+      const detNeraca = detectStimulusFromSoalText('Sebuah benda ditimbang menggunakan neraca dua lengan dengan anak timbangan 500 g dan 250 g sehingga posisinya seimbang.', 'matematika');
+      expect(detNeraca?.type).toBe('timbangan_neraca');
+      expect(detNeraca?.params?.status).toBe('seimbang');
+
+      // 2. Mata Angin
+      const detKompas = detectStimulusFromSoalText('Perhatikan gambar arah mata angin berikut! Arah yang berada di antara timur dan utara adalah timur laut.', 'matematika');
+      expect(detKompas?.type).toBe('mata_angin');
+      expect(detKompas?.params?.targetArah).toBe('TL');
+
+      // 3. Tabel Turus
+      const detTurus = detectStimulusFromSoalText('Perhatikan tabel frekuensi data dan turus tentang jenis olahraga kegemaran siswa berikut!', 'matematika');
+      expect(detTurus?.type).toBe('tabel_turus');
+
+      // 4. Spinner Peluang
+      const detSpinner = detectStimulusFromSoalText('Sebuah roda putar (spinner) dengan 8 bagian berwarna diputar satu kali. Peluang jarum berhenti pada warna merah adalah...', 'matematika');
+      expect(detSpinner?.type).toBe('spinner_peluang');
+      expect(detSpinner?.params?.bagian).toBe(8);
+
+      // 5. Pola Gambar
+      const detPola = detectStimulusFromSoalText('Perhatikan barisan pola gambar berikut! Banyaknya lingkaran pada pola ke-4 adalah...', 'matematika');
+      expect(detPola?.type).toBe('pola_gambar');
+      expect(detPola?.params?.targetSuku).toBe(4);
+
+      // 6. Flowchart
+      const detFlow = detectStimulusFromSoalText('Perhatikan diagram alir (flowchart) algoritma menentukan bilangan ganjil atau genap berikut! Simbol belah ketupat menunjukkan...', 'koding');
+      expect(detFlow?.type).toBe('flowchart');
+    });
+
+    it('should generate all 12 Stage 3 & 4 visual stimulus SVGs with correct dimensions', () => {
+      const templates = [
+        { type: 'termometer', w: 380, h: 270 },
+        { type: 'gelas_ukur', w: 460, h: 285 },
+        { type: 'pohon_faktor', w: 420, h: 280 },
+        { type: 'grid_matriks_100', w: 420, h: 250 },
+        { type: 'rambu_lalu_lintas', w: 380, h: 260 },
+        { type: 'piring_gizi_seimbang', w: 450, h: 280 },
+        { type: 'lapangan_olahraga', w: 420, h: 260 },
+        { type: 'preposition_place', w: 400, h: 250 },
+        { type: 'tangga_nada', w: 420, h: 250 },
+        { type: 'lingkaran_warna', w: 430, h: 260 },
+        { type: 'struktur_pemda', w: 400, h: 280 },
+        { type: 'grid_maze_koding', w: 420, h: 260 }
+      ];
+
+      for (const t of templates) {
+        const res = generateVisualStimulus({ type: t.type, params: {} });
+        expect(res, `Failed for ${t.type}`).not.toBeNull();
+        expect(res?.width).toBe(t.w);
+        expect(res?.height).toBe(t.h);
+        expect(res?.svg).toContain('<svg');
+        expect(res?.svg).toContain('</svg>');
+      }
+    });
+
+    it('should detect Stage 3 & 4 stimulus types from soal text accurately', () => {
+      // 1. Termometer
+      const dTermo = detectStimulusFromSoalText('Sebuah termometer laboratorium menunjukkan suhu zat cair sebesar 45 °C.', 'ipa');
+      expect(dTermo?.type).toBe('termometer');
+      expect(dTermo?.params?.suhu).toBe(45);
+
+      // 2. Gelas Ukur
+      const dGelas = detectStimulusFromSoalText('Sebuah batu dimasukkan ke dalam gelas ukur berisi air dengan volume awal 50 ml dan volume akhir 75 ml.', 'ipa');
+      expect(dGelas?.type).toBe('gelas_ukur');
+      expect(dGelas?.params?.v1).toBe(50);
+      expect(dGelas?.params?.v2).toBe(75);
+
+      // 3. Pohon Faktor
+      const dPohon = detectStimulusFromSoalText('Buatlah pohon faktor untuk mencari faktorisasi prima dari bilangan 24!', 'matematika');
+      expect(dPohon?.type).toBe('pohon_faktor');
+      expect(dPohon?.params?.bilangan).toBe(24);
+
+      // 4. Grid Matriks 100
+      const dGrid100 = detectStimulusFromSoalText('Perhatikan gambar grid 100 petak berikut! Daerah yang diarsir menunjukkan nilai desimal 35 persen.', 'matematika');
+      expect(dGrid100?.type).toBe('grid_matriks_100');
+
+      // 5. Rambu Lalu Lintas
+      const dRambu = detectStimulusFromSoalText('Perhatikan gambar rambu lalu lintas dilarang parkir berikut ini!', 'bahasa_indonesia');
+      expect(dRambu?.type).toBe('rambu_lalu_lintas');
+
+      // 6. Piring Gizi Seimbang
+      const dPiring = detectStimulusFromSoalText('Perhatikan panduan pedoman gizi seimbang piring makanku berikut ini!', 'pjok');
+      expect(dPiring?.type).toBe('piring_gizi_seimbang');
+
+      // 7. Lapangan Olahraga
+      const dLap = detectStimulusFromSoalText('Perhatikan denah lapangan sepak bola dan area kotak penalti berikut!', 'pjok');
+      expect(dLap?.type).toBe('lapangan_olahraga');
+
+      // 8. Preposition of Place
+      const dPrep = detectStimulusFromSoalText('Look at the picture! Where is the ball? The ball is on the box.', 'bahasa_inggris');
+      expect(dPrep?.type).toBe('preposition_place');
+
+      // 9. Tangga Nada
+      const dNada = detectStimulusFromSoalText('Perhatikan notasi not balok pada garis paranada kunci G berikut ini!', 'sbdp');
+      expect(dNada?.type).toBe('tangga_nada');
+
+      // 10. Lingkaran Warna
+      const dWarna = detectStimulusFromSoalText('Berdasarkan teori lingkaran warna, percampuran warna primer merah dan kuning menghasilkan warna...', 'sbdp');
+      expect(dWarna?.type).toBe('lingkaran_warna');
+
+      // 11. Struktur Pemda
+      const dPemda = detectStimulusFromSoalText('Dalam hirarki pemerintahan daerah, wilayah kecamatan dipimpin oleh seorang...', 'pancasila');
+      expect(dPemda?.type).toBe('struktur_pemda');
+
+      // 12. Grid Maze Koding
+      const dMaze = detectStimulusFromSoalText('Bantulah robot menyelesaikan labirin maze koding dengan susunan blok perintah!', 'koding');
+      expect(dMaze?.type).toBe('grid_maze_koding');
     });
   });
 });

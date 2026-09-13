@@ -9,9 +9,24 @@ import { recordAIGeneration } from '../lib/telemetry';
 import { getOfficialCP, cpElementsData } from '../lib/cp-data';
 import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
+import { validate, createAssessmentSchema } from '../lib/validation';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
+
+// Helper autentikasi pengguna dari sesi cookie atau Authorization bearer header
+async function getAuthenticatedUser(c: any): Promise<any | null> {
+    try {
+        const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie') || c.req.raw?.headers?.get('Cookie') || '';
+        const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+        const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+        const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+        if (!sessionId) return null;
+        return await getCurrentUser(c.env.DB, sessionId);
+    } catch (_) {
+        return null;
+    }
+}
 
 // Endpoint referensi Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025
 kisi.get('/cp-reference', async (c) => {
@@ -88,9 +103,19 @@ export const normalizeItemKisiMetadata = (item: any, defaultBentuk: string, defa
     }
     // Standardisasi Level Kognitif ke L1, L2, L3 (Puspendik / BSKAP)
     const rawLevel = String(item.level || '').toUpperCase();
-    if (rawLevel.includes('L3') || rawLevel.includes('HOTS') || rawLevel.includes('C4') || rawLevel.includes('C5') || rawLevel.includes('C6')) {
+    if (
+        rawLevel.includes('L3') || rawLevel.includes('HOTS') ||
+        rawLevel.includes('C4') || rawLevel.includes('C5') || rawLevel.includes('C6') ||
+        rawLevel.includes('PENALARAN') || rawLevel.includes('ANALISIS') ||
+        rawLevel.includes('EVALUASI') || rawLevel.includes('KREASI') ||
+        rawLevel.includes('MENGANALISIS') || rawLevel.includes('MENGEVALUASI')
+    ) {
         item.level = 'L3';
-    } else if (rawLevel.includes('L2') || rawLevel.includes('MOTS') || rawLevel.includes('C3')) {
+    } else if (
+        rawLevel.includes('L2') || rawLevel.includes('MOTS') ||
+        rawLevel.includes('C3') || rawLevel.includes('APLIKASI') ||
+        rawLevel.includes('PENERAPAN') || rawLevel.includes('MENERAPKAN')
+    ) {
         item.level = 'L2';
     } else {
         item.level = 'L1';
@@ -994,16 +1019,126 @@ export const buildAssessmentPrompt = (params: {
     `;
 };
 
+const SLUG_MAP: Record<string, string> = {
+    vertex: 'vertex-proxy',
+    gemini: 'gemini-flash',
+    bedrock: 'bedrock-claude',
+    mistral: 'mistral-large',
+    z_ai: 'glm4-flash'
+};
+
+// Helper: Normalisasi kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
+function normalizeAssessmentItems(finalData: any, resolvedCP: string, topik: string, isianType: string, totalPG: number) {
+    if (finalData.pg && Array.isArray(finalData.pg)) {
+        finalData.pg.forEach((q: any, i: number) => {
+            normalizeItemKisiMetadata(q, 'Pilihan Ganda', i + 1, resolvedCP, topik);
+        });
+    }
+
+    if (finalData.isian?.data && Array.isArray(finalData.isian.data)) {
+        const isianBentukLabel = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
+        finalData.isian.data.forEach((q: any, i: number) => {
+            normalizeItemKisiMetadata(q, isianBentukLabel, (q.no || (totalPG + i + 1)), resolvedCP, topik);
+        });
+    }
+
+    if (finalData.uraian && Array.isArray(finalData.uraian)) {
+        finalData.uraian.forEach((q: any, i: number) => {
+            const defaultUraianNo = (finalData.isian?.data?.length ? Math.max(...finalData.isian.data.map((x: any) => x.no || 0)) : totalPG) + i + 1;
+            normalizeItemKisiMetadata(q, 'Uraian', (q.no || defaultUraianNo), resolvedCP, topik);
+        });
+    }
+}
+
+// Helper: Simpan telemetri dan persistensi ke Bank Soal secara aman & non-blocking
+async function saveAssessmentTelemetryAndBankSoal(
+    db: D1Database,
+    user: any,
+    validated: any,
+    finalData: any,
+    preferredSlug?: string | null
+) {
+    try {
+        await recordAIGeneration(db, {
+            user_id: user?.id || 1,
+            user_nama: user?.nama || (validated.namaGuru || 'Guru'),
+            sekolah: user?.sekolah || (validated.namaSekolah || 'SDN 2 Nangerang'),
+            feature_type: 'ASESMEN',
+            mata_pelajaran: validated.mataPelajaran,
+            topik: validated.topik,
+            jenjang_kelas: validated.jenjangKelas,
+            ai_provider: preferredSlug || undefined,
+        });
+
+        // Persistensi ke Bank Soal (respek preferensi isPublic: 1 = Publik, 0 = Pribadi)
+        const isPublicVal = (validated.isPublic === false || validated.isPublic === 'false' || validated.isPublic === 0 || validated.isPublic === '0') ? 0 : 1;
+        try {
+            await ensureBankSoalTables(db);
+            await db.prepare(`
+                INSERT INTO bank_soal (
+                    user_id, user_nama, sekolah, mata_pelajaran, topik,
+                    jenjang_kelas, semester, jenis_ujian, capaian_pembelajaran,
+                    jumlah_pg, jumlah_isian, jumlah_uraian, isian_type, hots_ratio,
+                    content, ai_provider, is_public
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                user?.id || 1,
+                user?.nama || (validated.namaGuru || 'Guru'),
+                user?.sekolah || (validated.namaSekolah || ''),
+                validated.mataPelajaran || '',
+                validated.topik || '',
+                validated.jenjangKelas || '',
+                validated.semester || null,
+                validated.jenisUjian || null,
+                validated.capaianPembelajaran || null,
+                validated.jumlahPG || 0,
+                validated.jumlahIsian || 0,
+                validated.jumlahUraian || 0,
+                validated.isianType || 'Standard',
+                validated.hotsRatio || '30:40:30',
+                JSON.stringify(finalData),
+                preferredSlug || null,
+                isPublicVal
+            ).run();
+        } catch (bankErr) {
+            console.warn('[BankSoal] Auto-save failed (non-blocking):', bankErr);
+        }
+    } catch (e) {
+        console.warn('[Telemetry] Save failed (non-blocking):', e);
+    }
+}
+
 // Generate Asesmen (Soal) via AI (Standar)
 kisi.post('/generate', async (c) => {
     try {
-        const body = await c.req.json();
+        // 1. Auth Gate: Tolak request jika belum login
+        const user = await getAuthenticatedUser(c);
+        if (!user) {
+            return Errors.unauthorized(c, 'Sesi telah berakhir atau belum login. Silakan login terlebih dahulu.');
+        }
+
+        // 2. Validasi Input Payload dengan Zod
+        const rawBody = await c.req.json();
+        const validation = validate(createAssessmentSchema, rawBody);
+        if (!validation.success) {
+            return Errors.validation(c, 'Data input asesmen tidak valid', validation.errors);
+        }
+
+        const body = validation.data;
         const {
             namaSekolah, namaGuru, nipGuru, mataPelajaran, topik,
             jenjangKelas, semester, jenisUjian, capaianPembelajaran,
             jumlahPG, jumlahIsian, jumlahUraian,
             hotsRatio, isianType, aiProvider, useGambar
         } = body;
+
+        const totalPG = jumlahPG || 0;
+        const totalIsian = jumlahIsian || 0;
+        const totalUraian = jumlahUraian || 0;
+
+        if (totalPG + totalIsian + totalUraian === 0) {
+            return Errors.badRequest(c, 'Minimal harus ada 1 butir soal yang dibuat (PG, Isian, atau Uraian).');
+        }
 
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
 
@@ -1014,18 +1149,7 @@ kisi.post('/generate', async (c) => {
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
 
-        const slugMap: Record<string, string> = {
-            vertex: 'vertex-proxy',
-            gemini: 'gemini-flash',
-            bedrock: 'bedrock-claude',
-            mistral: 'mistral-large',
-            z_ai: 'glm4-flash'
-        };
-        const preferredSlug = slugMap[aiProvider] || aiProvider;
-
-        const totalPG = parseInt(jumlahPG) || 0;
-        const totalIsian = parseInt(jumlahIsian) || 0;
-        const totalUraian = parseInt(jumlahUraian) || 0;
+        const preferredSlug = aiProvider ? (SLUG_MAP[aiProvider] || aiProvider) : undefined;
         const finalData: any = { pg: [], isian: null, uraian: [] };
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
@@ -1193,74 +1317,11 @@ kisi.post('/generate', async (c) => {
         }
 
         // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
-        if (finalData.pg && Array.isArray(finalData.pg)) {
-            finalData.pg.forEach((q: any, i: number) => {
-                normalizeItemKisiMetadata(q, 'Pilihan Ganda', i + 1, resolvedCP, topik);
-            });
-        }
+        // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
+        normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
 
-        if (finalData.isian?.data && Array.isArray(finalData.isian.data)) {
-            const isianBentukLabel = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
-            finalData.isian.data.forEach((q: any, i: number) => {
-                normalizeItemKisiMetadata(q, isianBentukLabel, (q.no || (totalPG + i + 1)), resolvedCP, topik);
-            });
-        }
-
-        if (finalData.uraian && Array.isArray(finalData.uraian)) {
-            finalData.uraian.forEach((q: any, i: number) => {
-                const defaultUraianNo = (finalData.isian?.data?.length ? Math.max(...finalData.isian.data.map((x: any) => x.no || 0)) : totalPG) + i + 1;
-                normalizeItemKisiMetadata(q, 'Uraian', (q.no || defaultUraianNo), resolvedCP, topik);
-            });
-        }
-
-        // Record usage telemetry for school & teacher analytics
-        try {
-            const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie') || c.req.raw?.headers?.get('Cookie');
-            const authHeader = c.req.header('Authorization') || c.req.header('authorization');
-            const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-            const sessionId = getCookie(cookieHeader || '', 'session') || bearerToken;
-            const user = await getCurrentUser(c.env.DB, sessionId);
-            await recordAIGeneration(c.env.DB, {
-                user_id: user?.id || 1,
-                user_nama: user?.nama || (namaGuru || 'Guru'),
-                sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
-                feature_type: 'ASESMEN',
-                mata_pelajaran: mataPelajaran,
-                topik: topik,
-                jenjang_kelas: jenjangKelas,
-                ai_provider: preferredSlug,
-            });
-
-            // Auto-save to Bank Soal (server-side persistence for collaborative sharing)
-            try {
-                await ensureBankSoalTables(c.env.DB);
-                await c.env.DB.prepare(`
-                    INSERT INTO bank_soal (
-                        user_id, user_nama, sekolah, mata_pelajaran, topik,
-                        jenjang_kelas, semester, jenis_ujian, capaian_pembelajaran,
-                        jumlah_pg, jumlah_isian, jumlah_uraian, isian_type, hots_ratio,
-                        content, ai_provider, is_public
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                `).bind(
-                    user?.id || 1,
-                    user?.nama || (namaGuru || 'Guru'),
-                    user?.sekolah || (namaSekolah || ''),
-                    mataPelajaran || '',
-                    topik || '',
-                    jenjangKelas || '',
-                    semester || null,
-                    jenisUjian || null,
-                    capaianPembelajaran || null,
-                    totalPG, totalIsian, totalUraian,
-                    isianType || 'Standard',
-                    hotsRatio || '30:40:30',
-                    JSON.stringify(finalData),
-                    preferredSlug || null
-                ).run();
-            } catch (bankErr) {
-                console.warn('[BankSoal] Auto-save failed (non-blocking):', bankErr);
-            }
-        } catch (_) {}
+        // Telemetry & Bank Soal Persistence (non-blocking)
+        await saveAssessmentTelemetryAndBankSoal(c.env.DB, user, body, finalData, preferredSlug || null);
 
         return successResponse(c, finalData);
 
@@ -1273,7 +1334,20 @@ kisi.post('/generate', async (c) => {
 // Generate Asesmen (Soal) via AI Stream (SSE - Live Monitor)
 kisi.post('/generate-stream', async (c) => {
     try {
-        const body = await c.req.json();
+        // 1. Auth Gate: Tolak request jika belum login
+        const user = await getAuthenticatedUser(c);
+        if (!user) {
+            return Errors.unauthorized(c, 'Sesi telah berakhir atau belum login. Silakan login terlebih dahulu.');
+        }
+
+        // 2. Validasi Input Payload dengan Zod
+        const rawBody = await c.req.json();
+        const validation = validate(createAssessmentSchema, rawBody);
+        if (!validation.success) {
+            return Errors.validation(c, 'Data input asesmen tidak valid', validation.errors);
+        }
+
+        const body = validation.data;
         const {
             namaSekolah, namaGuru, nipGuru, mataPelajaran, topik,
             jenjangKelas, semester, jenisUjian, capaianPembelajaran,
@@ -1281,8 +1355,12 @@ kisi.post('/generate-stream', async (c) => {
             hotsRatio, isianType, aiProvider, useGambar
         } = body;
 
-        if (!topik || !String(topik).trim()) {
-            return Errors.badRequest(c, 'Topik/Materi wajib diisi');
+        const totalPG = jumlahPG || 0;
+        const totalIsian = jumlahIsian || 0;
+        const totalUraian = jumlahUraian || 0;
+
+        if (totalPG + totalIsian + totalUraian === 0) {
+            return Errors.badRequest(c, 'Minimal harus ada 1 butir soal yang dibuat (PG, Isian, atau Uraian).');
         }
 
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
@@ -1292,18 +1370,7 @@ kisi.post('/generate-stream', async (c) => {
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
 
-        const slugMap: Record<string, string> = {
-            vertex: 'vertex-proxy',
-            gemini: 'gemini-flash',
-            bedrock: 'bedrock-claude',
-            mistral: 'mistral-large',
-            z_ai: 'glm4-flash'
-        };
-        const preferredSlug = slugMap[aiProvider] || aiProvider;
-
-        const totalPG = parseInt(jumlahPG) || 0;
-        const totalIsian = parseInt(jumlahIsian) || 0;
-        const totalUraian = parseInt(jumlahUraian) || 0;
+        const preferredSlug = aiProvider ? (SLUG_MAP[aiProvider] || aiProvider) : undefined;
         const finalData: any = { pg: [], isian: null, uraian: [] };
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
@@ -1524,73 +1591,11 @@ kisi.post('/generate-stream', async (c) => {
                     })
                 });
 
-                if (finalData.pg && Array.isArray(finalData.pg)) {
-                    finalData.pg.forEach((q: any, i: number) => {
-                        normalizeItemKisiMetadata(q, 'Pilihan Ganda', i + 1, resolvedCP, topik);
-                    });
-                }
+                // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
+                normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
 
-                if (finalData.isian?.data && Array.isArray(finalData.isian.data)) {
-                    const isianBentukLabel = isianType === 'Crossword' ? 'Teka-Teki Silang' : isianType === 'Menjodohkan' ? 'Menjodohkan' : 'Isian Singkat';
-                    finalData.isian.data.forEach((q: any, i: number) => {
-                        normalizeItemKisiMetadata(q, isianBentukLabel, (q.no || (totalPG + i + 1)), resolvedCP, topik);
-                    });
-                }
-
-                if (finalData.uraian && Array.isArray(finalData.uraian)) {
-                    finalData.uraian.forEach((q: any, i: number) => {
-                        const defaultUraianNo = (finalData.isian?.data?.length ? Math.max(...finalData.isian.data.map((x: any) => x.no || 0)) : totalPG) + i + 1;
-                        normalizeItemKisiMetadata(q, 'Uraian', (q.no || defaultUraianNo), resolvedCP, topik);
-                    });
-                }
-
-                // Telemetry & Bank Soal Persistence
-                try {
-                    const cookieHeader = c.req.header('Cookie') || c.req.header('cookie');
-                    const authHeader = c.req.header('Authorization');
-                    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-                    const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
-                    const user = await getCurrentUser(c.env.DB, sessionId);
-                    await recordAIGeneration(c.env.DB, {
-                        user_id: user?.id || 1,
-                        user_nama: user?.nama || (namaGuru || 'Guru'),
-                        sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
-                        feature_type: 'ASESMEN',
-                        mata_pelajaran: mataPelajaran,
-                        topik: topik,
-                        jenjang_kelas: jenjangKelas,
-                        ai_provider: preferredSlug,
-                    });
-
-                    try {
-                        await ensureBankSoalTables(c.env.DB);
-                        await c.env.DB.prepare(`
-                            INSERT INTO bank_soal (
-                                user_id, user_nama, sekolah, mata_pelajaran, topik,
-                                jenjang_kelas, semester, jenis_ujian, capaian_pembelajaran,
-                                jumlah_pg, jumlah_isian, jumlah_uraian, isian_type, hots_ratio,
-                                content, ai_provider, is_public
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                        `).bind(
-                            user?.id || 1,
-                            user?.nama || (namaGuru || 'Guru'),
-                            user?.sekolah || (namaSekolah || ''),
-                            mataPelajaran || '',
-                            topik || '',
-                            jenjangKelas || '',
-                            semester || null,
-                            jenisUjian || null,
-                            capaianPembelajaran || null,
-                            totalPG, totalIsian, totalUraian,
-                            isianType || 'Standard',
-                            hotsRatio || '30:40:30',
-                            JSON.stringify(finalData),
-                            preferredSlug || null
-                        ).run();
-                    } catch (bankErr) {
-                        console.warn('[BankSoal] Auto-save failed (non-blocking):', bankErr);
-                    }
-                } catch (_) {}
+                // Telemetry & Bank Soal Persistence (non-blocking)
+                await saveAssessmentTelemetryAndBankSoal(c.env.DB, user, body, finalData, preferredSlug || null);
 
                 // Step 5: Selesai & Kirimkan Payload Final
                 await stream.writeSSE({

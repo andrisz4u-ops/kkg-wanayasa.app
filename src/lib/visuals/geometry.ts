@@ -409,33 +409,58 @@ export function renderBolaSvg(params: { r?: number; d?: number; unit?: string })
   const r = params.r || (params.d ? params.d / 2 : 7);
   const unit = params.unit || 'cm';
 
+  const cx = 160;
+  const cy = 112;
+  const rad = 78;
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <radialGradient id="gradBola" cx="40%" cy="35%" r="55%">
+    <!-- Gradien Volumetrik Bola 3D Spekular -->
+    <radialGradient id="gradBola3D" cx="36%" cy="32%" r="65%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="40%" stop-color="#e2e8f0"/>
-      <stop offset="100%" stop-color="#94a3b8"/>
+      <stop offset="30%" stop-color="#f1f5f9"/>
+      <stop offset="65%" stop-color="#cbd5e1"/>
+      <stop offset="90%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </radialGradient>
+
+    <!-- Bayangan Kontak Permukaan Lantai -->
+    <radialGradient id="bolaFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.18"/>
+      <stop offset="65%" stop-color="#0f172a" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <!-- Bola -->
-  <circle cx="160" cy="115" r="80" fill="url(#gradBola)" stroke="#0f172a" stroke-width="2"/>
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="${cx}" cy="${cy + rad + 6}" rx="${rad - 6}" ry="12" fill="url(#bolaFloorShdw)"/>
 
-  <!-- Garis Ekuator (elips putus-putus) -->
-  <ellipse cx="160" cy="115" rx="80" ry="22" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <!-- Badan Bola 3D -->
+  <circle cx="${cx}" cy="${cy}" r="${rad}" fill="url(#gradBola3D)" stroke="#0f172a" stroke-width="2"/>
 
-  <!-- Garis Meridian (vertikal, putus-putus) -->
-  <ellipse cx="160" cy="115" rx="22" ry="80" fill="none" stroke="#64748b" stroke-width="1" stroke-dasharray="4,4"/>
+  <!-- Garis Ekuator Belakang (Putus-Putus) -->
+  <path d="M ${cx - rad},${cy} A ${rad},22 0 0,1 ${cx + rad},${cy}" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
 
-  <!-- Titik pusat -->
-  <circle cx="160" cy="115" r="3" fill="#0f172a"/>
-  <text x="168" y="112" font-size="11" font-weight="bold" fill="#334155">O</text>
+  <!-- Garis Ekuator Depan (Tampak) -->
+  <path d="M ${cx - rad},${cy} A ${rad},22 0 0,0 ${cx + rad},${cy}" fill="none" stroke="#0f172a" stroke-width="1.6"/>
 
-  <!-- Garis jari-jari -->
-  <line x1="160" y1="115" x2="240" y2="115" stroke="#0284c7" stroke-width="2" stroke-dasharray="3,2"/>
-  <text x="195" y="108" font-size="12" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
+  <!-- Garis Meridian Vertikal Belakang (Putus-Putus) -->
+  <path d="M ${cx},${cy - rad} A 22,${rad} 0 0,0 ${cx},${cy + rad}" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,4"/>
 
-  <text x="160" y="225" text-anchor="middle" font-size="11" fill="#64748b">Bola (r = ${r} ${unit})</text>
+  <!-- Garis Meridian Vertikal Depan (Tampak) -->
+  <path d="M ${cx},${cy - rad} A 22,${rad} 0 0,1 ${cx},${cy + rad}" fill="none" stroke="#64748b" stroke-width="1.2"/>
+
+  <!-- Titik Pusat O -->
+  <circle cx="${cx}" cy="${cy}" r="3.5" fill="#0f172a"/>
+  <text x="${cx - 10}" y="${cy - 6}" font-size="11" font-weight="bold" fill="#334155">O</text>
+
+  <!-- Garis Jari-Jari (r) dari Titik Pusat ke Tepi Kanan -->
+  <line x1="${cx}" y1="${cy}" x2="${cx + rad}" y2="${cy}" stroke="#0284c7" stroke-width="2" stroke-dasharray="3,2"/>
+  <circle cx="${cx + rad}" cy="${cy}" r="2.5" fill="#0284c7"/>
+  <text x="${cx + rad / 2}" y="${cy - 7}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
+
+  <!-- Judul / Keterangan Bangun -->
+  <text x="${cx}" y="226" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">Bola (r = ${r} ${unit})</text>
 </svg>`;
 }
 
@@ -453,39 +478,76 @@ export function renderPrismaSvg(params: { alas?: number; tinggiSegitiga?: number
   const dy = -25;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <!-- Rusuk belakang (putus-putus) -->
-  <line x1="60" y1="180" x2="${60 + dx}" y2="${180 + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <line x1="130" y1="80" x2="${130 + dx}" y2="${80 + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <line x1="${60 + dx}" y1="${180 + dy}" x2="${130 + dx}" y2="${80 + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <defs>
+    <!-- Gradien Sisi Miring Atas -->
+    <linearGradient id="prismaTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
 
-  <!-- Sisi atas (segitiga depan ke belakang) -->
-  <polygon points="130,80 ${130 + dx},${80 + dy} ${200 + dx},${180 + dy} 200,180" fill="#f1f5f9" stroke="#0f172a" stroke-width="2"/>
+    <!-- Gradien Sisi Tegak Kanan -->
+    <linearGradient id="prismaRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="60%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
 
-  <!-- Sisi kanan -->
-  <polygon points="200,180 ${200 + dx},${180 + dy} ${130 + dx},${80 + dy} 130,80" fill="#e2e8f0" stroke="#0f172a" stroke-width="2"/>
+    <!-- Gradien Segitiga Depan -->
+    <linearGradient id="prismaFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
 
-  <!-- Segitiga depan -->
-  <polygon points="60,180 200,180 130,80" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+    <!-- Bayangan Kontak Lantai -->
+    <radialGradient id="prismaFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
 
-  <!-- Rusuk depan-belakang bawah kanan -->
-  <line x1="200" y1="180" x2="${200 + dx}" y2="${180 + dy}" stroke="#0f172a" stroke-width="2"/>
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <polygon points="56,182 196,182 ${200 + dx + 8},${180 + dy + 6} ${60 + dx + 4},${180 + dy + 6}" fill="url(#prismaFloorShdw)"/>
 
-  <!-- Simbol siku-siku -->
-  <rect x="130" y="164" width="12" height="12" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+  <!-- Rusuk Belakang Tak Tampak (Putus-Putus Presisi) -->
+  <line x1="60" y1="180" x2="${60 + dx}" y2="${180 + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="130" y1="80" x2="${130 + dx}" y2="${80 + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="${60 + dx}" y1="${180 + dy}" x2="${130 + dx}" y2="${80 + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
 
-  <!-- Titik sudut -->
-  <text x="46" y="192" font-size="11" font-weight="bold" fill="#334155">A</text>
-  <text x="206" y="192" font-size="11" font-weight="bold" fill="#334155">B</text>
-  <text x="120" y="74" font-size="11" font-weight="bold" fill="#334155">C</text>
-  <text x="${200 + dx + 6}" y="${180 + dy + 4}" font-size="11" font-weight="bold" fill="#334155">E</text>
-  <text x="${130 + dx + 6}" y="${80 + dy - 4}" font-size="11" font-weight="bold" fill="#334155">F</text>
+  <!-- Sisi Miring Atas (Segitiga Depan ke Belakang) -->
+  <polygon points="130,80 ${130 + dx},${80 + dy} ${200 + dx},${180 + dy} 200,180" fill="url(#prismaTopGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Label dimensi -->
-  <text x="130" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="#0284c7">alas = ${a} ${unit}</text>
-  <text x="112" y="135" text-anchor="end" font-size="11" font-weight="bold" fill="#e11d48">t = ${tSeg} ${unit}</text>
-  <text x="${200 + dx / 2 + 12}" y="${180 + dy / 2 + 16}" font-size="11" font-weight="bold" fill="#047857">p = ${p} ${unit}</text>
+  <!-- Sisi Tegak Kanan -->
+  <polygon points="200,180 ${200 + dx},${180 + dy} ${130 + dx},${80 + dy} 130,80" fill="url(#prismaRightGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <text x="180" y="240" text-anchor="middle" font-size="11" fill="#64748b">Prisma Segitiga (a=${a}, t=${tSeg}, p=${p} ${unit})</text>
+  <!-- Segitiga Depan (Bidang Utama) -->
+  <polygon points="60,180 200,180 130,80" fill="url(#prismaFrontGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- Garis Tinggi Segitiga Depan (Putus-Putus Merah) -->
+  <line x1="130" y1="80" x2="130" y2="180" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <rect x="130" y="168" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+
+  <!-- Titik Sudut Segitiga Depan (A, B, C) -->
+  <text x="46" y="192" font-size="11" font-weight="bold" fill="#1e293b">A</text>
+  <text x="206" y="192" font-size="11" font-weight="bold" fill="#1e293b">B</text>
+  <text x="120" y="74" font-size="11" font-weight="bold" fill="#1e293b">C</text>
+
+  <!-- Titik Sudut Belakang (E, F) -->
+  <text x="${200 + dx + 6}" y="${180 + dy + 4}" font-size="11" font-weight="bold" fill="#1e293b">E</text>
+  <text x="${130 + dx + 6}" y="${80 + dy - 4}" font-size="11" font-weight="bold" fill="#1e293b">F</text>
+
+  <!-- Label Dimensi Alas, Tinggi, dan Panjang Prisma -->
+  <line x1="60" y1="190" x2="200" y2="190" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="60" y1="186" x2="60" y2="194" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="200" y1="186" x2="200" y2="194" stroke="#0284c7" stroke-width="1.4"/>
+  <text x="130" y="204" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#0284c7">alas = ${a} ${unit}</text>
+
+  <text x="122" y="135" text-anchor="end" font-size="11.5" font-weight="bold" fill="#e11d48">t = ${tSeg} ${unit}</text>
+  <text x="${200 + dx / 2 + 14}" y="${180 + dy / 2 + 18}" font-size="11.5" font-weight="bold" fill="#047857">p = ${p} ${unit}</text>
+
+  <!-- Judul / Keterangan Bangun -->
+  <text x="180" y="240" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Prisma Segitiga (a=${a}, t=${tSeg}, p=${p} ${unit})</text>
 </svg>`;
 }
 
@@ -495,42 +557,67 @@ export function renderLimasSvg(params: { s?: number; t?: number; unit?: string }
   const t = params.t || 12;
   const unit = params.unit || 'cm';
 
+  const apexX = 170;
+  const apexY = 48;
+  const baseOy = 175;
+  const baseAy = 210;
+  const baseBy = 240;
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 250" width="340" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <!-- Alas (persegi dilihat isometrik) -->
-  <polygon points="170,175 95,210 170,245 245,210" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
+  <defs>
+    <!-- Gradien Segitiga Selimut Depan Kiri -->
+    <linearGradient id="limasLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
 
-  <!-- Rusuk belakang (putus-putus) -->
-  <line x1="170" y1="175" x2="170" y2="50" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <!-- Gradien Segitiga Selimut Depan Kanan -->
+    <linearGradient id="limasRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="60%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
 
-  <!-- Sisi segitiga depan-kiri -->
-  <polygon points="170,50 95,210 170,245" fill="#e2e8f0" stroke="#0f172a" stroke-width="2" fill-opacity="0.6"/>
+    <!-- Bayangan Dasar Kontak Lantai -->
+    <radialGradient id="limasFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
 
-  <!-- Sisi segitiga depan-kanan -->
-  <polygon points="170,50 245,210 170,245" fill="#f1f5f9" stroke="#0f172a" stroke-width="2" fill-opacity="0.6"/>
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="170" cy="225" rx="85" ry="14" fill="url(#limasFloorShdw)"/>
 
-  <!-- Sisi segitiga kiri-belakang -->
-  <line x1="170" y1="50" x2="95" y2="210" stroke="#0f172a" stroke-width="2"/>
-  <line x1="170" y1="50" x2="170" y2="175" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <!-- Rusuk Alas Belakang Tak Tampak (Putus-Putus Presisi) -->
+  <line x1="170" y1="${baseOy}" x2="95" y2="${baseAy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="170" y1="${baseOy}" x2="245" y2="${baseAy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="${apexX}" y1="${apexY}" x2="170" y2="${baseOy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
 
-  <!-- Sisi segitiga kanan-belakang -->
-  <line x1="170" y1="50" x2="245" y2="210" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Segitiga Selimut Depan Kiri -->
+  <polygon points="${apexX},${apexY} 95,${baseAy} 170,${baseBy}" fill="url(#limasLeftGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round" fill-opacity="0.85"/>
 
-  <!-- Titik sudut -->
-  <text x="170" y="42" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">T</text>
-  <text x="156" y="172" font-size="11" font-weight="bold" fill="#94a3b8">O</text>
-  <text x="80" y="218" font-size="11" font-weight="bold" fill="#334155">A</text>
-  <text x="170" y="258" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">B</text>
-  <text x="252" y="218" font-size="11" font-weight="bold" fill="#334155">C</text>
-  <text x="170" y="180" text-anchor="middle" font-size="11" font-weight="bold" fill="#94a3b8">D</text>
+  <!-- Sisi Segitiga Selimut Depan Kanan -->
+  <polygon points="${apexX},${apexY} 245,${baseAy} 170,${baseBy}" fill="url(#limasRightGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round" fill-opacity="0.85"/>
 
-  <!-- Garis tinggi (T ke O, putus-putus merah) -->
-  <line x1="170" y1="50" x2="170" y2="210" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <rect x="170" y="198" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="1"/>
+  <!-- Garis Tinggi (t) dari Puncak T ke Pusat Alas O (Merah Putus-Putus) -->
+  <line x1="${apexX}" y1="${apexY}" x2="170" y2="${baseAy}" stroke="#e11d48" stroke-width="1.6" stroke-dasharray="3,3"/>
+  <!-- Simbol Siku-Siku Pertemuan Tinggi & Alas -->
+  <rect x="170" y="${baseAy - 10}" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="1.2"/>
 
-  <!-- Label dimensi -->
-  <text x="178" y="135" font-size="11" font-weight="bold" fill="#e11d48">t = ${t} ${unit}</text>
-  <text x="130" y="240" font-size="11" font-weight="bold" fill="#0284c7">s = ${s} ${unit}</text>
+  <!-- Titik Puncak T & Titik Sudut Alas -->
+  <circle cx="${apexX}" cy="${apexY}" r="2.5" fill="#0f172a"/>
+  <text x="${apexX}" y="${apexY - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">T</text>
+  <text x="82" y="${baseAy + 4}" font-size="11" font-weight="bold" fill="#1e293b">A</text>
+  <text x="170" y="${baseBy + 15}" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e293b">B</text>
+  <text x="254" y="${baseAy + 4}" font-size="11" font-weight="bold" fill="#1e293b">C</text>
+  <text x="170" y="${baseOy - 6}" text-anchor="middle" font-size="11" font-weight="bold" fill="#64748b">D</text>
+  <text x="156" y="${baseAy + 4}" font-size="11" font-weight="bold" fill="#64748b">O</text>
 
+  <!-- Label Dimensi Tinggi (t) dan Rusuk Alas (s) -->
+  <text x="178" y="132" font-size="11.5" font-weight="bold" fill="#e11d48">t = ${t} ${unit}</text>
+  <text x="125" y="238" font-size="11.5" font-weight="bold" fill="#0284c7">s = ${s} ${unit}</text>
 </svg>`;
 }
 
@@ -1336,7 +1423,7 @@ export function renderSudutJarumJamSvg(params: {
 
   const cx = 175;
   const cy = 135;
-  const r = 80;
+  const r = 82;
 
   // Sudut jarum jam (0 derajat pada angka 12 / vertikal atas)
   const hourAngleDeg = (j % 12) * 30 + m * 0.5;
@@ -1345,18 +1432,35 @@ export function renderSudutJarumJamSvg(params: {
   const hRad = (hourAngleDeg - 90) * (Math.PI / 180);
   const mRad = (minAngleDeg - 90) * (Math.PI / 180);
 
-  const hLen = 45;
-  const mLen = 65;
+  const hLen = 46;
+  const mLen = 66;
 
   const hx = cx + hLen * Math.cos(hRad);
   const hy = cy + hLen * Math.sin(hRad);
   const mx = cx + mLen * Math.cos(mRad);
   const my = cy + mLen * Math.sin(mRad);
 
+  // 12 Tanda Jam (Ticks) di sekeliling dial
+  let hourTicks = '';
+  for (let hr = 1; hr <= 12; hr++) {
+    const angle = (hr * 30 - 90) * (Math.PI / 180);
+    const isCardinal = hr % 3 === 0;
+    const tLen = isCardinal ? 8 : 4;
+    const tx1 = cx + (r - 2) * Math.cos(angle);
+    const ty1 = cy + (r - 2) * Math.sin(angle);
+    const tx2 = cx + (r - 2 - tLen) * Math.cos(angle);
+    const ty2 = cy + (r - 2 - tLen) * Math.sin(angle);
+    hourTicks += `<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${isCardinal ? '#0f172a' : '#64748b'}" stroke-width="${isCardinal ? '2' : '1.2'}"/>`;
+  }
+
   // Busur sudut antara dua jarum
-  const arcR = 26;
+  const arcR = 28;
   const startRad = Math.min(hRad, mRad);
   const endRad = Math.max(hRad, mRad);
+  const diffDeg = Math.abs(hourAngleDeg - minAngleDeg);
+  const acuteDeg = diffDeg > 180 ? 360 - diffDeg : diffDeg;
+  const isLargeArc = (endRad - startRad > Math.PI) ? 1 : 0;
+
   const ax1 = cx + arcR * Math.cos(startRad);
   const ay1 = cy + arcR * Math.sin(startRad);
   const ax2 = cx + arcR * Math.cos(endRad);
@@ -1367,42 +1471,74 @@ export function renderSudutJarumJamSvg(params: {
   const tx = cx + (arcR + 24) * Math.cos(midRad);
   const ty = cy + (arcR + 24) * Math.sin(midRad);
 
-  // Angka jam 12, 3, 6, 9
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="380" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Sudut: Sudut Terkecil Antara Dua Jarum Jam</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <!-- Gradien Bezel Jam Baja Tahan Karat -->
+    <linearGradient id="clockBezelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="30%" stop-color="#94a3b8"/>
+      <stop offset="70%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
 
-  <!-- Piringan Jam -->
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f8fafc" stroke="#0f172a" stroke-width="2.5"/>
-  <circle cx="${cx}" cy="${cy}" r="${r - 5}" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+    <!-- Gradien Sektor Sudut Merah Muda -->
+    <linearGradient id="angleSectorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="100%" stop-color="#fecdd3"/>
+    </linearGradient>
 
-  <!-- Angka Jam Utama -->
+    <!-- Drop Shadow Badge -->
+    <filter id="badgeShdwJam" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Frame Luar -->
+  <rect x="2" y="2" width="376" height="256" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="190" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Sudut: Sudut Terkecil Antara Dua Jarum Jam</text>
+
+  <!-- Bezel Jam Baja Stainless Steel -->
+  <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="url(#clockBezelGrad)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Piringan Jam Putih (Dial Face) -->
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <circle cx="${cx}" cy="${cy}" r="${r - 6}" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- Ticks Jam & Menit -->
+  ${hourTicks}
+
+  <!-- Angka Jam Kardinal Utama (12, 3, 6, 9) -->
   <text x="${cx}" y="${cy - r + 20}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">12</text>
   <text x="${cx + r - 16}" y="${cy + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">3</text>
   <text x="${cx}" y="${cy + r - 10}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">6</text>
   <text x="${cx - r + 16}" y="${cy + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">9</text>
 
-  <!-- Busur Sudut Terarsir -->
-  <path d="M ${cx},${cy} L ${ax1.toFixed(1)},${ay1.toFixed(1)} A ${arcR},${arcR} 0 0,1 ${ax2.toFixed(1)},${ay2.toFixed(1)} Z" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <!-- Busur Juring Sudut Terarsir -->
+  <path d="M ${cx},${cy} L ${ax1.toFixed(1)},${ay1.toFixed(1)} A ${arcR},${arcR} 0 ${isLargeArc},1 ${ax2.toFixed(1)},${ay2.toFixed(1)} Z" fill="url(#angleSectorGrad)" stroke="#e11d48" stroke-width="1.6"/>
 
-  <!-- Jarum Jam Pendek -->
+  <!-- Jarum Jam Pendek (Hour Hand) -->
   <line x1="${cx}" y1="${cy}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#0f172a" stroke-width="4.5" stroke-linecap="round"/>
-  <!-- Jarum Menit Panjang -->
+  <!-- Jarum Menit Panjang (Minute Hand) -->
   <line x1="${cx}" y1="${cy}" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="${cx}" cy="${cy}" r="5" fill="#dc2626"/>
+  
+  <!-- Poros Tengah Jarum -->
+  <circle cx="${cx}" cy="${cy}" r="5" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
 
   <!-- Callout Target X -->
-  <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
-
-  <!-- Info Pukul di Kanan -->
-  <g transform="translate(290, 110)">
-    <rect width="75" height="45" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="37.5" y="18" text-anchor="middle" font-size="9" fill="#64748b">Waktu</text>
-    <text x="37.5" y="34" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${String(j).padStart(2, '0')}.${String(m).padStart(2, '0')}</text>
+  <g transform="translate(${tx.toFixed(1)}, ${ty.toFixed(1)})" filter="url(#badgeShdwJam)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
-  <text x="190" y="244" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Besar sudut terkecil yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...°</text>
+  <!-- Kartu Info Waktu di Sisi Kanan (Bebas Tabrakan) -->
+  <g transform="translate(292, 110)">
+    <rect x="-36" y="-24" width="72" height="48" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="0" y="-7" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#64748b">Pukul</text>
+    <text x="0" y="14" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">${String(j).padStart(2, '0')}.${String(m).padStart(2, '0')}</text>
+  </g>
+
+  <!-- Prompt Pertanyaan Pedagogis -->
+  <text x="190" y="246" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Besar sudut terkecil yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...°</text>
 </svg>`;
 }
 

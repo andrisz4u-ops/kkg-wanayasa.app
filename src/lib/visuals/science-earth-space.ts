@@ -569,60 +569,101 @@ export function renderTataSuryaSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const planets = [
-    { id: 'merkurius', num: 1, name: 'Merkurius', x: 80, r: 4.5, fill: '#94a3b8', stroke: '#64748b' },
-    { id: 'venus', num: 2, name: 'Venus', x: 115, r: 7.5, fill: '#fbbf24', stroke: '#d97706' },
-    { id: 'bumi', num: 3, name: 'Bumi', x: 160, r: 8, fill: '#38bdf8', stroke: '#0284c7', isBumi: true },
-    { id: 'mars', num: 4, name: 'Mars', x: 205, r: 6, fill: '#ef4444', stroke: '#b91c1c' },
-    { id: 'yupiter', num: 5, name: 'Yupiter', x: 280, r: 18, fill: '#d97706', stroke: '#b45309', isJup: true },
-    { id: 'saturnus', num: 6, name: 'Saturnus', x: 360, r: 13, fill: '#fde047', stroke: '#ca8a04', isSat: true },
-    { id: 'uranus', num: 7, name: 'Uranus', x: 430, r: 10, fill: '#67e8f9', stroke: '#06b6d4' },
-    { id: 'neptunus', num: 8, name: 'Neptunus', x: 485, r: 9.5, fill: '#3b82f6', stroke: '#1d4ed8' }
+    { id: 'merkurius', num: 1, name: 'Merkurius', x: 86, r: 5, fill: '#94a3b8', stroke: '#64748b' },
+    { id: 'venus', num: 2, name: 'Venus', x: 126, r: 8, fill: '#f59e0b', stroke: '#d97706' },
+    { id: 'bumi', num: 3, name: 'Bumi', x: 174, r: 8.5, fill: '#0284c7', stroke: '#0369a1', isBumi: true },
+    { id: 'mars', num: 4, name: 'Mars', x: 220, r: 6.5, fill: '#ef4444', stroke: '#b91c1c', isMars: true },
+    { id: 'yupiter', num: 5, name: 'Yupiter', x: 304, r: 20, fill: '#d97706', stroke: '#b45309', isJup: true },
+    { id: 'saturnus', num: 6, name: 'Saturnus', x: 390, r: 15, fill: '#fde047', stroke: '#ca8a04', isSat: true },
+    { id: 'uranus', num: 7, name: 'Uranus', x: 460, r: 11, fill: '#67e8f9', stroke: '#06b6d4', isUr: true },
+    { id: 'neptunus', num: 8, name: 'Neptunus', x: 518, r: 10.5, fill: '#3b82f6', stroke: '#1d4ed8', isNep: true }
   ];
 
   let targetIndex = 2; // Default Bumi (ke-3)
   planets.forEach((p, idx) => {
-    if (pointer === String(p.num) || pointer === p.id || pointer === p.name.toLowerCase() || (pointer === 'jupiter' && p.id === 'yupiter')) {
+    if (
+      pointer === String(p.num) ||
+      pointer === p.id ||
+      pointer === p.name.toLowerCase() ||
+      (pointer === 'jupiter' && p.id === 'yupiter')
+    ) {
       targetIndex = idx;
     }
   });
 
-  const cy = 135;
+  const cy = 138;
 
   const starDots = [
-    [50, 40], [90, 230], [140, 50], [190, 240], [230, 45],
-    [260, 220], [310, 35], [370, 235], [420, 55], [470, 225], [510, 40]
-  ].map(([sx, sy]) => `<circle cx="${sx}" cy="${sy}" r="1" fill="#ffffff" opacity="0.7"/>`).join('');
+    [45, 35], [95, 220], [140, 48], [195, 235], [235, 42],
+    [265, 215], [315, 38], [375, 230], [425, 52], [475, 220], [525, 38]
+  ].map(([sx, sy]) => `<circle cx="${sx}" cy="${sy}" r="1" fill="#ffffff" opacity="0.75"/>`).join('');
 
-  const asteroids = [
-    [236, 60], [242, 90], [238, 120], [244, 150], [237, 180], [243, 210]
-  ].map(([ax, ay]) => `<circle cx="${ax}" cy="${ay}" r="1.5" fill="#64748b" opacity="0.75"/>`).join('');
+  // Sabuk Asteroid (Antara Mars dan Yupiter)
+  const asteroidDots = [
+    [250, 55], [256, 85], [252, 115], [258, 140], [251, 165], [257, 195], [253, 225],
+    [262, 70], [266, 100], [263, 130], [268, 155], [264, 180], [267, 210]
+  ].map(([ax, ay]) => `<circle cx="${ax}" cy="${ay}" r="1.3" fill="#94a3b8" opacity="0.7"/>`).join('');
 
   const renderedPlanets = planets.map((p, idx) => {
     const isTarget = idx === targetIndex;
     let planetGraphic = '';
 
     if (p.isBumi) {
+      // Bumi dengan benua hijau, samudra biru, atmosfer awan, dan Bulan kecil
       planetGraphic = `
-        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
-        <circle cx="${p.x - 2}" cy="${cy - 2}" r="3" fill="#22c55e" opacity="0.8"/>
-        <circle cx="${p.x + 3}" cy="${cy + 2}" r="2.5" fill="#22c55e" opacity="0.8"/>
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#0284c7" stroke="#38bdf8" stroke-width="1.2"/>
+        <!-- Benua Hijau -->
+        <path d="M ${p.x - 4} ${cy - 3} Q ${p.x - 1} ${cy - 6} ${p.x + 2} ${cy - 3} Q ${p.x + 4} ${cy + 1} ${p.x} ${cy + 4} Z" fill="#22c55e" opacity="0.9"/>
+        <path d="M ${p.x - 3} ${cy + 2} Q ${p.x - 1} ${cy + 5} ${p.x + 2} ${cy + 3} Z" fill="#22c55e" opacity="0.85"/>
+        <!-- Awan Putih -->
+        <path d="M ${p.x - 6} ${cy - 1} Q ${p.x} ${cy - 4} ${p.x + 6} ${cy - 2}" stroke="#ffffff" stroke-width="1.2" fill="none" opacity="0.6"/>
+        <!-- Bulan Satelit -->
+        <circle cx="${p.x + 13}" cy="${cy - 7}" r="2" fill="#e2e8f0"/>
+      `;
+    } else if (p.isMars) {
+      // Mars dengan tudung es kutub putih
+      planetGraphic = `
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#ea580c" stroke="#c2410c" stroke-width="1.2"/>
+        <!-- Kutub Es -->
+        <ellipse cx="${p.x}" cy="${cy - p.r + 1.5}" rx="3" ry="1.2" fill="#ffffff" opacity="0.9"/>
       `;
     } else if (p.isJup) {
+      // Yupiter dengan sabuk awan garis ochre dan Bintik Merah Raksasa
       planetGraphic = `
-        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
-        <line x1="${p.x - 17}" y1="${cy - 6}" x2="${p.x + 17}" y2="${cy - 6}" stroke="#fef3c7" stroke-width="2" opacity="0.6"/>
-        <line x1="${p.x - 17}" y1="${cy}" x2="${p.x + 17}" y2="${cy}" stroke="#78350f" stroke-width="2.5" opacity="0.7"/>
-        <line x1="${p.x - 16}" y1="${cy + 7}" x2="${p.x + 16}" y2="${cy + 7}" stroke="#fef3c7" stroke-width="2" opacity="0.6"/>
-        <ellipse cx="${p.x + 6}" cy="${cy + 7}" rx="3.5" ry="2" fill="#dc2626"/>
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#d97706" stroke="#b45309" stroke-width="1.5"/>
+        <line x1="${p.x - 19}" y1="${cy - 8}" x2="${p.x + 19}" y2="${cy - 8}" stroke="#fef3c7" stroke-width="2.2" opacity="0.65"/>
+        <line x1="${p.x - 20}" y1="${cy - 2}" x2="${p.x + 20}" y2="${cy - 2}" stroke="#78350f" stroke-width="2.8" opacity="0.75"/>
+        <line x1="${p.x - 20}" y1="${cy + 5}" x2="${p.x + 20}" y2="${cy + 5}" stroke="#9a3412" stroke-width="2" opacity="0.7"/>
+        <line x1="${p.x - 18}" y1="${cy + 11}" x2="${p.x + 18}" y2="${cy + 11}" stroke="#fef3c7" stroke-width="2" opacity="0.65"/>
+        <!-- Bintik Merah Raksasa (Great Red Spot) -->
+        <ellipse cx="${p.x + 7}" cy="${cy + 5}" rx="4.5" ry="2.8" fill="#dc2626"/>
       `;
     } else if (p.isSat) {
+      // Saturnus dengan cincin 3D miring dan pembagian Cassini
       planetGraphic = `
-        <ellipse cx="${p.x}" cy="${cy}" rx="25" ry="6" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="3.5" opacity="0.9"/>
-        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>
-        <path d="M ${p.x - 22},${cy + 7} A 25 6 0 0 0 ${p.x + 22},${cy - 7}" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="3.5" opacity="0.9"/>
+        <!-- Belakang Cincin -->
+        <ellipse cx="${p.x}" cy="${cy}" rx="28" ry="7" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="4.5" opacity="0.85"/>
+        <ellipse cx="${p.x}" cy="${cy}" rx="28" ry="7" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#050814" stroke-width="0.8" opacity="0.9"/>
+        <!-- Badan Planet -->
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#fde047" stroke="#ca8a04" stroke-width="1.5"/>
+        <line x1="${p.x - 14}" y1="${cy}" x2="${p.x + 14}" y2="${cy}" stroke="#ca8a04" stroke-width="1.8" opacity="0.6"/>
+        <!-- Depan Cincin -->
+        <path d="M ${p.x - 26} ${cy + 8} A 28 7 0 0 0 ${p.x + 26} ${cy - 9}" transform="rotate(-18 ${p.x} ${cy})" fill="none" stroke="#fef08a" stroke-width="4.5" opacity="0.95"/>
+      `;
+    } else if (p.isUr) {
+      // Uranus dengan cincin tipis vertikal
+      planetGraphic = `
+        <ellipse cx="${p.x}" cy="${cy}" rx="3" ry="18" fill="none" stroke="#a5f3fc" stroke-width="1" opacity="0.7"/>
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#67e8f9" stroke="#06b6d4" stroke-width="1.2"/>
+      `;
+    } else if (p.isNep) {
+      // Neptunus biru laut pekat dengan pusaran badai
+      planetGraphic = `
+        <circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.2"/>
+        <path d="M ${p.x - 7} ${cy - 2} Q ${p.x} ${cy - 5} ${p.x + 7} ${cy - 1}" stroke="#93c5fd" stroke-width="1" fill="none" opacity="0.65"/>
       `;
     } else {
-      planetGraphic = `<circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.5"/>`;
+      planetGraphic = `<circle cx="${p.x}" cy="${cy}" r="${p.r}" fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.2"/>`;
     }
 
     const numberText = `<text x="${p.x}" y="240" text-anchor="middle" font-size="10" font-weight="600" fill="#94a3b8">(${p.num})</text>`;
@@ -639,6 +680,7 @@ export function renderTataSuryaSvg(params: any): string {
     }
 
     return `
+      <!-- Lintasan Orbit Planet -->
       <path d="M ${p.x},35 A ${p.x * 2} 400 0 0 1 ${p.x},235" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
       ${planetGraphic}
       ${numberText}
@@ -646,30 +688,46 @@ export function renderTataSuryaSvg(params: any): string {
     `;
   }).join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 270" width="520" height="270" style="background:#090d1a; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 280" width="560" height="280" style="background:#050814; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <radialGradient id="sunGlow" cx="20%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="#fef08a"/>
-      <stop offset="40%" stop-color="#f59e0b"/>
+    <radialGradient id="sunGlowSurya" cx="15%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="25%" stop-color="#fef08a"/>
+      <stop offset="60%" stop-color="#f59e0b"/>
       <stop offset="100%" stop-color="#dc2626"/>
     </radialGradient>
+    <filter id="sunHaloSurya" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
     <marker id="arrSurya" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#f43f5e" />
     </marker>
   </defs>
 
-  <rect width="520" height="270" fill="#090d1a" stroke="#334155" stroke-width="1.5" rx="6"/>
+  <!-- Frame -->
+  <rect x="2" y="2" width="556" height="276" rx="8" fill="#050814" stroke="#1e293b" stroke-width="1.5"/>
+  <!-- Space Dust / Nebula Glow -->
+  <ellipse cx="300" cy="140" rx="240" ry="90" fill="#1e1b4b" opacity="0.35"/>
   ${starDots}
-  ${asteroids}
+  ${asteroidDots}
 
-  <text x="260" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#f8fafc">Diagram Sistem Tata Surya</text>
+  <text x="280" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#f8fafc">Diagram Sistem Tata Surya</text>
 
-  <circle cx="0" cy="${cy}" r="52" fill="url(#sunGlow)"/>
-  <text x="22" y="${cy + 4}" font-size="10" font-weight="bold" fill="#ffffff" opacity="0.9">Matahari</text>
+  <!-- Matahari Raksasa Bersinar -->
+  <circle cx="0" cy="${cy}" r="64" fill="url(#sunGlowSurya)" filter="url(#sunHaloSurya)"/>
+  <!-- Solar Flare Prominences -->
+  <path d="M 38 ${cy - 38} Q 56 ${cy - 48} 48 ${cy - 24}" fill="none" stroke="#f59e0b" stroke-width="2.5" opacity="0.85"/>
+  <path d="M 44 ${cy + 30} Q 62 ${cy + 42} 50 ${cy + 18}" fill="none" stroke="#f59e0b" stroke-width="2.5" opacity="0.85"/>
+  <text x="24" y="${cy + 4}" font-size="10.5" font-weight="bold" fill="#ffffff" opacity="0.95">Matahari</text>
 
   ${renderedPlanets}
 
-  <text x="260" y="260" text-anchor="middle" font-size="10.5" font-weight="600" fill="#94a3b8">Perhatikan planet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+  <!-- Caption Bawah -->
+  <text x="280" y="264" text-anchor="middle" font-size="10.5" font-weight="600" fill="#94a3b8">Perhatikan planet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
 </svg>`;
 }
 
@@ -706,15 +764,19 @@ export function renderGerhanaSvg(params: {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 260" width="480" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <defs>
-    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fef08a"/>
-      <stop offset="60%" stop-color="#f59e0b"/>
+    <radialGradient id="sunGlowGerhana" cx="45%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="35%" stop-color="#fef08a"/>
+      <stop offset="70%" stop-color="#f59e0b"/>
       <stop offset="100%" stop-color="#d97706"/>
     </radialGradient>
-    <linearGradient id="earthGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="earthGradGerhana" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="100%" stop-color="#0369a1"/>
     </linearGradient>
+    <filter id="badgeShdwGerhana" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.3"/>
+    </filter>
   </defs>
 
   <rect width="480" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
@@ -724,8 +786,8 @@ export function renderGerhanaSvg(params: {
   <polygon points="70,90 230,${130 + middleR} 440,${130 + rightR + 35} 440,${130 - rightR - 35} 230,${130 - middleR} 70,170" fill="#cbd5e1" fill-opacity="0.35"/>
 
   <!-- Kerucut Bayangan Umbra (Gelap / Pekat) -->
-  <polygon points="70,90 230,${130 - middleR} 370,130 230,${130 + middleR} 70,170" fill="#334155" fill-opacity="0.5"/>
-  ${!isMatahari ? `<polygon points="240,${130 - middleR} 440,${130 - 15} 440,${130 + 15} 240,${130 + middleR}" fill="#1e293b" fill-opacity="0.6"/>` : ''}
+  <polygon points="70,90 230,${130 - middleR} 370,130 230,${130 + middleR} 70,170" fill="#334155" fill-opacity="0.55"/>
+  ${!isMatahari ? `<polygon points="240,${130 - middleR} 440,${130 - 15} 440,${130 + 15} 240,${130 + middleR}" fill="#1e293b" fill-opacity="0.65"/>` : ''}
 
   <!-- Garis Berkas Cahaya Batas -->
   <line x1="70" y1="90" x2="440" y2="${130 + rightR + 35}" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="4,4"/>
@@ -734,7 +796,7 @@ export function renderGerhanaSvg(params: {
   <line x1="70" y1="170" x2="370" y2="130" stroke="#d97706" stroke-width="1.2"/>
 
   <!-- Matahari (Kiri) -->
-  <circle cx="70" cy="130" r="40" fill="url(#sunGlow)" stroke="#b45309" stroke-width="2"/>
+  <circle cx="70" cy="130" r="40" fill="url(#sunGlowGerhana)" stroke="#b45309" stroke-width="2"/>
   <!-- Label Matahari -->
   <g>
     <rect x="35" y="45" width="70" height="20" rx="4" fill="#ffffff" stroke="#d97706" stroke-width="1"/>
@@ -743,6 +805,14 @@ export function renderGerhanaSvg(params: {
 
   <!-- Objek Tengah (Bulan pada Gerhana Matahari, Bumi pada Gerhana Bulan) -->
   <circle cx="230" cy="130" r="${middleR}" fill="${middleFill}" stroke="#0f172a" stroke-width="2"/>
+  ${isMatahari ? `
+    <!-- Detail Bulan Kawah -->
+    <circle cx="226" cy="126" r="2.5" fill="#334155" opacity="0.6"/>
+    <circle cx="233" cy="132" r="2" fill="#334155" opacity="0.6"/>
+  ` : `
+    <!-- Detail Benua Bumi -->
+    <path d="M 222 122 Q 230 118 238 122 Q 242 130 236 138 Z" fill="#22c55e" opacity="0.8"/>
+  `}
   <!-- Label Objek Tengah (Atas) -->
   <g>
     <rect x="${230 - 32}" y="42" width="64" height="20" rx="4" fill="#ffffff" stroke="#475569" stroke-width="1"/>
@@ -751,13 +821,22 @@ export function renderGerhanaSvg(params: {
 
   <!-- Objek Kanan (Bumi pada Gerhana Matahari, Bulan pada Gerhana Bulan) -->
   <circle cx="380" cy="130" r="${rightR}" fill="${rightFill}" stroke="#0f172a" stroke-width="2"/>
+  ${isMatahari ? `
+    <!-- Detail Benua Bumi Kanan -->
+    <path d="M 370 118 Q 382 112 392 118 Q 396 128 388 140 Z" fill="#22c55e" opacity="0.8"/>
+    <!-- Area Gerhana Total di Permukaan Bumi -->
+    <circle cx="350" cy="130" r="3.5" fill="#0f172a"/>
+  ` : `
+    <!-- Detail Bulan Kanan -->
+    <circle cx="377" cy="127" r="2" fill="#475569" opacity="0.6"/>
+  `}
   <!-- Label Objek Kanan (Bawah Objek) -->
   <g>
     <rect x="${380 - 32}" y="175" width="64" height="20" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1"/>
     <text x="380" y="189" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">${rightName}</text>
   </g>
 
-  <!-- Callout Label Zona Bayangan (Zona Berbeda Tanpa Tabrakan) -->
+  <!-- Callout Label Zona Bayangan -->
   <g>
     <rect x="275" y="210" width="75" height="20" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1"/>
     <text x="312.5" y="224" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#334155">1. Umbra</text>
@@ -768,8 +847,8 @@ export function renderGerhanaSvg(params: {
   </g>
 
   <!-- Target Badge X (Kontras Tinggi) -->
-  <g>
-    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+  <g filter="url(#badgeShdwGerhana)">
+    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
     <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
@@ -783,56 +862,112 @@ export function renderFaseBulanSvg(params: { pointer?: string; label?: string })
   const pointer = (params.pointer || 'purnama').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 75, y: 135, name: 'Bulan Purnama' }; // Posisi 5 (kiri)
-  if (pointer.includes('baru') || pointer.includes('mati')) target = { x: 305, y: 135, name: 'Bulan Baru' };
-  else if (pointer.includes('kuartir 1') || pointer.includes('paruh awal') || pointer.includes('atas')) target = { x: 190, y: 55, name: 'Kuartir Pertama' };
-  else if (pointer.includes('kuartir 3') || pointer.includes('paruh akhir') || pointer.includes('bawah')) target = { x: 190, y: 215, name: 'Kuartir Ketiga' };
-  else if (pointer.includes('sabit')) target = { x: 270, y: 78, name: 'Bulan Sabit' };
+  let target = { x: 85, y: 140, name: 'Bulan Purnama' }; // Posisi 5 (kiri)
+  if (pointer.includes('baru') || pointer.includes('mati')) target = { x: 305, y: 140, name: 'Bulan Baru' };
+  else if (pointer.includes('kuartir 1') || pointer.includes('paruh awal') || pointer.includes('atas') || pointer.includes('kuartir i')) target = { x: 195, y: 50, name: 'Kuartir Pertama' };
+  else if (pointer.includes('kuartir 3') || pointer.includes('paruh akhir') || pointer.includes('bawah') || pointer.includes('kuartir iii')) target = { x: 195, y: 230, name: 'Kuartir Ketiga' };
+  else if (pointer.includes('sabit')) target = { x: 265, y: 76, name: 'Bulan Sabit' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 270" width="420" height="270" style="background:#0f172a; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#f8fafc">Fase-Fase Bulan Mengelilingi Bumi</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 300" width="540" height="300" style="background:#070b19; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="badgeShdwFase" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrSunRay" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#facc15" />
+    </marker>
+  </defs>
+
+  <!-- Frame -->
+  <rect x="2" y="2" width="536" height="296" rx="8" fill="#070b19" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="270" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#f8fafc">Fase-Fase Bulan Mengelilingi Bumi</text>
 
   <!-- Sinar Matahari Datang dari Kanan -->
-  <g>
-    <line x1="395" y1="65" x2="365" y2="65" stroke="#facc15" stroke-width="2"/>
-    <line x1="395" y1="135" x2="365" y2="135" stroke="#facc15" stroke-width="2.5"/>
-    <line x1="395" y1="205" x2="365" y2="205" stroke="#facc15" stroke-width="2"/>
-    <text x="380" y="148" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#fde047">Sinar Matahari</text>
+  <g transform="translate(485, 140)">
+    <line x1="25" y1="-60" x2="-25" y2="-60" stroke="#facc15" stroke-width="2" marker-end="url(#arrSunRay)"/>
+    <line x1="25" y1="0" x2="-25" y2="0" stroke="#facc15" stroke-width="2.5" marker-end="url(#arrSunRay)"/>
+    <line x1="25" y1="60" x2="-25" y2="60" stroke="#facc15" stroke-width="2" marker-end="url(#arrSunRay)"/>
+    <text x="0" y="16" text-anchor="middle" font-size="9" font-weight="bold" fill="#fde047">Sinar Matahari</text>
   </g>
 
   <!-- Garis Orbit Lingkaran -->
-  <circle cx="190" cy="135" r="95" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <circle cx="195" cy="140" r="90" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4,4"/>
 
   <!-- Bumi di Pusat -->
-  <circle cx="190" cy="135" r="22" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
-  <ellipse cx="186" cy="132" rx="10" ry="14" fill="#22c55e"/>
-  <text x="190" y="139" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">Bumi</text>
+  <circle cx="195" cy="140" r="22" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
+  <!-- Belahan Bumi Siang / Malam -->
+  <path d="M 195,118 A 22 22 0 0 1 195,162 Z" fill="#38bdf8" opacity="0.4"/>
+  <path d="M 195,118 A 22 22 0 0 0 195,162 Z" fill="#0f172a" opacity="0.4"/>
+  <!-- Benua Hijau -->
+  <ellipse cx="191" cy="137" rx="9" ry="12" fill="#22c55e" opacity="0.85"/>
+  <text x="195" y="144" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">Bumi</text>
 
-  <!-- Posisi 1: Bulan Baru (Kanan) -->
-  <circle cx="285" cy="135" r="14" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
-  <text x="285" y="160" text-anchor="middle" font-size="7.5" fill="#94a3b8">Bulan Baru</text>
+  <!-- 8 Posisi Bulan -->
+  <!-- 1. Bulan Baru (Kanan, 0°) -->
+  <g transform="translate(285, 140)">
+    <circle cx="0" cy="0" r="13" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#94a3b8">Bulan Baru</text>
+  </g>
 
-  <!-- Posisi 3: Kuartir Pertama (Atas) -->
-  <path d="M 190,40 A 14 14 0 0 1 190,68 Z" fill="#fef08a"/>
-  <path d="M 190,40 A 14 14 0 0 0 190,68 Z" fill="#1e293b"/>
-  <circle cx="190" cy="54" r="14" fill="none" stroke="#64748b" stroke-width="1"/>
-  <text x="190" y="38" text-anchor="middle" font-size="7.5" fill="#94a3b8">Kuartir I</text>
+  <!-- 2. Sabit Awal (Kanan Atas, 45°) -->
+  <g transform="translate(259, 76)">
+    <circle cx="0" cy="0" r="11" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <!-- Lit right side -->
+    <path d="M 0,-11 A 11 11 0 0 1 0,11 Z" fill="#fef08a"/>
+    <path d="M 0,-11 A 11 11 0 0 0 0,11 Z" fill="#1e293b"/>
+  </g>
 
-  <!-- Posisi 5: Bulan Purnama (Kiri) -->
-  <circle cx="95" cy="135" r="14" fill="#fef08a" stroke="#facc15" stroke-width="1.5"/>
-  <text x="95" y="160" text-anchor="middle" font-size="7.5" fill="#fde047">Purnama</text>
+  <!-- 3. Kuartir Pertama (Atas, 90°) -->
+  <g transform="translate(195, 50)">
+    <circle cx="0" cy="0" r="13" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <path d="M 0,-13 A 13 13 0 0 1 0,13 Z" fill="#fef08a"/>
+    <path d="M 0,-13 A 13 13 0 0 0 0,13 Z" fill="#1e293b"/>
+    <text x="0" y="-18" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#94a3b8">Kuartir I</text>
+  </g>
 
-  <!-- Posisi 7: Kuartir Ketiga (Bawah) -->
-  <path d="M 190,202 A 14 14 0 0 1 190,230 Z" fill="#fef08a"/>
-  <path d="M 190,202 A 14 14 0 0 0 190,230 Z" fill="#1e293b"/>
-  <circle cx="190" cy="216" r="14" fill="none" stroke="#64748b" stroke-width="1"/>
-  <text x="190" y="242" text-anchor="middle" font-size="7.5" fill="#94a3b8">Kuartir III</text>
+  <!-- 4. Cembung Awal (Kiri Atas, 135°) -->
+  <g transform="translate(131, 76)">
+    <circle cx="0" cy="0" r="11" fill="#fef08a" stroke="#ca8a04" stroke-width="1"/>
+    <path d="M 0,-11 A 11 11 0 0 1 0,11 Z" fill="#fef08a"/>
+    <path d="M 0,-11 A 11 11 0 0 0 0,11 Z" fill="#1e293b"/>
+  </g>
+
+  <!-- 5. Bulan Purnama (Kiri, 180°) -->
+  <g transform="translate(105, 140)">
+    <circle cx="0" cy="0" r="13" fill="#fef08a" stroke="#facc15" stroke-width="1.5"/>
+    <text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#fde047">Purnama</text>
+  </g>
+
+  <!-- 6. Cembung Akhir (Kiri Bawah, 225°) -->
+  <g transform="translate(131, 204)">
+    <circle cx="0" cy="0" r="11" fill="#fef08a" stroke="#ca8a04" stroke-width="1"/>
+    <path d="M 0,-11 A 11 11 0 0 1 0,11 Z" fill="#fef08a"/>
+    <path d="M 0,-11 A 11 11 0 0 0 0,11 Z" fill="#1e293b"/>
+  </g>
+
+  <!-- 7. Kuartir Ketiga (Bawah, 270°) -->
+  <g transform="translate(195, 230)">
+    <circle cx="0" cy="0" r="13" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <path d="M 0,-13 A 13 13 0 0 1 0,13 Z" fill="#fef08a"/>
+    <path d="M 0,-13 A 13 13 0 0 0 0,13 Z" fill="#1e293b"/>
+    <text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#94a3b8">Kuartir III</text>
+  </g>
+
+  <!-- 8. Sabit Akhir (Kanan Bawah, 315°) -->
+  <g transform="translate(259, 204)">
+    <circle cx="0" cy="0" r="11" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+    <path d="M 0,-11 A 11 11 0 0 1 0,11 Z" fill="#fef08a"/>
+    <path d="M 0,-11 A 11 11 0 0 0 0,11 Z" fill="#1e293b"/>
+  </g>
 
   <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <g transform="translate(${target.x}, ${target.y})" filter="url(#badgeShdwFase)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
 
-  <text x="210" y="258" text-anchor="middle" font-size="10.5" font-weight="600" fill="#cbd5e1">Fase bulan yang ditunjukkan oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Caption Bawah -->
+  <text x="270" y="282" text-anchor="middle" font-size="10.5" font-weight="600" fill="#cbd5e1">Fase bulan yang ditunjukkan oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -841,52 +976,92 @@ export function renderLapisanBumiSvg(params: { pointer?: string; label?: string 
   const pointer = (params.pointer || 'mantel').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 275, y: 95, name: 'Mantel Bumi' };
-  if (pointer.includes('kerak') || pointer.includes('crust')) target = { x: 310, y: 65, name: 'Kerak Bumi' };
-  else if (pointer.includes('inti luar') || pointer.includes('outer')) target = { x: 235, y: 135, name: 'Inti Luar Cair' };
-  else if (pointer.includes('inti dalam') || pointer.includes('inner')) target = { x: 185, y: 175, name: 'Inti Dalam Padat' };
+  let target = { x: 235, y: 105, name: 'Mantel Bumi' };
+  if (pointer.includes('kerak') || pointer.includes('crust')) target = { x: 255, y: 65, name: 'Kerak Bumi' };
+  else if (pointer.includes('inti luar') || pointer.includes('outer')) target = { x: 205, y: 145, name: 'Inti Luar Cair' };
+  else if (pointer.includes('inti dalam') || pointer.includes('inner')) target = { x: 175, y: 185, name: 'Inti Dalam Padat' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="200" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Struktur Lapisan Bumi</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" width="520" height="300" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <radialGradient id="innerCoreGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#facc15"/>
+    </radialGradient>
+    <radialGradient id="outerCoreGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </radialGradient>
+    <radialGradient id="mantleGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="60%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#9a3412"/>
+    </radialGradient>
+    <filter id="badgeShdwLapisan" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Potongan Irisan Bumi Melingkar -->
-  <g transform="translate(140, 180)">
-    <!-- Inti Luar & Mantel Concentric Arcs -->
-    <path d="M 0,0 L 130,-130 A 184 184 0 0 0 -130,-130 Z" fill="#b45309"/> <!-- Mantel Atas -->
-    <path d="M 0,0 L 105,-105 A 148 148 0 0 0 -105,-105 Z" fill="#ea580c"/> <!-- Mantel Bawah -->
-    <path d="M 0,0 L 75,-75 A 106 106 0 0 0 -75,-75 Z" fill="#f59e0b"/> <!-- Inti Luar -->
-    <path d="M 0,0 L 40,-40 A 56 56 0 0 0 -40,-40 Z" fill="#fef08a"/> <!-- Inti Dalam -->
-    <!-- Kerak Tipis di Luar -->
-    <path d="M 130,-130 A 184 184 0 0 0 -130,-130" fill="none" stroke="#15803d" stroke-width="4"/>
+  <!-- Frame -->
+  <rect x="2" y="2" width="516" height="296" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="260" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Struktur Lapisan Bumi</text>
+
+  <!-- Potongan Irisan Bumi Melingkar (Concentric Cross-Section) -->
+  <g transform="translate(150, 205)">
+    <!-- Mantel Bumi (Upper & Lower Mantle) -->
+    <path d="M 0,0 L 135,-135 A 190 190 0 0 0 -135,-135 Z" fill="url(#mantleGrad)" stroke="#7c2d12" stroke-width="1.2"/>
+    <!-- Inti Luar Cair (Outer Core) -->
+    <path d="M 0,0 L 80,-80 A 113 113 0 0 0 -80,-80 Z" fill="url(#outerCoreGrad)" stroke="#c2410c" stroke-width="1"/>
+    <!-- Inti Dalam Padat (Inner Core) -->
+    <path d="M 0,0 L 40,-40 A 56 56 0 0 0 -40,-40 Z" fill="url(#innerCoreGrad)" stroke="#ca8a04" stroke-width="1"/>
+
+    <!-- Kerak Bumi Tipis di Permukaan Luar -->
+    <path d="M 135,-135 A 190 190 0 0 0 -135,-135" fill="none" stroke="#15803d" stroke-width="5"/>
+    <path d="M 135,-135 A 190 190 0 0 0 -135,-135" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="16,8"/>
   </g>
 
   <!-- Label Lapisan Kanan (Anti-Overlap) -->
-  <g>
-    <rect x="260" y="48" width="125" height="20" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1"/>
-    <text x="322.5" y="62" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">1. Kerak Bumi (Crust)</text>
-    <line x1="260" y1="58" x2="220" y2="68" stroke="#16a34a" stroke-width="1"/>
+  <!-- 1. Kerak Bumi -->
+  <g transform="translate(310, 48)">
+    <rect x="0" y="0" width="185" height="26" rx="5" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="12" y="17" font-size="10" font-weight="bold" fill="#166534">1. Kerak Bumi (Crust)</text>
+    <text x="145" y="17" font-size="8.5" fill="#15803d">0-70 km</text>
+    <line x1="0" y1="13" x2="-70" y2="42" stroke="#16a34a" stroke-width="1.2"/>
   </g>
-  <g>
-    <rect x="260" y="85" width="125" height="20" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1"/>
-    <text x="322.5" y="99" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">2. Mantel Bumi (Mantle)</text>
-    <line x1="260" y1="95" x2="210" y2="105" stroke="#ea580c" stroke-width="1"/>
+
+  <!-- 2. Mantel Bumi -->
+  <g transform="translate(310, 88)">
+    <rect x="0" y="0" width="185" height="26" rx="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.2"/>
+    <text x="12" y="17" font-size="10" font-weight="bold" fill="#c2410c">2. Mantel Bumi (Mantle)</text>
+    <text x="135" y="17" font-size="8.5" fill="#c2410c">2.900 km</text>
+    <line x1="0" y1="13" x2="-80" y2="28" stroke="#ea580c" stroke-width="1.2"/>
   </g>
-  <g>
-    <rect x="260" y="125" width="125" height="20" rx="4" fill="#d97706" stroke="#b45309" stroke-width="1"/>
-    <text x="322.5" y="139" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">3. Inti Luar (Outer Core)</text>
-    <line x1="260" y1="135" x2="190" y2="135" stroke="#d97706" stroke-width="1"/>
+
+  <!-- 3. Inti Luar -->
+  <g transform="translate(310, 128)">
+    <rect x="0" y="0" width="185" height="26" rx="5" fill="#fffbeb" stroke="#d97706" stroke-width="1.2"/>
+    <text x="12" y="17" font-size="10" font-weight="bold" fill="#b45309">3. Inti Luar (Outer Core)</text>
+    <text x="135" y="17" font-size="8.5" fill="#b45309">5.150 km</text>
+    <line x1="0" y1="13" x2="-105" y2="18" stroke="#d97706" stroke-width="1.2"/>
   </g>
-  <g>
-    <rect x="260" y="165" width="125" height="20" rx="4" fill="#eab308" stroke="#854d0e" stroke-width="1"/>
-    <text x="322.5" y="179" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">4. Inti Dalam (Inner Core)</text>
-    <line x1="260" y1="175" x2="160" y2="165" stroke="#eab308" stroke-width="1"/>
+
+  <!-- 4. Inti Dalam -->
+  <g transform="translate(310, 168)">
+    <rect x="0" y="0" width="185" height="26" rx="5" fill="#fefce8" stroke="#ca8a04" stroke-width="1.2"/>
+    <text x="12" y="17" font-size="10" font-weight="bold" fill="#854d0e">4. Inti Dalam (Inner Core)</text>
+    <text x="135" y="17" font-size="8.5" fill="#854d0e">6.371 km</text>
+    <line x1="0" y1="13" x2="-135" y2="18" stroke="#ca8a04" stroke-width="1.2"/>
   </g>
 
   <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <g transform="translate(${target.x}, ${target.y})" filter="url(#badgeShdwLapisan)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
 
-  <text x="200" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Lapisan bumi yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Bottom Prompt -->
+  <text x="260" y="278" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Lapisan bumi yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

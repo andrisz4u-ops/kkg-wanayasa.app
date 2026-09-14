@@ -1096,142 +1096,275 @@ export function renderPancaindraSvg(params: {
   const pointer = (params.pointer || 'kornea').toLowerCase();
 
   if (organ === 'telinga') {
-    let target = { x: 195, y: 135, name: 'Gendang Telinga' };
-    if (pointer.includes('koklea') || pointer.includes('siput')) target = { x: 280, y: 130 };
-    else if (pointer.includes('saluran') || pointer.includes('liang')) target = { x: 125, y: 135 };
-    else if (pointer.includes('daun')) target = { x: 55, y: 130 };
-    else if (pointer.includes('tulang') || pointer.includes('martil')) target = { x: 230, y: 120 };
-    else if (pointer.includes('eustachius')) target = { x: 275, y: 185 };
+    let target = { x: 196, y: 135, name: 'Gendang Telinga' };
+    if (pointer.includes('koklea') || pointer.includes('siput')) target = { x: 302, y: 130, name: 'Koklea (Rumah Siput)' };
+    else if (pointer.includes('saluran') || pointer.includes('liang')) target = { x: 130, y: 138, name: 'Liang Telinga' };
+    else if (pointer.includes('daun')) target = { x: 55, y: 125, name: 'Daun Telinga' };
+    else if (pointer.includes('tulang') || pointer.includes('martil') || pointer.includes('landasan') || pointer.includes('sanggurdi')) target = { x: 232, y: 122, name: 'Tulang Pendengaran' };
+    else if (pointer.includes('eustachius')) target = { x: 268, y: 188, name: 'Saluran Eustachius' };
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 260" width="440" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-    <rect width="440" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-    <text x="220" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Anatomi Bagian Indra Pendengaran (Telinga)</text>
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 260" width="450" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="earPinnaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="50%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#fdba74"/>
+    </linearGradient>
+    <linearGradient id="earCanalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <radialGradient id="tympanicGrad" cx="40%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fecaca"/>
+      <stop offset="80%" stop-color="#f87171"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </radialGradient>
+    <linearGradient id="cochleaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5f3ff"/>
+      <stop offset="50%" stop-color="#ddd6fe"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="glowEar" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-    <!-- Daun Telinga (Kiri Luar) -->
-    <path d="M 60,70 C 20,80 20,180 55,200 C 65,205 75,190 70,175 C 65,150 45,140 50,110 C 55,80 75,70 60,70 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="2"/>
+  <!-- Background Container -->
+  <rect width="450" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-    <!-- Saluran Telinga Luar (Liang Telinga) -->
-    <path d="M 65,120 L 190,125 L 190,145 L 65,150 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+  <!-- Subtle Regional Zone Backdrops -->
+  <rect x="8" y="32" width="145" height="184" rx="6" fill="#f8fafc" stroke="#f1f5f9" stroke-width="1"/>
+  <rect x="157" y="32" width="112" height="184" rx="6" fill="#fffbeb" stroke="#fef3c7" stroke-width="1" stroke-opacity="0.5"/>
+  <rect x="273" y="32" width="169" height="184" rx="6" fill="#faf5ff" stroke="#f3e8ff" stroke-width="1" stroke-opacity="0.5"/>
 
-    <!-- Gendang Telinga (Membran Timpani) -->
-    <line x1="190" y1="115" x2="195" y2="155" stroke="#dc2626" stroke-width="3.5"/>
+  <!-- Title -->
+  <text x="225" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Anatomi Bagian Indra Pendengaran (Telinga)</text>
 
-    <!-- Rongga Telinga Tengah & Tulang Pendengaran -->
-    <ellipse cx="230" cy="130" rx="30" ry="25" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
-    <circle cx="215" cy="125" r="5" fill="#78350f"/>
-    <line x1="215" y1="125" x2="230" y2="120" stroke="#78350f" stroke-width="2.5"/>
-    <circle cx="230" cy="120" r="4" fill="#78350f"/>
-    <line x1="230" y1="120" x2="245" y2="128" stroke="#78350f" stroke-width="2.5"/>
+  <!-- Daun Telinga (Aurikula / Pinna) -->
+  <path d="M 62,65 C 22,76 18,175 52,198 C 66,206 76,192 70,174 C 64,152 46,142 50,110 C 54,82 74,70 62,65 Z" fill="url(#earPinnaGrad)" stroke="#c2410c" stroke-width="2"/>
+  <!-- Helix & Antihelix anatomical grooves -->
+  <path d="M 52,78 C 30,95 32,165 52,185" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M 58,102 C 48,118 48,150 58,162" fill="none" stroke="#f97316" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- Tragus -->
+  <path d="M 66,128 C 62,134 62,142 67,146" fill="none" stroke="#c2410c" stroke-width="1.6"/>
 
-    <!-- Telinga Dalam: Koklea (Rumah Siput) -->
-    <path d="M 265,125 C 265,105 295,105 295,125 C 295,140 275,145 275,135 C 275,128 288,128 288,135" fill="none" stroke="#7c3aed" stroke-width="3"/>
-    <circle cx="282" cy="132" r="14" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <!-- Liang Telinga (Saluran Telinga Luar / Meatus Akustikus Eksternus) -->
+  <path d="M 68,124 Q 125,128 194,120 L 196,152 Q 125,148 69,152 Z" fill="url(#earCanalGrad)" stroke="#ea580c" stroke-width="1.5"/>
+  <!-- Sound Waves traversing the canal -->
+  <path d="M 85,130 Q 90,138 85,146 M 105,128 Q 110,138 105,148 M 125,126 Q 130,138 125,150" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
 
-    <!-- Saluran Eustachius (Bawah) -->
-    <path d="M 240,150 L 275,200 L 290,195 L 255,148 Z" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <!-- Gendang Telinga (Membran Timpani) -->
+  <ellipse cx="196" cy="136" rx="4" ry="20" transform="rotate(12 196 136)" fill="url(#tympanicGrad)" stroke="#dc2626" stroke-width="2.2"/>
 
-    <!-- Callouts Label Rapi dengan Latar Belakang (Anti-Overlap) -->
-    <g>
-      <rect x="15" y="42" width="85" height="18" rx="4" fill="#ffffff" stroke="#c2410c" stroke-width="1"/>
-      <text x="57.5" y="55" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#c2410c">Daun Telinga</text>
-      <line x1="57" y1="60" x2="57" y2="72" stroke="#c2410c" stroke-width="1"/>
-    </g>
-    <g>
-      <rect x="145" y="80" width="95" height="18" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1"/>
-      <text x="192.5" y="93" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">Gendang Telinga</text>
-      <line x1="192" y1="98" x2="192" y2="114" stroke="#dc2626" stroke-width="1"/>
-    </g>
-    <g>
-      <rect x="250" y="70" width="115" height="18" rx="4" fill="#ffffff" stroke="#7c3aed" stroke-width="1"/>
-      <text x="307.5" y="83" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7c3aed">Koklea (Rumah Siput)</text>
-      <line x1="290" y1="88" x2="282" y2="118" stroke="#7c3aed" stroke-width="1"/>
-    </g>
-    <g>
-      <rect x="240" y="210" width="105" height="18" rx="4" fill="#ffffff" stroke="#b91c1c" stroke-width="1"/>
-      <text x="292.5" y="223" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#b91c1c">Saluran Eustachius</text>
-    </g>
+  <!-- Rongga Telinga Tengah (Kavum Timpani) -->
+  <ellipse cx="232" cy="132" rx="30" ry="26" fill="#fef9c3" stroke="#d97706" stroke-width="1.4" stroke-dasharray="3 2"/>
 
-    <!-- Target Badge X -->
-    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-    <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Tulang-Tulang Pendengaran (Ossicula Auditiva) -->
+  <!-- 1. Malleus (Martil) connected to tympanum -->
+  <line x1="196" y1="134" x2="216" y2="120" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="216" cy="120" r="4.5" fill="#92400e"/>
+  <!-- 2. Incus (Landasan) -->
+  <line x1="216" y1="120" x2="234" y2="124" stroke="#78350f" stroke-width="2.8" stroke-linecap="round"/>
+  <circle cx="234" cy="124" r="3.5" fill="#92400e"/>
+  <!-- 3. Stapes (Sanggurdi) connecting to oval window -->
+  <path d="M 234,124 L 248,118 L 248,132 Z" fill="#fef3c7" stroke="#78350f" stroke-width="2"/>
+  <line x1="248" y1="125" x2="256" y2="125" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
 
-    <text x="220" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian indra pendengaran yang ditunjuk huruf "${escapeXml(labelChar)}" adalah ...</text>
-  </svg>`;
+  <!-- Saluran Eustachius (Tubus Eustachius) ke Bawah-Kanan -->
+  <path d="M 238,154 L 268,206 L 284,198 L 254,150 Z" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <path d="M 246,152 L 276,202" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="2 2"/>
+
+  <!-- Telinga Dalam: Saluran Setengah Lingkaran (Kanalis Semisirkularis) -->
+  <ellipse cx="290" cy="100" rx="14" ry="9" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+  <ellipse cx="278" cy="108" rx="9" ry="14" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+  <ellipse cx="302" cy="108" rx="8" ry="13" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+
+  <!-- Koklea (Rumah Siput) -->
+  <path d="M 276,128 C 276,114 316,110 320,128 C 324,144 288,152 284,136 C 282,122 308,122 308,132 C 308,138 296,140 295,134" fill="url(#cochleaGrad)" stroke="#6d28d9" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle cx="300" cy="132" r="6" fill="#a78bfa" stroke="#6d28d9" stroke-width="1.5"/>
+
+  <!-- Saraf Pendengaran (Nervus Vestibulokohlearis) Keluar ke Kanan -->
+  <path d="M 320,125 L 365,120 L 365,138 L 320,135 Z" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="324" y1="127" x2="362" y2="124" stroke="#d97706" stroke-width="1" stroke-dasharray="2 2"/>
+  <line x1="324" y1="133" x2="362" y2="132" stroke="#d97706" stroke-width="1" stroke-dasharray="2 2"/>
+
+  <!-- Callout Labels Rapi & Terproteksi (Anti-Overlap) -->
+  <!-- 1. Daun Telinga -->
+  <g>
+    <rect x="14" y="44" width="82" height="18" rx="4" fill="#ffffff" stroke="#c2410c" stroke-width="1.2"/>
+    <text x="55" y="57" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">Daun Telinga</text>
+    <path d="M 55,62 L 55,75" stroke="#c2410c" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 2. Liang Telinga -->
+  <g>
+    <rect x="85" y="196" width="76" height="18" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1.2"/>
+    <text x="123" y="209" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#ea580c">Liang Telinga</text>
+    <line x1="123" y1="196" x2="123" y2="152" stroke="#ea580c" stroke-width="1" stroke-dasharray="2 2"/>
+  </g>
+
+  <!-- 3. Gendang Telinga -->
+  <g>
+    <rect x="135" y="78" width="94" height="18" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1.2"/>
+    <text x="182" y="91" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">Gendang Telinga</text>
+    <path d="M 182,96 L 194,116" stroke="#dc2626" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 4. Koklea (Rumah Siput) -->
+  <g>
+    <rect x="252" y="52" width="124" height="18" rx="4" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+    <text x="314" y="65" text-anchor="middle" font-size="9" font-weight="bold" fill="#7c3aed">Koklea (Rumah Siput)</text>
+    <path d="M 314,70 L 302,112" stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 5. Saluran Eustachius -->
+  <g>
+    <rect x="236" y="214" width="108" height="18" rx="4" fill="#ffffff" stroke="#b91c1c" stroke-width="1.2"/>
+    <text x="290" y="227" text-anchor="middle" font-size="9" font-weight="bold" fill="#b91c1c">Saluran Eustachius</text>
+    <line x1="284" y1="214" x2="274" y2="192" stroke="#b91c1c" stroke-width="1" stroke-dasharray="2 2"/>
+  </g>
+
+  <!-- Dynamic Pointer Target Badge X / Y -->
+  <circle cx="${target.x}" cy="${target.y}" r="17" fill="none" stroke="#e11d48" stroke-width="1.8" opacity="0.4"/>
+  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowEar)"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="225" y="250" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bagian indra pendengaran yang ditunjuk huruf "${escapeXml(labelChar)}" adalah ...</text>
+</svg>`;
   }
 
-  // Default: Mata Manusia
-  let target = { x: 135, y: 135, name: 'Kornea' };
-  if (pointer.includes('pupil')) target = { x: 165, y: 135 };
-  else if (pointer.includes('lensa')) target = { x: 195, y: 135 };
-  else if (pointer.includes('retina')) target = { x: 295, y: 135 };
-  else if (pointer.includes('saraf')) target = { x: 345, y: 135 };
-  else if (pointer.includes('iris')) target = { x: 175, y: 105 };
+  // Default: Bola Mata Manusia
+  let target = { x: 136, y: 135, name: 'Kornea' };
+  if (pointer.includes('pupil')) target = { x: 172, y: 135, name: 'Pupil' };
+  else if (pointer.includes('lensa')) target = { x: 198, y: 135, name: 'Lensa' };
+  else if (pointer.includes('retina')) target = { x: 298, y: 135, name: 'Retina' };
+  else if (pointer.includes('saraf')) target = { x: 348, y: 135, name: 'Saraf Optik' };
+  else if (pointer.includes('iris')) target = { x: 178, y: 104, name: 'Iris' };
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 260" width="450" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <defs>
-    <radialGradient id="lensGrad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#e0f2fe"/>
-      <stop offset="100%" stop-color="#38bdf8"/>
+    <radialGradient id="scleraGlobeGrad" cx="45%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="85%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
     </radialGradient>
+    <linearGradient id="lensEyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0f9ff"/>
+      <stop offset="40%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="corneaGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glowEye" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
   </defs>
 
-  <rect width="450" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="225" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Anatomi Penampang Bola Mata Manusia</text>
+  <!-- Background Container -->
+  <rect width="450" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Bola Mata Utama (Sclera) -->
-  <circle cx="235" cy="135" r="75" fill="#f8fafc" stroke="#0f172a" stroke-width="2.5"/>
+  <!-- Title -->
+  <text x="225" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Anatomi Penampang Bola Mata Manusia</text>
 
-  <!-- Lapisan Retina (Kuning Emas di Bagian Belakang Dalam) -->
-  <path d="M 235,62 A 73 73 0 0 1 306,135 A 73 73 0 0 1 235,208" fill="none" stroke="#f59e0b" stroke-width="5"/>
+  <!-- Bola Mata Utama (Sklera - Lapisan Luar Putih) -->
+  <circle cx="236" cy="135" r="76" fill="url(#scleraGlobeGrad)" stroke="#334155" stroke-width="2.5"/>
 
-  <!-- Saraf Optik (Kanan Keluar) -->
-  <path d="M 306,125 L 360,120 L 360,150 L 306,145 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+  <!-- Lapisan Koroid (Lapisan Tengah Berpembuluh Darah) -->
+  <path d="M 236,62 A 73 73 0 0 1 307,135 A 73 73 0 0 1 236,208" fill="none" stroke="#be123c" stroke-width="4.5" opacity="0.4"/>
 
-  <!-- Tonjolan Kornea (Kiri Luar) -->
-  <path d="M 180,78 C 120,95 120,175 180,192" fill="#bae6fd" fill-opacity="0.4" stroke="#0284c7" stroke-width="2.5"/>
+  <!-- Lapisan Retina (Kuning Emas / Oranye di Bagian Belakang Dalam) -->
+  <path d="M 236,64 A 71 71 0 0 1 305,135 A 71 71 0 0 1 236,206" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+  <!-- Fovea Centralis (Bintik Kuning) -->
+  <ellipse cx="304" cy="135" rx="2" ry="4.5" fill="#dc2626"/>
 
-  <!-- Iris (Atas & Bawah) -->
-  <line x1="175" y1="88" x2="182" y2="118" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
-  <line x1="175" y1="182" x2="182" y2="152" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
+  <!-- Saraf Optik (Nervus Optikus - Keluar ke Kanan) -->
+  <path d="M 305,124 L 366,118 L 366,152 L 305,146 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
+  <!-- Arteri & Vena Sentralis Retina -->
+  <line x1="306" y1="132" x2="366" y2="132" stroke="#ef4444" stroke-width="1.8"/>
+  <line x1="306" y1="138" x2="366" y2="138" stroke="#2563eb" stroke-width="1.8"/>
 
-  <!-- Pupil (Celah Antara Iris) -->
-  <line x1="182" y1="118" x2="182" y2="152" stroke="#0f172a" stroke-width="2" stroke-dasharray="2,2"/>
+  <!-- Humor Vitreus (Cairan Bening Pengisi Bola Mata) -->
+  <path d="M 210,135 Q 260,115 300,135 Q 260,155 210,135" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 3"/>
 
-  <!-- Lensa Kristalin (Biconvex) -->
-  <ellipse cx="195" cy="135" rx="10" ry="26" fill="url(#lensGrad)" stroke="#0284c7" stroke-width="2"/>
+  <!-- Berkas Sinar Cahaya Refraksi (Optik Pedagogis) -->
+  <path d="M 95,120 L 140,130 L 198,135 L 304,135" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="2 2" opacity="0.75"/>
+  <path d="M 95,150 L 140,140 L 198,135 L 304,135" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="2 2" opacity="0.75"/>
 
-  <!-- Callouts Label Rapi dengan Latar Belakang (Anti-Overlap) -->
+  <!-- Tonjolan Kornea (Kubah Transparan Cembung Depan) -->
+  <path d="M 180,76 C 122,94 122,176 180,194" fill="url(#corneaGlowGrad)" stroke="#0284c7" stroke-width="2.6"/>
+  <!-- Kilau Spekular Kornea -->
+  <path d="M 172,88 C 140,105 138,135 146,145" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Bilik Depan Bola Mata (Camera Anterior) -->
+  <ellipse cx="168" cy="135" rx="12" ry="38" fill="#e0f2fe" fill-opacity="0.3"/>
+
+  <!-- Badan Silier (Ciliary Body) & Serabut Zonula -->
+  <rect x="188" y="94" width="10" height="12" rx="2" fill="#92400e"/>
+  <rect x="188" y="164" width="10" height="12" rx="2" fill="#92400e"/>
+  <line x1="193" y1="106" x2="198" y2="114" stroke="#64748b" stroke-width="1.5"/>
+  <line x1="193" y1="164" x2="198" y2="156" stroke="#64748b" stroke-width="1.5"/>
+
+  <!-- Iris (Diafragma Berpigmen Atas & Bawah) -->
+  <line x1="174" y1="86" x2="182" y2="118" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
+  <line x1="174" y1="184" x2="182" y2="152" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
+  <!-- Tekstur Iris -->
+  <line x1="175" y1="92" x2="181" y2="116" stroke="#b45309" stroke-width="2"/>
+  <line x1="175" y1="178" x2="181" y2="154" stroke="#b45309" stroke-width="2"/>
+
+  <!-- Pupil (Celah Apertur Cahaya di Antara Iris) -->
+  <line x1="182" y1="118" x2="182" y2="152" stroke="#0f172a" stroke-width="2.5" stroke-dasharray="2 2"/>
+
+  <!-- Lensa Kristalin (Biconvex Transparan Berkualitas Tinggi) -->
+  <ellipse cx="198" cy="135" rx="11" ry="26" fill="url(#lensEyeGrad)" stroke="#0284c7" stroke-width="2"/>
+  <!-- Kilau Cembung Lensa -->
+  <path d="M 194,120 Q 192,135 194,150" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Callout Badges Rapi & Terproteksi (Anti-Overlap) -->
+  <!-- 1. Kornea -->
   <g>
-    <rect x="25" y="60" width="65" height="18" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1"/>
-    <text x="57.5" y="73" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1">1. Kornea</text>
-    <line x1="90" y1="69" x2="140" y2="115" stroke="#0284c7" stroke-width="1"/>
-  </g>
-  <g>
-    <rect x="115" y="42" width="55" height="18" rx="4" fill="#ffffff" stroke="#78350f" stroke-width="1"/>
-    <text x="142.5" y="55" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#78350f">2. Iris</text>
-    <line x1="142" y1="60" x2="178" y2="100" stroke="#78350f" stroke-width="1"/>
-  </g>
-  <g>
-    <rect x="185" y="42" width="60" height="18" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1"/>
-    <text x="215" y="55" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0284c7">3. Lensa</text>
-    <line x1="210" y1="60" x2="198" y2="110" stroke="#0284c7" stroke-width="1"/>
-  </g>
-  <g>
-    <rect x="315" y="42" width="60" height="18" rx="4" fill="#ffffff" stroke="#f59e0b" stroke-width="1"/>
-    <text x="345" y="55" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#b45309">4. Retina</text>
-    <line x1="330" y1="60" x2="295" y2="110" stroke="#f59e0b" stroke-width="1"/>
-  </g>
-  <g>
-    <rect x="350" y="180" width="85" height="18" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1"/>
-    <text x="392.5" y="193" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#c2410c">5. Saraf Optik</text>
-    <line x1="355" y1="180" x2="335" y2="148" stroke="#ea580c" stroke-width="1"/>
+    <rect x="18" y="55" width="74" height="18" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1.2"/>
+    <text x="55" y="68" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">1. Kornea</text>
+    <path d="M 92,64 L 140,112" stroke="#0284c7" stroke-width="1.2" stroke-linecap="round"/>
   </g>
 
-  <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- 2. Iris -->
+  <g>
+    <rect x="18" y="108" width="64" height="18" rx="4" fill="#ffffff" stroke="#78350f" stroke-width="1.2"/>
+    <text x="50" y="121" text-anchor="middle" font-size="9" font-weight="bold" fill="#78350f">2. Iris</text>
+    <line x1="82" y1="117" x2="175" y2="105" stroke="#78350f" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
 
-  <text x="225" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian bola mata yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- 3. Lensa -->
+  <g>
+    <rect x="18" y="160" width="68" height="18" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1.2"/>
+    <text x="52" y="173" text-anchor="middle" font-size="9" font-weight="bold" fill="#0284c7">3. Lensa</text>
+    <line x1="86" y1="169" x2="196" y2="148" stroke="#0284c7" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 4. Retina -->
+  <g>
+    <rect x="345" y="55" width="70" height="18" rx="4" fill="#ffffff" stroke="#f59e0b" stroke-width="1.2"/>
+    <text x="380" y="68" text-anchor="middle" font-size="9" font-weight="bold" fill="#b45309">4. Retina</text>
+    <path d="M 345,64 L 298,105" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 5. Saraf Optik -->
+  <g>
+    <rect x="335" y="178" width="94" height="18" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1.2"/>
+    <text x="382" y="191" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">5. Saraf Optik</text>
+    <path d="M 345,178 L 336,148" stroke="#ea580c" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Dynamic Pointer Target Badge X -->
+  <circle cx="${target.x}" cy="${target.y}" r="17" fill="none" stroke="#e11d48" stroke-width="1.8" opacity="0.4"/>
+  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowEye)"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="225" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bagian bola mata yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -1240,99 +1373,163 @@ export function renderRangkaManusiaSvg(params: { pointer?: string; label?: strin
   const pointer = (params.pointer || 'tengkorak').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 190, y: 55, name: 'Tulang Tengkorak' };
-  if (pointer.includes('rusuk') || pointer.includes('dada')) target = { x: 190, y: 110, name: 'Tulang Rusuk / Dada' };
-  else if (pointer.includes('belakang') || pointer.includes('punggung') || pointer.includes('vertebra')) target = { x: 190, y: 140, name: 'Tulang Belakang' };
-  else if (pointer.includes('lengan') || pointer.includes('humerus')) target = { x: 135, y: 118, name: 'Tulang Lengan Atas' };
-  else if (pointer.includes('panggul') || pointer.includes('pinggul') || pointer.includes('pelvis')) target = { x: 190, y: 165, name: 'Tulang Panggul' };
-  else if (pointer.includes('paha') || pointer.includes('femur')) target = { x: 168, y: 198, name: 'Tulang Paha' };
-  else if (pointer.includes('kering') || pointer.includes('betis') || pointer.includes('tibia')) target = { x: 168, y: 236, name: 'Tulang Kering / Betis' };
+  let target = { x: 230, y: 55, name: 'Tulang Tengkorak' };
+  if (pointer.includes('rusuk') || pointer.includes('dada') || pointer.includes('sternum')) target = { x: 230, y: 122, name: 'Tulang Rusuk' };
+  else if (pointer.includes('belakang') || pointer.includes('punggung') || pointer.includes('vertebra') || pointer.includes('spine')) target = { x: 230, y: 156, name: 'Tulang Belakang' };
+  else if (pointer.includes('lengan') || pointer.includes('humerus')) target = { x: 176, y: 128, name: 'Tulang Lengan Atas' };
+  else if (pointer.includes('panggul') || pointer.includes('pinggul') || pointer.includes('pelvis')) target = { x: 230, y: 184, name: 'Tulang Panggul' };
+  else if (pointer.includes('paha') || pointer.includes('femur')) target = { x: 204, y: 226, name: 'Tulang Paha' };
+  else if (pointer.includes('kering') || pointer.includes('betis') || pointer.includes('tibia') || pointer.includes('fibula')) target = { x: 204, y: 270, name: 'Tulang Kering / Betis' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 280" width="380" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 320" width="460" height="320" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <defs>
-    <linearGradient id="boneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f8fafc"/>
+    <linearGradient id="boneStructureGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f1f5f9"/>
       <stop offset="100%" stop-color="#e2e8f0"/>
     </linearGradient>
+    <linearGradient id="pelvisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <filter id="glowRangka" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
   </defs>
 
-  <text x="190" y="20" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Sistem Rangka Tubuh Manusia</text>
+  <!-- Background Border Container -->
+  <rect width="460" height="320" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Siluet Rangka Anatomi Sederhana Bersih -->
-  <!-- Tengkorak -->
-  <ellipse cx="190" cy="55" rx="20" ry="22" fill="url(#boneGrad)" stroke="#64748b" stroke-width="1.8"/>
-  <circle cx="183" cy="52" r="3.5" fill="#94a3b8"/>
-  <circle cx="197" cy="52" r="3.5" fill="#94a3b8"/>
-  <path d="M 183,67 Q 190,70 197,67" stroke="#64748b" stroke-width="1.5" fill="none"/>
+  <!-- Title Header -->
+  <text x="230" y="20" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Sistem Rangka Tubuh Manusia</text>
 
-  <!-- Leher & Tulang Belakang -->
-  <line x1="190" y1="77" x2="190" y2="165" stroke="#475569" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Siluet Rangka Anatomi Presisi Enterprise (Sumbu Simetris x=230) -->
 
-  <!-- Bahu (Klavikula) -->
-  <line x1="150" y1="90" x2="230" y2="90" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+  <!-- 1. TENGKORAK (Cranium & Mandible) -->
+  <!-- Tempurung Kepala (Neurocranium) -->
+  <path d="M 214,40 C 214,26 246,26 246,40 C 251,46 250,56 245,62 L 243,68 C 242,73 238,76 230,76 C 222,76 218,73 217,68 L 215,62 C 210,56 209,46 214,40 Z" fill="url(#boneStructureGrad)" stroke="#475569" stroke-width="1.8"/>
+  <!-- Rongga Mata (Orbita) -->
+  <ellipse cx="223" cy="48" rx="4.2" ry="4.8" fill="#334155"/>
+  <ellipse cx="237" cy="48" rx="4.2" ry="4.8" fill="#334155"/>
+  <!-- Rongga Hidung (Cavum Nasi) -->
+  <path d="M 230,54 L 228,60 L 232,60 Z" fill="#475569"/>
+  <!-- Tulang Rahang Bawah (Mandibula) -->
+  <path d="M 221,68 Q 230,74 239,68" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="225" y1="64" x2="235" y2="64" stroke="#64748b" stroke-width="1.2"/>
 
-  <!-- Sangkar Rusuk -->
-  <ellipse cx="190" cy="115" rx="28" ry="24" fill="none" stroke="#64748b" stroke-width="2"/>
-  <path d="M 164,105 Q 190,112 216,105 M 162,115 Q 190,122 218,115 M 166,125 Q 190,132 214,125" fill="none" stroke="#64748b" stroke-width="1.6"/>
-  <line x1="190" y1="95" x2="190" y2="135" stroke="#334155" stroke-width="3"/>
+  <!-- 2. TULANG LEHER (Vertebra Cervicalis) -->
+  <path d="M 228,76 L 232,76 M 227,80 L 233,80 M 227,84 L 233,84" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/>
 
-  <!-- Lengan Kiri & Kanan -->
-  <line x1="150" y1="90" x2="132" y2="128" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
-  <line x1="132" y1="128" x2="120" y2="162" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="230" y1="90" x2="248" y2="128" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
-  <line x1="248" y1="128" x2="260" y2="162" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- 3. TULANG SELANGKA & PUNDAK (Clavicula & Scapula) -->
+  <path d="M 194,88 Q 212,84 230,87 Q 248,84 266,88" fill="none" stroke="#475569" stroke-width="3" stroke-linecap="round"/>
+  <!-- Scapula (Tulang Belikat) kiri & kanan -->
+  <path d="M 198,92 L 188,108 L 204,104 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.4"/>
+  <path d="M 262,92 L 272,108 L 256,104 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.4"/>
 
-  <!-- Tulang Panggul -->
-  <path d="M 168,160 Q 190,175 212,160 L 206,176 Q 190,182 174,176 Z" fill="url(#boneGrad)" stroke="#475569" stroke-width="2"/>
+  <!-- 4. TULANG DADA & RUSUK (Sternum & Costa / Thorax) -->
+  <!-- Tulang Dada (Sternum: Manubrium & Korpus) -->
+  <rect x="228" y="88" width="4" height="38" rx="1.5" fill="#334155"/>
+  <!-- Lengkung Tulang Rusuk (True & False Ribs) -->
+  <path d="M 228,93 C 205,92 202,104 228,104 M 232,93 C 255,92 258,104 232,104" fill="none" stroke="#64748b" stroke-width="2"/>
+  <path d="M 228,101 C 200,100 198,114 228,114 M 232,101 C 260,100 262,114 232,114" fill="none" stroke="#64748b" stroke-width="2"/>
+  <path d="M 228,109 C 196,108 194,124 228,124 M 232,109 C 264,108 266,124 232,124" fill="none" stroke="#64748b" stroke-width="2"/>
+  <path d="M 228,117 C 200,118 198,134 228,134 M 232,117 C 260,118 262,134 232,134" fill="none" stroke="#64748b" stroke-width="2"/>
+  <path d="M 228,124 Q 210,138 226,141 M 232,124 Q 250,138 234,141" fill="none" stroke="#64748b" stroke-width="1.8"/>
 
-  <!-- Tungkai Kaki Kiri & Kanan -->
-  <line x1="175" y1="176" x2="168" y2="215" stroke="#64748b" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="168" cy="216" r="3.5" fill="#94a3b8"/>
-  <line x1="168" y1="218" x2="166" y2="250" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+  <!-- 5. TULANG BELAKANG (Columna Vertebralis) -->
+  <line x1="230" y1="126" x2="230" y2="175" stroke="#334155" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Ruas-ruas vertebra lumbalis -->
+  <path d="M 226,144 L 234,144 M 226,152 L 234,152 M 226,160 L 234,160 M 226,168 L 234,168" stroke="#94a3b8" stroke-width="1.5"/>
 
-  <line x1="205" y1="176" x2="212" y2="215" stroke="#64748b" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="212" cy="216" r="3.5" fill="#94a3b8"/>
-  <line x1="212" y1="218" x2="214" y2="250" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+  <!-- 6. ANGGOTA GERAK ATAS (Lengan Kiri & Kanan) -->
+  <!-- Lengan Atas (Humerus) -->
+  <line x1="192" y1="90" x2="176" y2="128" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+  <line x1="268" y1="90" x2="284" y2="128" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+  <!-- Sendi Siku -->
+  <circle cx="176" cy="129" r="3.2" fill="#94a3b8"/>
+  <circle cx="284" cy="129" r="3.2" fill="#94a3b8"/>
+  <!-- Lengan Bawah (Radius & Ulna) -->
+  <line x1="175" y1="131" x2="162" y2="166" stroke="#64748b" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="178" y1="131" x2="166" y2="166" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+  <line x1="285" y1="131" x2="298" y2="166" stroke="#64748b" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="282" y1="131" x2="294" y2="166" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+  <!-- Tulang Pergelangan & Jari Tangan -->
+  <path d="M 164,167 L 158,180 M 162,168 L 156,182 M 166,168 L 160,182" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M 296,167 L 302,180 M 298,168 L 304,182 M 294,168 L 300,182" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- 7. GELANG PANGGUL (Pelvis) -->
+  <path d="M 206,166 C 206,182 216,192 230,192 C 244,192 254,182 254,166 C 246,162 238,172 230,172 C 222,172 214,162 206,166 Z" fill="url(#pelvisGrad)" stroke="#334155" stroke-width="2"/>
+  <ellipse cx="230" cy="180" rx="9" ry="6" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- 8. ANGGOTA GERAK BAWAH (Tungkai Kaki) -->
+  <!-- Tulang Paha (Femur) -->
+  <line x1="216" y1="188" x2="204" y2="234" stroke="#475569" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="244" y1="188" x2="256" y2="234" stroke="#475569" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Tempurung Lutut (Patella) -->
+  <circle cx="204" cy="235" r="4.2" fill="#94a3b8" stroke="#475569" stroke-width="1.4"/>
+  <circle cx="256" cy="235" r="4.2" fill="#94a3b8" stroke="#475569" stroke-width="1.4"/>
+  <!-- Tulang Kering & Tulang Betis (Tibia & Fibula) -->
+  <line x1="203" y1="239" x2="201" y2="278" stroke="#475569" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="208" y1="240" x2="207" y2="277" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+  <line x1="257" y1="239" x2="259" y2="278" stroke="#475569" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="252" y1="240" x2="253" y2="277" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+  <!-- Pergelangan & Telapak Kaki -->
+  <path d="M 200,279 L 191,288 L 204,288 Z" fill="#e2e8f0" stroke="#475569" stroke-width="1.6"/>
+  <path d="M 260,279 L 269,288 L 256,288 Z" fill="#e2e8f0" stroke="#475569" stroke-width="1.6"/>
 
   <!-- Callout Labels Kiri (Anti-Overlap) -->
+  <!-- 1. Tengkorak -->
   <g>
-    <rect x="14" y="45" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="57" y="58" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Tengkorak</text>
-    <line x1="100" y1="54" x2="170" y2="55" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="14" y="44" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="57" y="57" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tengkorak</text>
+    <line x1="100" y1="53" x2="212" y2="52" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
+  <!-- 2. Lengan Atas -->
   <g>
-    <rect x="14" y="105" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="57" y="118" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Lengan Atas</text>
-    <line x1="100" y1="114" x2="135" y2="118" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="14" y="106" width="94" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="61" y="119" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tulang Lengan Atas</text>
+    <line x1="108" y1="115" x2="176" y2="120" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
+  <!-- 3. Tulang Paha -->
   <g>
-    <rect x="14" y="195" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="57" y="208" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Tulang Paha</text>
-    <line x1="100" y1="204" x2="168" y2="200" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="14" y="196" width="88" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="58" y="209" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tulang Paha</text>
+    <line x1="102" y1="205" x2="204" y2="218" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
 
   <!-- Callout Labels Kanan (Anti-Overlap) -->
+  <!-- 1. Tulang Rusuk -->
   <g>
-    <rect x="280" y="105" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="323" y="118" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Tulang Rusuk</text>
-    <line x1="280" y1="114" x2="218" y2="115" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="350" y="96" width="94" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="397" y="109" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tulang Rusuk</text>
+    <line x1="350" y1="105" x2="258" y2="114" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
+  <!-- 2. Tulang Belakang -->
   <g>
-    <rect x="280" y="155" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="323" y="168" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Tulang Panggul</text>
-    <line x1="280" y1="164" x2="208" y2="168" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="345" y="146" width="98" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="394" y="159" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tulang Belakang</text>
+    <line x1="345" y1="155" x2="234" y2="155" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
+  <!-- 3. Tulang Panggul -->
   <g>
-    <rect x="280" y="230" width="86" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="323" y="243" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">Kering &amp; Betis</text>
-    <line x1="280" y1="239" x2="214" y2="240" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+    <rect x="350" y="190" width="94" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="397" y="203" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Tulang Panggul</text>
+    <line x1="350" y1="196" x2="254" y2="178" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
+  </g>
+  <!-- 4. Tulang Kering & Betis -->
+  <g>
+    <rect x="345" y="246" width="102" height="18" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="396" y="259" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#334155">Kering &amp; Betis</text>
+    <line x1="345" y1="255" x2="258" y2="258" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>
   </g>
 
-  <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Dynamic Pointer Target Badge X -->
+  <circle cx="${target.x}" cy="${target.y}" r="17" fill="none" stroke="#e11d48" stroke-width="1.8" opacity="0.4"/>
+  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowRangka)"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="190" y="270" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian rangka yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Pedagogical Question Prompt -->
+  <text x="230" y="308" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian rangka yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -1347,63 +1544,113 @@ export function renderSendiGerakSvg(params: { pointer?: string; label?: string }
   else if (pointer.includes('pelana') || pointer.includes('ibu jari') || pointer.includes('jempol')) activeIdx = 3;
 
   const cards = [
-    { x: 15, y: 42, title: 'Sendi Engsel', desc: 'Gerak 1 Arah (Siku & Lutut)' },
-    { x: 205, y: 42, title: 'Sendi Peluru', desc: 'Segala Arah (Bahu & Gelang Panggul)' },
-    { x: 15, y: 145, title: 'Sendi Putar', desc: 'Gerak Berputar (Leher & Tengkorak)' },
-    { x: 205, y: 145, title: 'Sendi Pelana', desc: 'Gerak 2 Arah (Pangkal Ibu Jari)' }
+    { x: 15, y: 38, w: 240, h: 128 },
+    { x: 265, y: 38, w: 240, h: 128 },
+    { x: 15, y: 176, w: 240, h: 128 },
+    { x: 265, y: 176, w: 240, h: 128 }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="200" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Macam-Macam Sendi Gerak (Diartrosis)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 330" width="520" height="330" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="jointBoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <filter id="glowSendi" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-  <!-- Panel 1: Sendi Engsel -->
-  <rect x="15" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <text x="26" y="58" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Sendi Engsel` : 'Sendi Engsel'}</text>
-  <!-- Ilustrasi Engsel -->
-  <rect x="35" y="70" width="22" height="42" rx="3" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
-  <circle cx="57" cy="91" r="5" fill="#0284c7"/>
-  <path d="M 57,91 L 82,75" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
-  <path d="M 80,72 Q 88,85 82,98" fill="none" stroke="#e11d48" stroke-width="1.8" marker-end="url(#arr)" stroke-dasharray="2 2"/>
-  <text x="105" y="85" font-size="9" font-weight="600" fill="#475569">1 Arah</text>
-  <text x="105" y="100" font-size="8.5" fill="#64748b">(Siku/Lutut)</text>
+  <!-- Container Border -->
+  <rect width="520" height="330" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Panel 2: Sendi Peluru -->
-  <rect x="205" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <text x="216" y="58" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Sendi Peluru` : 'Sendi Peluru'}</text>
-  <!-- Ilustrasi Peluru -->
-  <path d="M 235,70 C 255,70 255,108 235,108 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
-  <circle cx="248" cy="89" r="10" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
-  <line x1="258" y1="89" x2="280" y2="89" stroke="#64748b" stroke-width="4.5" stroke-linecap="round"/>
-  <path d="M 270,77 A 14 14 0 1 1 270,101" fill="none" stroke="#e11d48" stroke-width="1.8"/>
-  <text x="295" y="85" font-size="9" font-weight="600" fill="#475569">Segala Arah</text>
-  <text x="295" y="100" font-size="8.5" fill="#64748b">(Bahu/Paha)</text>
+  <!-- Title -->
+  <text x="260" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Macam-Macam Sendi Gerak (Diartrosis)</text>
 
-  <!-- Panel 3: Sendi Putar -->
-  <rect x="15" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <text x="26" y="161" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Sendi Putar` : 'Sendi Putar'}</text>
-  <!-- Ilustrasi Putar -->
-  <ellipse cx="60" cy="185" rx="16" ry="8" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
-  <circle cx="60" cy="185" r="5" fill="#0284c7"/>
-  <path d="M 60,185 L 60,215" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
-  <path d="M 45,188 A 18 10 0 1 0 75,188" fill="none" stroke="#e11d48" stroke-width="1.8"/>
-  <text x="95" y="188" font-size="9" font-weight="600" fill="#475569">Memutar</text>
-  <text x="95" y="203" font-size="8.5" fill="#64748b">(Tengkorak/Leher)</text>
+  <!-- Panel 1: Sendi Engsel (Top-Left) -->
+  <rect x="15" y="38" width="240" height="128" rx="8" fill="${activeIdx === 0 ? '#fff1f2' : '#f8fafc'}" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
+  <text x="26" y="56" font-size="11" font-weight="bold" fill="${activeIdx === 0 ? '#be123c' : '#0369a1'}">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Sendi Engsel` : 'Sendi Engsel'}</text>
+  
+  <!-- Ilustrasi Anatomi Sendi Engsel (Humeroulnar joint) -->
+  <!-- Tulang Atas (Humerus dengan Trochlea) -->
+  <path d="M 40,70 L 60,70 L 60,86 C 60,96 40,96 40,86 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <!-- Lapisan Tulang Rawan (Articular Cartilage) -->
+  <path d="M 40,86 C 40,96 60,96 60,86" fill="none" stroke="#0284c7" stroke-width="2.5"/>
+  <!-- Tulang Bawah (Ulna dengan Fossa Trochlearis) -->
+  <path d="M 34,92 C 34,106 66,106 66,92 L 72,112 L 52,118 L 34,92 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <!-- Poros / Pin Engsel -->
+  <circle cx="50" cy="88" r="3.5" fill="#0284c7" stroke="#ffffff" stroke-width="1"/>
+  <!-- Panah Gerak 1 Arah (Fleksi/Ekstensi) -->
+  <path d="M 72,82 Q 86,96 76,112" fill="none" stroke="#e11d48" stroke-width="2.2" stroke-linecap="round"/>
+  <polygon points="73,112 79,114 78,106" fill="#e11d48"/>
+  <!-- Keterangan -->
+  <text x="110" y="80" font-size="9.5" font-weight="bold" fill="#334155">Gerak 1 Arah</text>
+  <text x="110" y="96" font-size="8.5" fill="#64748b">Fleksi &amp; Ekstensi</text>
+  <text x="110" y="112" font-size="8.5" font-weight="600" fill="#0284c7">Contoh: Siku &amp; Lutut</text>
 
-  <!-- Panel 4: Sendi Pelana -->
-  <rect x="205" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
-  <text x="216" y="161" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Sendi Pelana` : 'Sendi Pelana'}</text>
-  <!-- Ilustrasi Pelana -->
-  <path d="M 235,190 Q 250,175 265,190 L 265,210 Q 250,195 235,210 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
-  <circle cx="250" cy="188" r="4.5" fill="#0284c7"/>
-  <path d="M 240,178 Q 250,172 260,178 M 240,220 Q 250,226 260,220" fill="none" stroke="#e11d48" stroke-width="1.6"/>
-  <text x="285" y="188" font-size="9" font-weight="600" fill="#475569">2 Arah</text>
-  <text x="285" y="203" font-size="8.5" fill="#64748b">(Pangkal Ibu Jari)</text>
+  <!-- Panel 2: Sendi Peluru (Top-Right) -->
+  <rect x="265" y="38" width="240" height="128" rx="8" fill="${activeIdx === 1 ? '#fff1f2' : '#f8fafc'}" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
+  <text x="276" y="56" font-size="11" font-weight="bold" fill="${activeIdx === 1 ? '#be123c' : '#0369a1'}">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Sendi Peluru` : 'Sendi Peluru'}</text>
+  
+  <!-- Ilustrasi Anatomi Sendi Peluru (Ball & Socket: Glenohumeral) -->
+  <!-- Mangkok Sendi (Socket / Cavitas Glenoidalis) -->
+  <path d="M 285,68 C 305,68 305,110 285,110 L 285,68 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <path d="M 286,72 C 302,76 302,102 286,106" fill="none" stroke="#0284c7" stroke-width="2.5"/>
+  <!-- Kepala Tulang Bulat (Ball / Caput) -->
+  <circle cx="304" cy="89" r="13" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <line x1="317" y1="89" x2="340" y2="89" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+  <!-- Panah Gerak Segala Arah (Rotasi 3D) -->
+  <ellipse cx="328" cy="89" rx="10" ry="18" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/>
+  <polygon points="338,82 340,74 332,77" fill="#e11d48"/>
+  <!-- Keterangan -->
+  <text x="365" y="80" font-size="9.5" font-weight="bold" fill="#334155">Segala Arah</text>
+  <text x="365" y="96" font-size="8.5" fill="#64748b">Bebas (Multiaxial)</text>
+  <text x="365" y="112" font-size="8.5" font-weight="600" fill="#0284c7">Contoh: Bahu &amp; Panggul</text>
 
-  <!-- Badge X jika target aktif -->
-  <circle cx="${cards[activeIdx].x + 165}" cy="${cards[activeIdx].y + 14}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cards[activeIdx].x + 165}" y="${cards[activeIdx].y + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Panel 3: Sendi Putar (Bottom-Left) -->
+  <rect x="15" y="176" width="240" height="128" rx="8" fill="${activeIdx === 2 ? '#fff1f2' : '#f8fafc'}" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
+  <text x="26" y="194" font-size="11" font-weight="bold" fill="${activeIdx === 2 ? '#be123c' : '#0369a1'}">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Sendi Putar` : 'Sendi Putar'}</text>
+  
+  <!-- Ilustrasi Anatomi Sendi Putar (Atlantoaxial / Pivot) -->
+  <!-- Cincin Tulang (Ring / Atlas) -->
+  <ellipse cx="58" cy="226" rx="20" ry="10" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <!-- Poros Tulang Pusat (Dens Axis) -->
+  <ellipse cx="58" cy="224" rx="7" ry="4" fill="#0284c7"/>
+  <path d="M 51,224 L 51,250 C 51,254 65,254 65,250 L 65,224 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <!-- Panah Gerak Berputar Melingkar -->
+  <path d="M 40,228 A 20 8 0 1 0 76,228" fill="none" stroke="#e11d48" stroke-width="2.2" stroke-linecap="round"/>
+  <polygon points="76,228 80,221 72,224" fill="#e11d48"/>
+  <!-- Keterangan -->
+  <text x="110" y="218" font-size="9.5" font-weight="bold" fill="#334155">Gerak Berputar</text>
+  <text x="110" y="234" font-size="8.5" fill="#64748b">Rotasi pada 1 Poros</text>
+  <text x="110" y="250" font-size="8.5" font-weight="600" fill="#0284c7">Contoh: Leher &amp; Tengkorak</text>
 
-  <text x="200" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Jenis persendian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Panel 4: Sendi Pelana (Bottom-Right) -->
+  <rect x="265" y="176" width="240" height="128" rx="8" fill="${activeIdx === 3 ? '#fff1f2' : '#f8fafc'}" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
+  <text x="276" y="194" font-size="11" font-weight="bold" fill="${activeIdx === 3 ? '#be123c' : '#0369a1'}">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Sendi Pelana` : 'Sendi Pelana'}</text>
+  
+  <!-- Ilustrasi Anatomi Sendi Pelana (Carpometacarpal Pollicis / Saddle) -->
+  <!-- Permukaan Pelana Bawah (Concave-Convex) -->
+  <path d="M 288,230 Q 306,218 324,230 L 324,250 Q 306,238 288,250 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <!-- Permukaan Pelana Atas (Menunggang) -->
+  <path d="M 294,226 Q 306,236 318,226 L 318,206 Q 306,216 294,206 Z" fill="url(#jointBoneGrad)" stroke="#475569" stroke-width="1.6"/>
+  <circle cx="306" cy="226" r="3.5" fill="#0284c7"/>
+  <!-- Panah Gerak 2 Arah Silang -->
+  <path d="M 292,216 Q 306,210 320,216" fill="none" stroke="#e11d48" stroke-width="1.8"/>
+  <path d="M 294,244 Q 306,248 318,244" fill="none" stroke="#e11d48" stroke-width="1.8"/>
+  <polygon points="320,216 314,213 318,220" fill="#e11d48"/>
+  <!-- Keterangan -->
+  <text x="365" y="218" font-size="9.5" font-weight="bold" fill="#334155">Gerak 2 Arah</text>
+  <text x="365" y="234" font-size="8.5" fill="#64748b">Biaxial (2 Bidang Sumbu)</text>
+  <text x="365" y="250" font-size="8.5" font-weight="600" fill="#0284c7">Contoh: Pangkal Ibu Jari</text>
+
+  <!-- Dynamic Target Badge [X] pada Panel Terpilih -->
+  <circle cx="${cards[activeIdx].x + cards[activeIdx].w - 20}" cy="${cards[activeIdx].y + 18}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowSendi)"/>
+  <text x="${cards[activeIdx].x + cards[activeIdx].w - 20}" y="${cards[activeIdx].y + 22.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="260" y="320" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Jenis persendian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

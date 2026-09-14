@@ -5,66 +5,136 @@
 
 import { escapeXml } from './types';
 
-/** Render Rantai Makanan Sederhana dengan Tanda X */
+/** Render Rantai Makanan & Aliran Energi Ekosistem (Enterprise Textbook Grade) */
 export function renderRantaiMakananSvg(params: { pointer?: string; label?: string; organisme?: string[] }): string {
   const labelChar = params.label || 'X';
   const pointer = (params.pointer || 'konsumen1').toLowerCase();
   const organisme = params.organisme?.length ? params.organisme : ['Rumput', 'Belalang', 'Katak', 'Ular', 'Elang'];
 
   let targetIdx = 1;
-  if (pointer.includes('produsen') || pointer.includes('tumbuhan')) targetIdx = 0;
-  else if (pointer.includes('konsumen1') || pointer.includes('herbivora')) targetIdx = 1;
-  else if (pointer.includes('konsumen2') || pointer.includes('karnivora')) targetIdx = 2;
-  else if (pointer.includes('konsumen3') || pointer.includes('puncak')) targetIdx = 3;
-  else if (pointer.includes('pengurai') || pointer.includes('dekomposer')) targetIdx = 4;
+  if (pointer.includes('produsen') || pointer.includes('tumbuhan') || pointer.includes('rumput') || pointer.includes('padi') || pointer.includes('fitoplankton')) targetIdx = 0;
+  else if (pointer.includes('konsumen1') || pointer.includes('herbivora') || pointer.includes('belalang') || pointer.includes('tikus') || pointer.includes('udang')) targetIdx = 1;
+  else if (pointer.includes('konsumen2') || pointer.includes('karnivora') || pointer.includes('katak') || pointer.includes('ayam') || pointer.includes('ikan')) targetIdx = 2;
+  else if (pointer.includes('konsumen3') || pointer.includes('puncak') || pointer.includes('predator') || pointer.includes('ular') || pointer.includes('elang') || pointer.includes('hiu')) targetIdx = 3;
+  else if (pointer.includes('pengurai') || pointer.includes('dekomposer') || pointer.includes('jamur') || pointer.includes('bakteri')) targetIdx = 4;
 
-  const boxW = 55;
-  const gap = 12;
-  const startX = 15;
-  const centerY = 90;
-  const colors = ['#86efac', '#fef08a', '#fecdd3', '#fda4af', '#e2e8f0'];
-  const roles = ['Produsen', 'Konsumen I', 'Konsumen II', 'Konsumen III', 'Pengurai'];
+  const count = Math.min(organisme.length, 5);
+  const cardW = 105;
+  const cardH = 135;
+  const gap = 24;
+  const totalW = count * cardW + (count - 1) * gap;
+  const startX = Math.round((700 - totalW) / 2);
+  const centerY = 195;
 
-  let boxesSvg = '';
-  let arrowsSvg = '';
+  const trophicRoles = [
+    { role: 'Produsen', trophic: 'Trofik I', color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
+    { role: 'Konsumen I', trophic: 'Trofik II', color: '#0284c7', bg: '#f0f9ff', border: '#7dd3fc' },
+    { role: 'Konsumen II', trophic: 'Trofik III', color: '#ea580c', bg: '#fff7ed', border: '#fdba74' },
+    { role: 'Konsumen III', trophic: 'Trofik IV', color: '#be123c', bg: '#fff1f2', border: '#fecdd3' },
+    { role: 'Pengurai', trophic: 'Dekomposer', color: '#78350f', bg: '#fefce8', border: '#fef08a' }
+  ];
 
-  organisme.forEach((name, idx) => {
-    if (idx >= 5) return;
-    const x = startX + idx * (boxW + gap);
-    const fill = colors[idx % colors.length];
-    const stroke = idx === targetIdx ? '#e11d48' : '#475569';
-    const sw = idx === targetIdx ? 3 : 1.5;
+  let cardsSvg = '';
+  let flowSvg = '';
 
-    boxesSvg += `
-      <rect x="${x}" y="${centerY - 20}" width="${boxW}" height="40" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>
-      <text x="${x + boxW / 2}" y="${centerY + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">${escapeXml(name)}</text>
-      <text x="${x + boxW / 2}" y="${centerY + 34}" text-anchor="middle" font-size="8" fill="#64748b">(${roles[idx] || ''})</text>
+  for (let idx = 0; idx < count; idx++) {
+    const x = startX + idx * (cardW + gap);
+    const y = centerY - cardH / 2;
+    const name = organisme[idx];
+    const roleInfo = trophicRoles[idx] || trophicRoles[1];
+    const isTarget = idx === targetIdx;
+
+    cardsSvg += `
+      <!-- Card Organisme ${idx + 1} -->
+      <g filter="${isTarget ? 'url(#trophicGlow)' : 'url(#trophicShadow)'}">
+        <rect x="${x}" y="${y}" width="${cardW}" height="${cardH}" rx="12" fill="${isTarget ? '#ffffff' : roleInfo.bg}" stroke="${isTarget ? '#e11d48' : roleInfo.border}" stroke-width="${isTarget ? 3 : 1.5}"/>
+        
+        <!-- Header Pill Peran -->
+        <rect x="${x + 8}" y="${y + 10}" width="${cardW - 16}" height="22" rx="6" fill="${roleInfo.color}"/>
+        <text x="${x + cardW / 2}" y="${y + 24}" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">${roleInfo.role}</text>
+        
+        <!-- Nama Organisme -->
+        <rect x="${x + 6}" y="${y + 44}" width="${cardW - 12}" height="42" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="${x + cardW / 2}" y="${y + 68}" text-anchor="middle" font-size="13" font-weight="900" fill="#0f172a">${escapeXml(name)}</text>
+        
+        <!-- Tingkat Trofik Footnote -->
+        <rect x="${x + 12}" y="${y + 98}" width="${cardW - 24}" height="20" rx="4" fill="#f1f5f9"/>
+        <text x="${x + cardW / 2}" y="${y + 112}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#64748b">${roleInfo.trophic}</text>
+      </g>
     `;
 
-    if (idx < organisme.length - 1 && idx < 4) {
-      const ax = x + boxW + 2;
-      arrowsSvg += `
-        <line x1="${ax}" y1="${centerY}" x2="${ax + gap - 4}" y2="${centerY}" stroke="#047857" stroke-width="2"/>
-        <polygon points="${ax + gap - 2},${centerY} ${ax + gap - 8},${centerY - 4} ${ax + gap - 8},${centerY + 4}" fill="#047857"/>
+    // Panah Aliran Energi Antar Trofik
+    if (idx < count - 1) {
+      const ax1 = x + cardW + 4;
+      const ax2 = ax1 + gap - 8;
+      const ay = centerY;
+      flowSvg += `
+        <g>
+          <line x1="${ax1}" y1="${ay}" x2="${ax2}" y2="${ay}" stroke="#10b981" stroke-width="3.5" stroke-linecap="round"/>
+          <polygon points="${ax2 + 4},${ay} ${ax2 - 4},${ay - 5} ${ax2 - 4},${ay + 5}" fill="#10b981"/>
+          <!-- Label Energi -->
+          <text x="${ax1 + (gap - 12) / 2}" y="${ay - 8}" text-anchor="middle" font-size="7.5" font-weight="800" fill="#059669">Energi</text>
+        </g>
       `;
     }
-  });
+  }
 
-  // Target marker
-  const targetX = startX + targetIdx * (boxW + gap) + boxW / 2;
+  // Posisi target X di atas kartu yang ditunjuk
+  const targetX = startX + targetIdx * (cardW + gap) + cardW / 2;
+  const targetY = centerY - cardH / 2 - 28;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" width="360" height="180" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="180" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Rantai Makanan</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 380" width="100%" height="100%" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+  <defs>
+    <!-- Filter Shadow & Glow -->
+    <filter id="trophicGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#e11d48" flood-opacity="0.4"/>
+    </filter>
+    <filter id="trophicShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
 
-  ${arrowsSvg}
-  ${boxesSvg}
+  <!-- Background Canvas Card -->
+  <rect x="2" y="2" width="696" height="376" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 
-  <!-- Target Huruf X -->
-  <circle cx="${targetX}" cy="${centerY - 42}" r="14" fill="#e11d48"/>
-  <text x="${targetX}" y="${centerY - 37}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
-  <line x1="${targetX}" y1="${centerY - 28}" x2="${targetX}" y2="${centerY - 22}" stroke="#e11d48" stroke-width="2"/>
+  <!-- Header Banner -->
+  <rect x="2" y="2" width="696" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="24" y="14" width="6" height="22" rx="3" fill="#10b981"/>
+  <text x="40" y="30" font-size="16" font-weight="800" fill="#0f172a" letter-spacing="0.3">Rantai Makanan &amp; Aliran Energi Ekosistem</text>
+  <text x="405" y="30" font-size="12" font-weight="600" fill="#64748b">(Tingkat Trofik I s.d. Puncak)</text>
 
-  <text x="180" y="160" text-anchor="middle" font-size="11" fill="#64748b">Organisme bertanda huruf "${escapeXml(labelChar)}" berperan sebagai...</text>
+  <!-- Simbol Matahari Sumber Energi Utama di Kiri Atas -->
+  <g transform="translate(48, 85)" opacity="0.85">
+    <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#eab308" stroke-width="2"/>
+    <line x1="0" y1="-20" x2="0" y2="-16" stroke="#eab308" stroke-width="2"/>
+    <line x1="0" y1="16" x2="0" y2="20" stroke="#eab308" stroke-width="2"/>
+    <line x1="-20" y1="0" x2="-16" y2="0" stroke="#eab308" stroke-width="2"/>
+    <line x1="16" y1="0" x2="20" y2="0" stroke="#eab308" stroke-width="2"/>
+    <text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="700" fill="#ca8a04">Cahaya Surya</text>
+  </g>
+
+  <!-- Garis Alur Energi & Kartu Organisme -->
+  ${flowSvg}
+  ${cardsSvg}
+
+  <!-- ==================== TARGET POINTER DINAMIS HURUF X ==================== -->
+  <g id="target_pointer">
+    <!-- Efek Beacon Berpendar -->
+    <circle cx="${targetX}" cy="${targetY}" r="22" fill="#e11d48" opacity="0.18"/>
+    <circle cx="${targetX}" cy="${targetY}" r="15" fill="#e11d48" opacity="0.3"/>
+    
+    <!-- Badge Target Huruf X -->
+    <circle cx="${targetX}" cy="${targetY}" r="17" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#trophicGlow)"/>
+    <text x="${targetX}" y="${targetY + 6}" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
+    
+    <!-- Panah Penunjuk Vertikal ke Bawah Menuju Kartu -->
+    <line x1="${targetX}" y1="${targetY + 17}" x2="${targetX}" y2="${targetY + 28}" stroke="#e11d48" stroke-width="3" stroke-linecap="round"/>
+    <polygon points="${targetX},${targetY + 34} ${targetX - 4},${targetY + 26} ${targetX + 4},${targetY + 26}" fill="#e11d48"/>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="348" width="696" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="350" y="367" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Organisme bertanda huruf "${escapeXml(labelChar)}" berperan sebagai...</text>
 </svg>`;
 }
 
@@ -747,79 +817,185 @@ export function renderSimbiosisSvg(params: { tipe?: string; label?: string }): s
 </svg>`;
 }
 
-/** 8. Render Jaring-Jaring Makanan Ekosistem Sawah */
+/** 8. Render Jaring-Jaring Makanan Ekosistem Sawah (Enterprise Textbook Grade) */
 export function renderJaringMakananSawahSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'katak').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 130, y: 110, name: 'Katak' };
-  if (pointer.includes('padi') || pointer.includes('produsen')) target = { x: 215, y: 225, name: 'Padi' };
-  else if (pointer.includes('belalang')) target = { x: 85, y: 170, name: 'Belalang' };
-  else if (pointer.includes('tikus')) target = { x: 215, y: 170, name: 'Tikus' };
-  else if (pointer.includes('ulat')) target = { x: 335, y: 170, name: 'Ulat' };
-  else if (pointer.includes('ayam') || pointer.includes('burung')) target = { x: 300, y: 110, name: 'Ayam' };
-  else if (pointer.includes('ular')) target = { x: 160, y: 55, name: 'Ular Sawah' };
-  else if (pointer.includes('elang') || pointer.includes('puncak')) target = { x: 280, y: 55, name: 'Burung Elang' };
+  let target = { x: 235, y: 195, name: 'Katak (Konsumen II)' };
+  if (pointer.includes('padi') || pointer.includes('produsen')) target = { x: 350, y: 355, name: 'Padi (Produsen)' };
+  else if (pointer.includes('belalang')) target = { x: 175, y: 275, name: 'Belalang (Konsumen I)' };
+  else if (pointer.includes('tikus')) target = { x: 350, y: 275, name: 'Tikus (Konsumen I)' };
+  else if (pointer.includes('ulat')) target = { x: 525, y: 275, name: 'Ulat (Konsumen I)' };
+  else if (pointer.includes('ayam') || pointer.includes('burung')) target = { x: 465, y: 195, name: 'Ayam (Konsumen II)' };
+  else if (pointer.includes('ular')) target = { x: 250, y: 105, name: 'Ular Sawah (Konsumen III)' };
+  else if (pointer.includes('elang') || pointer.includes('puncak')) target = { x: 450, y: 105, name: 'Burung Elang (Predator Puncak)' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 275" width="430" height="275" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 440" width="100%" height="100%" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
   <defs>
-    <marker id="foodArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7" />
+    <!-- Gradien Tingkat Trofik -->
+    <linearGradient id="webApexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="100%" stop-color="#fecaca"/>
+    </linearGradient>
+    <linearGradient id="webCons2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="webCons1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+    <linearGradient id="webProdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dcfce7"/>
+      <stop offset="100%" stop-color="#bbf7d0"/>
+    </linearGradient>
+
+    <!-- Marker Panah Aliran Energi -->
+    <marker id="foodArr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0284c7" />
     </marker>
+    <marker id="foodArrApex" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+
+    <!-- Filter Shadow & Glow -->
+    <filter id="webGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#e11d48" flood-opacity="0.4"/>
+    </filter>
+    <filter id="webCardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
   </defs>
 
-  <text x="215" y="20" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Jaring-Jaring Makanan Ekosistem Sawah</text>
+  <!-- Background Canvas Card -->
+  <rect x="2" y="2" width="696" height="436" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 
-  <!-- Panah Aliran Energi -->
-  <!-- Dari Padi -->
-  <line x1="190" y1="215" x2="105" y2="182" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="215" y1="212" x2="215" y2="185" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="240" y1="215" x2="315" y2="182" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
+  <!-- Header Banner -->
+  <rect x="2" y="2" width="696" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="24" y="14" width="6" height="22" rx="3" fill="#0284c7"/>
+  <text x="40" y="30" font-size="16" font-weight="800" fill="#0f172a" letter-spacing="0.3">Jaring-Jaring Makanan Ekosistem Sawah</text>
+  <text x="390" y="30" font-size="12" font-weight="600" fill="#64748b">(Interkoneksi Rantai Makanan &amp; Aliran Energi)</text>
 
-  <!-- Dari Herbivora ke Karnivora Tingkat 2 -->
-  <line x1="90" y1="155" x2="120" y2="125" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="330" y1="155" x2="310" y2="125" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="215" y1="155" x2="175" y2="70" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
+  <!-- Kolom Panduan Tingkat Trofik di Sisi Kiri -->
+  <g transform="translate(18, 70)" opacity="0.85">
+    <rect x="0" y="22" width="80" height="28" rx="5" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+    <text x="40" y="39" text-anchor="middle" font-size="8.5" font-weight="800" fill="#991b1b">Trofik IV</text>
+    
+    <rect x="0" y="112" width="80" height="28" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="40" y="129" text-anchor="middle" font-size="8.5" font-weight="800" fill="#92400e">Trofik III</text>
+    
+    <rect x="0" y="192" width="80" height="28" rx="5" fill="#e0f2fe" stroke="#0284c7" stroke-width="1"/>
+    <text x="40" y="209" text-anchor="middle" font-size="8.5" font-weight="800" fill="#075985">Trofik II</text>
+    
+    <rect x="0" y="272" width="80" height="28" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1"/>
+    <text x="40" y="289" text-anchor="middle" font-size="8.5" font-weight="800" fill="#166534">Trofik I</text>
+  </g>
 
-  <!-- Ke Predator Puncak -->
-  <line x1="140" y1="95" x2="160" y2="70" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="290" y1="95" x2="185" y2="65" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="300" y1="95" x2="290" y2="70" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
-  <line x1="185" y1="55" x2="250" y2="55" stroke="#0284c7" stroke-width="1.5" marker-end="url(#foodArr)"/>
+  <!-- ==================== GARIS PANAH JARING-JARING MAKANAN ==================== -->
+  <!-- 1. Dari Padi ke Herbivora (Belalang, Tikus, Ulat) -->
+  <path d="M 310,340 C 250,320 205,305 185,295" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <path d="M 350,336 L 350,296" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <path d="M 390,340 C 450,320 495,305 515,295" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#foodArr)"/>
 
-  <!-- Node Tingkat 4: Predator Puncak (Top) -->
-  <rect x="120" y="45" width="75" height="24" rx="5" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
-  <text x="157.5" y="61" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#991b1b">Ular</text>
+  <!-- 2. Dari Herbivora ke Konsumen II (Katak, Ayam) -->
+  <!-- Belalang -> Katak -->
+  <path d="M 190,256 C 205,240 215,225 225,214" fill="none" stroke="#0284c7" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <!-- Belalang -> Ayam -->
+  <path d="M 230,265 C 320,240 390,225 435,208" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="5,2" marker-end="url(#foodArr)"/>
+  <!-- Tikus -> Ular (Langsung ke Puncak) -->
+  <path d="M 335,256 C 310,210 280,165 260,126" fill="none" stroke="#0284c7" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <!-- Ulat -> Katak -->
+  <path d="M 470,265 C 380,240 310,225 265,208" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="5,2" marker-end="url(#foodArr)"/>
+  <!-- Ulat -> Ayam -->
+  <path d="M 510,256 C 495,240 485,225 475,214" fill="none" stroke="#0284c7" stroke-width="2.2" marker-end="url(#foodArr)"/>
 
-  <rect x="255" y="45" width="75" height="24" rx="5" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
-  <text x="292.5" y="61" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#991b1b">Elang</text>
+  <!-- 3. Dari Konsumen II ke Predator Puncak (Ular, Elang) -->
+  <!-- Katak -> Ular -->
+  <path d="M 238,176 L 246,126" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <!-- Ayam -> Ular -->
+  <path d="M 425,188 C 360,170 305,145 272,125" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#foodArr)"/>
+  <!-- Ayam -> Elang -->
+  <path d="M 462,176 L 454,126" fill="none" stroke="#ea580c" stroke-width="2.2" marker-end="url(#foodArr)"/>
+  <!-- Ular -> Elang -->
+  <path d="M 305,105 L 392,105" fill="none" stroke="#e11d48" stroke-width="2.5" marker-end="url(#foodArrApex)"/>
 
-  <!-- Node Tingkat 3: Konsumen II -->
-  <rect x="95" y="100" width="75" height="24" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="132.5" y="116" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#92400e">Katak</text>
+  <!-- ==================== KARTU ORGANISME TINGKAT TROFIK ==================== -->
 
-  <rect x="260" y="100" width="75" height="24" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
-  <text x="297.5" y="116" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#92400e">Ayam</text>
+  <!-- TINGKAT 4: PREDATOR PUNCAK (Top Level) -->
+  <!-- 1. ULAR SAWAH -->
+  <g transform="translate(250, 105)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webApexGrad)" stroke="#ef4444" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#991b1b">Ular</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#b91c1c">(Konsumen III)</text>
+  </g>
 
-  <!-- Node Tingkat 2: Konsumen I (Herbivora) -->
-  <rect x="50" y="160" width="75" height="24" rx="5" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
-  <text x="87.5" y="176" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#075985">Belalang</text>
+  <!-- 2. BURUNG ELANG -->
+  <g transform="translate(450, 105)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webApexGrad)" stroke="#ef4444" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#991b1b">Elang</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#b91c1c">(Predator Puncak)</text>
+  </g>
 
-  <rect x="178" y="160" width="75" height="24" rx="5" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
-  <text x="215.5" y="176" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#075985">Tikus</text>
+  <!-- TINGKAT 3: KONSUMEN II (Karnivora / Omnivora) -->
+  <!-- 3. KATAK -->
+  <g transform="translate(235, 195)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webCons2Grad)" stroke="#f59e0b" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#92400e">Katak</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#b45309">(Konsumen II / Karnivora)</text>
+  </g>
 
-  <rect x="298" y="160" width="75" height="24" rx="5" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
-  <text x="335.5" y="176" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#075985">Ulat</text>
+  <!-- 4. AYAM -->
+  <g transform="translate(465, 195)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webCons2Grad)" stroke="#f59e0b" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#92400e">Ayam</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#b45309">(Konsumen II / Omnivora)</text>
+  </g>
 
-  <!-- Node Tingkat 1: Produsen (Bottom) -->
-  <rect x="168" y="215" width="95" height="26" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
-  <text x="215.5" y="232" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#166534">Padi (Produsen)</text>
+  <!-- TINGKAT 2: KONSUMEN I (Herbivora) -->
+  <!-- 5. BELALANG -->
+  <g transform="translate(175, 275)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webCons1Grad)" stroke="#0284c7" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#075985">Belalang</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#0369a1">(Konsumen I / Herbivora)</text>
+  </g>
 
-  <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- 6. TIKUS -->
+  <g transform="translate(350, 275)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webCons1Grad)" stroke="#0284c7" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#075985">Tikus</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#0369a1">(Konsumen I / Hama Padi)</text>
+  </g>
 
-  <text x="215" y="265" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Organisme yang ditandai dengan "${escapeXml(labelChar)}" menduduki peran ...</text>
+  <!-- 7. ULAT -->
+  <g transform="translate(525, 275)" filter="url(#webCardShadow)">
+    <rect x="-55" y="-20" width="110" height="40" rx="8" fill="url(#webCons1Grad)" stroke="#0284c7" stroke-width="1.8"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="12" font-weight="900" fill="#075985">Ulat</text>
+    <text x="0" y="11" text-anchor="middle" font-size="8" font-weight="700" fill="#0369a1">(Konsumen I / Herbivora)</text>
+  </g>
+
+  <!-- TINGKAT 1: PRODUSEN (Dasar Jaring Makanan) -->
+  <!-- 8. PADI -->
+  <g transform="translate(350, 355)" filter="url(#webCardShadow)">
+    <rect x="-85" y="-22" width="170" height="44" rx="10" fill="url(#webProdGrad)" stroke="#16a34a" stroke-width="2.5"/>
+    <text x="0" y="-3" text-anchor="middle" font-size="13" font-weight="900" fill="#14532d">Padi (Produsen)</text>
+    <text x="0" y="13" text-anchor="middle" font-size="8.5" font-weight="700" fill="#15803d">Autotrof (Penghasil Makanan Utama)</text>
+  </g>
+
+  <!-- ==================== TARGET POINTER DINAMIS HURUF X ==================== -->
+  <g id="target_pointer">
+    <!-- Efek Beacon Berpendar -->
+    <circle cx="${target.x}" cy="${target.y}" r="26" fill="#e11d48" opacity="0.18"/>
+    <circle cx="${target.x}" cy="${target.y}" r="18" fill="#e11d48" opacity="0.3"/>
+    
+    <!-- Badge Target Huruf X -->
+    <circle cx="${target.x}" cy="${target.y}" r="17" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#webGlow)"/>
+    <text x="${target.x}" y="${target.y + 6}" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="408" width="696" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="350" y="427" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Organisme yang ditandai dengan "${escapeXml(labelChar)}" menduduki peran ... (${escapeXml(target.name)})</text>
 </svg>`;
 }
 

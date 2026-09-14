@@ -22,56 +22,81 @@ export function renderBalokSvg(params: { p?: number; l?: number; t?: number; uni
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" width="360" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <linearGradient id="gradTop" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f8fafc"/>
+    <!-- Gradien Sisi Atas (Pencahayaan Lembut dari Atas) -->
+    <linearGradient id="balokTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
       <stop offset="100%" stop-color="#e2e8f0"/>
     </linearGradient>
-    <linearGradient id="gradRight" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#edf2f7"/>
-      <stop offset="100%" stop-color="#cbd5e1"/>
+
+    <!-- Gradien Sisi Kanan (Bayangan Kedalaman 3D) -->
+    <linearGradient id="balokRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="60%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
     </linearGradient>
-    <linearGradient id="gradFront" x1="0%" y1="0%" x2="100%" y2="100%">
+
+    <!-- Gradien Sisi Depan (Wajah Utama Bersih) -->
+    <linearGradient id="balokFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
     </linearGradient>
+
+    <!-- Filter Bayangan Dasar Kontak Lantai -->
+    <radialGradient id="balokFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
-  <!-- Rusuk Belakang (Garis Putus-Putus) -->
-  <line x1="${x0}" y1="${y0}" x2="${x0 + dx}" y2="${y0 + dy}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + fw + dx}" y2="${y0 + dy}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + dx}" y2="${y0 - fh + dy}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="${x0 + fw / 2 + dx / 2}" cy="${y0 + 12}" rx="${fw / 2 + 25}" ry="13" fill="url(#balokFloorShdw)"/>
 
-  <!-- Sisi Atas -->
-  <polygon points="${x0},${y0 - fh} ${x0 + dx},${y0 - fh + dy} ${x0 + fw + dx},${y0 - fh + dy} ${x0 + fw},${y0 - fh}" fill="url(#gradTop)" stroke="#0f172a" stroke-width="2"/>
+  <!-- Rusuk Belakang Tak Tampak (Garis Putus-Putus Presisi) -->
+  <line x1="${x0}" y1="${y0}" x2="${x0 + dx}" y2="${y0 + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + fw + dx}" y2="${y0 + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
+  <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + dx}" y2="${y0 - fh + dy}" stroke="#64748b" stroke-width="1.6" stroke-dasharray="4,4"/>
 
-  <!-- Sisi Kanan -->
-  <polygon points="${x0 + fw},${y0 - fh} ${x0 + fw + dx},${y0 - fh + dy} ${x0 + fw + dx},${y0 + dy} ${x0 + fw},${y0}" fill="url(#gradRight)" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Atas Balok 3D -->
+  <polygon points="${x0},${y0 - fh} ${x0 + dx},${y0 - fh + dy} ${x0 + fw + dx},${y0 - fh + dy} ${x0 + fw},${y0 - fh}" fill="url(#balokTopGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Sisi Depan -->
-  <rect x="${x0}" y="${y0 - fh}" width="${fw}" height="${fh}" fill="url(#gradFront)" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Kanan Balok 3D -->
+  <polygon points="${x0 + fw},${y0 - fh} ${x0 + fw + dx},${y0 - fh + dy} ${x0 + fw + dx},${y0 + dy} ${x0 + fw},${y0}" fill="url(#balokRightGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Titik Sudut -->
-  <text x="${x0 - 14}" y="${y0 + 14}" font-size="12" font-weight="bold" fill="#334155">A</text>
-  <text x="${x0 + fw + 8}" y="${y0 + 14}" font-size="12" font-weight="bold" fill="#334155">B</text>
-  <text x="${x0 + fw + dx + 8}" y="${y0 + dy + 6}" font-size="12" font-weight="bold" fill="#334155">C</text>
-  <text x="${x0 + dx - 16}" y="${y0 + dy + 4}" font-size="12" font-weight="bold" fill="#94a3b8">D</text>
+  <!-- Sisi Depan Balok 3D -->
+  <rect x="${x0}" y="${y0 - fh}" width="${fw}" height="${fh}" fill="url(#balokFrontGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <text x="${x0 - 14}" y="${y0 - fh - 6}" font-size="12" font-weight="bold" fill="#334155">E</text>
-  <text x="${x0 + fw + 8}" y="${y0 - fh - 6}" font-size="12" font-weight="bold" fill="#334155">F</text>
-  <text x="${x0 + fw + dx + 8}" y="${y0 - fh + dy - 4}" font-size="12" font-weight="bold" fill="#334155">G</text>
-  <text x="${x0 + dx - 16}" y="${y0 - fh + dy - 6}" font-size="12" font-weight="bold" fill="#334155">H</text>
+  <!-- Titik Sudut Alas (A, B, C, D) -->
+  <text x="${x0 - 14}" y="${y0 + 14}" font-size="12" font-weight="bold" fill="#1e293b">A</text>
+  <text x="${x0 + fw + 8}" y="${y0 + 14}" font-size="12" font-weight="bold" fill="#1e293b">B</text>
+  <text x="${x0 + fw + dx + 8}" y="${y0 + dy + 6}" font-size="12" font-weight="bold" fill="#1e293b">C</text>
+  <text x="${x0 + dx - 16}" y="${y0 + dy + 4}" font-size="12" font-weight="bold" fill="#64748b">D</text>
 
-  <!-- Label Dimensi -->
+  <!-- Titik Sudut Tutup (E, F, G, H) -->
+  <text x="${x0 - 14}" y="${y0 - fh - 6}" font-size="12" font-weight="bold" fill="#1e293b">E</text>
+  <text x="${x0 + fw + 8}" y="${y0 - fh - 6}" font-size="12" font-weight="bold" fill="#1e293b">F</text>
+  <text x="${x0 + fw + dx + 8}" y="${y0 - fh + dy - 4}" font-size="12" font-weight="bold" fill="#1e293b">G</text>
+  <text x="${x0 + dx - 16}" y="${y0 - fh + dy - 6}" font-size="12" font-weight="bold" fill="#64748b">H</text>
+
+  <!-- Garis Dimensi Panjang (p) -->
   <line x1="${x0}" y1="${y0 + 20}" x2="${x0 + fw}" y2="${y0 + 20}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${x0}" y1="${y0 + 16}" x2="${x0}" y2="${y0 + 24}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${x0 + fw}" y1="${y0 + 16}" x2="${x0 + fw}" y2="${y0 + 24}" stroke="#0284c7" stroke-width="1.5"/>
   <text x="${x0 + fw / 2}" y="${y0 + 35}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">p = ${p} ${unit}</text>
 
+  <!-- Garis Dimensi Tinggi (t) -->
   <line x1="${x0 - 15}" y1="${y0 - fh}" x2="${x0 - 15}" y2="${y0}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${x0 - 19}" y1="${y0 - fh}" x2="${x0 - 11}" y2="${y0 - fh}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${x0 - 19}" y1="${y0}" x2="${x0 - 11}" y2="${y0}" stroke="#0284c7" stroke-width="1.5"/>
   <text x="${x0 - 22}" y="${y0 - fh / 2 + 4}" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">t = ${t} ${unit}</text>
 
+  <!-- Garis Dimensi Lebar (l) -->
   <line x1="${x0 + fw + 15}" y1="${y0 + 8}" x2="${x0 + fw + dx + 12}" y2="${y0 + dy + 4}" stroke="#0284c7" stroke-width="1.5"/>
   <text x="${x0 + fw + dx / 2 + 25}" y="${y0 + dy / 2 + 18}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">l = ${l} ${unit}</text>
 
-  <text x="180" y="240" text-anchor="middle" font-size="11" fill="#64748b">${escapeXml(label)}</text>
+  <!-- Judul / Keterangan Bangun -->
+  <text x="180" y="240" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">${escapeXml(label)}</text>
 </svg>`;
 }
 
@@ -88,34 +113,68 @@ export function renderKubusSvg(params: { s?: number; unit?: string; label?: stri
   const dy = -40;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 240" width="340" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <!-- Garis Belakang -->
+  <defs>
+    <!-- Gradien 3D Kubus -->
+    <linearGradient id="kubusTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="kubusRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="60%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <linearGradient id="kubusFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <radialGradient id="kubusFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="${x0 + a / 2 + dx / 2}" cy="${y0 + 10}" rx="${a / 2 + 22}" ry="12" fill="url(#kubusFloorShdw)"/>
+
+  <!-- Garis Rusuk Belakang Tak Tampak (Putus-Putus Presisi) -->
   <line x1="${x0}" y1="${y0}" x2="${x0 + dx}" y2="${y0 + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
   <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + a + dx}" y2="${y0 + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
   <line x1="${x0 + dx}" y1="${y0 + dy}" x2="${x0 + dx}" y2="${y0 - a + dy}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
 
-  <!-- Sisi Atas -->
-  <polygon points="${x0},${y0 - a} ${x0 + dx},${y0 - a + dy} ${x0 + a + dx},${y0 - a + dy} ${x0 + a},${y0 - a}" fill="#f1f5f9" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Atas Kubus -->
+  <polygon points="${x0},${y0 - a} ${x0 + dx},${y0 - a + dy} ${x0 + a + dx},${y0 - a + dy} ${x0 + a},${y0 - a}" fill="url(#kubusTopGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Sisi Kanan -->
-  <polygon points="${x0 + a},${y0 - a} ${x0 + a + dx},${y0 - a + dy} ${x0 + a + dx},${y0 + dy} ${x0 + a},${y0}" fill="#e2e8f0" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Kanan Kubus -->
+  <polygon points="${x0 + a},${y0 - a} ${x0 + a + dx},${y0 - a + dy} ${x0 + a + dx},${y0 + dy} ${x0 + a},${y0}" fill="url(#kubusRightGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Sisi Depan -->
-  <rect x="${x0}" y="${y0 - a}" width="${a}" height="${a}" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sisi Depan Kubus -->
+  <rect x="${x0}" y="${y0 - a}" width="${a}" height="${a}" fill="url(#kubusFrontGrad)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
 
-  <!-- Titik Sudut -->
-  <text x="${x0 - 12}" y="${y0 + 14}" font-size="11" font-weight="bold" fill="#334155">A</text>
-  <text x="${x0 + a + 6}" y="${y0 + 14}" font-size="11" font-weight="bold" fill="#334155">B</text>
-  <text x="${x0 + a + dx + 6}" y="${y0 + dy + 4}" font-size="11" font-weight="bold" fill="#334155">C</text>
-  <text x="${x0 - 12}" y="${y0 - a - 4}" font-size="11" font-weight="bold" fill="#334155">E</text>
-  <text x="${x0 + a + 6}" y="${y0 - a - 4}" font-size="11" font-weight="bold" fill="#334155">F</text>
-  <text x="${x0 + a + dx + 6}" y="${y0 - a + dy - 4}" font-size="11" font-weight="bold" fill="#334155">G</text>
-  <text x="${x0 + dx - 12}" y="${y0 - a + dy - 4}" font-size="11" font-weight="bold" fill="#334155">H</text>
+  <!-- Titik Sudut Alas & Tutup -->
+  <text x="${x0 - 12}" y="${y0 + 14}" font-size="11" font-weight="bold" fill="#1e293b">A</text>
+  <text x="${x0 + a + 6}" y="${y0 + 14}" font-size="11" font-weight="bold" fill="#1e293b">B</text>
+  <text x="${x0 + a + dx + 6}" y="${y0 + dy + 4}" font-size="11" font-weight="bold" fill="#1e293b">C</text>
+  <text x="${x0 - 12}" y="${y0 - a - 4}" font-size="11" font-weight="bold" fill="#1e293b">E</text>
+  <text x="${x0 + a + 6}" y="${y0 - a - 4}" font-size="11" font-weight="bold" fill="#1e293b">F</text>
+  <text x="${x0 + a + dx + 6}" y="${y0 - a + dy - 4}" font-size="11" font-weight="bold" fill="#1e293b">G</text>
+  <text x="${x0 + dx - 12}" y="${y0 - a + dy - 4}" font-size="11" font-weight="bold" fill="#64748b">H</text>
 
-  <!-- Label Rusuk -->
-  <text x="${x0 + a / 2}" y="${y0 + 22}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">s = ${s} ${unit}</text>
+  <!-- Label Dimensi Rusuk (s) -->
+  <line x1="${x0}" y1="${y0 + 16}" x2="${x0 + a}" y2="${y0 + 16}" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="${x0}" y1="${y0 + 12}" x2="${x0}" y2="${y0 + 20}" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="${x0 + a}" y1="${y0 + 12}" x2="${x0 + a}" y2="${y0 + 20}" stroke="#0284c7" stroke-width="1.4"/>
+  <text x="${x0 + a / 2}" y="${y0 + 29}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">s = ${s} ${unit}</text>
+
+  <line x1="${x0 - 14}" y1="${y0 - a}" x2="${x0 - 14}" y2="${y0}" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="${x0 - 18}" y1="${y0 - a}" x2="${x0 - 10}" y2="${y0 - a}" stroke="#0284c7" stroke-width="1.4"/>
+  <line x1="${x0 - 18}" y1="${y0}" x2="${x0 - 10}" y2="${y0}" stroke="#0284c7" stroke-width="1.4"/>
   <text x="${x0 - 20}" y="${y0 - a / 2 + 4}" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">s = ${s} ${unit}</text>
 
-  <text x="170" y="225" text-anchor="middle" font-size="11" fill="#64748b">${escapeXml(label)}</text>
+  <!-- Judul / Keterangan Bangun -->
+  <text x="170" y="225" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">${escapeXml(label)}</text>
 </svg>`;
 }
 
@@ -125,26 +184,72 @@ export function renderTabungSvg(params: { r?: number; t?: number; d?: number; un
   const t = params.t || 14;
   const unit = params.unit || 'cm';
 
+  const cx = 160;
+  const topY = 60;
+  const botY = 180;
+  const rx = 80;
+  const ry = 25;
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 250" width="320" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <path d="M 80,60 L 80,180 A 80,25 0 0,0 240,180 L 240,60 Z" fill="#f8fafc" stroke="none"/>
-  <path d="M 80,180 A 80,25 0 0,1 240,180" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <path d="M 80,180 A 80,25 0 0,0 240,180" fill="none" stroke="#0f172a" stroke-width="2"/>
+  <defs>
+    <!-- Gradien Selimut Silinder 3D -->
+    <linearGradient id="tabungBodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="25%" stop-color="#ffffff"/>
+      <stop offset="65%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+
+    <!-- Gradien Tutup Atas Elips -->
+    <linearGradient id="tabungTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+
+    <!-- Bayangan Dasar Kontak Lantai -->
+    <radialGradient id="tabungFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="${cx}" cy="${botY + 6}" rx="${rx + 12}" ry="${ry + 4}" fill="url(#tabungFloorShdw)"/>
+
+  <!-- Badan Selimut Tabung -->
+  <path d="M ${cx - rx},${topY} L ${cx - rx},${botY} A ${rx},${ry} 0 0,0 ${cx + rx},${botY} L ${cx + rx},${topY} Z" fill="url(#tabungBodyGrad)" stroke="none"/>
+
+  <!-- Garis Rusuk Lengkung Belakang Dasar (Putus-Putus) -->
+  <path d="M ${cx - rx},${botY} A ${rx},${ry} 0 0,1 ${cx + rx},${botY}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+  <!-- Garis Rusuk Lengkung Depan Dasar (Tampak) -->
+  <path d="M ${cx - rx},${botY} A ${rx},${ry} 0 0,0 ${cx + rx},${botY}" fill="none" stroke="#0f172a" stroke-width="2"/>
   
-  <line x1="80" y1="60" x2="80" y2="180" stroke="#0f172a" stroke-width="2"/>
-  <line x1="240" y1="60" x2="240" y2="180" stroke="#0f172a" stroke-width="2"/>
+  <!-- Rusuk Tegak Kiri & Kanan -->
+  <line x1="${cx - rx}" y1="${topY}" x2="${cx - rx}" y2="${botY}" stroke="#0f172a" stroke-width="2"/>
+  <line x1="${cx + rx}" y1="${topY}" x2="${cx + rx}" y2="${botY}" stroke="#0f172a" stroke-width="2"/>
 
-  <ellipse cx="160" cy="60" rx="80" ry="25" fill="#e2e8f0" stroke="#0f172a" stroke-width="2"/>
+  <!-- Sumbu Simetri Putar Tengah -->
+  <line x1="${cx}" y1="${topY}" x2="${cx}" y2="${botY}" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,3"/>
 
-  <line x1="160" y1="60" x2="240" y2="60" stroke="#0284c7" stroke-width="2" stroke-dasharray="2,2"/>
-  <circle cx="160" cy="60" r="3" fill="#0284c7"/>
-  <text x="195" y="52" font-size="12" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
+  <!-- Tutup Atas Tabung (Elips 3D) -->
+  <ellipse cx="${cx}" cy="${topY}" rx="${rx}" ry="${ry}" fill="url(#tabungTopGrad)" stroke="#0f172a" stroke-width="2"/>
 
-  <line x1="60" y1="60" x2="60" y2="180" stroke="#0284c7" stroke-width="1.5"/>
-  <line x1="55" y1="60" x2="65" y2="60" stroke="#0284c7" stroke-width="1.5"/>
-  <line x1="55" y1="180" x2="65" y2="180" stroke="#0284c7" stroke-width="1.5"/>
-  <text x="50" y="125" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">t = ${t} ${unit}</text>
+  <!-- Garis Jari-Jari (r) pada Tutup Atas -->
+  <line x1="${cx}" y1="${topY}" x2="${cx + rx}" y2="${topY}" stroke="#0284c7" stroke-width="2" stroke-dasharray="2,2"/>
+  <circle cx="${cx}" cy="${topY}" r="3" fill="#0284c7"/>
+  <text x="${cx + rx / 2}" y="${topY - 8}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
 
-  <text x="160" y="230" text-anchor="middle" font-size="11" fill="#64748b">Tabung (r = ${r} ${unit}, t = ${t} ${unit})</text>
+  <!-- Garis Ukur Tinggi (t) di Sisi Kiri -->
+  <line x1="${cx - rx - 20}" y1="${topY}" x2="${cx - rx - 20}" y2="${botY}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${cx - rx - 25}" y1="${topY}" x2="${cx - rx - 15}" y2="${topY}" stroke="#0284c7" stroke-width="1.5"/>
+  <line x1="${cx - rx - 25}" y1="${botY}" x2="${cx - rx - 15}" y2="${botY}" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="${cx - rx - 30}" y="${(topY + botY) / 2 + 4}" text-anchor="end" font-size="12" font-weight="bold" fill="#0284c7">t = ${t} ${unit}</text>
+
+  <!-- Judul / Keterangan Bangun -->
+  <text x="${cx}" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">Tabung (r = ${r} ${unit}, t = ${t} ${unit})</text>
 </svg>`;
 }
 
@@ -155,25 +260,67 @@ export function renderKerucutSvg(params: { r?: number; t?: number; s?: number; u
   const s = params.s || 15;
   const unit = params.unit || 'cm';
 
+  const apexX = 160;
+  const apexY = 40;
+  const botY = 180;
+  const rx = 80;
+  const ry = 24;
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 250" width="320" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <polygon points="160,40 80,180 240,180" fill="#f8fafc"/>
-  <path d="M 80,180 A 80,24 0 0,1 240,180" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <path d="M 80,180 A 80,24 0 0,0 240,180" fill="none" stroke="#0f172a" stroke-width="2"/>
+  <defs>
+    <!-- Gradien Selimut Kerucut 3D -->
+    <linearGradient id="kerucutMantleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="25%" stop-color="#ffffff"/>
+      <stop offset="65%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
 
-  <line x1="160" y1="40" x2="80" y2="180" stroke="#0f172a" stroke-width="2"/>
-  <line x1="160" y1="40" x2="240" y2="180" stroke="#0f172a" stroke-width="2"/>
+    <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+    <radialGradient id="kerucutFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.14"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
 
-  <line x1="160" y1="40" x2="160" y2="180" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <circle cx="160" cy="180" r="3" fill="#0f172a"/>
+  <!-- Bayangan Kontak Lantai (Ground Shadow) -->
+  <ellipse cx="${apexX}" cy="${botY + 5}" rx="${rx + 12}" ry="${ry + 3}" fill="url(#kerucutFloorShdw)"/>
 
-  <line x1="160" y1="180" x2="240" y2="180" stroke="#0284c7" stroke-width="2"/>
-  <text x="200" y="174" font-size="11" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
+  <!-- Segitiga Badan Selimut Kerucut -->
+  <polygon points="${apexX},${apexY} ${apexX - rx},${botY} ${apexX + rx},${botY}" fill="url(#kerucutMantleGrad)"/>
 
-  <text x="154" y="115" text-anchor="end" font-size="11" font-weight="bold" fill="#e11d48">t = ${t} ${unit}</text>
-  <text x="215" y="105" font-size="11" font-weight="bold" fill="#334155">s = ${s} ${unit}</text>
+  <!-- Dasar Alas Lengkung Belakang (Putus-Putus) -->
+  <path d="M ${apexX - rx},${botY} A ${rx},${ry} 0 0,1 ${apexX + rx},${botY}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
 
-  <rect x="160" y="172" width="8" height="8" fill="none" stroke="#0f172a" stroke-width="1"/>
-  <text x="160" y="230" text-anchor="middle" font-size="11" fill="#64748b">Kerucut (r = ${r} ${unit}, t = ${t} ${unit})</text>
+  <!-- Dasar Alas Lengkung Depan (Tampak) -->
+  <path d="M ${apexX - rx},${botY} A ${rx},${ry} 0 0,0 ${apexX + rx},${botY}" fill="none" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- Garis Pelukis Kiri & Kanan (Garis Selimut Terluar) -->
+  <line x1="${apexX}" y1="${apexY}" x2="${apexX - rx}" y2="${botY}" stroke="#0f172a" stroke-width="2"/>
+  <line x1="${apexX}" y1="${apexY}" x2="${apexX + rx}" y2="${botY}" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- Garis Tinggi (t) dari Puncak ke Pusat Alas -->
+  <line x1="${apexX}" y1="${apexY}" x2="${apexX}" y2="${botY}" stroke="#e11d48" stroke-width="1.6" stroke-dasharray="3,3"/>
+  <circle cx="${apexX}" cy="${botY}" r="2.5" fill="#0f172a"/>
+
+  <!-- Simbol Siku-Siku Pertemuan Tinggi & Jari-Jari -->
+  <rect x="${apexX}" y="${botY - 9}" width="9" height="9" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+
+  <!-- Garis Jari-Jari (r) dari Pusat ke Rusuk Kanan -->
+  <line x1="${apexX}" y1="${botY}" x2="${apexX + rx}" y2="${botY}" stroke="#0284c7" stroke-width="2"/>
+  <circle cx="${apexX + rx}" cy="${botY}" r="2.5" fill="#0284c7"/>
+
+  <!-- Label Anotasi Dimensi -->
+  <text x="${apexX + rx / 2}" y="${botY + 16}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0284c7">r = ${r} ${unit}</text>
+  <text x="${apexX - 6}" y="${(apexY + botY) / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#e11d48">t = ${t} ${unit}</text>
+  <text x="${apexX + rx / 2 + 18}" y="${(apexY + botY) / 2 - 4}" font-size="11" font-weight="bold" fill="#334155">s = ${s} ${unit}</text>
+
+  <!-- Titik Puncak T -->
+  <text x="${apexX}" y="${apexY - 6}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">T</text>
+
+  <!-- Judul / Keterangan Bangun -->
+  <text x="${apexX}" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">Kerucut (r = ${r} ${unit}, t = ${t} ${unit})</text>
 </svg>`;
 }
 

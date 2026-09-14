@@ -68,71 +68,239 @@ export function renderRantaiMakananSvg(params: { pointer?: string; label?: strin
 </svg>`;
 }
 
-/** Render Metamorfosis Sempurna Kupu-Kupu dengan Tanda X */
+/** Render Metamorfosis Sempurna Kupu-Kupu (Enterprise Textbook Grade) */
 export function renderMetamorfosisSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'kepompong').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 260, y: 140, name: 'Kepompong (Pupa)' };
-  if (pointer.includes('telur')) target = { x: 160, y: 55, name: 'Telur' };
-  else if (pointer.includes('ulat') || pointer.includes('larva')) target = { x: 75, y: 135, name: 'Ulat (Larva)' };
-  else if (pointer.includes('kupu')) target = { x: 160, y: 200, name: 'Kupu-Kupu Dewasa' };
+  let target = { x: 535, y: 220, name: 'Kepompong (Pupa)' };
+  let isTarget = {
+    telur: false,
+    ulat: false,
+    kepompong: false,
+    kupu: false
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 250" width="340" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  if (pointer.includes('telur')) {
+    target = { x: 350, y: 110, name: 'Telur' };
+    isTarget.telur = true;
+  } else if (pointer.includes('ulat') || pointer.includes('larva')) {
+    target = { x: 165, y: 220, name: 'Ulat (Larva)' };
+    isTarget.ulat = true;
+  } else if (pointer.includes('kupu') || pointer.includes('dewasa') || pointer.includes('imago')) {
+    target = { x: 350, y: 335, name: 'Kupu-Kupu Dewasa (Imago)' };
+    isTarget.kupu = true;
+  } else {
+    // Default Kepompong
+    isTarget.kepompong = true;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 440" width="100%" height="100%" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
   <defs>
-    <marker id="mArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#047857" />
+    <!-- Gradien Siklus -->
+    <linearGradient id="metaLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="60%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="metaBranchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a16207"/>
+      <stop offset="50%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#451a03"/>
+    </linearGradient>
+    <linearGradient id="metaPupaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#854d0e"/>
+    </linearGradient>
+    <linearGradient id="metaWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="50%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+
+    <!-- Filter Shadow & Glow -->
+    <filter id="metaGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#e11d48" flood-opacity="0.4"/>
+    </filter>
+    <filter id="metaCardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+
+    <marker id="mArr" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#047857" />
     </marker>
   </defs>
 
-  <text x="170" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Daur Hidup / Metamorfosis Kupu-Kupu</text>
+  <!-- Background Canvas Card -->
+  <rect x="2" y="2" width="696" height="436" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 
-  <path d="M 190,50 Q 250,75 255,115" fill="none" stroke="#047857" stroke-width="2" marker-end="url(#mArr)"/>
-  <path d="M 255,160 Q 240,200 195,205" fill="none" stroke="#047857" stroke-width="2" marker-end="url(#mArr)"/>
-  <path d="M 125,205 Q 75,185 75,155" fill="none" stroke="#047857" stroke-width="2" marker-end="url(#mArr)"/>
-  <path d="M 85,110 Q 105,65 135,50" fill="none" stroke="#047857" stroke-width="2" marker-end="url(#mArr)"/>
+  <!-- Header Banner -->
+  <rect x="2" y="2" width="696" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="24" y="14" width="6" height="22" rx="3" fill="#16a34a"/>
+  <text x="40" y="30" font-size="16" font-weight="800" fill="#0f172a" letter-spacing="0.3">Daur Hidup / Metamorfosis Kupu-Kupu</text>
+  <text x="360" y="30" font-size="12" font-weight="600" fill="#64748b">(Metamorfosis Sempurna / Holometabola)</text>
 
-  <!-- 1. Telur di atas Daun (Atas) -->
-  <ellipse cx="160" cy="50" rx="22" ry="12" fill="#86efac" stroke="#16a34a" stroke-width="1.5"/>
-  <circle cx="155" cy="50" r="3" fill="#fef08a" stroke="#ca8a04"/>
-  <circle cx="162" cy="49" r="3" fill="#fef08a" stroke="#ca8a04"/>
-  <text x="160" y="74" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">1. Telur</text>
+  <!-- Ranting Alami Melengkung di Tengah -->
+  <path d="M 80,180 Q 220,130 350,150 Q 480,170 620,120" fill="none" stroke="url(#metaBranchGrad)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 280,145 Q 310,120 330,85 M 480,170 Q 520,200 535,230" fill="none" stroke="url(#metaBranchGrad)" stroke-width="4.5" stroke-linecap="round"/>
 
-  <!-- 2. Ulat (Kiri) -->
-  <ellipse cx="75" cy="130" rx="18" ry="10" fill="#a3e635" stroke="#4d7c0f" stroke-width="1.5"/>
-  <text x="75" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">2. Ulat (Larva)</text>
+  <!-- ==================== PANAH SIKLUS SIRKULAR ==================== -->
+  <!-- 1 -> 2 (Telur ke Ulat / Kiri Bawah) -->
+  <path d="M 270,95 C 200,95 160,135 150,165" fill="none" stroke="#047857" stroke-width="3" stroke-dasharray="6,3"/>
+  <path d="M 152,158 L 150,168" marker-end="url(#mArr)"/>
 
-  <!-- 3. Kepompong (Kanan) -->
-  <path d="M 260,115 C 270,125 270,140 260,150 C 250,140 250,125 260,115 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <text x="260" y="165" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">3. Kepompong</text>
+  <!-- 2 -> 3 (Ulat ke Kepompong / Melintas Bawah ke Kanan) -->
+  <path d="M 170,270 C 190,320 280,360 350,365 C 420,360 510,320 530,270" fill="none" stroke="#047857" stroke-width="3" stroke-dasharray="6,3"/>
+  <path d="M 526,278 L 532,268" marker-end="url(#mArr)"/>
 
-  <!-- 4. Kupu-kupu (Bawah) -->
-  <path d="M 155,200 C 140,185 130,205 145,215 M 165,200 C 180,185 190,205 175,215" fill="#f472b6" stroke="#db2777" stroke-width="1.5"/>
-  <text x="160" y="228" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">4. Kupu-Kupu</text>
+  <!-- 3 -> 4 (Kepompong ke Kupu-Kupu / Atas ke Bawah) -->
+  <path d="M 550,170 C 560,130 500,95 430,95" fill="none" stroke="#047857" stroke-width="3" stroke-dasharray="6,3"/>
+  <path d="M 440,95 L 428,95" marker-end="url(#mArr)"/>
 
-  <!-- Target Huruf X -->
-  <g>
-    <circle cx="${target.x}" cy="${target.y}" r="15" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${target.x}" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- ==================== TAHAP 1: TELUR (ATAS) ==================== -->
+  <g transform="translate(350, 95)" filter="url(#metaCardShadow)">
+    <rect x="-85" y="-38" width="170" height="76" rx="10" fill="${isTarget.telur ? '#f0fdf4' : '#ffffff'}" stroke="${isTarget.telur ? '#16a34a' : '#cbd5e1'}" stroke-width="${isTarget.telur ? 2.5 : 1.2}"/>
+    
+    <!-- Daun Berembun -->
+    <path d="M -60,12 Q -20,-28 40,-12 Q 60,18 10,22 Q -40,24 -60,12 Z" fill="url(#metaLeafGrad)" stroke="#15803d" stroke-width="1.5"/>
+    <path d="M -50,10 Q 0,0 35,-8" fill="none" stroke="#bbf7d0" stroke-width="1.2"/>
+
+    <!-- Butir-butir Telur Mutiara Bergaris Halus -->
+    <ellipse cx="-15" cy="-2" rx="4.5" ry="5.5" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+    <ellipse cx="-5" cy="4" rx="4.5" ry="5.5" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+    <ellipse cx="6" cy="-1" rx="4.5" ry="5.5" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+    <ellipse cx="16" cy="3" rx="4.5" ry="5.5" fill="#fef9c3" stroke="#ca8a04" stroke-width="1"/>
+
+    <!-- Label -->
+    <rect x="-42" y="16" width="84" height="18" rx="4" fill="#15803d"/>
+    <text x="0" y="29" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">1. Telur</text>
   </g>
 
-  <text x="170" y="244" text-anchor="middle" font-size="11" fill="#64748b">Tahapan yang ditunjuk oleh huruf "${escapeXml(labelChar)}"</text>
+  <!-- ==================== TAHAP 2: ULAT / LARVA (KIRI) ==================== -->
+  <g transform="translate(165, 215)" filter="url(#metaCardShadow)">
+    <rect x="-85" y="-45" width="170" height="90" rx="10" fill="${isTarget.ulat ? '#f0fdf4' : '#ffffff'}" stroke="${isTarget.ulat ? '#16a34a' : '#cbd5e1'}" stroke-width="${isTarget.ulat ? 2.5 : 1.2}"/>
+
+    <!-- Daun yang Dimakan Ulat (Bekas Gigitan) -->
+    <path d="M -50,-15 Q -10,-35 45,-15 C 35,-5 42,10 25,12 C 10,14 15,28 -5,22 Z" fill="url(#metaLeafGrad)" stroke="#15803d" stroke-width="1.5"/>
+
+    <!-- Tubuh Ulat Beruas-ruas Realistis -->
+    <g transform="translate(-10, 5)">
+      <circle cx="-28" cy="0" r="7" fill="#84cc16" stroke="#4d7c0f" stroke-width="1.2"/>
+      <circle cx="-16" cy="-2" r="7.5" fill="#a3e635" stroke="#4d7c0f" stroke-width="1.2"/>
+      <circle cx="-4" cy="-3" r="8" fill="#84cc16" stroke="#4d7c0f" stroke-width="1.2"/>
+      <circle cx="9" cy="-2" r="8.5" fill="#a3e635" stroke="#4d7c0f" stroke-width="1.2"/>
+      <circle cx="22" cy="0" r="8" fill="#84cc16" stroke="#4d7c0f" stroke-width="1.2"/>
+      <circle cx="34" cy="3" r="7" fill="#65a30d" stroke="#365314" stroke-width="1.2"/> <!-- Kepala Ulat -->
+      <!-- Mata & Ocelli Kepala -->
+      <circle cx="37" cy="1" r="1.5" fill="#0f172a"/>
+      <!-- Bintik-bintik Ruas Tubuh -->
+      <circle cx="-16" cy="-2" r="1.5" fill="#0f172a"/>
+      <circle cx="-4" cy="-3" r="1.5" fill="#0f172a"/>
+      <circle cx="9" cy="-2" r="1.5" fill="#0f172a"/>
+      <circle cx="22" cy="0" r="1.5" fill="#0f172a"/>
+    </g>
+
+    <!-- Label -->
+    <rect x="-55" y="24" width="110" height="18" rx="4" fill="#4d7c0f"/>
+    <text x="0" y="37" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">2. Ulat (Larva)</text>
+  </g>
+
+  <!-- ==================== TAHAP 3: KEPOMPONG / PUPA (KANAN) ==================== -->
+  <g transform="translate(535, 215)" filter="url(#metaCardShadow)">
+    <rect x="-85" y="-45" width="170" height="90" rx="10" fill="${isTarget.kepompong ? '#fefce8' : '#ffffff'}" stroke="${isTarget.kepompong ? '#ca8a04' : '#cbd5e1'}" stroke-width="${isTarget.kepompong ? 2.5 : 1.2}"/>
+
+    <!-- Ranting Gantung & Benang Sutra (Silk Girdle) -->
+    <line x1="0" y1="-30" x2="0" y2="-12" stroke="#e2e8f0" stroke-width="2"/>
+    
+    <!-- Kepompong Bergelantungan Emas-Kehijauan -->
+    <path d="M 0,-12 C 14,-6 18,12 10,24 C 5,30 0,36 0,36 C 0,36 -5,30 -10,24 C -18,12 -14,-6 0,-12 Z" fill="url(#metaPupaGrad)" stroke="#a16207" stroke-width="1.8"/>
+    <!-- Alur Sayap di Balik Kulit Kepompong -->
+    <path d="M -6,4 Q 0,14 6,4 M -8,12 Q 0,20 8,12" fill="none" stroke="#713f12" stroke-width="1.2"/>
+    <circle cx="0" cy="-6" r="2" fill="#ca8a04"/>
+
+    <!-- Label -->
+    <rect x="-60" y="24" width="120" height="18" rx="4" fill="#a16207"/>
+    <text x="0" y="37" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">3. Kepompong (Pupa)</text>
+  </g>
+
+  <!-- ==================== TAHAP 4: KUPU-KUPU DEWASA / IMAGO (BAWAH) ==================== -->
+  <g transform="translate(350, 335)" filter="url(#metaCardShadow)">
+    <rect x="-105" y="-42" width="210" height="84" rx="10" fill="${isTarget.kupu ? '#fff7ed' : '#ffffff'}" stroke="${isTarget.kupu ? '#ea580c' : '#cbd5e1'}" stroke-width="${isTarget.kupu ? 2.5 : 1.2}"/>
+
+    <!-- Sayap Kiri Atas & Bawah -->
+    <path d="M -4,-6 C -25,-32 -55,-28 -60,-10 C -64,4 -52,14 -40,10 C -48,22 -35,32 -20,26 C -8,22 -4,12 -4,2 Z" fill="url(#metaWingGrad)" stroke="#7c2d12" stroke-width="1.5"/>
+    <circle cx="-42" cy="-14" r="5" fill="#fef08a" stroke="#7c2d12" stroke-width="1"/>
+    <circle cx="-32" cy="18" r="3" fill="#ffffff"/>
+
+    <!-- Sayap Kanan Atas & Bawah (Simetris) -->
+    <path d="M 4,-6 C 25,-32 55,-28 60,-10 C 64,4 52,14 40,10 C 48,22 35,32 20,26 C 8,22 4,12 4,2 Z" fill="url(#metaWingGrad)" stroke="#7c2d12" stroke-width="1.5"/>
+    <circle cx="42" cy="-14" r="5" fill="#fef08a" stroke="#7c2d12" stroke-width="1"/>
+    <circle cx="32" cy="18" r="3" fill="#ffffff"/>
+
+    <!-- Tubuh Toraks & Abdomen Kupu-kupu -->
+    <ellipse cx="0" cy="4" rx="3.5" ry="14" fill="#1e293b"/>
+    <circle cx="0" cy="-10" r="3.5" fill="#0f172a"/>
+    <!-- Antena Berkepala Club -->
+    <path d="M -2,-13 Q -8,-24 -12,-22 M 2,-13 Q 8,-24 12,-22" fill="none" stroke="#0f172a" stroke-width="1.2"/>
+
+    <!-- Label -->
+    <rect x="-65" y="20" width="130" height="18" rx="4" fill="#c2410c"/>
+    <text x="0" y="33" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">4. Kupu-Kupu (Imago)</text>
+  </g>
+
+  <!-- ==================== TARGET POINTER DINAMIS HURUF X ==================== -->
+  <g id="target_pointer">
+    <!-- Efek Beacon Berpendar -->
+    <circle cx="${target.x}" cy="${target.y}" r="26" fill="#e11d48" opacity="0.18"/>
+    <circle cx="${target.x}" cy="${target.y}" r="18" fill="#e11d48" opacity="0.3"/>
+    
+    <!-- Badge Target Huruf X -->
+    <circle cx="${target.x}" cy="${target.y}" r="17" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#metaGlow)"/>
+    <text x="${target.x}" y="${target.y + 6}" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="408" width="696" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="350" y="427" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Tahapan yang ditunjuk oleh huruf "${escapeXml(labelChar)}" (${escapeXml(target.name)})</text>
 </svg>`;
 }
 
-/** Render Bagian-Bagian Bunga Sempurna dengan Tanda X */
+/** Render Bagian-Bagian Bunga Sempurna dengan Tanda X (Enterprise Textbook Grade) */
 export function renderBagianBungaSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'putik').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 165, y: 64, name: 'Kepala Putik' };
-  if (pointer.includes('sari') || pointer.includes('benang') || pointer.includes('anther')) target = { x: 122, y: 78, name: 'Benang Sari' };
-  else if (pointer.includes('mahkota') || pointer.includes('petal') || pointer.includes('corolla')) target = { x: 232, y: 104, name: 'Mahkota Bunga' };
-  else if (pointer.includes('kelopak') || pointer.includes('sepal') || pointer.includes('calyx')) target = { x: 120, y: 168, name: 'Kelopak Bunga' };
-  else if (pointer.includes('biji') || pointer.includes('bakal') || pointer.includes('ovulum') || pointer.includes('ovarium')) target = { x: 165, y: 148, name: 'Bakal Biji' };
+  let target = { x: 165, y: 64, name: 'Kepala Putik (Stigma)', side: 'right' };
+  let isTarget = {
+    putik: false,
+    sari: false,
+    mahkota: false,
+    kelopak: false,
+    biji: false,
+    dasar: false
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 255" width="340" height="255" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  if (pointer.includes('sari') || pointer.includes('benang') || pointer.includes('anther')) {
+    target = { x: 122, y: 78, name: 'Benang Sari (Stamen)', side: 'left' };
+    isTarget.sari = true;
+  } else if (pointer.includes('mahkota') || pointer.includes('petal') || pointer.includes('corolla')) {
+    target = { x: 232, y: 104, name: 'Mahkota Bunga (Petal)', side: 'right' };
+    isTarget.mahkota = true;
+  } else if (pointer.includes('kelopak') || pointer.includes('sepal') || pointer.includes('calyx')) {
+    target = { x: 120, y: 168, name: 'Kelopak Bunga (Sepal)', side: 'left' };
+    isTarget.kelopak = true;
+  } else if (pointer.includes('biji') || pointer.includes('bakal') || pointer.includes('ovulum') || pointer.includes('ovarium')) {
+    target = { x: 165, y: 148, name: 'Bakal Biji (Ovula)', side: 'right' };
+    isTarget.biji = true;
+  } else {
+    // Default Putik
+    isTarget.putik = true;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 255" width="340" height="255" style="background:#ffffff; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:8px;">
   <defs>
+    <!-- Gradien Mahkota Bunga Mawar / Kembang Sepatu -->
     <linearGradient id="petalGradL" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fbcfe8"/>
       <stop offset="60%" stop-color="#f472b6"/>
@@ -143,11 +311,18 @@ export function renderBagianBungaSvg(params: { pointer?: string; label?: string 
       <stop offset="60%" stop-color="#f472b6"/>
       <stop offset="100%" stop-color="#db2777"/>
     </linearGradient>
+
+    <!-- Filter Glow -->
+    <filter id="flowerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.4"/>
+    </filter>
+
     <marker id="bArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
     </marker>
   </defs>
 
+  <!-- Judul Bagan -->
   <text x="170" y="20" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Penampang Bagian-Bagian Bunga</text>
 
   <!-- Tangkai Bunga (Pedicel) & Dasar Bunga (Receptacle) -->
@@ -158,7 +333,7 @@ export function renderBagianBungaSvg(params: { pointer?: string; label?: string 
   <path d="M 144,172 C 112,174 104,188 128,180 C 136,176 142,172 144,172 Z" fill="#4ade80" stroke="#15803d" stroke-width="1.8"/>
   <path d="M 186,172 C 218,174 226,188 202,180 C 194,176 188,172 186,172 Z" fill="#4ade80" stroke="#15803d" stroke-width="1.8"/>
 
-  <!-- Mahkota Bunga (Petal) Belakang / Tengah -->
+  <!-- Mahkota Bunga (Petal) Belakang / Samping -->
   <path d="M 148,160 C 95,130 85,65 130,85 C 150,95 156,135 152,156 Z" fill="url(#petalGradL)" stroke="#be185d" stroke-width="1.8"/>
   <path d="M 182,160 C 235,130 245,65 200,85 C 180,95 174,135 178,156 Z" fill="url(#petalGradR)" stroke="#be185d" stroke-width="1.8"/>
   <path d="M 152,145 C 140,85 190,85 178,145 Z" fill="#f472b6" fill-opacity="0.7" stroke="#db2777" stroke-width="1.5"/>
@@ -193,7 +368,7 @@ export function renderBagianBungaSvg(params: { pointer?: string; label?: string 
   <!-- Panah Penunjuk Dinamis Leader Line Target X -->
   <g>
     <line x1="285" y1="${target.y}" x2="${target.x + 8}" y2="${target.y}" stroke="#e11d48" stroke-width="2.2" marker-end="url(#bArr)"/>
-    <circle cx="294" cy="${target.y}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="294" cy="${target.y}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#flowerGlow)"/>
     <text x="294" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 

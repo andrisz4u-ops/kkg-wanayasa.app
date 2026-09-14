@@ -5,89 +5,284 @@
 
 import { escapeXml } from './types';
 
-/** Render Organ Pernapasan Manusia dengan Panah Penunjuk Dinamis X */
+/** Render Organ Pernapasan Manusia dengan Siluet Torso Anatomis & Inset Alveolus (Enterprise Textbook Grade) */
 export function renderOrganPernapasanSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'trakea').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 170, y: 112, name: 'Trakea (Tenggorokan)' };
-  if (pointer.includes('hidung') || pointer.includes('rongga')) target = { x: 170, y: 48, name: 'Rongga Hidung' };
-  else if (pointer.includes('laring') || pointer.includes('faring') || pointer.includes('pangkal')) target = { x: 170, y: 82, name: 'Faring / Laring' };
-  else if (pointer.includes('bronkus') || pointer.includes('cabang')) target = { x: 145, y: 142, name: 'Bronkus' };
-  else if (pointer.includes('paru') || pointer.includes('alveolus') || pointer.includes('pulmo')) target = { x: 215, y: 165, name: 'Paru-paru / Alveolus' };
-  else if (pointer.includes('diafragma') || pointer.includes('sekat')) target = { x: 170, y: 218, name: 'Diafragma' };
+  let target = { x: 310, y: 172, name: 'Trakea (Tenggorokan)', side: 'right' };
+  let isTarget = {
+    hidung: false,
+    faring: false,
+    trakea: false,
+    bronkus: false,
+    paru: false,
+    alveolus: false,
+    diafragma: false
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 270" width="350" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  if (pointer.includes('hidung') || pointer.includes('rongga')) {
+    target = { x: 300, y: 78, name: 'Rongga Hidung', side: 'left' };
+    isTarget.hidung = true;
+  } else if (pointer.includes('laring') || pointer.includes('faring') || pointer.includes('pangkal')) {
+    target = { x: 310, y: 122, name: 'Faring & Laring', side: 'left' };
+    isTarget.faring = true;
+  } else if (pointer.includes('bronkus') || pointer.includes('cabang')) {
+    target = { x: 275, y: 220, name: 'Bronkus', side: 'left' };
+    isTarget.bronkus = true;
+  } else if (pointer.includes('alveolus')) {
+    target = { x: 575, y: 225, name: 'Alveolus (Kantung Udara)', side: 'right' };
+    isTarget.alveolus = true;
+  } else if (pointer.includes('paru') || pointer.includes('pulmo') || pointer.includes('lobus')) {
+    target = { x: 380, y: 255, name: 'Paru-Paru (Pulmo)', side: 'right' };
+    isTarget.paru = true;
+  } else if (pointer.includes('diafragma') || pointer.includes('sekat')) {
+    target = { x: 310, y: 352, name: 'Diafragma (Sekat Rongga Dada)', side: 'left' };
+    isTarget.diafragma = true;
+  } else {
+    // Default Trakea
+    isTarget.trakea = true;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 440" width="100%" height="100%" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
   <defs>
+    <!-- Gradien Torso Tubuh -->
+    <linearGradient id="respTorsoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+
+    <!-- Gradien Paru-Paru -->
     <linearGradient id="lungGradR" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fecdd3"/>
-      <stop offset="100%" stop-color="#fda4af"/>
+      <stop offset="60%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
     <linearGradient id="lungGradL" x1="100%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#fecdd3"/>
-      <stop offset="100%" stop-color="#fda4af"/>
+      <stop offset="60%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
+
+    <!-- Gradien Trakea -->
     <linearGradient id="tracheaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#ffedd5"/>
       <stop offset="50%" stop-color="#fed7aa"/>
       <stop offset="100%" stop-color="#fdba74"/>
     </linearGradient>
+
+    <!-- Filter Shadow & Glow -->
+    <filter id="respGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+    <filter id="respCardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+
     <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
     </marker>
   </defs>
 
-  <text x="175" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Sistem Pernapasan Manusia</text>
+  <!-- Background Canvas Card -->
+  <rect x="2" y="2" width="696" height="436" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 
-  <!-- Siluet Garis Luar Kepala, Leher & Bahu Torso -->
-  <path d="M 130,42 C 130,22 152,18 170,18 C 188,18 205,24 205,44 C 205,58 194,68 186,76 L 245,92 C 255,95 260,110 255,135 L 248,225 L 92,225 L 85,135 C 80,110 85,95 95,92 L 154,76 C 146,68 130,58 130,42 Z" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.8"/>
+  <!-- Header Banner -->
+  <rect x="2" y="2" width="696" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="24" y="14" width="6" height="22" rx="3" fill="#0284c7"/>
+  <text x="40" y="30" font-size="16" font-weight="800" fill="#0f172a" letter-spacing="0.3">Sistem Pernapasan Manusia</text>
+  <text x="325" y="30" font-size="12" font-weight="600" fill="#64748b">(Saluran Pernapasan, Paru-Paru &amp; Inset Alveolus)</text>
 
-  <!-- Rongga Hidung & Faring -->
-  <path d="M 164,30 Q 170,24 176,30 Q 174,48 170,55" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
-  <ellipse cx="170" cy="48" rx="7" ry="5" fill="#e2e8f0" stroke="#475569" stroke-width="1.5"/>
-
-  <!-- Laring (Kotak Suara) -->
-  <path d="M 163,68 L 177,68 L 179,84 L 161,84 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
-  <line x1="165" y1="76" x2="175" y2="76" stroke="#c2410c" stroke-width="1.5"/>
-
-  <!-- Trakea dengan Cincin Tulang Rawan Berlapis -->
-  <rect x="163" y="85" width="14" height="48" rx="2" fill="url(#tracheaGrad)" stroke="#ea580c" stroke-width="1.6"/>
-  <line x1="163" y1="93" x2="177" y2="93" stroke="#c2410c" stroke-width="1.8"/>
-  <line x1="163" y1="101" x2="177" y2="101" stroke="#c2410c" stroke-width="1.8"/>
-  <line x1="163" y1="109" x2="177" y2="109" stroke="#c2410c" stroke-width="1.8"/>
-  <line x1="163" y1="117" x2="177" y2="117" stroke="#c2410c" stroke-width="1.8"/>
-  <line x1="163" y1="125" x2="177" y2="125" stroke="#c2410c" stroke-width="1.8"/>
-
-  <!-- Percabangan Bronkus Kiri & Kanan (Bifurkasi Karina) -->
-  <path d="M 170,133 Q 166,142 145,148 Q 135,152 126,160" fill="none" stroke="#c2410c" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 170,133 Q 174,142 195,148 Q 205,152 214,160" fill="none" stroke="#c2410c" stroke-width="3" stroke-linecap="round"/>
-  <!-- Cabang Bronkiolus Kecil -->
-  <path d="M 142,148 Q 138,162 136,175 M 145,148 Q 148,160 148,172" fill="none" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M 198,148 Q 202,162 204,175 M 195,148 Q 192,160 192,172" fill="none" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
-
-  <!-- Paru-paru Kanan (3 Lobus: Superior, Medius, Inferior) -->
-  <path d="M 158,138 C 142,132 118,136 106,152 C 94,168 96,192 104,206 C 114,216 142,216 156,206 C 162,198 162,156 158,138 Z" fill="url(#lungGradR)" stroke="#e11d48" stroke-width="1.8"/>
-  <!-- Garis Fissura Lobus Paru Kanan -->
-  <path d="M 102,170 Q 130,172 158,166" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="2,2"/>
-  <path d="M 108,190 Q 132,188 156,186" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="2,2"/>
-
-  <!-- Paru-paru Kiri (2 Lobus dengan Lekuk Jantung / Cardiac Notch) -->
-  <path d="M 182,138 C 198,132 222,136 234,152 C 246,168 244,192 236,206 C 226,216 198,216 186,204 C 180,195 186,176 180,165 C 176,154 178,144 182,138 Z" fill="url(#lungGradL)" stroke="#e11d48" stroke-width="1.8"/>
-  <!-- Garis Fissura Lobus Paru Kiri -->
-  <path d="M 184,172 Q 212,175 238,172" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="2,2"/>
-
-  <!-- Otot Diafragma Melengkung di Bawah Rongga Dada -->
-  <path d="M 88,222 Q 170,205 252,222" fill="none" stroke="#047857" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M 98,226 Q 170,212 242,226" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
-
-  <!-- Panah Penunjuk Dinamis Leader Line Target X -->
-  <g>
-    <line x1="290" y1="${target.y}" x2="${target.x + 8}" y2="${target.y}" stroke="#e11d48" stroke-width="2.2" marker-end="url(#arrow)"/>
-    <circle cx="298" cy="${target.y}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="298" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- KONTUR SILUET KEPALA, LEHER & TORSO DADA -->
+  <g opacity="0.95">
+    <!-- Profil Kepala & Leher Manusia -->
+    <path d="M 290,52 C 270,52 265,65 265,78 C 265,90 275,100 282,108 L 282,130 C 250,136 195,155 178,190 C 168,215 168,260 172,320 C 174,355 185,385 195,405 L 425,405 C 435,385 446,355 448,320 C 452,260 452,215 442,190 C 425,155 370,136 338,130 L 338,108 C 345,100 355,90 355,78 C 355,65 350,52 330,52 Z" fill="url(#respTorsoGrad)" stroke="#cbd5e1" stroke-width="1.8"/>
+    <!-- Bayangan Klavikula & Tulang Dada (Sternum) -->
+    <path d="M 220,154 Q 280,146 310,146 Q 340,146 400,154" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+    <line x1="310" y1="146" x2="310" y2="280" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
+    <!-- Lengkung Tulang Rusuk (Costa) -->
+    <path d="M 210,195 Q 260,205 285,215 M 410,195 Q 360,205 335,215" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <path d="M 205,235 Q 260,245 285,255 M 415,235 Q 360,245 335,255" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <path d="M 205,275 Q 260,285 285,295 M 415,275 Q 360,285 335,295" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="3,3"/>
   </g>
 
-  <text x="175" y="254" text-anchor="middle" font-size="11" fill="#64748b">Perhatikan bagian organ bertanda huruf "${escapeXml(labelChar)}"</text>
+  <!-- 1. RONGGA HIDUNG (Nasal Cavity dengan Fosil Konka) -->
+  <g id="organ_hidung">
+    <ellipse cx="300" cy="76" rx="14" ry="9" fill="${isTarget.hidung ? '#fed7aa' : '#ffedd5'}" stroke="${isTarget.hidung ? '#ea580c' : '#fdba74'}" stroke-width="${isTarget.hidung ? 2.5 : 1.5}"/>
+    <!-- Silia & Alur Udara Masuk -->
+    <path d="M 292,76 Q 300,72 308,76" fill="none" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="294" cy="80" r="1.5" fill="#c2410c"/>
+    <circle cx="306" cy="80" r="1.5" fill="#c2410c"/>
+  </g>
+
+  <!-- 2. FARING & LARING (Pangkal Tenggorokan & Kotak Suara) -->
+  <g id="organ_laring">
+    <rect x="303" y="106" width="14" height="24" rx="3" fill="#ffedd5" stroke="${isTarget.faring ? '#e11d48' : '#ea580c'}" stroke-width="${isTarget.faring ? 2.5 : 1.5}"/>
+    <!-- Pita Suara / Epiglotis -->
+    <line x1="305" y1="114" x2="315" y2="114" stroke="#c2410c" stroke-width="1.6"/>
+    <line x1="305" y1="122" x2="315" y2="122" stroke="#c2410c" stroke-width="1.6"/>
+  </g>
+
+  <!-- 3. TRAKEA (BATANG TENGGOROKAN) DENGAN CINCIN TULANG RAWAN KARTILAGO -->
+  <g id="organ_trakea">
+    <rect x="302" y="132" width="16" height="68" rx="3" fill="url(#tracheaGrad)" stroke="${isTarget.trakea ? '#e11d48' : '#ea580c'}" stroke-width="${isTarget.trakea ? 2.5 : 1.8}"/>
+    <!-- Cincin Tulang Rawan Berlapis (Cartilage Rings) -->
+    <line x1="302" y1="140" x2="318" y2="140" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="148" x2="318" y2="148" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="156" x2="318" y2="156" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="164" x2="318" y2="164" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="172" x2="318" y2="172" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="180" x2="318" y2="180" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="188" x2="318" y2="188" stroke="#c2410c" stroke-width="1.8"/>
+    <line x1="302" y1="196" x2="318" y2="196" stroke="#c2410c" stroke-width="1.8"/>
+  </g>
+
+  <!-- 4. PERCABANGAN BRONKUS & BRONKIOLUS POHON PERNAPASAN -->
+  <g id="organ_bronkus">
+    <!-- Karina & Bronkus Kanan (Lebih Pendek, Lebih Tegak) -->
+    <path d="M 310,200 Q 302,210 274,222 Q 256,230 240,244" fill="none" stroke="#c2410c" stroke-width="${isTarget.bronkus ? 4.5 : 3.5}" stroke-linecap="round"/>
+    <!-- Bronkus Kiri (Lebih Panjang, Mendatar Menghindari Jantung) -->
+    <path d="M 310,200 Q 318,210 346,222 Q 364,230 380,244" fill="none" stroke="#c2410c" stroke-width="${isTarget.bronkus ? 4.5 : 3.5}" stroke-linecap="round"/>
+    
+    <!-- Percabangan Bronkiolus Sekunder & Tersier -->
+    <!-- Sisi Kanan Tubuh / Kiri Gambar -->
+    <path d="M 270,224 Q 258,245 252,270 M 274,222 Q 278,248 280,274 M 256,230 Q 236,252 232,276" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M 252,270 Q 242,290 238,310 M 280,274 Q 284,296 286,316" fill="none" stroke="#f97316" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- Sisi Kiri Tubuh / Kanan Gambar -->
+    <path d="M 350,224 Q 362,245 368,270 M 346,222 Q 342,248 340,274 M 364,230 Q 384,252 388,276" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M 368,270 Q 378,290 382,310 M 340,274 Q 336,296 334,316" fill="none" stroke="#f97316" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 5. PARU-PARU KANAN (3 LOBUS: SUPERIOR, MEDIUS, INFERIOR) -->
+  <g id="organ_paru_r">
+    <path d="M 292,204 C 265,195 220,200 200,225 C 180,250 182,295 195,322 C 212,338 260,338 285,320 C 295,308 296,235 292,204 Z" fill="url(#lungGradR)" stroke="${isTarget.paru ? '#991b1b' : '#e11d48'}" stroke-width="${isTarget.paru ? 3 : 2}" filter="${isTarget.paru ? 'url(#respGlow)' : 'none'}"/>
+    <!-- Garis Fissura Horizontal & Oblique Paru Kanan -->
+    <path d="M 190,260 Q 240,262 292,252" fill="none" stroke="#be123c" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <path d="M 198,290 Q 245,286 288,280" fill="none" stroke="#be123c" stroke-width="1.5" stroke-dasharray="3,2"/>
+  </g>
+
+  <!-- 6. PARU-PARU KIRI (2 LOBUS DENGAN LEKUKAN JANTUNG / CARDIAC NOTCH) -->
+  <g id="organ_paru_kiri">
+    <path d="M 328,204 C 355,195 400,200 420,225 C 440,250 438,295 425,322 C 408,338 360,338 335,320 C 322,305 330,272 322,252 C 316,234 322,215 328,204 Z" fill="url(#lungGradL)" stroke="${isTarget.paru ? '#991b1b' : '#e11d48'}" stroke-width="${isTarget.paru ? 3 : 2}" filter="${isTarget.paru ? 'url(#respGlow)' : 'none'}"/>
+    <!-- Garis Fissura Oblique Paru Kiri -->
+    <path d="M 334,260 Q 380,265 428,258" fill="none" stroke="#be123c" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <!-- Siluet Lekuk Jantung di Balik Paru Kiri -->
+    <ellipse cx="320" cy="272" rx="14" ry="20" fill="#f43f5e" fill-opacity="0.25" stroke="#e11d48" stroke-width="1.2" stroke-dasharray="2,2"/>
+  </g>
+
+  <!-- 7. OTOT DIAFRAGMA (SEKAT RONGGA DADA & PERUT) -->
+  <g id="organ_diafragma">
+    <path d="M 174,348 Q 310,320 446,348" fill="none" stroke="#047857" stroke-width="${isTarget.diafragma ? 6 : 4.5}" stroke-linecap="round"/>
+    <path d="M 185,354 Q 310,330 435,354" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- ==================== INSET DETAIL: ALVEOLUS (Pertukaran Gas) ==================== -->
+  <g id="inset_alveolus" transform="translate(485, 120)">
+    <!-- Kartu Latar Belakang Inset -->
+    <rect x="0" y="0" width="195" height="185" rx="10" fill="#ffffff" stroke="${isTarget.alveolus ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.alveolus ? 2 : 1.2}" filter="url(#respCardShadow)"/>
+    <rect x="0" y="0" width="195" height="26" rx="10" fill="#f1f5f9"/>
+    <text x="97" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">Mikroskopis: Alveolus</text>
+
+    <!-- Kantung Alveolus Bergerombol -->
+    <g transform="translate(70, 85)">
+      <!-- Saluran Masuk Udara (Duktus Alveolaris) -->
+      <path d="M 0,-40 L 0,-20" stroke="#fdba74" stroke-width="8" stroke-linecap="round"/>
+      
+      <!-- Kantung-Kantung Alveolus Bersama Kapiler -->
+      <circle cx="-16" cy="-10" r="14" fill="#fee2e2" stroke="#f43f5e" stroke-width="1.5"/>
+      <circle cx="16" cy="-10" r="14" fill="#fee2e2" stroke="#f43f5e" stroke-width="1.5"/>
+      <circle cx="-18" cy="14" r="15" fill="#fee2e2" stroke="#f43f5e" stroke-width="1.5"/>
+      <circle cx="18" cy="14" r="15" fill="#fee2e2" stroke="#f43f5e" stroke-width="1.5"/>
+      <circle cx="0" cy="24" r="16" fill="#fee2e2" stroke="#f43f5e" stroke-width="1.5"/>
+
+      <!-- Jaring Anyaman Kapiler (Biru CO2 & Merah O2) -->
+      <path d="M -30,-8 Q -8,-16 8,-4 Q 24,8 32,22" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M -24,8 Q 0,0 16,18 Q 24,28 10,38" fill="none" stroke="#e11d48" stroke-width="2.2" stroke-linecap="round"/>
+
+      <!-- Label Difusi Gas -->
+      <text x="-48" y="-14" font-size="9" font-weight="700" fill="#0284c7">CO₂</text>
+      <path d="M -42,-12 L -34,-12" stroke="#0284c7" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="32" y="-14" font-size="9" font-weight="700" fill="#e11d48">O₂</text>
+      <path d="M 32,-12 L 24,-12" stroke="#e11d48" stroke-width="1.2" marker-end="url(#arrow)"/>
+    </g>
+
+    <text x="97" y="168" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Pertukaran Gas O₂ &amp; CO₂</text>
+  </g>
+
+  <!-- Garis Hubung dari Paru-paru ke Inset Alveolus -->
+  <line x1="418" y1="280" x2="485" y2="230" stroke="#0284c7" stroke-width="1.2" stroke-dasharray="3,3"/>
+  <circle cx="418" cy="280" r="3" fill="#0284c7"/>
+
+  <!-- ==================== ANOTASI & LEADER LINES RESMI ==================== -->
+
+  <!-- SISI KIRI (Left Cards): Hidung, Faring/Laring, Bronkus, Diafragma -->
+  <!-- 1. RONGGA HIDUNG -->
+  <g>
+    <rect x="24" y="64" width="140" height="28" rx="6" fill="${isTarget.hidung ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.hidung ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.hidung ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="36" y="83" font-size="11.5" font-weight="700" fill="${isTarget.hidung ? '#991b1b' : '#334155'}">1. Rongga Hidung</text>
+    <line x1="164" y1="78" x2="284" y2="76" stroke="${isTarget.hidung ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.hidung ? 2 : 1.2}" stroke-dasharray="${isTarget.hidung ? 'none' : '3,2'}"/>
+    <circle cx="284" cy="76" r="2.5" fill="${isTarget.hidung ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- 2. FARING & LARING -->
+  <g>
+    <rect x="24" y="108" width="140" height="28" rx="6" fill="${isTarget.faring ? '#ffedd5' : '#ffffff'}" stroke="${isTarget.faring ? '#f97316' : '#cbd5e1'}" stroke-width="${isTarget.faring ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="36" y="127" font-size="11.5" font-weight="700" fill="${isTarget.faring ? '#c2410c' : '#334155'}">2. Faring &amp; Laring</text>
+    <line x1="164" y1="122" x2="302" y2="120" stroke="${isTarget.faring ? '#ea580c' : '#94a3b8'}" stroke-width="${isTarget.faring ? 2 : 1.2}" stroke-dasharray="${isTarget.faring ? 'none' : '3,2'}"/>
+    <circle cx="302" cy="120" r="2.5" fill="${isTarget.faring ? '#ea580c' : '#64748b'}"/>
+  </g>
+
+  <!-- 3. BRONKUS -->
+  <g>
+    <rect x="24" y="210" width="140" height="28" rx="6" fill="${isTarget.bronkus ? '#ffedd5' : '#ffffff'}" stroke="${isTarget.bronkus ? '#f97316' : '#cbd5e1'}" stroke-width="${isTarget.bronkus ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="36" y="229" font-size="11.5" font-weight="700" fill="${isTarget.bronkus ? '#c2410c' : '#334155'}">4. Bronkus (Cabang)</text>
+    <line x1="164" y1="224" x2="268" y2="224" stroke="${isTarget.bronkus ? '#ea580c' : '#94a3b8'}" stroke-width="${isTarget.bronkus ? 2 : 1.2}" stroke-dasharray="${isTarget.bronkus ? 'none' : '3,2'}"/>
+    <circle cx="268" cy="224" r="2.5" fill="${isTarget.bronkus ? '#ea580c' : '#64748b'}"/>
+  </g>
+
+  <!-- 4. DIAFRAGMA -->
+  <g>
+    <rect x="24" y="340" width="140" height="28" rx="6" fill="${isTarget.diafragma ? '#dcfce7' : '#ffffff'}" stroke="${isTarget.diafragma ? '#10b981' : '#cbd5e1'}" stroke-width="${isTarget.diafragma ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="36" y="359" font-size="11.5" font-weight="700" fill="${isTarget.diafragma ? '#047857' : '#334155'}">Diafragma</text>
+    <line x1="164" y1="354" x2="245" y2="348" stroke="${isTarget.diafragma ? '#059669' : '#94a3b8'}" stroke-width="${isTarget.diafragma ? 2 : 1.2}" stroke-dasharray="${isTarget.diafragma ? 'none' : '3,2'}"/>
+    <circle cx="245" cy="348" r="2.5" fill="${isTarget.diafragma ? '#059669' : '#64748b'}"/>
+  </g>
+
+  <!-- SISI KANAN (Right Cards): Trakea & Paru-Paru -->
+  <!-- 5. TRAKEA -->
+  <g>
+    <rect x="520" y="64" width="156" height="28" rx="6" fill="${isTarget.trakea ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.trakea ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.trakea ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="532" y="83" font-size="11.5" font-weight="700" fill="${isTarget.trakea ? '#991b1b' : '#334155'}">3. Trakea (Tenggorokan)</text>
+    <line x1="520" y1="78" x2="320" y2="162" stroke="${isTarget.trakea ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.trakea ? 2 : 1.2}" stroke-dasharray="${isTarget.trakea ? 'none' : '3,2'}"/>
+    <circle cx="320" cy="162" r="2.5" fill="${isTarget.trakea ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- 6. PARU-PARU -->
+  <g>
+    <rect x="520" y="325" width="156" height="28" rx="6" fill="${isTarget.paru ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.paru ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.paru ? 2 : 1}" filter="url(#respCardShadow)"/>
+    <text x="532" y="344" font-size="11.5" font-weight="700" fill="${isTarget.paru ? '#991b1b' : '#334155'}">5. Paru-paru (Pulmo)</text>
+    <line x1="520" y1="339" x2="425" y2="305" stroke="${isTarget.paru ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.paru ? 2 : 1.2}" stroke-dasharray="${isTarget.paru ? 'none' : '3,2'}"/>
+    <circle cx="425" cy="305" r="2.5" fill="${isTarget.paru ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- ==================== TARGET POINTER DINAMIS HURUF X ==================== -->
+  <g id="target_pointer">
+    <!-- Efek Beacon Berpendar -->
+    <circle cx="${target.x}" cy="${target.y}" r="22" fill="#e11d48" opacity="0.18"/>
+    <circle cx="${target.x}" cy="${target.y}" r="14" fill="#e11d48" opacity="0.3"/>
+    
+    <!-- Panah Penunjuk Merah -->
+    <line x1="${target.side === 'right' ? target.x + 45 : target.x - 45}" y1="${target.y}" x2="${target.side === 'right' ? target.x + 8 : target.x - 8}" y2="${target.y}" stroke="#e11d48" stroke-width="2.8" marker-end="url(#arrow)"/>
+    
+    <!-- Badge Target Huruf X -->
+    <circle cx="${target.side === 'right' ? target.x + 64 : target.x - 64}" cy="${target.y}" r="17" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#respGlow)"/>
+    <text x="${target.side === 'right' ? target.x + 64 : target.x - 64}" y="${target.y + 6}" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="408" width="696" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="350" y="427" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Perhatikan bagian organ bertanda huruf "${escapeXml(labelChar)}" (${escapeXml(target.name)})</text>
 </svg>`;
 }
 
@@ -158,139 +353,290 @@ export function renderAlveolusSvg(params: { pointer?: string; label?: string }):
 </svg>`;
 }
 
-/** Render Organ Pencernaan Manusia dengan Siluet Torso Anatomis & Highlight Organ Dinamis X */
+/** Render Organ Pencernaan Manusia dengan Siluet Torso Anatomis & Highlight Organ Dinamis X (Enterprise Textbook Grade) */
 export function renderOrganPencernaanSvg(params: { pointer?: string; label?: string }): string {
   const pointer = (params.pointer || 'lambung').toLowerCase();
   const labelChar = params.label || 'X';
 
   // Tentukan organ target dan highlight state
-  let target = { x: 185, y: 125, name: 'Lambung' };
+  let target = { x: 330, y: 195, name: 'Lambung', side: 'right', lx: 530, ly: 195 };
   let isTarget = {
     mulut: false,
     kerongkongan: false,
     lambung: false,
     hati: false,
+    empedu: false,
+    pankreas: false,
     ususHalus: false,
     ususBesar: false,
     anus: false
   };
 
   if (pointer.includes('mulut') || pointer.includes('gigi') || pointer.includes('lidah')) {
-    target = { x: 170, y: 44, name: 'Rongga Mulut' };
+    target = { x: 325, y: 66, name: 'Rongga Mulut', side: 'right', lx: 530, ly: 66 };
     isTarget.mulut = true;
   } else if (pointer.includes('kerongkongan') || pointer.includes('esofagus')) {
-    target = { x: 170, y: 76, name: 'Kerongkongan (Esofagus)' };
+    target = { x: 320, y: 125, name: 'Kerongkongan (Esofagus)', side: 'right', lx: 530, ly: 125 };
     isTarget.kerongkongan = true;
-  } else if (pointer.includes('usus halus')) {
-    target = { x: 170, y: 175, name: 'Usus Halus' };
+  } else if (pointer.includes('hati') || pointer.includes('liver')) {
+    target = { x: 260, y: 180, name: 'Hati (Liver)', side: 'left', lx: 110, ly: 180 };
+    isTarget.hati = true;
+  } else if (pointer.includes('empedu')) {
+    target = { x: 275, y: 205, name: 'Kantung Empedu', side: 'left', lx: 110, ly: 220 };
+    isTarget.empedu = true;
+  } else if (pointer.includes('pankreas')) {
+    target = { x: 330, y: 225, name: 'Pankreas', side: 'right', lx: 530, ly: 235 };
+    isTarget.pankreas = true;
+  } else if (pointer.includes('usus halus') || pointer.includes('ileum') || pointer.includes('jejunum') || pointer.includes('duodenum')) {
+    target = { x: 320, y: 295, name: 'Usus Halus', side: 'left', lx: 110, ly: 295 };
     isTarget.ususHalus = true;
-  } else if (pointer.includes('usus besar') || pointer.includes('kolon')) {
-    target = { x: 215, y: 155, name: 'Usus Besar (Kolon)' };
+  } else if (pointer.includes('usus besar') || pointer.includes('kolon') || pointer.includes('apendiks')) {
+    target = { x: 385, y: 270, name: 'Usus Besar (Kolon)', side: 'right', lx: 530, ly: 270 };
     isTarget.ususBesar = true;
   } else if (pointer.includes('anus') || pointer.includes('rektum')) {
-    target = { x: 170, y: 220, name: 'Anus / Rektum' };
+    target = { x: 320, y: 382, name: 'Anus / Rektum', side: 'right', lx: 530, ly: 382 };
     isTarget.anus = true;
-  } else if (pointer.includes('hati') || pointer.includes('liver')) {
-    target = { x: 135, y: 115, name: 'Hati' };
-    isTarget.hati = true;
   } else {
     // Default Lambung
     isTarget.lambung = true;
   }
 
-  // Warna adaptif: organ target di-highlight warna menyala
-  const colMulut = isTarget.mulut ? '#e11d48' : '#fda4af';
-  const swMulut = isTarget.mulut ? 2.5 : 1.5;
-
-  const colEsofagus = isTarget.kerongkongan ? '#d97706' : '#fed7aa';
-  const swEsofagus = isTarget.kerongkongan ? 2.8 : 1.6;
-
-  const colLambung = isTarget.lambung ? '#e11d48' : '#fecdd3';
-  const swLambung = isTarget.lambung ? 2.8 : 1.8;
-
-  const colHati = isTarget.hati ? '#b45309' : '#d97706';
-  const swHati = isTarget.hati ? 2.8 : 1.6;
-
-  const colUsusHalus = isTarget.ususHalus ? '#ea580c' : '#fed7aa';
-  const swUsusHalus = isTarget.ususHalus ? 3.5 : 2.2;
-
-  const colUsusBesar = isTarget.ususBesar ? '#0284c7' : '#bae6fd';
-  const swUsusBesar = isTarget.ususBesar ? 4 : 2.5;
-
-  const colAnus = isTarget.anus ? '#e11d48' : '#475569';
-  const swAnus = isTarget.anus ? 2.8 : 1.8;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270" width="360" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 440" width="100%" height="100%" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
   <defs>
-    <linearGradient id="torsoBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#f8fafc"/>
-      <stop offset="100%" stop-color="#f1f5f9"/>
+    <!-- Gradien Torso Tubuh -->
+    <linearGradient id="pencTorsoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
     </linearGradient>
-    <linearGradient id="stomachGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${isTarget.lambung ? '#fb7185' : '#fed7aa'}"/>
-      <stop offset="100%" stop-color="${isTarget.lambung ? '#e11d48' : '#fecdd3'}"/>
+
+    <!-- Gradien Organ -->
+    <linearGradient id="pencLiverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9a3412"/>
+      <stop offset="60%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#7c2d12"/>
     </linearGradient>
-    <linearGradient id="liverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${isTarget.hati ? '#ea580c' : '#b45309'}"/>
-      <stop offset="100%" stop-color="${isTarget.hati ? '#c2410c' : '#92400e'}"/>
+    <linearGradient id="pencStomachGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="60%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#e11d48"/>
     </linearGradient>
+    <linearGradient id="pencColonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="pencSmallIntGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="60%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+
+    <!-- Filter Shadow & Glow -->
+    <filter id="pencGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+
     <marker id="arrPenc" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
     </marker>
   </defs>
 
-  <text x="180" y="20" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Sistem Pencernaan Manusia</text>
+  <!-- Background Canvas Card -->
+  <rect x="2" y="2" width="696" height="436" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 
-  <!-- Siluet Tubuh Torso Manusia (Konteks Posisi Anatomis) -->
-  <path d="M 140,28 C 140,20 155,18 170,18 C 185,18 200,20 200,28 C 200,38 190,48 185,55 L 235,68 C 245,72 250,85 245,110 L 235,160 C 235,180 245,210 245,240 L 95,240 C 95,210 105,180 105,160 L 95,110 C 90,85 95,72 105,68 L 155,55 C 150,48 140,38 140,28 Z" fill="url(#torsoBg)" stroke="#e2e8f0" stroke-width="1.5"/>
+  <!-- Header Banner -->
+  <rect x="2" y="2" width="696" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="24" y="14" width="6" height="22" rx="3" fill="#e11d48"/>
+  <text x="40" y="30" font-size="16" font-weight="800" fill="#0f172a" letter-spacing="0.3">Sistem Pencernaan Manusia</text>
+  <text x="320" y="30" font-size="12" font-weight="600" fill="#64748b">(Sistem Organ &amp; Saluran Pencernaan Lengkap)</text>
 
-  <!-- 1. Rongga Mulut & Kelenjar Ludah -->
-  <ellipse cx="170" cy="44" rx="14" ry="8" fill="${colMulut}" stroke="#e11d48" stroke-width="${swMulut}"/>
-  <path d="M 162,44 Q 170,48 178,44" fill="none" stroke="#be123c" stroke-width="1.2"/>
-  <text x="135" y="47" font-size="9.5" text-anchor="end" font-weight="600" fill="#64748b">Mulut</text>
-
-  <!-- 2. Kerongkongan (Esofagus) Tabung Berotot -->
-  <path d="M 167,52 L 167,98 M 173,52 L 173,98" stroke="${colEsofagus}" stroke-width="${swEsofagus * 1.5}" stroke-linecap="round"/>
-  <text x="135" y="78" font-size="9.5" text-anchor="end" font-weight="600" fill="#64748b">Kerongkongan</text>
-
-  <!-- 3. Hati (Liver) dengan Lobus Kanan & Kiri -->
-  <path d="M 112,96 C 102,98 96,112 104,126 C 112,138 138,136 154,124 L 154,98 Z" fill="url(#liverGrad)" stroke="#78350f" stroke-width="${swHati}"/>
-  <!-- Kantung Empedu (Gallbladder Hijau) -->
-  <path d="M 142,126 C 142,132 148,136 152,132 C 156,128 152,124 148,124 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
-  <text x="96" y="115" font-size="9.5" text-anchor="end" font-weight="600" fill="#64748b">Hati</text>
-
-  <!-- Pankreas (Kuning di Balik Lambung) -->
-  <path d="M 152,134 Q 170,132 188,138 Q 172,142 152,136 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
-
-  <!-- 4. Lambung (Ventriculus J-Shape Anatomis) -->
-  <path d="M 166,96 C 156,96 150,110 158,128 C 164,142 182,148 196,140 C 206,132 208,114 198,102 C 188,92 174,96 166,96 Z" fill="url(#stomachGrad)" stroke="#be123c" stroke-width="${swLambung}"/>
-  <text x="218" y="112" font-size="9.5" font-weight="600" fill="#64748b">Lambung</text>
-
-  <!-- 6. Usus Besar (Kolon Membingkai dengan Lekukan Haustra) -->
-  <!-- Kolon Asendens (Kanan Tubuh / Kiri Gambar) -->
-  <path d="M 132,198 C 130,182 134,170 132,154 C 132,148 136,144 146,146" fill="none" stroke="${colUsusBesar}" stroke-width="${swUsusBesar}" stroke-linecap="round"/>
-  <!-- Kolon Transversum (Mendatar) -->
-  <path d="M 146,146 C 160,148 185,148 198,148" fill="none" stroke="${colUsusBesar}" stroke-width="${swUsusBesar}" stroke-linecap="round"/>
-  <!-- Kolon Desendens & Sigmoid (Kiri Tubuh / Kanan Gambar ke Tengah) -->
-  <path d="M 198,148 C 206,150 206,168 204,196 C 202,208 186,212 176,214 L 170,224" fill="none" stroke="${colUsusBesar}" stroke-width="${swUsusBesar}" stroke-linecap="round"/>
-  <text x="222" y="165" font-size="9.5" font-weight="600" fill="#64748b">Usus Besar</text>
-
-  <!-- 5. Usus Halus (Lipatan-lipatan Berkelok di Tengah) -->
-  <path d="M 152,158 Q 168,154 182,158 Q 186,170 170,172 Q 152,174 154,186 Q 168,188 184,186 Q 182,198 168,200" fill="none" stroke="${colUsusHalus}" stroke-width="${swUsusHalus}" stroke-linecap="round"/>
-  <text x="125" y="180" font-size="9.5" text-anchor="end" font-weight="600" fill="#64748b">Usus Halus</text>
-
-  <!-- 7. Anus / Rektum -->
-  <ellipse cx="170" cy="226" rx="5" ry="3.5" fill="${colAnus}" stroke="#1e293b" stroke-width="${swAnus}"/>
-  <text x="145" y="230" font-size="9.5" text-anchor="end" font-weight="600" fill="#64748b">Anus</text>
-
-  <!-- Panah Penunjuk Dinamis Leader Line Target X -->
-  <g>
-    <line x1="298" y1="${target.y}" x2="${target.x + 12}" y2="${target.y}" stroke="#e11d48" stroke-width="2.2" marker-end="url(#arrPenc)"/>
-    <circle cx="308" cy="${target.y}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="308" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- KONTUR SILUET TORSO MANUSIA (Anatomical Body Contour) -->
+  <g opacity="0.95">
+    <!-- Kepala & Leher Samping-Depan -->
+    <path d="M 305,52 C 285,52 280,68 280,82 C 280,95 292,104 298,110 L 298,130 C 265,135 210,150 190,185 C 175,210 178,255 180,310 C 182,345 195,385 205,410 L 435,410 C 445,385 458,345 460,310 C 462,255 465,210 450,185 C 430,150 375,135 342,130 L 342,110 C 348,104 360,95 360,82 C 360,68 355,52 335,52 Z" fill="url(#pencTorsoGrad)" stroke="#cbd5e1" stroke-width="1.8"/>
+    <!-- Bayangan Bahu & Klavikula -->
+    <path d="M 230,152 Q 295,145 342,138 M 410,152 Q 345,145 298,138" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+    <!-- Garis Iga / Costa Halus -->
+    <path d="M 220,195 Q 260,205 285,215 M 420,195 Q 380,205 355,215" fill="none" stroke="#e2e8f0" stroke-width="1.4" stroke-dasharray="3,3"/>
   </g>
 
-  <text x="180" y="258" text-anchor="middle" font-size="11" fill="#64748b">Perhatikan bagian organ yang ditunjuk oleh huruf "${escapeXml(labelChar)}"</text>
+  <!-- ORGAN 1: RONGGA MULUT & KELENJAR LUDAH -->
+  <g id="organ_mulut">
+    <!-- Kelenjar Ludah (Parotis & Submandibularis) -->
+    <ellipse cx="342" cy="74" rx="7" ry="5" fill="#fbcfe8" stroke="#db2777" stroke-width="1.2"/>
+    <ellipse cx="325" cy="85" rx="6" ry="4" fill="#fbcfe8" stroke="#db2777" stroke-width="1.2"/>
+    <!-- Rongga Mulut & Lidah -->
+    <ellipse cx="318" cy="68" rx="16" ry="10" fill="${isTarget.mulut ? '#f43f5e' : '#fda4af'}" stroke="${isTarget.mulut ? '#be123c' : '#e11d48'}" stroke-width="${isTarget.mulut ? 2.5 : 1.8}"/>
+    <path d="M 310,68 Q 318,74 326,68" fill="none" stroke="#be123c" stroke-width="1.5"/>
+    <path d="M 312,63 L 324,63" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- ORGAN 2: KERONGKONGAN / ESOFAGUS -->
+  <g id="organ_esofagus">
+    <path d="M 318,80 L 318,168 M 324,80 L 324,168" stroke="${isTarget.kerongkongan ? '#ea580c' : '#fdba74'}" stroke-width="${isTarget.kerongkongan ? 4 : 3}" stroke-linecap="round"/>
+    <!-- Cincin Otot Peristaltik Halus -->
+    <line x1="316" y1="95" x2="326" y2="95" stroke="#f97316" stroke-width="1.5"/>
+    <line x1="316" y1="115" x2="326" y2="115" stroke="#f97316" stroke-width="1.5"/>
+    <line x1="316" y1="135" x2="326" y2="135" stroke="#f97316" stroke-width="1.5"/>
+    <line x1="316" y1="155" x2="326" y2="155" stroke="#f97316" stroke-width="1.5"/>
+  </g>
+
+  <!-- ORGAN 3: HATI (LIVER) & KANTUNG EMPEDU -->
+  <g id="organ_hati">
+    <!-- Hati Lobus Besar Kanan & Lobus Kiri -->
+    <path d="M 235,160 C 215,165 205,185 215,208 C 225,225 260,222 295,202 L 295,162 Z" fill="url(#pencLiverGrad)" stroke="${isTarget.hati ? '#e11d48' : '#7c2d12'}" stroke-width="${isTarget.hati ? 3 : 1.8}" filter="${isTarget.hati ? 'url(#pencGlow)' : 'none'}"/>
+    <path d="M 265,161 Q 262,185 272,212" fill="none" stroke="#7c2d12" stroke-width="1.2" stroke-dasharray="2,2"/>
+    <!-- Kantung Empedu (Gallbladder) Hijau -->
+    <path d="M 270,205 C 265,215 275,222 282,218 C 286,214 282,204 274,204 Z" fill="#22c55e" stroke="${isTarget.empedu ? '#e11d48' : '#15803d'}" stroke-width="${isTarget.empedu ? 2.5 : 1.5}"/>
+    <!-- Saluran Empedu / Duktus Biliaris -->
+    <path d="M 280,214 Q 295,218 304,226" fill="none" stroke="#15803d" stroke-width="1.8"/>
+  </g>
+
+  <!-- ORGAN 4: LAMBUNG (STOMACH / VENTRICULUS) -->
+  <g id="organ_lambung">
+    <!-- Bentuk J-Shape Anatomis dengan Rugae Lambung -->
+    <path d="M 318,162 C 302,162 290,178 296,202 C 302,225 328,235 348,220 C 362,210 366,182 350,168 C 338,156 328,162 318,162 Z" fill="url(#pencStomachGrad)" stroke="${isTarget.lambung ? '#991b1b' : '#be123c'}" stroke-width="${isTarget.lambung ? 3.5 : 2}" filter="${isTarget.lambung ? 'url(#pencGlow)' : 'none'}"/>
+    <!-- Tekstur Rugae / Lipatan Mukosa Dinding Lambung -->
+    <path d="M 310,185 Q 318,198 335,188 M 312,202 Q 325,214 342,204" fill="none" stroke="#fda4af" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- ORGAN 5: PANKREAS (Di Lekukan Duodenum di Balik Lambung) -->
+  <g id="organ_pankreas">
+    <path d="M 300,222 Q 330,218 356,226 Q 332,234 300,226 Z" fill="#fef08a" stroke="${isTarget.pankreas ? '#e11d48' : '#ca8a04'}" stroke-width="${isTarget.pankreas ? 2.5 : 1.5}"/>
+    <!-- Bintik-bintik Lobulus Asinus Pankreas -->
+    <circle cx="315" cy="223" r="1.2" fill="#a16207"/>
+    <circle cx="328" cy="224" r="1.2" fill="#a16207"/>
+    <circle cx="342" cy="226" r="1.2" fill="#a16207"/>
+  </g>
+
+  <!-- ORGAN 6: USUS BESAR (KOLON) DENGAN HAUSTRASI -->
+  <g id="organ_kolon">
+    <!-- Kolon Asendens (Kanan Tubuh / Sisi Kiri Gambar) -->
+    <path d="M 252,320 C 248,300 248,270 252,242 C 254,232 265,228 278,230" fill="none" stroke="url(#pencColonGrad)" stroke-width="${isTarget.ususBesar ? 14 : 11}" stroke-linecap="round"/>
+    <!-- Kolon Transversum (Mendatar Menyilang) -->
+    <path d="M 278,230 C 310,234 350,234 378,230" fill="none" stroke="url(#pencColonGrad)" stroke-width="${isTarget.ususBesar ? 14 : 11}" stroke-linecap="round"/>
+    <!-- Kolon Desendens & Sigmoid (Sisi Kanan Gambar Menuju Tengah Bawah) -->
+    <path d="M 378,230 C 392,235 392,265 388,310 C 386,332 365,348 345,355 L 324,372" fill="none" stroke="url(#pencColonGrad)" stroke-width="${isTarget.ususBesar ? 14 : 11}" stroke-linecap="round"/>
+    
+    <!-- Garis Segmentasi Haustra Kolon -->
+    <path d="M 246,260 L 258,260 M 246,285 L 258,285 M 310,224 L 310,236 M 345,224 L 345,236 M 384,260 L 396,260 M 384,285 L 396,285" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.8"/>
+
+    <!-- Sekum & Apendiks / Usus Buntu (Cacing Kecil di Kiri Bawah Kolon) -->
+    <ellipse cx="252" cy="330" rx="9" ry="8" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+    <path d="M 250,336 Q 242,346 248,354" fill="none" stroke="#0369a1" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- ORGAN 7: USUS HALUS (DUODENUM, JEJUNUM, ILEUM) -->
+  <g id="organ_usus_halus">
+    <!-- Lipatan Berkelok Padat di Pusat Perut -->
+    <path d="M 275,255 Q 305,248 335,255 Q 365,262 335,270 Q 285,278 285,290 Q 345,286 360,298 Q 362,315 325,316 Q 280,318 290,332 Q 330,332 355,330" fill="none" stroke="url(#pencSmallIntGrad)" stroke-width="${isTarget.ususHalus ? 9 : 7}" stroke-linecap="round" stroke-linejoin="round" filter="${isTarget.ususHalus ? 'url(#pencGlow)' : 'none'}"/>
+    <!-- Lapisan Tekstur Lipatan Usus Halus -->
+    <path d="M 292,262 Q 320,258 350,264 M 295,292 Q 325,290 350,296 M 300,322 Q 325,320 345,324" fill="none" stroke="#fff7ed" stroke-width="1.5" opacity="0.6"/>
+  </g>
+
+  <!-- ORGAN 8: REKTUM & ANUS -->
+  <g id="organ_anus">
+    <path d="M 324,370 L 324,392" stroke="#475569" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="324" cy="396" rx="7" ry="4" fill="${isTarget.anus ? '#e11d48' : '#334155'}" stroke="#0f172a" stroke-width="${isTarget.anus ? 2.5 : 1.8}"/>
+  </g>
+
+  <!-- ==================== ANOTASI & LEADER LINES RESMI ==================== -->
+
+  <!-- SISI KIRI (Left Cards): Hati, Kantung Empedu, Usus Halus -->
+  <!-- 1. HATI -->
+  <g>
+    <rect x="24" y="166" width="130" height="28" rx="6" fill="${isTarget.hati ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.hati ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.hati ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="36" y="185" font-size="11.5" font-weight="700" fill="${isTarget.hati ? '#991b1b' : '#334155'}">Hati (Liver)</text>
+    <line x1="154" y1="180" x2="228" y2="180" stroke="${isTarget.hati ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.hati ? 2 : 1.2}" stroke-dasharray="${isTarget.hati ? 'none' : '3,2'}"/>
+    <circle cx="228" cy="180" r="2.5" fill="${isTarget.hati ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- 2. KANTUNG EMPEDU -->
+  <g>
+    <rect x="24" y="206" width="130" height="28" rx="6" fill="${isTarget.empedu ? '#dcfce7' : '#ffffff'}" stroke="${isTarget.empedu ? '#22c55e' : '#cbd5e1'}" stroke-width="${isTarget.empedu ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="36" y="225" font-size="11.5" font-weight="700" fill="${isTarget.empedu ? '#15803d' : '#334155'}">Kantung Empedu</text>
+    <line x1="154" y1="220" x2="268" y2="216" stroke="${isTarget.empedu ? '#16a34a' : '#94a3b8'}" stroke-width="${isTarget.empedu ? 2 : 1.2}" stroke-dasharray="${isTarget.empedu ? 'none' : '3,2'}"/>
+    <circle cx="268" cy="216" r="2.5" fill="${isTarget.empedu ? '#16a34a' : '#64748b'}"/>
+  </g>
+
+  <!-- 3. USUS HALUS -->
+  <g>
+    <rect x="24" y="282" width="130" height="28" rx="6" fill="${isTarget.ususHalus ? '#ffedd5' : '#ffffff'}" stroke="${isTarget.ususHalus ? '#f97316' : '#cbd5e1'}" stroke-width="${isTarget.ususHalus ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="36" y="301" font-size="11.5" font-weight="700" fill="${isTarget.ususHalus ? '#c2410c' : '#334155'}">Usus Halus</text>
+    <line x1="154" y1="296" x2="280" y2="296" stroke="${isTarget.ususHalus ? '#ea580c' : '#94a3b8'}" stroke-width="${isTarget.ususHalus ? 2 : 1.2}" stroke-dasharray="${isTarget.ususHalus ? 'none' : '3,2'}"/>
+    <circle cx="280" cy="296" r="2.5" fill="${isTarget.ususHalus ? '#ea580c' : '#64748b'}"/>
+  </g>
+
+  <!-- SISI KANAN (Right Cards): Mulut, Kerongkongan, Lambung, Pankreas, Usus Besar, Anus -->
+  <!-- 4. RONGGA MULUT -->
+  <g>
+    <rect x="520" y="52" width="156" height="28" rx="6" fill="${isTarget.mulut ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.mulut ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.mulut ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="71" font-size="11.5" font-weight="700" fill="${isTarget.mulut ? '#991b1b' : '#334155'}">1. Mulut &amp; Gigi</text>
+    <line x1="520" y1="66" x2="336" y2="68" stroke="${isTarget.mulut ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.mulut ? 2 : 1.2}" stroke-dasharray="${isTarget.mulut ? 'none' : '3,2'}"/>
+    <circle cx="336" cy="68" r="2.5" fill="${isTarget.mulut ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- 5. KERONGKONGAN -->
+  <g>
+    <rect x="520" y="112" width="156" height="28" rx="6" fill="${isTarget.kerongkongan ? '#ffedd5' : '#ffffff'}" stroke="${isTarget.kerongkongan ? '#f97316' : '#cbd5e1'}" stroke-width="${isTarget.kerongkongan ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="131" font-size="11.5" font-weight="700" fill="${isTarget.kerongkongan ? '#c2410c' : '#334155'}">2. Kerongkongan</text>
+    <line x1="520" y1="126" x2="330" y2="126" stroke="${isTarget.kerongkongan ? '#f97316' : '#94a3b8'}" stroke-width="${isTarget.kerongkongan ? 2 : 1.2}" stroke-dasharray="${isTarget.kerongkongan ? 'none' : '3,2'}"/>
+    <circle cx="330" cy="126" r="2.5" fill="${isTarget.kerongkongan ? '#f97316' : '#64748b'}"/>
+  </g>
+
+  <!-- 6. LAMBUNG -->
+  <g>
+    <rect x="520" y="182" width="156" height="28" rx="6" fill="${isTarget.lambung ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.lambung ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.lambung ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="201" font-size="11.5" font-weight="700" fill="${isTarget.lambung ? '#991b1b' : '#334155'}">3. Lambung</text>
+    <line x1="520" y1="196" x2="362" y2="196" stroke="${isTarget.lambung ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.lambung ? 2 : 1.2}" stroke-dasharray="${isTarget.lambung ? 'none' : '3,2'}"/>
+    <circle cx="362" cy="196" r="2.5" fill="${isTarget.lambung ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- 7. PANKREAS -->
+  <g>
+    <rect x="520" y="222" width="156" height="28" rx="6" fill="${isTarget.pankreas ? '#fef9c3' : '#ffffff'}" stroke="${isTarget.pankreas ? '#eab308' : '#cbd5e1'}" stroke-width="${isTarget.pankreas ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="241" font-size="11.5" font-weight="700" fill="${isTarget.pankreas ? '#854d0e' : '#334155'}">Pankreas</text>
+    <line x1="520" y1="236" x2="358" y2="228" stroke="${isTarget.pankreas ? '#ca8a04' : '#94a3b8'}" stroke-width="${isTarget.pankreas ? 2 : 1.2}" stroke-dasharray="${isTarget.pankreas ? 'none' : '3,2'}"/>
+    <circle cx="358" cy="228" r="2.5" fill="${isTarget.pankreas ? '#ca8a04' : '#64748b'}"/>
+  </g>
+
+  <!-- 8. USUS BESAR -->
+  <g>
+    <rect x="520" y="262" width="156" height="28" rx="6" fill="${isTarget.ususBesar ? '#e0f2fe' : '#ffffff'}" stroke="${isTarget.ususBesar ? '#0284c7' : '#cbd5e1'}" stroke-width="${isTarget.ususBesar ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="281" font-size="11.5" font-weight="700" fill="${isTarget.ususBesar ? '#0369a1' : '#334155'}">4. Usus Besar (Kolon)</text>
+    <line x1="520" y1="276" x2="394" y2="276" stroke="${isTarget.ususBesar ? '#0284c7' : '#94a3b8'}" stroke-width="${isTarget.ususBesar ? 2 : 1.2}" stroke-dasharray="${isTarget.ususBesar ? 'none' : '3,2'}"/>
+    <circle cx="394" cy="276" r="2.5" fill="${isTarget.ususBesar ? '#0284c7' : '#64748b'}"/>
+  </g>
+
+  <!-- 9. ANUS -->
+  <g>
+    <rect x="520" y="368" width="156" height="28" rx="6" fill="${isTarget.anus ? '#fee2e2' : '#ffffff'}" stroke="${isTarget.anus ? '#ef4444' : '#cbd5e1'}" stroke-width="${isTarget.anus ? 2 : 1}" filter="url(#cardShadow)"/>
+    <text x="532" y="387" font-size="11.5" font-weight="700" fill="${isTarget.anus ? '#991b1b' : '#334155'}">5. Anus / Rektum</text>
+    <line x1="520" y1="382" x2="338" y2="394" stroke="${isTarget.anus ? '#e11d48' : '#94a3b8'}" stroke-width="${isTarget.anus ? 2 : 1.2}" stroke-dasharray="${isTarget.anus ? 'none' : '3,2'}"/>
+    <circle cx="338" cy="394" r="2.5" fill="${isTarget.anus ? '#e11d48' : '#64748b'}"/>
+  </g>
+
+  <!-- ==================== TARGET POINTER DINAMIS HURUF X ==================== -->
+  <g id="target_pointer">
+    <!-- Efek Beacon Berpendar -->
+    <circle cx="${target.x}" cy="${target.y}" r="22" fill="#e11d48" opacity="0.18"/>
+    <circle cx="${target.x}" cy="${target.y}" r="14" fill="#e11d48" opacity="0.3"/>
+    
+    <!-- Panah Penunjuk Merah -->
+    <line x1="${target.side === 'right' ? target.x + 45 : target.x - 45}" y1="${target.y}" x2="${target.side === 'right' ? target.x + 8 : target.x - 8}" y2="${target.y}" stroke="#e11d48" stroke-width="3" marker-end="url(#arrPenc)"/>
+    
+    <!-- Badge Target Huruf X -->
+    <circle cx="${target.side === 'right' ? target.x + 64 : target.x - 64}" cy="${target.y}" r="17" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#pencGlow)"/>
+    <text x="${target.side === 'right' ? target.x + 64 : target.x - 64}" y="${target.y + 6}" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="408" width="696" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="350" y="427" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Perhatikan bagian organ yang ditunjuk oleh huruf "${escapeXml(labelChar)}" (${escapeXml(target.name)})</text>
 </svg>`;
 }
 
@@ -565,124 +911,175 @@ export function renderPeredaranDarahSvg(params: {
   const isTargetVenaPulmonalis = pointer.includes('vena_pulmonalis');
   const isTargetBilikKiri = pointer.includes('bilik_kiri') || pointer.includes('ventrikel_kiri') || pointer === '4' || (!isTargetSerambiKanan && !isTargetBilikKanan && !isTargetSerambiKiri && !isTargetParu && !isTargetTubuh && !isTargetAorta && !isTargetVenaCava && !isTargetArteriPulmonalis && !isTargetVenaPulmonalis);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 350" width="440" height="350" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 350" width="440" height="350" style="background:#f8fafc; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
   <defs>
+    <!-- Gradien Kapiler Pulmonalis & Sistemik -->
+    <linearGradient id="pulmoCapGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <linearGradient id="systemicCapGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="50%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+
+    <!-- Gradien Ruang Jantung -->
+    <linearGradient id="corBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+    <linearGradient id="corRedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="100%" stop-color="#fecaca"/>
+    </linearGradient>
+
+    <!-- Marker Panah Aliran Darah -->
     <marker id="arrBloodBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0284c7" />
     </marker>
     <marker id="arrBloodRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
     </marker>
+
+    <!-- Filter Shadow & Glow -->
+    <filter id="bloodGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.4"/>
+    </filter>
   </defs>
 
-  <!-- Border & Judul -->
-  <rect width="440" height="350" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="220" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Skema Peredaran Darah Manusia</text>
+  <!-- Border Kartu Utama -->
+  <rect x="2" y="2" width="436" height="346" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="2" y="2" width="436" height="30" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="12" y="8" width="4" height="18" rx="2" fill="#e11d48"/>
+  <text x="22" y="21" font-size="12" font-weight="800" fill="#0f172a" letter-spacing="0.2">Skema Peredaran Darah Manusia</text>
 
-  <!-- Paru-paru (Pulmo) Top -->
-  <rect x="150" y="36" width="140" height="36" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+  <!-- ==================== LOOP ATAS: PARU-PARU (PULMO) ==================== -->
+  <rect x="140" y="36" width="160" height="38" rx="8" fill="${isTargetParu ? '#fee2e2' : '#fef2f2'}" stroke="${isTargetParu ? '#ef4444' : '#ef4444'}" stroke-width="${isTargetParu ? 2.5 : 1.8}"/>
+  <!-- Jaring Kapiler Paru -->
+  <path d="M 152,56 Q 185,46 220,56 Q 255,66 288,56" fill="none" stroke="url(#pulmoCapGrad)" stroke-width="2.5" stroke-linecap="round"/>
+
   ${isTargetParu ? `
-    <circle cx="220" cy="54" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="220" y="58.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="220" cy="55" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="220" y="60" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="220" y="58" text-anchor="middle" font-size="12" font-weight="bold" fill="#991b1b">Paru-Paru (Pulmo)</text>
+    <text x="220" y="52" text-anchor="middle" font-size="11" font-weight="800" fill="#991b1b">Paru-Paru (Pulmo)</text>
+    <text x="220" y="65" text-anchor="middle" font-size="8.5" font-weight="600" fill="#ef4444">Pertukaran O₂ &amp; CO₂</text>
   `}
 
-  <!-- Pembuluh Darah: Loop Atas (Peredaran Darah Kecil) -->
-  <!-- Bilik Kanan ke Paru-paru (Arteri Pulmonalis - Biru / CO2) -->
-  <path d="M 155,165 C 100,165 90,85 150,54" fill="none" stroke="#0284c7" stroke-width="3" stroke-dasharray="6,2"/>
-  <path d="M 120,110 L 120,105" marker-end="url(#arrBloodBlue)"/>
+  <!-- Pembuluh Darah Loop Atas: -->
+  <!-- Arteri Pulmonalis (Bilik Kanan ke Paru-paru - Biru / CO2) -->
+  <path d="M 155,165 C 95,165 85,85 150,54" fill="none" stroke="#0284c7" stroke-width="3.2"/>
+  <path d="M 112,110 L 112,104" marker-end="url(#arrBloodBlue)"/>
 
-  <!-- Paru-paru ke Serambi Kiri (Vena Pulmonalis - Merah / O2) -->
-  <path d="M 290,54 C 350,85 340,135 285,135" fill="none" stroke="#e11d48" stroke-width="3"/>
-  <path d="M 325,95 L 325,100" marker-end="url(#arrBloodRed)"/>
+  <!-- Vena Pulmonalis (Paru-paru ke Serambi Kiri - Merah / O2) -->
+  <path d="M 290,54 C 355,85 345,135 285,135" fill="none" stroke="#e11d48" stroke-width="3.2"/>
+  <path d="M 328,95 L 328,101" marker-end="url(#arrBloodRed)"/>
 
-  <!-- Jantung Utama (Cor) 4 Ruang -->
-  <rect x="115" y="105" width="210" height="135" rx="14" fill="#f8fafc" stroke="#0f172a" stroke-width="2.5"/>
-  <text x="220" y="100" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">JANTUNG</text>
+  <!-- ==================== PUSAT: JANTUNG (COR) 4 RUANG ==================== -->
+  <rect x="115" y="102" width="210" height="138" rx="14" fill="#f8fafc" stroke="#0f172a" stroke-width="2.5"/>
+  <rect x="175" y="96" width="90" height="14" rx="3" fill="#0f172a"/>
+  <text x="220" y="106" text-anchor="middle" font-size="9" font-weight="800" fill="#ffffff" letter-spacing="0.8">JANTUNG</text>
 
-  <!-- Pembatas Ruang Jantung -->
-  <line x1="220" y1="105" x2="220" y2="240" stroke="#0f172a" stroke-width="2"/>
-  <line x1="115" y1="172" x2="325" y2="172" stroke="#0f172a" stroke-width="2"/>
+  <!-- Pembatas Septum Vertikal & Katup Horisontal -->
+  <line x1="220" y1="110" x2="220" y2="240" stroke="#0f172a" stroke-width="2.5"/>
+  <line x1="115" y1="171" x2="325" y2="171" stroke="#0f172a" stroke-width="2.5"/>
 
-  <!-- Ruang 1: Serambi Kanan -->
-  <rect x="120" y="110" width="95" height="58" rx="6" fill="#e0f2fe" fill-opacity="0.8"/>
+  <!-- 1. Serambi Kanan -->
+  <rect x="120" y="110" width="95" height="56" rx="6" fill="url(#corBlueGrad)" stroke="${isTargetSerambiKanan ? '#e11d48' : '#0284c7'}" stroke-width="${isTargetSerambiKanan ? 2.5 : 1}"/>
   ${isTargetSerambiKanan ? `
-    <circle cx="167" cy="139" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="167" y="143.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="167" cy="138" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="167" y="143" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="167" y="136" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Serambi Kanan</text>
-    <text x="167" y="152" text-anchor="middle" font-size="9" fill="#0284c7">(Kaya CO₂)</text>
+    <text x="167" y="134" text-anchor="middle" font-size="10.5" font-weight="800" fill="#0369a1">Serambi Kanan</text>
+    <text x="167" y="149" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0284c7">(Kaya CO₂)</text>
   `}
 
-  <!-- Ruang 2: Bilik Kanan -->
-  <rect x="120" y="176" width="95" height="58" rx="6" fill="#bae6fd" fill-opacity="0.8"/>
+  <!-- 2. Bilik Kanan -->
+  <rect x="120" y="176" width="95" height="58" rx="6" fill="url(#corBlueGrad)" stroke="${isTargetBilikKanan ? '#e11d48' : '#0284c7'}" stroke-width="${isTargetBilikKanan ? 2.5 : 1}"/>
   ${isTargetBilikKanan ? `
-    <circle cx="167" cy="205" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="167" y="209.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="167" cy="205" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="167" y="210" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="167" y="202" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Bilik Kanan</text>
-    <text x="167" y="218" text-anchor="middle" font-size="9" fill="#0284c7">(Kaya CO₂)</text>
+    <text x="167" y="201" text-anchor="middle" font-size="10.5" font-weight="800" fill="#0369a1">Bilik Kanan</text>
+    <text x="167" y="216" text-anchor="middle" font-size="8.5" font-weight="600" fill="#0284c7">(Kaya CO₂)</text>
   `}
 
-  <!-- Ruang 3: Serambi Kiri -->
-  <rect x="225" y="110" width="95" height="58" rx="6" fill="#fee2e2" fill-opacity="0.8"/>
+  <!-- 3. Serambi Kiri -->
+  <rect x="225" y="110" width="95" height="56" rx="6" fill="url(#corRedGrad)" stroke="${isTargetSerambiKiri ? '#e11d48' : '#e11d48'}" stroke-width="${isTargetSerambiKiri ? 2.5 : 1}"/>
   ${isTargetSerambiKiri ? `
-    <circle cx="272" cy="139" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="272" y="143.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="272" cy="138" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="272" y="143" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="272" y="136" text-anchor="middle" font-size="11" font-weight="bold" fill="#be123c">Serambi Kiri</text>
-    <text x="272" y="152" text-anchor="middle" font-size="9" fill="#e11d48">(Kaya O₂)</text>
+    <text x="272" y="134" text-anchor="middle" font-size="10.5" font-weight="800" fill="#991b1b">Serambi Kiri</text>
+    <text x="272" y="149" text-anchor="middle" font-size="8.5" font-weight="600" fill="#e11d48">(Kaya O₂)</text>
   `}
 
-  <!-- Ruang 4: Bilik Kiri -->
-  <rect x="225" y="176" width="95" height="58" rx="6" fill="#fecaca" fill-opacity="0.8"/>
+  <!-- 4. Bilik Kiri -->
+  <rect x="225" y="176" width="95" height="58" rx="6" fill="url(#corRedGrad)" stroke="${isTargetBilikKiri ? '#e11d48' : '#e11d48'}" stroke-width="${isTargetBilikKiri ? 2.5 : 1.5}"/>
   ${isTargetBilikKiri ? `
-    <circle cx="272" cy="205" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="272" y="209.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="272" cy="205" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="272" y="210" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="272" y="202" text-anchor="middle" font-size="11" font-weight="bold" fill="#be123c">Bilik Kiri</text>
-    <text x="272" y="218" text-anchor="middle" font-size="9" fill="#e11d48">(Kaya O₂)</text>
+    <text x="272" y="201" text-anchor="middle" font-size="10.5" font-weight="800" fill="#991b1b">Bilik Kiri</text>
+    <text x="272" y="216" text-anchor="middle" font-size="8.5" font-weight="600" fill="#e11d48">(Kaya O₂)</text>
   `}
 
-  <!-- Pembuluh Darah: Loop Bawah (Peredaran Darah Besar) -->
-  <!-- Bilik Kiri ke Seluruh Tubuh (Aorta - Merah / O2) -->
-  <path d="M 285,234 C 360,245 350,290 290,295" fill="none" stroke="#e11d48" stroke-width="3"/>
-  <path d="M 330,265 L 330,270" marker-end="url(#arrBloodRed)"/>
+  <!-- Simbol Katup Jantung -->
+  <path d="M 160,168 L 167,174 L 174,168" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M 265,168 L 272,174 L 279,168" fill="none" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/>
 
-  <!-- Seluruh Tubuh ke Serambi Kanan (Vena Cava - Biru / CO2) -->
-  <path d="M 150,295 C 90,290 85,150 155,135" fill="none" stroke="#0284c7" stroke-width="3" stroke-dasharray="6,2"/>
-  <path d="M 97,220 L 97,215" marker-end="url(#arrBloodBlue)"/>
+  <!-- ==================== LOOP BAWAH: SELURUH TUBUH (SISTEMIK) ==================== -->
+  <!-- Aorta (Bilik Kiri ke Seluruh Tubuh - Merah / O2) -->
+  <path d="M 285,234 C 365,245 355,290 290,295" fill="none" stroke="#e11d48" stroke-width="3.2"/>
+  <path d="M 333,265 L 333,271" marker-end="url(#arrBloodRed)"/>
 
-  <!-- Seluruh Tubuh (Sistemik) Bottom -->
-  <rect x="140" y="278" width="160" height="36" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+  <!-- Vena Cava (Seluruh Tubuh ke Serambi Kanan - Biru / CO2) -->
+  <path d="M 150,295 C 85,290 80,150 155,135" fill="none" stroke="#0284c7" stroke-width="3.2"/>
+  <path d="M 92,220 L 92,214" marker-end="url(#arrBloodBlue)"/>
+
+  <!-- Seluruh Tubuh Bottom Card -->
+  <rect x="140" y="278" width="160" height="38" rx="8" fill="${isTargetTubuh ? '#fee2e2' : '#f1f5f9'}" stroke="${isTargetTubuh ? '#ef4444' : '#475569'}" stroke-width="${isTargetTubuh ? 2.5 : 1.8}"/>
+  <!-- Jaring Kapiler Tubuh -->
+  <path d="M 152,298 Q 185,308 220,298 Q 255,288 288,298" fill="none" stroke="url(#systemicCapGrad)" stroke-width="2.5" stroke-linecap="round"/>
+
   ${isTargetTubuh ? `
-    <circle cx="220" cy="296" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="220" y="300.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="220" cy="297" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#bloodGlow)"/>
+    <text x="220" y="302" text-anchor="middle" font-size="13" font-weight="900" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="220" y="300" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">Seluruh Tubuh</text>
+    <text x="220" y="294" text-anchor="middle" font-size="11" font-weight="800" fill="#1e293b">Seluruh Tubuh</text>
+    <text x="220" y="307" text-anchor="middle" font-size="8.5" font-weight="600" fill="#475569">Jaringan Tubuh (Sistemik)</text>
   `}
 
-  <!-- Label Pembuluh Darah dengan Background Pill (Anti-Overlap) -->
+  <!-- ==================== CALLOUTS PEMBULUH DARAH UTAMA ==================== -->
+  <!-- Arteri Pulmonalis (Kiri Atas) -->
   <g>
-    <rect x="12" y="80" width="105" height="20" rx="4" fill="${isTargetArteriPulmonalis ? '#e11d48' : '#ffffff'}" stroke="${isTargetArteriPulmonalis ? '#e11d48' : '#0284c7'}" stroke-width="1.5"/>
-    <text x="64" y="94" text-anchor="middle" font-size="${isTargetArteriPulmonalis ? '12' : '9.5'}" font-weight="bold" fill="${isTargetArteriPulmonalis ? '#ffffff' : '#0284c7'}">${isTargetArteriPulmonalis ? escapeXml(labelChar) : 'Arteri Pulmonalis'}</text>
-  </g>
-  <g>
-    <rect x="323" y="80" width="105" height="20" rx="4" fill="${isTargetVenaPulmonalis ? '#e11d48' : '#ffffff'}" stroke="${isTargetVenaPulmonalis ? '#e11d48' : '#e11d48'}" stroke-width="1.5"/>
-    <text x="375" y="94" text-anchor="middle" font-size="${isTargetVenaPulmonalis ? '12' : '9.5'}" font-weight="bold" fill="${isTargetVenaPulmonalis ? '#ffffff' : '#e11d48'}">${isTargetVenaPulmonalis ? escapeXml(labelChar) : 'Vena Pulmonalis'}</text>
-  </g>
-  <g>
-    <rect x="330" y="240" width="70" height="20" rx="4" fill="${isTargetAorta ? '#e11d48' : '#ffffff'}" stroke="#e11d48" stroke-width="1.5"/>
-    <text x="365" y="254" text-anchor="middle" font-size="${isTargetAorta ? '12' : '9.5'}" font-weight="bold" fill="${isTargetAorta ? '#ffffff' : '#e11d48'}">${isTargetAorta ? escapeXml(labelChar) : 'Aorta'}</text>
-  </g>
-  <g>
-    <rect x="25" y="240" width="85" height="20" rx="4" fill="${isTargetVenaCava ? '#e11d48' : '#ffffff'}" stroke="${isTargetVenaCava ? '#e11d48' : '#0284c7'}" stroke-width="1.5"/>
-    <text x="67" y="254" text-anchor="middle" font-size="${isTargetVenaCava ? '12' : '9.5'}" font-weight="bold" fill="${isTargetVenaCava ? '#ffffff' : '#0284c7'}">${isTargetVenaCava ? escapeXml(labelChar) : 'Vena Cava'}</text>
+    <rect x="10" y="80" width="112" height="22" rx="5" fill="${isTargetArteriPulmonalis ? '#fee2e2' : '#ffffff'}" stroke="${isTargetArteriPulmonalis ? '#e11d48' : '#0284c7'}" stroke-width="${isTargetArteriPulmonalis ? 2 : 1.2}"/>
+    <text x="66" y="95" text-anchor="middle" font-size="${isTargetArteriPulmonalis ? '11.5' : '9.5'}" font-weight="800" fill="${isTargetArteriPulmonalis ? '#991b1b' : '#0284c7'}">${isTargetArteriPulmonalis ? 'Arteri Pulm: [' + escapeXml(labelChar) + ']' : 'Arteri Pulmonalis'}</text>
   </g>
 
-  <!-- Keterangan Soal -->
-  <text x="220" y="338" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Vena Pulmonalis (Kanan Atas) -->
+  <g>
+    <rect x="318" y="80" width="112" height="22" rx="5" fill="${isTargetVenaPulmonalis ? '#fee2e2' : '#ffffff'}" stroke="${isTargetVenaPulmonalis ? '#e11d48' : '#e11d48'}" stroke-width="${isTargetVenaPulmonalis ? 2 : 1.2}"/>
+    <text x="374" y="95" text-anchor="middle" font-size="${isTargetVenaPulmonalis ? '11.5' : '9.5'}" font-weight="800" fill="${isTargetVenaPulmonalis ? '#991b1b' : '#e11d48'}">${isTargetVenaPulmonalis ? 'Vena Pulm: [' + escapeXml(labelChar) + ']' : 'Vena Pulmonalis'}</text>
+  </g>
+
+  <!-- Aorta (Kanan Bawah) -->
+  <g>
+    <rect x="325" y="240" width="90" height="22" rx="5" fill="${isTargetAorta ? '#fee2e2' : '#ffffff'}" stroke="#e11d48" stroke-width="${isTargetAorta ? 2 : 1.2}"/>
+    <text x="370" y="255" text-anchor="middle" font-size="${isTargetAorta ? '11.5' : '9.5'}" font-weight="800" fill="${isTargetAorta ? '#991b1b' : '#e11d48'}">${isTargetAorta ? 'Aorta: [' + escapeXml(labelChar) + ']' : 'Aorta'}</text>
+  </g>
+
+  <!-- Vena Cava (Kiri Bawah) -->
+  <g>
+    <rect x="18" y="240" width="95" height="22" rx="5" fill="${isTargetVenaCava ? '#fee2e2' : '#ffffff'}" stroke="${isTargetVenaCava ? '#e11d48' : '#0284c7'}" stroke-width="${isTargetVenaCava ? 2 : 1.2}"/>
+    <text x="65" y="255" text-anchor="middle" font-size="${isTargetVenaCava ? '11.5' : '9.5'}" font-weight="800" fill="${isTargetVenaCava ? '#991b1b' : '#0284c7'}">${isTargetVenaCava ? 'Vena Cava: [' + escapeXml(labelChar) + ']' : 'Vena Cava'}</text>
+  </g>
+
+  <!-- Footer Banner Prompt Ujian -->
+  <rect x="2" y="324" width="436" height="24" rx="6" fill="#f1f5f9"/>
+  <text x="220" y="340" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

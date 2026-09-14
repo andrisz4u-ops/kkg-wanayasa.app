@@ -987,38 +987,46 @@ export function renderJaringKubusSvg(params: { s?: number; unit?: string; pola?:
   const cs = 55;
   const gap = 1;
 
-  let faces: { x: number; y: number; label: string }[] = [];
+  let faces: { x: number; y: number; label: string; num: number }[] = [];
 
   if (pola === 'tangga') {
     faces = [
-      { x: cs + gap, y: 0, label: 'Atas' },
-      { x: 0, y: cs + gap, label: 'Kiri' },
-      { x: cs + gap, y: cs + gap, label: 'Depan' },
-      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' },
-      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' },
-      { x: 3 * (cs + gap), y: 2 * (cs + gap), label: 'Bawah' },
+      { x: cs + gap, y: 0, label: 'Atas', num: 1 },
+      { x: 0, y: cs + gap, label: 'Kiri', num: 2 },
+      { x: cs + gap, y: cs + gap, label: 'Depan', num: 3 },
+      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan', num: 4 },
+      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang', num: 5 },
+      { x: 3 * (cs + gap), y: 2 * (cs + gap), label: 'Bawah', num: 6 },
     ];
   } else if (pola === 't') {
     faces = [
-      { x: 0, y: 0, label: 'Kiri' },
-      { x: cs + gap, y: 0, label: 'Depan' },
-      { x: 2 * (cs + gap), y: 0, label: 'Kanan' },
-      { x: cs + gap, y: cs + gap, label: 'Bawah' },
-      { x: cs + gap, y: 2 * (cs + gap), label: 'Belakang' },
-      { x: cs + gap, y: 3 * (cs + gap), label: 'Atas' },
+      { x: 0, y: 0, label: 'Kiri', num: 1 },
+      { x: cs + gap, y: 0, label: 'Depan', num: 2 },
+      { x: 2 * (cs + gap), y: 0, label: 'Kanan', num: 3 },
+      { x: cs + gap, y: cs + gap, label: 'Bawah', num: 4 },
+      { x: cs + gap, y: 2 * (cs + gap), label: 'Belakang', num: 5 },
+      { x: cs + gap, y: 3 * (cs + gap), label: 'Atas', num: 6 },
     ];
   } else {
     faces = [
-      { x: cs + gap, y: 0, label: 'Atas' },
-      { x: 0, y: cs + gap, label: 'Kiri' },
-      { x: cs + gap, y: cs + gap, label: 'Depan' },
-      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan' },
-      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang' },
-      { x: cs + gap, y: 2 * (cs + gap), label: 'Bawah' },
+      { x: cs + gap, y: 0, label: 'Atas', num: 1 },
+      { x: 0, y: cs + gap, label: 'Kiri', num: 2 },
+      { x: cs + gap, y: cs + gap, label: 'Depan', num: 3 },
+      { x: 2 * (cs + gap), y: cs + gap, label: 'Kanan', num: 4 },
+      { x: 3 * (cs + gap), y: cs + gap, label: 'Belakang', num: 5 },
+      { x: cs + gap, y: 2 * (cs + gap), label: 'Bawah', num: 6 },
     ];
   }
 
-  const colors = ['#dbeafe', '#fce7f3', '#d1fae5', '#fef3c7', '#e0e7ff', '#fecaca'];
+  const colors = [
+    { bg: '#dbeafe', stroke: '#2563eb', text: '#1e40af' }, // Atas
+    { bg: '#fce7f3', stroke: '#db2777', text: '#9d174d' }, // Kiri
+    { bg: '#d1fae5', stroke: '#059669', text: '#065f46' }, // Depan
+    { bg: '#fef3c7', stroke: '#d97706', text: '#92400e' }, // Kanan
+    { bg: '#e0e7ff', stroke: '#4f46e5', text: '#3730a3' }, // Belakang
+    { bg: '#ffedd5', stroke: '#ea580c', text: '#9a3412' }  // Bawah
+  ];
+
   const maxCols = Math.max(...faces.map(f => f.x / (cs + gap))) + 1;
   const maxRows = Math.max(...faces.map(f => f.y / (cs + gap))) + 1;
 
@@ -1029,13 +1037,24 @@ export function renderJaringKubusSvg(params: { s?: number; unit?: string; pola?:
 
   let rects = '';
   faces.forEach((f, i) => {
-    rects += `<rect x="${ox + f.x}" y="${oy + f.y}" width="${cs}" height="${cs}" fill="${colors[i]}" stroke="#1e40af" stroke-width="2" rx="2"/>`;
-    rects += `<text x="${ox + f.x + cs / 2}" y="${oy + f.y + cs / 2 + 4}" text-anchor="middle" font-size="9" fill="#475569">${f.label}</text>`;
+    const c = colors[i % colors.length];
+    rects += `
+      <!-- Muka ${f.num}: ${f.label} -->
+      <rect x="${ox + f.x}" y="${oy + f.y}" width="${cs}" height="${cs}" fill="${c.bg}" stroke="${c.stroke}" stroke-width="2" rx="3"/>
+      <!-- Garis Lipat Internal Putus-Putus -->
+      <rect x="${ox + f.x + 3}" y="${oy + f.y + 3}" width="${cs - 6}" height="${cs - 6}" fill="none" stroke="${c.stroke}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.6"/>
+      <!-- Badge Nomor Muka -->
+      <circle cx="${ox + f.x + cs / 2}" cy="${oy + f.y + cs / 2 - 6}" r="9" fill="#ffffff" stroke="${c.stroke}" stroke-width="1.2"/>
+      <text x="${ox + f.x + cs / 2}" y="${oy + f.y + cs / 2 - 2.5}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="${c.text}">${f.num}</text>
+      <!-- Label Posisi Muka -->
+      <text x="${ox + f.x + cs / 2}" y="${oy + f.y + cs / 2 + 13}" text-anchor="middle" font-size="8.5" font-weight="600" fill="${c.text}">${f.label}</text>
+    `;
   });
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect x="2" y="2" width="${w - 4}" height="${h - 4}" rx="6" fill="#ffffff" stroke="#f1f5f9" stroke-width="1"/>
   ${rects}
-  <text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Kubus Pola ${pola.toUpperCase()} (s = ${s} ${unit})</text>
+  <text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Jaring-jaring Kubus Pola ${pola.toUpperCase()} (s = ${s} ${unit})</text>
 </svg>`;
 }
 
@@ -1055,35 +1074,41 @@ export function renderJaringBalokSvg(params: { p?: number; l?: number; t?: numbe
   const ts = t * scale;
 
   const ox = 30;
-  const oy = 20;
-  const colors = ['#dbeafe', '#d1fae5', '#fef3c7', '#fce7f3', '#e0e7ff', '#fecaca'];
+  const oy = 22;
 
-  // Layout T: atas (t×l), kiri (p×t), depan (p×l), kanan (p×t), bawah (t×l), belakang (p×l di bawah depan)
+  // 3 Pasang Muka Kongruen:
+  // Pasang 1: Depan & Belakang (p × l)
+  // Pasang 2: Atas & Bawah (p × t)
+  // Pasang 3: Kiri & Kanan (t × l)
   const faces = [
-    { x: ts, y: 0, w: ps, h: ts, label: 'Atas', color: colors[0] },
-    { x: 0, y: ts, w: ts, h: ls, label: 'Kiri', color: colors[1] },
-    { x: ts, y: ts, w: ps, h: ls, label: 'Depan', color: colors[2] },
-    { x: ts + ps, y: ts, w: ts, h: ls, label: 'Kanan', color: colors[3] },
-    { x: ts + ps + ts, y: ts, w: ps, h: ls, label: 'Belakang', color: colors[4] },
-    { x: ts, y: ts + ls, w: ps, h: ts, label: 'Bawah', color: colors[5] },
+    { x: ts, y: 0, w: ps, h: ts, label: 'Atas', bg: '#fef3c7', stroke: '#d97706', text: '#92400e' },
+    { x: 0, y: ts, w: ts, h: ls, label: 'Kiri', bg: '#d1fae5', stroke: '#059669', text: '#065f46' },
+    { x: ts, y: ts, w: ps, h: ls, label: 'Depan', bg: '#dbeafe', stroke: '#2563eb', text: '#1e40af' },
+    { x: ts + ps, y: ts, w: ts, h: ls, label: 'Kanan', bg: '#d1fae5', stroke: '#059669', text: '#065f46' },
+    { x: ts + ps + ts, y: ts, w: ps, h: ls, label: 'Belakang', bg: '#dbeafe', stroke: '#2563eb', text: '#1e40af' },
+    { x: ts, y: ts + ls, w: ps, h: ts, label: 'Bawah', bg: '#fef3c7', stroke: '#d97706', text: '#92400e' },
   ];
 
   let rects = '';
   faces.forEach(f => {
-    rects += `<rect x="${ox + f.x}" y="${oy + f.y}" width="${f.w}" height="${f.h}" fill="${f.color}" stroke="#1e40af" stroke-width="1.8" rx="1"/>`;
-    rects += `<text x="${ox + f.x + f.w / 2}" y="${oy + f.y + f.h / 2 + 4}" text-anchor="middle" font-size="9" fill="#475569">${f.label}</text>`;
+    rects += `
+      <rect x="${ox + f.x}" y="${oy + f.y}" width="${f.w}" height="${f.h}" fill="${f.bg}" stroke="${f.stroke}" stroke-width="1.8" rx="2"/>
+      <rect x="${ox + f.x + 2}" y="${oy + f.y + 2}" width="${f.w - 4}" height="${f.h - 4}" fill="none" stroke="${f.stroke}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.5"/>
+      <text x="${ox + f.x + f.w / 2}" y="${oy + f.y + f.h / 2 + 4}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="${f.text}">${f.label}</text>
+    `;
   });
 
   const totalW = 2 * ts + 2 * ps + ox * 2;
   const totalH = ts + ls + ts + oy * 2 + 30;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect x="2" y="2" width="${totalW - 4}" height="${totalH - 4}" rx="6" fill="#ffffff" stroke="#f1f5f9" stroke-width="1"/>
   ${rects}
-  <!-- Label dimensi -->
-  <text x="${ox + ts + ps / 2}" y="${oy - 5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">p = ${p} ${unit}</text>
-  <text x="${ox - 5}" y="${oy + ts + ls / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">l = ${l} ${unit}</text>
-  <text x="${ox + ts / 2}" y="${oy - 5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#7c3aed">t = ${t} ${unit}</text>
-  <text x="${totalW / 2}" y="${totalH - 6}" text-anchor="middle" font-size="11" fill="#64748b">Jaring-jaring Balok (${p}×${l}×${t} ${unit})</text>
+  <!-- Label Dimensi Panjang (p), Lebar (l), dan Tinggi (t) -->
+  <text x="${ox + ts + ps / 2}" y="${oy - 6}" text-anchor="middle" font-size="11" font-weight="bold" fill="#e11d48">p = ${p} ${unit}</text>
+  <text x="${ox - 6}" y="${oy + ts + ls / 2 + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#0284c7">l = ${l} ${unit}</text>
+  <text x="${ox + ts / 2}" y="${oy - 6}" text-anchor="middle" font-size="11" font-weight="bold" fill="#7c3aed">t = ${t} ${unit}</text>
+  <text x="${totalW / 2}" y="${totalH - 8}" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">Jaring-jaring Balok (${p}×${l}×${t} ${unit})</text>
 </svg>`;
 }
 
@@ -1554,35 +1579,68 @@ export function renderJaringLimasSegiempatSvg(params: {
   const h = 55;
   const labelChar = params.label || 'X';
 
-  const cx = 180;
+  const cx = 175;
   const cy = 135;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="380" height="270" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri 3D: Jaring-jaring Limas Segiempat</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <!-- Gradien Alas Persegi -->
+    <linearGradient id="jaringLimasAlasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
 
-  <!-- Alas Persegi Tengah -->
-  <rect x="${cx - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
-  <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">Alas</text>
+    <!-- Gradien Sisi Tegak Segitiga -->
+    <linearGradient id="jaringLimasTriGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
 
-  <!-- 4 Segitiga Selubung Terbuka (Atas, Bawah, Kiri, Kanan) -->
-  <polygon points="${cx - s / 2},${cy - s / 2} ${cx + s / 2},${cy - s / 2} ${cx},${cy - s / 2 - h}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
-  <polygon points="${cx - s / 2},${cy + s / 2} ${cx + s / 2},${cy + s / 2} ${cx},${cy + s / 2 + h}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
-  <polygon points="${cx - s / 2},${cy - s / 2} ${cx - s / 2},${cy + s / 2} ${cx - s / 2 - h},${cy}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
-  <polygon points="${cx + s / 2},${cy - s / 2} ${cx + s / 2},${cy + s / 2} ${cx + s / 2 + h},${cy}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+    <!-- Drop Shadow Badge -->
+    <filter id="badgeShdwLimasNet" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.22"/>
+    </filter>
+  </defs>
 
-  <!-- Target Badge X pada salah satu segitiga sisi tegak -->
-  <circle cx="${cx}" cy="${cy - s / 2 - h / 2}" r="11" fill="#e11d48"/>
-  <text x="${cx}" y="${cy - s / 2 - h / 2 + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Frame Luar -->
+  <rect x="2" y="2" width="376" height="266" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="190" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri 3D: Jaring-jaring Limas Segiempat</text>
 
-  <!-- Keterangan Sisi Kanan -->
-  <g transform="translate(295, 95)">
-    <rect width="70" height="70" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="35" y="20" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">Bentuk</text>
-    <text x="35" y="38" text-anchor="middle" font-size="8.5" fill="#475569">1 Persegi</text>
-    <text x="35" y="52" text-anchor="middle" font-size="8.5" fill="#475569">4 Segitiga</text>
+  <!-- 4 Segitiga Selimut Mekar (Atas, Bawah, Kiri, Kanan) -->
+  <polygon points="${cx - s / 2},${cy - s / 2} ${cx + s / 2},${cy - s / 2} ${cx},${cy - s / 2 - h}" fill="url(#jaringLimasTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="${cx - s / 2},${cy + s / 2} ${cx + s / 2},${cy + s / 2} ${cx},${cy + s / 2 + h}" fill="url(#jaringLimasTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="${cx - s / 2},${cy - s / 2} ${cx - s / 2},${cy + s / 2} ${cx - s / 2 - h},${cy}" fill="url(#jaringLimasTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="${cx + s / 2},${cy - s / 2} ${cx + s / 2},${cy + s / 2} ${cx + s / 2 + h},${cy}" fill="url(#jaringLimasTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
+
+  <!-- Garis Lipatan Putus-Putus pada Pertemuan Alas & Segitiga -->
+  <line x1="${cx - s / 2}" y1="${cy - s / 2}" x2="${cx + s / 2}" y2="${cy - s / 2}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
+  <line x1="${cx - s / 2}" y1="${cy + s / 2}" x2="${cx + s / 2}" y2="${cy + s / 2}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
+  <line x1="${cx - s / 2}" y1="${cy - s / 2}" x2="${cx - s / 2}" y2="${cy + s / 2}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
+  <line x1="${cx + s / 2}" y1="${cy - s / 2}" x2="${cx + s / 2}" y2="${cy + s / 2}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
+
+  <!-- Alas Persegi Pusat -->
+  <rect x="${cx - s / 2}" y="${cy - s / 2}" width="${s}" height="${s}" fill="url(#jaringLimasAlasGrad)" stroke="#0284c7" stroke-width="2" rx="1"/>
+  <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Alas</text>
+
+  <!-- Garis Tinggi Segitiga Atas (Panduan Lipat) -->
+  <line x1="${cx}" y1="${cy - s / 2}" x2="${cx}" y2="${cy - s / 2 - h}" stroke="#d97706" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Target Badge X pada Segitiga Sisi Tegak Atas -->
+  <g transform="translate(${cx}, ${cy - s / 2 - h / 2 - 2})" filter="url(#badgeShdwLimasNet)">
+    <circle cx="0" cy="0" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
+  <!-- Kartu Spesifikasi Geometri di Kanan (Bebas Tabrakan) -->
+  <g transform="translate(296, 100)">
+    <rect x="-38" y="-35" width="76" height="70" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="0" y="-17" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Komposisi</text>
+    <line x1="-28" y1="-9" x2="28" y2="-9" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="0" y="7" text-anchor="middle" font-size="9" fill="#475569">1 Alas Persegi</text>
+    <text x="0" y="23" text-anchor="middle" font-size="9" fill="#475569">4 Sisi Segitiga</text>
+  </g>
+
+  <!-- Prompt Pertanyaan Pedagogis -->
   <text x="190" y="254" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian bangun sisi tegak yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
@@ -1644,28 +1702,74 @@ export function renderJaringPrismaSegitigaSvg(params: {
   const h = 60;
   const triH = 45;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 270" width="400" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="400" height="270" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="200" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri 3D: Jaring-jaring Prisma Segitiga</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 270" width="400" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <!-- Gradien Persegi Panjang Selubung -->
+    <linearGradient id="prismaNetRectGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+
+    <!-- Gradien Alas Tengah -->
+    <linearGradient id="prismaNetAlasGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+
+    <!-- Gradien Segitiga Penutup -->
+    <linearGradient id="prismaNetTriGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+
+    <!-- Drop Shadow Badge -->
+    <filter id="badgeShdwPrismaNet" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Frame Luar -->
+  <rect x="2" y="2" width="396" height="266" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="200" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Geometri 3D: Jaring-jaring Prisma Segitiga</text>
 
   <!-- 3 Persegi Panjang Selubung Berjejer -->
-  <rect x="${startX}" y="${startY}" width="${w}" height="${h}" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.8"/>
+  <rect x="${startX}" y="${startY}" width="${w}" height="${h}" fill="url(#prismaNetRectGrad)" stroke="#334155" stroke-width="1.8" rx="2"/>
   <text x="${startX + w / 2}" y="${startY + h / 2 + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Sisi 1</text>
 
-  <rect x="${startX + w}" y="${startY}" width="${w}" height="${h}" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <rect x="${startX + w}" y="${startY}" width="${w}" height="${h}" fill="url(#prismaNetAlasGrad)" stroke="#0284c7" stroke-width="2" rx="2"/>
   <text x="${startX + w + w / 2}" y="${startY + h / 2 + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Alas</text>
 
-  <rect x="${startX + 2 * w}" y="${startY}" width="${w}" height="${h}" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.8"/>
+  <rect x="${startX + 2 * w}" y="${startY}" width="${w}" height="${h}" fill="url(#prismaNetRectGrad)" stroke="#334155" stroke-width="1.8" rx="2"/>
   <text x="${startX + 2 * w + w / 2}" y="${startY + h / 2 + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Sisi 2</text>
 
-  <!-- 2 Segitiga Tutup (Atas & Bawah pada persegi panjang tengah) -->
-  <polygon points="${startX + w},${startY} ${startX + 2 * w},${startY} ${startX + w + w / 2},${startY - triH}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
-  <polygon points="${startX + w},${startY + h} ${startX + 2 * w},${startY + h} ${startX + w + w / 2},${startY + h + triH}" fill="#fef3c7" stroke="#d97706" stroke-width="1.8"/>
+  <!-- Garis Lipatan Putus-Putus pada Sambungan Antar Persegi -->
+  <line x1="${startX + w}" y1="${startY}" x2="${startX + w}" y2="${startY + h}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
+  <line x1="${startX + 2 * w}" y1="${startY}" x2="${startX + 2 * w}" y2="${startY + h}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,3"/>
 
-  <!-- Target Badge X pada segitiga penutup -->
-  <circle cx="${startX + w + w / 2}" cy="${startY - triH / 2}" r="11" fill="#e11d48"/>
-  <text x="${startX + w + w / 2}" y="${startY - triH / 2 + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- 2 Segitiga Penutup (Atas & Bawah pada persegi panjang tengah) -->
+  <polygon points="${startX + w},${startY} ${startX + 2 * w},${startY} ${startX + w + w / 2},${startY - triH}" fill="url(#prismaNetTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="${startX + w},${startY + h} ${startX + 2 * w},${startY + h} ${startX + w + w / 2},${startY + h + triH}" fill="url(#prismaNetTriGrad)" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/>
 
+  <!-- Garis Lipatan Putus-Putus pada Segitiga -->
+  <line x1="${startX + w}" y1="${startY}" x2="${startX + 2 * w}" y2="${startY}" stroke="#d97706" stroke-width="1.8" stroke-dasharray="4,3"/>
+  <line x1="${startX + w}" y1="${startY + h}" x2="${startX + 2 * w}" y2="${startY + h}" stroke="#d97706" stroke-width="1.8" stroke-dasharray="4,3"/>
+
+  <!-- Target Badge X pada Segitiga Penutup Atas -->
+  <g transform="translate(${startX + w + w / 2}, ${startY - triH / 2 - 2})" filter="url(#badgeShdwPrismaNet)">
+    <circle cx="0" cy="0" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+
+  <!-- Kartu Spesifikasi Bangun di Sisi Kanan (Bebas Tabrakan) -->
+  <g transform="translate(332, 125)">
+    <rect x="-42" y="-38" width="84" height="76" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="0" y="-20" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Komponen</text>
+    <line x1="-32" y1="-12" x2="32" y2="-12" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="0" y="4" text-anchor="middle" font-size="9" fill="#475569">3 Persegi Pjg</text>
+    <text x="0" y="20" text-anchor="middle" font-size="9" fill="#475569">2 Segitiga</text>
+  </g>
+
+  <!-- Prompt Pertanyaan Pedagogis Bawah -->
   <text x="200" y="254" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bentuk bangun datar yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }

@@ -1120,8 +1120,8 @@ export function renderKoordinatKartesiusSvg(params: { titik?: Array<{ x: number;
 
   const maxRange = Math.max(xRange, yRange, 1);
   const gridStep = Math.min(28, Math.max(14, Math.floor(145 / maxRange)));
-  const w = Math.max(360, (xRange * gridStep + 30) * 2);
-  const h = Math.max(320, (yRange * gridStep + 35) * 2);
+  const w = Math.max(380, (xRange * gridStep + 35) * 2);
+  const h = Math.max(340, (yRange * gridStep + 38) * 2);
   const cx = w / 2;
   const cy = h / 2 - 10;
 
@@ -1129,42 +1129,91 @@ export function renderKoordinatKartesiusSvg(params: { titik?: Array<{ x: number;
   let grid = '';
   for (let i = -xRange; i <= xRange; i++) {
     const gx = cx + i * gridStep;
-    grid += `<line x1="${gx}" y1="${cy - yRange * gridStep}" x2="${gx}" y2="${cy + yRange * gridStep}" stroke="${i === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${i === 0 ? 2 : 0.8}"/>`;
-    if (i !== 0) grid += `<text x="${gx}" y="${cy + 14}" text-anchor="middle" font-size="9" fill="#64748b">${i}</text>`;
+    const isAxis = i === 0;
+    grid += `<line x1="${gx}" y1="${cy - yRange * gridStep}" x2="${gx}" y2="${cy + yRange * gridStep}" stroke="${isAxis ? '#0f172a' : '#e2e8f0'}" stroke-width="${isAxis ? 2 : 0.8}"/>`;
+    if (!isAxis) {
+      grid += `<line x1="${gx}" y1="${cy - 3}" x2="${gx}" y2="${cy + 3}" stroke="#0f172a" stroke-width="1.2"/>`;
+      grid += `<text x="${gx}" y="${cy + 14}" text-anchor="middle" font-size="9" fill="#475569">${i}</text>`;
+    }
   }
   for (let j = -yRange; j <= yRange; j++) {
     const gy = cy - j * gridStep;
-    grid += `<line x1="${cx - xRange * gridStep}" y1="${gy}" x2="${cx + xRange * gridStep}" y2="${gy}" stroke="${j === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${j === 0 ? 2 : 0.8}"/>`;
-    if (j !== 0) grid += `<text x="${cx - 12}" y="${gy + 4}" text-anchor="end" font-size="9" fill="#64748b">${j}</text>`;
+    const isAxis = j === 0;
+    grid += `<line x1="${cx - xRange * gridStep}" y1="${gy}" x2="${cx + xRange * gridStep}" y2="${gy}" stroke="${isAxis ? '#0f172a' : '#e2e8f0'}" stroke-width="${isAxis ? 2 : 0.8}"/>`;
+    if (!isAxis) {
+      grid += `<line x1="${cx - 3}" y1="${gy}" x2="${cx + 3}" y2="${gy}" stroke="#0f172a" stroke-width="1.2"/>`;
+      grid += `<text x="${cx - 8}" y="${gy + 3.5}" text-anchor="end" font-size="9" fill="#475569">${j}</text>`;
+    }
   }
 
-  // Axis labels
-  grid += `<text x="${cx + xRange * gridStep + 8}" y="${cy + 4}" font-size="12" font-weight="bold" fill="#0f172a">X</text>`;
-  grid += `<text x="${cx + 8}" y="${cy - yRange * gridStep - 4}" font-size="12" font-weight="bold" fill="#0f172a">Y</text>`;
-  grid += `<text x="${cx - 10}" y="${cy + 14}" font-size="9" fill="#64748b">O</text>`;
+  // Quadrant Labels (Subtle pedagogical watermark)
+  const qPad = 12;
+  const qRight = cx + xRange * gridStep - qPad;
+  const qLeft = cx - xRange * gridStep + qPad;
+  const qTop = cy - yRange * gridStep + 18;
+  const qBottom = cy + yRange * gridStep - 10;
 
-  // Axis arrows
-  grid += `<polygon points="${cx + xRange * gridStep + 4},${cy} ${cx + xRange * gridStep - 2},${cy - 4} ${cx + xRange * gridStep - 2},${cy + 4}" fill="#0f172a"/>`;
-  grid += `<polygon points="${cx},${cy - yRange * gridStep - 4} ${cx - 4},${cy - yRange * gridStep + 2} ${cx + 4},${cy - yRange * gridStep + 2}" fill="#0f172a"/>`;
+  const quadrants = `
+    <text x="${qRight}" y="${qTop}" text-anchor="end" font-size="9.5" font-weight="bold" fill="#94a3b8" fill-opacity="0.45">Kuadran I (+,+)</text>
+    <text x="${qLeft}" y="${qTop}" text-anchor="start" font-size="9.5" font-weight="bold" fill="#94a3b8" fill-opacity="0.45">Kuadran II (-,+)</text>
+    <text x="${qLeft}" y="${qBottom}" text-anchor="start" font-size="9.5" font-weight="bold" fill="#94a3b8" fill-opacity="0.45">Kuadran III (-,-)</text>
+    <text x="${qRight}" y="${qBottom}" text-anchor="end" font-size="9.5" font-weight="bold" fill="#94a3b8" fill-opacity="0.45">Kuadran IV (+,-)</text>
+  `;
+
+  // Axis Labels & Arrowheads
+  const axisExt = 16;
+  const axisExtras = `
+    <!-- Axis arrows -->
+    <polygon points="${cx + xRange * gridStep + axisExt},${cy} ${cx + xRange * gridStep + axisExt - 8},${cy - 4} ${cx + xRange * gridStep + axisExt - 8},${cy + 4}" fill="#0f172a"/>
+    <polygon points="${cx},${cy - yRange * gridStep - axisExt} ${cx - 4},${cy - yRange * gridStep - axisExt + 8} ${cx + 4},${cy - yRange * gridStep - axisExt + 8}" fill="#0f172a"/>
+    <!-- Axis Labels -->
+    <text x="${cx + xRange * gridStep + axisExt + 8}" y="${cy + 4}" font-size="12" font-weight="bold" fill="#0f172a">X</text>
+    <text x="${cx + 8}" y="${cy - yRange * gridStep - axisExt - 2}" font-size="12" font-weight="bold" fill="#0f172a">Y</text>
+    <text x="${cx - 10}" y="${cy + 14}" font-size="9.5" font-weight="600" fill="#64748b">O</text>
+  `;
 
   // Plot points
-  const pointColors = ['#dc2626', '#2563eb', '#059669', '#d97706', '#7c3aed'];
+  const pointColors = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
   let points = '';
   titik.forEach((pt, i) => {
     const px = cx + pt.x * gridStep;
     const py = cy - pt.y * gridStep;
     const color = pointColors[i % pointColors.length];
-    points += `<circle cx="${px}" cy="${py}" r="5" fill="${color}" stroke="white" stroke-width="1.5"/>`;
-    points += `<text x="${px + 8}" y="${py - 6}" font-size="11" font-weight="bold" fill="${color}">${escapeXml(pt.label)}(${pt.x},${pt.y})</text>`;
-    // Garis bantu putus-putus ke sumbu
-    points += `<line x1="${px}" y1="${py}" x2="${px}" y2="${cy}" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3"/>`;
-    points += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${py}" stroke="${color}" stroke-width="0.8" stroke-dasharray="3,3"/>`;
+
+    // Projection lines to X and Y axes
+    points += `<line x1="${px}" y1="${py}" x2="${px}" y2="${cy}" stroke="${color}" stroke-width="1.2" stroke-dasharray="3,3"/>`;
+    points += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${py}" stroke="${color}" stroke-width="1.2" stroke-dasharray="3,3"/>`;
+
+    // Axis projection ticks
+    points += `<circle cx="${px}" cy="${cy}" r="2.5" fill="${color}"/>`;
+    points += `<circle cx="${cx}" cy="${py}" r="2.5" fill="${color}"/>`;
+
+    // Glowing point halo & core
+    points += `<circle cx="${px}" cy="${py}" r="7" fill="${color}" fill-opacity="0.2"/>`;
+    points += `<circle cx="${px}" cy="${py}" r="4.5" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>`;
+
+    // Smart label positioning with background pill badge (clamped within canvas)
+    const labelStr = `${pt.label}(${pt.x},${pt.y})`;
+    const badgeW = Math.max(36, labelStr.length * 7 + 8);
+    const badgeH = 18;
+    const offsetX = pt.x >= 0 ? 8 : -(badgeW + 8);
+    const offsetY = pt.y >= 0 ? -badgeH - 4 : 6;
+    const badgeX = Math.max(6, Math.min(w - badgeW - 6, px + offsetX));
+    const badgeY = Math.max(6, Math.min(h - badgeH - 24, py + offsetY));
+
+    points += `
+      <rect x="${badgeX}" y="${badgeY}" width="${badgeW}" height="${badgeH}" rx="4" fill="#ffffff" stroke="${color}" stroke-width="1" stroke-opacity="0.8"/>
+      <text x="${badgeX + badgeW / 2}" y="${badgeY + 12.5}" text-anchor="middle" font-size="10" font-weight="bold" fill="${color}">${escapeXml(labelStr)}</text>
+    `;
   });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  ${quadrants}
   ${grid}
+  ${axisExtras}
   ${points}
-  <text x="${w / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="#64748b">Bidang Koordinat Kartesius</text>
+  <text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b">Bidang Koordinat Kartesius</text>
 </svg>`;
 }
 

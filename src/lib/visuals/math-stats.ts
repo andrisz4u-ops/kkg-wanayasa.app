@@ -30,12 +30,19 @@ export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: 
         const y1 = cy + r * Math.sin(startAngle);
         const x2 = cx + r * Math.cos(endAngle);
         const y2 = cy + r * Math.sin(endAngle);
-        fullSlices += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="#38bdf8" stroke="#0f172a" stroke-width="1.8"/>`;
+        fullSlices += `<path d="M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="#38bdf8" stroke="#0f172a" stroke-width="1.8"/>`;
       }
       circlesSvg += `
+        <!-- Ground Shadow -->
+        <ellipse cx="${cx}" cy="${cy + r + 4}" rx="${(r * 0.92).toFixed(1)}" ry="8" fill="#0f172a" fill-opacity="0.08"/>
         <g>${fullSlices}</g>
-        <circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a"/>
-        <text x="${cx}" y="${cy + r + 22}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">1 Bagian Utuh</text>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#0f172a" stroke-width="2.2"/>
+        <!-- Pivot Pin -->
+        <circle cx="${cx}" cy="${cy}" r="3.5" fill="#0f172a"/>
+        <circle cx="${cx - 1}" cy="${cy - 1}" r="1" fill="#ffffff"/>
+        <!-- Badge -->
+        <rect x="${cx - 46}" y="${cy + r + 10}" width="92" height="20" rx="10" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1"/>
+        <text x="${cx}" y="${cy + r + 24}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">1 Bagian Utuh</text>
       `;
     }
 
@@ -50,17 +57,27 @@ export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: 
       const y2 = cy + r * Math.sin(endAngle);
       const isShaded = i < k;
       const fill = isShaded ? '#38bdf8' : '#ffffff';
-      fracSlices += `<path d="M ${cxFrac},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="${fill}" stroke="#0f172a" stroke-width="1.8"/>`;
+      fracSlices += `<path d="M ${cxFrac},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${fill}" stroke="#0f172a" stroke-width="1.8"/>`;
     }
     circlesSvg += `
+      <!-- Ground Shadow -->
+      <ellipse cx="${cxFrac}" cy="${cy + r + 4}" rx="${(r * 0.92).toFixed(1)}" ry="8" fill="#0f172a" fill-opacity="0.08"/>
       <g>${fracSlices}</g>
-      <circle cx="${cxFrac}" cy="${cy}" r="3" fill="#0f172a"/>
+      <circle cx="${cxFrac}" cy="${cy}" r="${r}" fill="none" stroke="#0f172a" stroke-width="2.2"/>
+      <!-- Pivot Pin -->
+      <circle cx="${cxFrac}" cy="${cy}" r="3.5" fill="#0f172a"/>
+      <circle cx="${cxFrac - 1}" cy="${cy - 1}" r="1" fill="#ffffff"/>
+      <!-- Badge -->
+      <rect x="${cxFrac - 38}" y="${cy + r + 10}" width="76" height="20" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="${cxFrac}" y="${cy + r + 24}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#64748b">Pecahan</text>
     `;
 
     // Zero-spoiler: default caption netral tanpa membocorkan nilai pecahan
     const caption = params.caption !== undefined ? params.caption : 'Daerah yang Diarsir';
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="6"/>
+  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <rect x="15" y="8" width="160" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>
+  <text x="95" y="21" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b">Model Pecahan Campuran</text>
   ${circlesSvg}
   ${caption ? `<text x="${w / 2}" y="${h - 10}" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
 </svg>`;
@@ -69,8 +86,8 @@ export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: 
   // Zero-spoiler: default caption netral tanpa membocorkan nilai pecahan k/n
   const caption = params.caption !== undefined ? params.caption : 'Daerah yang Diarsir';
   const cx = 160;
-  const cy = 110;
-  const r = 85;
+  const cy = 112;
+  const r = 80;
 
   let slices = '';
   for (let i = 0; i < n; i++) {
@@ -85,13 +102,21 @@ export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: 
     const isShaded = i < k;
     const fill = isShaded ? '#38bdf8' : '#ffffff';
 
-    slices += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="${fill}" stroke="#0f172a" stroke-width="2"/>`;
+    slices += `<path d="M ${cx},${cy} L ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${fill}" stroke="#0f172a" stroke-width="2"/>`;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="320" height="240" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <!-- Drop Shadow Base -->
+  <ellipse cx="${cx}" cy="${cy + r + 6}" rx="${(r * 0.9).toFixed(1)}" ry="10" fill="#0f172a" fill-opacity="0.08"/>
+  <!-- Slices -->
   <g>${slices}</g>
-  <circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a"/>
-  ${caption ? `<text x="160" y="225" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
+  <!-- Outer Perimeter Circle -->
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#0f172a" stroke-width="2.2"/>
+  <!-- Pivot Hub -->
+  <circle cx="${cx}" cy="${cy}" r="4.5" fill="#0f172a"/>
+  <circle cx="${cx - 1.2}" cy="${cy - 1.2}" r="1.5" fill="#ffffff"/>
+  ${caption ? `<text x="160" y="222" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">${escapeXml(caption)}</text>` : ''}
 </svg>`;
 }
 
@@ -178,20 +203,26 @@ export function renderDiagramBatangSvg(params: { judul?: string; labels?: string
   const yLabel = params.yLabel || 'Jumlah';
 
   const maxVal = Math.max(...data, 10);
-  const ceilMax = Math.ceil(maxVal / 10) * 10;
+  let ceilMax = 10;
+  let steps = 4;
+  if (maxVal <= 10) { ceilMax = 10; steps = 5; }
+  else if (maxVal <= 20) { ceilMax = 20; steps = 4; }
+  else if (maxVal <= 50) { ceilMax = Math.ceil(maxVal / 10) * 10; steps = 5; }
+  else if (maxVal <= 100) { ceilMax = Math.ceil(maxVal / 20) * 20; steps = 4; }
+  else { ceilMax = Math.ceil(maxVal / 50) * 50; steps = 5; }
 
   const chartX = 55;
-  const chartY = 45;
+  const chartY = 46;
   const chartW = 270;
-  const chartH = 140;
+  const chartH = 136;
 
   let gridSvg = '';
-  const steps = 4;
   for (let i = 0; i <= steps; i++) {
     const val = Math.round((ceilMax / steps) * i);
     const y = chartY + chartH - (i / steps) * chartH;
     gridSvg += `
-      <line x1="${chartX}" y1="${y}" x2="${chartX + chartW}" y2="${y}" stroke="${i === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${i === 0 ? 2 : 1}"/>
+      <line x1="${chartX}" y1="${y}" x2="${chartX + chartW}" y2="${y}" stroke="${i === 0 ? '#0f172a' : '#e2e8f0'}" stroke-width="${i === 0 ? 2 : 1}" ${i > 0 ? 'stroke-dasharray="3,3"' : ''}/>
+      <line x1="${chartX - 3}" y1="${y}" x2="${chartX}" y2="${y}" stroke="#0f172a" stroke-width="1.5"/>
       <text x="${chartX - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b">${val}</text>
     `;
   }
@@ -199,24 +230,30 @@ export function renderDiagramBatangSvg(params: { judul?: string; labels?: string
   let barsSvg = '';
   const barCount = data.length;
   const slotW = chartW / barCount;
-  const barW = Math.min(36, slotW * 0.65);
+  const barW = Math.min(36, Math.max(14, slotW * 0.65));
 
   data.forEach((val, idx) => {
     const bH = (val / ceilMax) * chartH;
     const bX = chartX + idx * slotW + (slotW - barW) / 2;
     const bY = chartY + chartH - bH;
     const lbl = labels[idx] || `${idx + 1}`;
+    const isNearTop = (bY - 5) < 38;
+    const valY = isNearTop ? bY + 12 : bY - 5;
+    const valColor = isNearTop ? '#ffffff' : '#0369a1';
 
     barsSvg += `
-      <rect x="${bX}" y="${bY}" width="${barW}" height="${bH}" fill="#0284c7" rx="3" stroke="#0369a1" stroke-width="1.5"/>
-      <text x="${bX + barW / 2}" y="${bY - 5}" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">${val}</text>
-      <text x="${bX + barW / 2}" y="${chartY + chartH + 16}" text-anchor="middle" font-size="10.5" fill="#334155">${escapeXml(lbl)}</text>
+      <rect x="${(bX + 2).toFixed(1)}" y="${(bY + 2).toFixed(1)}" width="${barW.toFixed(1)}" height="${bH.toFixed(1)}" rx="3" fill="#0f172a" fill-opacity="0.07"/>
+      <rect x="${bX.toFixed(1)}" y="${bY.toFixed(1)}" width="${barW.toFixed(1)}" height="${bH.toFixed(1)}" rx="3" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+      <line x1="${(bX + 2).toFixed(1)}" y1="${(bY + 1.5).toFixed(1)}" x2="${(bX + barW - 2).toFixed(1)}" y2="${(bY + 1.5).toFixed(1)}" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.5"/>
+      <text x="${(bX + barW / 2).toFixed(1)}" y="${valY.toFixed(1)}" text-anchor="middle" font-size="10" font-weight="bold" fill="${valColor}">${val}</text>
+      <text x="${(bX + barW / 2).toFixed(1)}" y="${chartY + chartH + 16}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#334155">${escapeXml(lbl)}</text>
     `;
   });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 240" width="360" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="180" y="25" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${escapeXml(judul)}</text>
-  <text x="18" y="${chartY + chartH / 2}" text-anchor="middle" transform="rotate(-90, 18, ${chartY + chartH / 2})" font-size="10" font-weight="bold" fill="#64748b">${escapeXml(yLabel)}</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 240" width="360" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="360" height="240" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${escapeXml(judul)}</text>
+  <text x="16" y="${chartY + chartH / 2}" text-anchor="middle" transform="rotate(-90, 16, ${chartY + chartH / 2})" font-size="10" font-weight="bold" fill="#64748b">${escapeXml(yLabel)}</text>
   ${gridSvg}
   ${barsSvg}
 </svg>`;
@@ -2176,51 +2213,61 @@ export function renderPolaUbinSvg(params: { pola?: number[]; label?: string }): 
 export function renderPitaPecahanSvg(params: { label?: string }): string {
   const startX = 40;
   const stripW = 400;
+  const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 255" width="480" height="255" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <rect width="480" height="255" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
   <text x="240" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pita Pecahan Senilai (Fraction Strips)</text>
 
   <!-- Strip 1 Utuh -->
-  <rect x="${startX}" y="45" width="${stripW}" height="26" fill="#bfdbfe" stroke="#0f172a" stroke-width="1.2" rx="3"/>
+  <rect x="${startX}" y="45" width="${stripW}" height="26" fill="#bfdbfe" stroke="#1e40af" stroke-width="1.5" rx="3"/>
+  <line x1="${startX + 2}" y1="47" x2="${startX + stripW - 2}" y2="47" stroke="#ffffff" stroke-opacity="0.7" stroke-width="1.2"/>
   <text x="${startX + stripW / 2}" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e3a8a">1 Bagian Utuh (1/1)</text>
 
   <!-- Strip 1/2 -->
-  <rect x="${startX}" y="77" width="${stripW / 2}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX}" y="77" width="${stripW / 2}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" rx="2"/>
+  <line x1="${startX + 2}" y1="79" x2="${startX + stripW / 2 - 2}" y2="79" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"/>
   <text x="${startX + stripW / 4}" y="94" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">1/2</text>
-  <rect x="${startX + stripW / 2}" y="77" width="${stripW / 2}" height="26" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + stripW / 2}" y="77" width="${stripW / 2}" height="26" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="2"/>
   <text x="${startX + (3 * stripW) / 4}" y="94" text-anchor="middle" font-size="11" font-weight="bold" fill="#64748b">1/2</text>
 
   <!-- Strip 1/4 -->
-  <rect x="${startX}" y="109" width="${stripW / 4}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX}" y="109" width="${stripW / 4}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" rx="2"/>
+  <line x1="${startX + 2}" y1="111" x2="${startX + stripW / 4 - 2}" y2="111" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"/>
   <text x="${startX + stripW / 8}" y="126" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">1/4</text>
-  <rect x="${startX + stripW / 4}" y="109" width="${stripW / 4}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + stripW / 4}" y="109" width="${stripW / 4}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" rx="2"/>
+  <line x1="${startX + stripW / 4 + 2}" y1="111" x2="${startX + stripW / 2 - 2}" y2="111" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"/>
   <text x="${startX + (3 * stripW) / 8}" y="126" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">1/4</text>
-  <rect x="${startX + stripW / 2}" y="109" width="${stripW / 4}" height="26" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + stripW / 2}" y="109" width="${stripW / 4}" height="26" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="2"/>
   <text x="${startX + (5 * stripW) / 8}" y="126" text-anchor="middle" font-size="11" font-weight="bold" fill="#64748b">1/4</text>
-  <rect x="${startX + (3 * stripW) / 4}" y="109" width="${stripW / 4}" height="26" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + (3 * stripW) / 4}" y="109" width="${stripW / 4}" height="26" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="2"/>
   <text x="${startX + (7 * stripW) / 8}" y="126" text-anchor="middle" font-size="11" font-weight="bold" fill="#64748b">1/4</text>
 
   <!-- Strip 1/8 -->
-  <rect x="${startX}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2" rx="2"/>
+  <line x1="${startX + 2}" y1="143" x2="${startX + stripW / 8 - 2}" y2="143" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1"/>
   <text x="${startX + stripW / 16}" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">1/8</text>
-  <rect x="${startX + stripW / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + stripW / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2" rx="2"/>
+  <line x1="${startX + stripW / 8 + 2}" y1="143" x2="${startX + stripW / 4 - 2}" y2="143" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1"/>
   <text x="${startX + (3 * stripW) / 16}" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">1/8</text>
-  <rect x="${startX + (2 * stripW) / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + (2 * stripW) / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2" rx="2"/>
+  <line x1="${startX + (2 * stripW) / 8 + 2}" y1="143" x2="${startX + (3 * stripW) / 8 - 2}" y2="143" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1"/>
   <text x="${startX + (5 * stripW) / 16}" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">1/8</text>
-  <rect x="${startX + (3 * stripW) / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + (3 * stripW) / 8}" y="141" width="${stripW / 8}" height="26" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2" rx="2"/>
+  <line x1="${startX + (3 * stripW) / 8 + 2}" y1="143" x2="${startX + stripW / 2 - 2}" y2="143" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1"/>
   <text x="${startX + (7 * stripW) / 16}" y="158" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">1/8</text>
   <!-- Rest 1/8 white -->
-  <rect x="${startX + stripW / 2}" y="141" width="${stripW / 2}" height="26" fill="#f1f5f9" stroke="#0f172a" stroke-width="1.2"/>
+  <rect x="${startX + stripW / 2}" y="141" width="${stripW / 2}" height="26" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="2"/>
   <text x="${startX + (3 * stripW) / 4}" y="158" text-anchor="middle" font-size="10" fill="#64748b">4/8 Lainnya</text>
 
   <!-- Garis Pedoman Vertikal (Alignment Line) -->
-  <line x1="${startX + stripW / 2}" y1="40" x2="${startX + stripW / 2}" y2="175" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="${startX + stripW / 2}" y1="38" x2="${startX + stripW / 2}" y2="175" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4"/>
+  <polygon points="${startX + stripW / 2},42 ${startX + stripW / 2 - 4},36 ${startX + stripW / 2 + 4},36" fill="#ef4444"/>
 
   <!-- Prompt Zero Spoiler -->
-  <rect x="80" y="188" width="320" height="28" rx="6" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.2"/>
-  <text x="240" y="206" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Pecahan Senilai: 1/2 = 2/4 = [ X ] / 8</text>
-  <text x="240" y="238" text-anchor="middle" font-size="10" fill="#64748b">Berdasarkan garis pembanding merah, berapa pembilang yang tepat?</text>
+  <rect x="80" y="186" width="320" height="30" rx="6" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="240" y="205" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Pecahan Senilai: 1/2 = 2/4 = [ ${escapeXml(labelChar)} ] / 8</text>
+  <text x="240" y="238" text-anchor="middle" font-size="10.5" fill="#64748b">Berdasarkan garis pembanding merah, berapa pembilang yang tepat?</text>
 </svg>`;
 }
 

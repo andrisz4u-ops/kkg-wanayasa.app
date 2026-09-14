@@ -1132,62 +1132,64 @@ export function renderZonaWaktuIndonesiaSvg(params: { zona?: string; label?: str
   if (zona.includes('wib') || zona.includes('barat')) activeIdx = 0;
   else if (zona.includes('wit') && !zona.includes('wita') || zona.includes('timur')) activeIdx = 2;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Pembagian Tiga Zona Waktu di Indonesia</text>
+  const targetCoords = [77, 210, 343];
 
-  <!-- Peta Kepulauan Indonesia Sederhana & Batas Garis Bujur -->
-  <rect x="15" y="45" width="390" height="90" rx="8" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.2"/>
-  <!-- Batas Wilayah Vertikal Garis Putus -->
-  <line x1="145" y1="45" x2="145" y2="135" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4 3"/>
-  <line x1="275" y1="45" x2="275" y2="135" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4 3"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="420" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Pembagian Tiga Zona Waktu di Indonesia</text>
 
-  <!-- Ikon Jam Perbandingan Waktu -->
-  <!-- Kolom WIB -->
-  <g>
-    <circle cx="80" cy="75" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
-    <line x1="80" y1="75" x2="80" y2="64" stroke="#0f172a" stroke-width="2"/>
-    <line x1="80" y1="75" x2="72" y2="82" stroke="#0f172a" stroke-width="1.6"/>
-    <text x="80" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">07.00 WIB</text>
-    <text x="80" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 105° BT</text>
-  </g>
+  <!-- Panel 1: WIB -->
+  <rect x="15" y="44" width="124" height="92" rx="6" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.2"/>
+  <!-- Jam Analog WIB (07.00) -->
+  <circle cx="77" cy="72" r="17" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <circle cx="77" cy="72" r="2" fill="#0f172a"/>
+  <!-- Jarum Menit ke 12, Jarum Jam ke 7 -->
+  <line x1="77" y1="72" x2="77" y2="59" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="77" y1="72" x2="68" y2="79" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="77" y="103" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">07.00 WIB</text>
+  <text x="77" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 105° BT</text>
 
-  <!-- Kolom WITA -->
-  <g>
-    <circle cx="210" cy="75" r="16" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
-    <line x1="210" y1="75" x2="210" y2="64" stroke="#0f172a" stroke-width="2"/>
-    <line x1="210" y1="75" x2="200" y2="75" stroke="#0f172a" stroke-width="1.6"/>
-    <text x="210" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">08.00 WITA</text>
-    <text x="210" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 120° BT</text>
-  </g>
+  <!-- Panel 2: WITA -->
+  <rect x="148" y="44" width="124" height="92" rx="6" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.2"/>
+  <!-- Jam Analog WITA (08.00) -->
+  <circle cx="210" cy="72" r="17" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+  <circle cx="210" cy="72" r="2" fill="#0f172a"/>
+  <!-- Jarum Menit ke 12, Jarum Jam ke 8 -->
+  <line x1="210" y1="72" x2="210" y2="59" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="210" y1="72" x2="199" y2="74" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="210" y="103" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#15803d">08.00 WITA</text>
+  <text x="210" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 120° BT</text>
 
-  <!-- Kolom WIT -->
-  <g>
-    <circle cx="340" cy="75" r="16" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
-    <line x1="340" y1="75" x2="340" y2="64" stroke="#0f172a" stroke-width="2"/>
-    <line x1="340" y1="75" x2="328" y2="75" stroke="#0f172a" stroke-width="1.6"/>
-    <text x="340" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">09.00 WIT</text>
-    <text x="340" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 135° BT</text>
-  </g>
+  <!-- Panel 3: WIT -->
+  <rect x="281" y="44" width="124" height="92" rx="6" fill="#fffbeb" stroke="#fde68a" stroke-width="1.2"/>
+  <!-- Jam Analog WIT (09.00) -->
+  <circle cx="343" cy="72" r="17" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+  <circle cx="343" cy="72" r="2" fill="#0f172a"/>
+  <!-- Jarum Menit ke 12, Jarum Jam ke 9 -->
+  <line x1="343" y1="72" x2="343" y2="59" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="343" y1="72" x2="330" y2="72" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="343" y="103" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b45309">09.00 WIT</text>
+  <text x="343" y="122" text-anchor="middle" font-size="8" fill="#64748b">Meridian 135° BT</text>
 
-  <!-- Kartu Penjelasan Wilayah di Bawah -->
-  <rect x="15" y="145" width="120" height="75" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <text x="75" y="162" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1">WIB (UTC+7)</text>
-  <text x="75" y="180" text-anchor="middle" font-size="8" fill="#475569">Sumatra, Jawa,</text>
-  <text x="75" y="194" text-anchor="middle" font-size="8" fill="#475569">Kalbar, Kalteng</text>
+  <!-- Kartu Penjelasan Wilayah Bawah -->
+  <rect x="15" y="144" width="124" height="74" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
+  <text x="77" y="161" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1">WIB (UTC+7)</text>
+  <text x="77" y="179" text-anchor="middle" font-size="8" fill="#475569">Sumatra, Jawa, Madura,</text>
+  <text x="77" y="193" text-anchor="middle" font-size="8" fill="#475569">Kalbar &amp; Kalteng</text>
 
-  <rect x="145" y="145" width="120" height="75" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <text x="205" y="162" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#166534">WITA (UTC+8)</text>
-  <text x="205" y="180" text-anchor="middle" font-size="8" fill="#475569">Sulawesi, Bali,</text>
-  <text x="205" y="194" text-anchor="middle" font-size="8" fill="#475569">NTB, NTT, Kalsel</text>
+  <rect x="148" y="144" width="124" height="74" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
+  <text x="210" y="161" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#166534">WITA (UTC+8)</text>
+  <text x="210" y="179" text-anchor="middle" font-size="8" fill="#475569">Sulawesi, Bali, NTB, NTT,</text>
+  <text x="210" y="193" text-anchor="middle" font-size="8" fill="#475569">Kalsel, Kaltim, Kaltara</text>
 
-  <rect x="275" y="145" width="120" height="75" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <text x="335" y="162" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#b45309">WIT (UTC+9)</text>
-  <text x="335" y="180" text-anchor="middle" font-size="8" fill="#475569">Kepulauan Maluku</text>
-  <text x="335" y="194" text-anchor="middle" font-size="8" fill="#475569">&amp; Tanah Papua</text>
+  <rect x="281" y="144" width="124" height="74" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
+  <text x="343" y="161" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#b45309">WIT (UTC+9)</text>
+  <text x="343" y="179" text-anchor="middle" font-size="8" fill="#475569">Kepulauan Maluku &amp;</text>
+  <text x="343" y="193" text-anchor="middle" font-size="8" fill="#475569">Seluruh Tanah Papua</text>
 
   <!-- Target Badge X -->
-  <circle cx="${[75, 205, 335][activeIdx]}" cy="145" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${[75, 205, 335][activeIdx]}" y="149" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${targetCoords[activeIdx]}" cy="144" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${targetCoords[activeIdx]}" y="148" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
   <text x="210" y="246" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Zona waktu yang ditunjuk oleh huruf "${escapeXml(labelChar)}" berselisih ... jam dari WIB</text>
 </svg>`;

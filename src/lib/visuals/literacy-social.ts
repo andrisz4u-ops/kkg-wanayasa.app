@@ -634,59 +634,67 @@ export function renderSimbolKartografiSvg(params: { pointer?: string; label?: st
   let activeIdx = 0; // 0: Gunung Aktif, 1: Gunung Mati, 2: Sungai, 3: Danau, 4: Bandara, 5: Rel Kereta
   if (pointer.includes('mati') || pointer.includes('tidak aktif')) activeIdx = 1;
   else if (pointer.includes('sungai') || pointer.includes('aliran')) activeIdx = 2;
-  else if (pointer.includes('danau') || pointer.includes('telaga')) activeIdx = 3;
+  else if (pointer.includes('danau') || pointer.includes('telaga') || pointer.includes('rawa')) activeIdx = 3;
   else if (pointer.includes('bandara') || pointer.includes('pesawat') || pointer.includes('udara')) activeIdx = 4;
   else if (pointer.includes('kereta') || pointer.includes('rel')) activeIdx = 5;
 
   const cells = [
-    { x: 15, y: 45, title: 'Gunung Aktif' },
-    { x: 145, y: 45, title: 'Gunung Mati' },
-    { x: 275, y: 45, title: 'Aliran Sungai' },
-    { x: 15, y: 145, title: 'Danau' },
-    { x: 145, y: 145, title: 'Bandar Udara' },
-    { x: 275, y: 145, title: 'Rel Kereta Api' }
+    { x: 15, y: 44, title: 'Gunung Berapi Aktif' },
+    { x: 148, y: 44, title: 'Gunung Tidak Aktif' },
+    { x: 281, y: 44, title: 'Aliran Sungai' },
+    { x: 15, y: 144, title: 'Danau / Waduk' },
+    { x: 148, y: 144, title: 'Bandar Udara' },
+    { x: 281, y: 144, title: 'Rel Kereta Api' }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 260" width="410" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Simbol-Simbol Standar Pada Peta (Kartografi)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="420" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Simbol-Simbol Standar Pada Peta (Kartografi)</text>
 
-  <!-- Kotak 1: Gunung Aktif (Segitiga Merah) -->
-  <rect x="15" y="45" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <polygon points="75,62 55,95 95,95" fill="#ef4444" stroke="#991b1b" stroke-width="1.5"/>
-  <text x="75" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Gunung Aktif</text>
+  <!-- Kotak 1: Gunung Aktif (Segitiga Merah & Kepulan Asap) -->
+  <rect x="15" y="44" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
+  <!-- Asap Erupsi -->
+  <path d="M 75,52 Q 72,45 77,41 Q 82,45 78,52 Z" fill="#f97316" fill-opacity="0.8"/>
+  <ellipse cx="76" cy="54" rx="6" ry="3.5" fill="#f59e0b" fill-opacity="0.85"/>
+  <!-- Badan Gunung -->
+  <polygon points="76,57 53,94 99,94" fill="#ef4444" stroke="#991b1b" stroke-width="1.6"/>
+  <text x="77" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Gunung Aktif</text>
 
-  <!-- Kotak 2: Gunung Tidak Aktif (Segitiga Hitam) -->
-  <rect x="145" y="45" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <polygon points="205,62 185,95 225,95" fill="#1e293b" stroke="#0f172a" stroke-width="1.5"/>
-  <text x="205" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Gunung Mati</text>
+  <!-- Kotak 2: Gunung Tidak Aktif (Segitiga Hitam Berpuncak Salju) -->
+  <rect x="148" y="44" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
+  <polygon points="210,57 187,94 233,94" fill="#1e293b" stroke="#0f172a" stroke-width="1.6"/>
+  <polygon points="210,57 203,70 210,67 217,70" fill="#ffffff" fill-opacity="0.6"/>
+  <text x="210" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Gunung Mati</text>
 
-  <!-- Kotak 3: Sungai (Garis Berkelok Biru) -->
-  <rect x="275" y="45" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <path d="M 290,95 Q 315,65 340,90 T 380,65" fill="none" stroke="#0284c7" stroke-width="4.5" stroke-linecap="round"/>
-  <text x="335" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Aliran Sungai</text>
+  <!-- Kotak 3: Sungai (Alur Air Berkelok Ganda) -->
+  <rect x="281" y="44" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
+  <path d="M 296,92 C 316,68 332,96 352,72 C 366,56 384,82 396,68" fill="none" stroke="#0284c7" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M 296,92 C 316,68 332,96 352,72 C 366,56 384,82 396,68" fill="none" stroke="#bae6fd" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="343" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Aliran Sungai</text>
 
-  <!-- Kotak 4: Danau (Area Biru Muda) -->
-  <rect x="15" y="145" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
-  <ellipse cx="75" cy="178" rx="30" ry="16" fill="#bae6fd" stroke="#0284c7" stroke-width="1.8"/>
-  <text x="75" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Danau / Rawa</text>
+  <!-- Kotak 4: Danau (Genangan Air Bertekstur) -->
+  <rect x="15" y="144" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
+  <path d="M 54,174 C 52,160 72,156 87,162 C 104,168 108,186 94,190 C 77,194 57,188 54,174 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="1.8"/>
+  <path d="M 68,174 Q 77,171 87,174" fill="none" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="77" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Danau / Rawa</text>
 
-  <!-- Kotak 5: Bandar Udara (Pesawat) -->
-  <rect x="145" y="145" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 4 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 4 ? 2 : 1}"/>
-  <!-- Ikon Pesawat Terbang -->
-  <path d="M 205,164 L 205,192 M 190,174 L 220,174 M 197,190 L 213,190" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="205" cy="164" r="3" fill="#0f172a"/>
-  <text x="205" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Bandar Udara</text>
+  <!-- Kotak 5: Bandar Udara (Siluet Pesawat ICAO) -->
+  <rect x="148" y="144" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 4 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 4 ? 2 : 1}"/>
+  <path d="M 210,154 L 212,168 L 227,178 L 227,182 L 212,178 L 212,188 L 217,192 L 217,195 L 210,193 L 203,195 L 203,192 L 208,188 L 208,178 L 193,182 L 193,178 L 208,168 Z" fill="#0f172a"/>
+  <text x="210" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Bandar Udara</text>
 
-  <!-- Kotak 6: Rel Kereta Api (Strip Garis) -->
-  <rect x="275" y="145" width="120" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 5 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 5 ? 2 : 1}"/>
-  <line x1="290" y1="178" x2="380" y2="178" stroke="#0f172a" stroke-width="4" stroke-dasharray="8 6"/>
-  <text x="335" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Rel Kereta Api</text>
+  <!-- Kotak 6: Rel Kereta Api (Jalur Rel Bertali Bantalan) -->
+  <rect x="281" y="144" width="124" height="88" rx="6" fill="#f8fafc" stroke="${activeIdx === 5 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 5 ? 2 : 1}"/>
+  <line x1="298" y1="171" x2="388" y2="171" stroke="#0f172a" stroke-width="1.8"/>
+  <line x1="298" y1="181" x2="388" y2="181" stroke="#0f172a" stroke-width="1.8"/>
+  <line x1="298" y1="176" x2="388" y2="176" stroke="#0f172a" stroke-width="10" stroke-dasharray="2.5 7"/>
+  <text x="343" y="215" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Rel Kereta Api</text>
 
   <!-- Target Badge X -->
-  <circle cx="${cells[activeIdx].x + 105}" cy="${cells[activeIdx].y + 12}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cells[activeIdx].x + 105}" y="${cells[activeIdx].y + 16}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${cells[activeIdx].x + 109}" cy="${cells[activeIdx].y + 13}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${cells[activeIdx].x + 109}" y="${cells[activeIdx].y + 17}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="205" y="250" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Arti simbol peta pada kotak "${escapeXml(labelChar)}" adalah ...</text>
+  <text x="210" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Arti simbol peta pada kotak "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -695,60 +703,67 @@ export function renderGarisLintangBujurSvg(params: { pointer?: string; label?: s
   const pointer = (params.pointer || 'khatulistiwa').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 160, y: 135, name: 'Khatulistiwa (0°)' };
-  if (pointer.includes('greenwich') || pointer.includes('bujur 0')) target = { x: 160, y: 80, name: 'Meridian Greenwich (0°)' };
-  else if (pointer.includes('kutub utara')) target = { x: 160, y: 55, name: 'Kutub Utara (90° LU)' };
-  else if (pointer.includes('kutub selatan')) target = { x: 160, y: 215, name: 'Kutub Selatan (90° LS)' };
-  else if (pointer.includes('balik utara') || pointer.includes('cancer')) target = { x: 160, y: 105, name: 'Garis Balik Utara (23.5° LU)' };
+  let target = { x: 150, y: 132, name: 'Khatulistiwa (0°)' };
+  if (pointer.includes('greenwich') || pointer.includes('bujur 0')) target = { x: 150, y: 78, name: 'Meridian Greenwich (0°)' };
+  else if (pointer.includes('kutub utara')) target = { x: 150, y: 56, name: 'Kutub Utara (90° LU)' };
+  else if (pointer.includes('kutub selatan')) target = { x: 150, y: 208, name: 'Kutub Selatan (90° LS)' };
+  else if (pointer.includes('balik utara') || pointer.includes('cancer')) target = { x: 150, y: 104, name: 'Garis Balik Utara (23.5° LU)' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="200" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Garis Lintang (Paralel) &amp; Garis Bujur (Meridian)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="400" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="200" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Garis Lintang (Paralel) &amp; Garis Bujur (Meridian)</text>
 
-  <!-- Globe Bola Dunia -->
-  <circle cx="160" cy="135" r="75" fill="#f0f9ff" stroke="#0284c7" stroke-width="2.5"/>
+  <!-- Globe Bola Dunia 3D -->
+  <!-- Penyangga Busur Meridian Tembaga -->
+  <path d="M 132,222 L 168,222 L 160,214 L 140,214 Z" fill="#78350f"/>
+  <circle cx="150" cy="212" r="3.5" fill="#d97706"/>
+  <circle cx="150" cy="132" r="76" fill="none" stroke="#d97706" stroke-width="3" stroke-dasharray="240 240" transform="rotate(-30 150 132)"/>
+
+  <!-- Bola Globe Biru Laut -->
+  <circle cx="150" cy="132" r="72" fill="#f0f9ff" stroke="#0284c7" stroke-width="2"/>
 
   <!-- Garis Lintang Khatulistiwa (0 Derajat) - Tebal Merah -->
-  <line x1="85" y1="135" x2="235" y2="135" stroke="#ef4444" stroke-width="2.5"/>
+  <line x1="78" y1="132" x2="222" y2="132" stroke="#ef4444" stroke-width="2.5"/>
 
   <!-- Garis Lintang Paralel Lainnya -->
-  <ellipse cx="160" cy="105" rx="68" ry="10" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2"/>
-  <ellipse cx="160" cy="165" rx="68" ry="10" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <ellipse cx="150" cy="104" rx="66" ry="9" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <ellipse cx="150" cy="160" rx="66" ry="9" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="4,2"/>
 
   <!-- Garis Bujur Meridian Greenwich (0 Derajat) - Vertikal Biru -->
-  <line x1="160" y1="60" x2="160" y2="210" stroke="#0284c7" stroke-width="2.5"/>
+  <line x1="150" y1="60" x2="150" y2="204" stroke="#0284c7" stroke-width="2.5"/>
 
   <!-- Garis Bujur Melengkung Lainnya -->
-  <ellipse cx="160" cy="135" rx="40" ry="75" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <ellipse cx="150" cy="132" rx="38" ry="72" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3,2"/>
 
   <!-- Kutub Titik -->
-  <circle cx="160" cy="60" r="3.5" fill="#0f172a"/>
-  <circle cx="160" cy="210" r="3.5" fill="#0f172a"/>
+  <circle cx="150" cy="60" r="3.5" fill="#0f172a"/>
+  <circle cx="150" cy="204" r="3.5" fill="#0f172a"/>
 
   <!-- Legenda Kanan (Anti-Overlap) -->
   <g>
-    <rect x="250" y="55" width="135" height="22" rx="4" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
-    <text x="317.5" y="70" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Kutub Utara (90° LU)</text>
+    <rect x="245" y="48" width="142" height="22" rx="4" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+    <text x="316" y="63" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Kutub Utara (90° LU)</text>
   </g>
   <g>
-    <rect x="250" y="90" width="135" height="22" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1"/>
-    <text x="317.5" y="105" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Meridian Greenwich (0°)</text>
+    <rect x="245" y="82" width="142" height="22" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1"/>
+    <text x="316" y="97" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Meridian Greenwich (0°)</text>
   </g>
   <g>
-    <rect x="250" y="125" width="135" height="22" rx="4" fill="#ffffff" stroke="#ef4444" stroke-width="1"/>
-    <text x="317.5" y="140" text-anchor="middle" font-size="9" font-weight="bold" fill="#b91c1c">Khatulistiwa (Ekuator 0°)</text>
+    <rect x="245" y="116" width="142" height="22" rx="4" fill="#ffffff" stroke="#ef4444" stroke-width="1"/>
+    <text x="316" y="131" text-anchor="middle" font-size="9" font-weight="bold" fill="#b91c1c">Khatulistiwa (Ekuator 0°)</text>
   </g>
   <g>
-    <rect x="250" y="160" width="135" height="22" rx="4" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
-    <text x="317.5" y="175" text-anchor="middle" font-size="9" font-weight="bold" fill="#475569">Garis Balik (23.5° LU/LS)</text>
+    <rect x="245" y="150" width="142" height="22" rx="4" fill="#ffffff" stroke="#d97706" stroke-width="1"/>
+    <text x="316" y="165" text-anchor="middle" font-size="9" font-weight="bold" fill="#b45309">Garis Balik (23.5° LU/LS)</text>
   </g>
   <g>
-    <rect x="250" y="195" width="135" height="22" rx="4" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
-    <text x="317.5" y="210" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Kutub Selatan (90° LS)</text>
+    <rect x="245" y="184" width="142" height="22" rx="4" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+    <text x="316" y="199" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Kutub Selatan (90° LS)</text>
   </g>
 
   <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${target.x}" cy="${target.y}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${target.x}" y="${target.y + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
   <text x="200" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Garis imajiner bumi yang ditunjuk oleh tanda "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
@@ -1284,52 +1299,60 @@ export function renderGarisWallaceWeberSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const zones = [
-    { id: 'asiatis', name: 'Fauna Asiatis (Barat)', x: 90, icon: '🐘', desc: 'Gajah, Harimau' },
-    { id: 'peralihan', name: 'Fauna Peralihan (Tengah)', x: 210, icon: '🦬', desc: 'Anoa, Komodo' },
-    { id: 'australis', name: 'Fauna Australis (Timur)', x: 330, icon: '🦜', desc: 'Cendrawasih, Kasuari' }
+    { id: 'asiatis', name: 'Tipe Asiatis', x: 80, icon: '🐘', fauna: 'Gajah, Harimau', wilayah: 'Sumatra, Jawa, Kalimantan' },
+    { id: 'peralihan', name: 'Tipe Peralihan', x: 210, icon: '🦬', fauna: 'Anoa, Komodo, Babi Rusa', wilayah: 'Sulawesi, Nusa Tenggara' },
+    { id: 'australis', name: 'Tipe Australis', x: 340, icon: '🦜', fauna: 'Cendrawasih, Kasuari', wilayah: 'Papua, Maluku, Kep. Aru' }
   ];
 
   let target = zones.find(z => pointer.includes(z.id)) || zones[1];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 230" width="420" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="420" height="230" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 240" width="420" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="420" height="240" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
   <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Persebaran Fauna Indonesia: Garis Wallace &amp; Weber</text>
 
   <!-- 3 Wilayah / Zona Fauna -->
   <!-- Zona Asiatis -->
-  <rect x="35" y="45" width="110" height="130" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
-  <text x="90" y="65" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">Tipe Asiatis</text>
-  <text x="90" y="95" text-anchor="middle" font-size="18">🐘</text>
-  <text x="90" y="125" text-anchor="middle" font-size="7.5" fill="#334155">Sumatra, Jawa</text>
-  <text x="90" y="137" text-anchor="middle" font-size="7.5" fill="#334155">Kalimantan</text>
+  <rect x="20" y="44" width="118" height="136" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <rect x="30" y="52" width="98" height="20" rx="10" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+  <text x="79" y="66" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">Tipe Asiatis</text>
+  <text x="79" y="98" text-anchor="middle" font-size="22">🐘</text>
+  <text x="79" y="122" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#334155">Mamalia Besar</text>
+  <text x="79" y="138" text-anchor="middle" font-size="7.5" fill="#64748b">Sumatra, Jawa, Bali,</text>
+  <text x="79" y="150" text-anchor="middle" font-size="7.5" fill="#64748b">serta Kalimantan</text>
 
   <!-- Garis Wallace Merah -->
-  <line x1="150" y1="40" x2="150" y2="180" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,3"/>
-  <text x="150" y="195" text-anchor="middle" font-size="7" font-weight="bold" fill="#dc2626">Garis Wallace</text>
+  <line x1="145" y1="40" x2="145" y2="185" stroke="#dc2626" stroke-width="2.2" stroke-dasharray="5,3"/>
+  <rect x="114" y="188" width="62" height="18" rx="4" fill="#fee2e2" stroke="#dc2626" stroke-width="1"/>
+  <text x="145" y="201" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#b91c1c">G. Wallace</text>
 
   <!-- Zona Peralihan -->
-  <rect x="155" y="45" width="110" height="130" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
-  <text x="210" y="65" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400e">Tipe Peralihan</text>
-  <text x="210" y="95" text-anchor="middle" font-size="18">🦬</text>
-  <text x="210" y="125" text-anchor="middle" font-size="7.5" fill="#334155">Sulawesi, Nusa</text>
-  <text x="210" y="137" text-anchor="middle" font-size="7.5" fill="#334155">Tenggara</text>
+  <rect x="151" y="44" width="118" height="136" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <rect x="161" y="52" width="98" height="20" rx="10" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+  <text x="210" y="66" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400e">Tipe Peralihan</text>
+  <text x="210" y="98" text-anchor="middle" font-size="22">🦬</text>
+  <text x="210" y="122" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#334155">Fauna Endemik</text>
+  <text x="210" y="138" text-anchor="middle" font-size="7.5" fill="#64748b">Sulawesi, Nusa Tenggara,</text>
+  <text x="210" y="150" text-anchor="middle" font-size="7.5" fill="#64748b">dan Maluku</text>
 
   <!-- Garis Weber Biru -->
-  <line x1="270" y1="40" x2="270" y2="180" stroke="#2563eb" stroke-width="2" stroke-dasharray="4,3"/>
-  <text x="270" y="195" text-anchor="middle" font-size="7" font-weight="bold" fill="#2563eb">Garis Weber</text>
+  <line x1="275" y1="40" x2="275" y2="185" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="5,3"/>
+  <rect x="248" y="188" width="54" height="18" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+  <text x="275" y="201" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#1d4ed8">G. Weber</text>
 
   <!-- Zona Australis -->
-  <rect x="275" y="45" width="110" height="130" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
-  <text x="330" y="65" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Tipe Australis</text>
-  <text x="330" y="95" text-anchor="middle" font-size="18">🦜</text>
-  <text x="330" y="125" text-anchor="middle" font-size="7.5" fill="#334155">Papua, Maluku</text>
-  <text x="330" y="137" text-anchor="middle" font-size="7.5" fill="#334155">Kep. Aru</text>
+  <rect x="282" y="44" width="118" height="136" rx="8" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5"/>
+  <rect x="292" y="52" width="98" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="341" y="66" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Tipe Australis</text>
+  <text x="341" y="98" text-anchor="middle" font-size="22">🦜</text>
+  <text x="341" y="122" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#334155">Burung &amp; Marsupial</text>
+  <text x="341" y="138" text-anchor="middle" font-size="7.5" fill="#64748b">Papua, Kep. Aru,</text>
+  <text x="341" y="150" text-anchor="middle" font-size="7.5" fill="#64748b">dan sekitarnya</text>
 
   <!-- Target Badge -->
-  <circle cx="${target.x}" cy="95" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-  <text x="${target.x}" y="99" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <circle cx="${target.x}" cy="98" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${target.x}" y="102" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
 
-  <text x="210" y="214" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Contoh fauna endemik pada zona bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+  <text x="210" y="226" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Contoh fauna endemik atau wilayah pada zona bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
 </svg>`;
 }
 

@@ -381,7 +381,7 @@ export function renderTanggaNadaSvg(params: {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <rect width="420" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Seni Musik: Garis Paranada & Tangga Nada Diatonis</text>
+  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Seni Musik: Garis Paranada &amp; Tangga Nada Diatonis</text>
 
   <!-- 5 Garis Paranada -->
   ${staffLines}
@@ -454,7 +454,7 @@ export function renderLingkaranWarnaSvg(params: {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 260" width="430" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <rect width="430" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="215" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Teori Warna: Lingkaran Warna Primer & Sekunder</text>
+  <text x="215" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Teori Warna: Lingkaran Warna Primer &amp; Sekunder</text>
 
   <!-- Roda 6 Warna -->
   <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
@@ -1575,7 +1575,7 @@ export function renderJenisParagrafInduktifDeduktifSvg(params: any): string {
   const types = [
     { id: 'deduktif', name: 'Deduktif', desc: 'Ide Pokok di Awal', x: 75, top: true, bot: false },
     { id: 'induktif', name: 'Induktif', desc: 'Ide Pokok di Akhir', x: 190, top: false, bot: true },
-    { id: 'campuran', name: 'Campuran', desc: 'Ide Pokok Awal & Akhir', x: 305, top: true, bot: true }
+    { id: 'campuran', name: 'Campuran', desc: 'Ide Pokok Awal &amp; Akhir', x: 305, top: true, bot: true }
   ];
 
   let target = types.find(t => pointer.includes(t.id)) || types[0];
@@ -1702,7 +1702,7 @@ export function renderKoperasiSekolahSvg(params: any): string {
     { id: 'rat', name: 'Rapat Anggota Tahunan (RAT)', role: 'Kekuasaan Tertinggi', x: 190, y: 55 },
     { id: 'pengawas', name: 'Pengawas', role: 'Pengawasan', x: 110, y: 110 },
     { id: 'pengurus', name: 'Pengurus', role: 'Pelaksana Usaha', x: 270, y: 110 },
-    { id: 'anggota', name: 'Anggota Koperasi (Siswa & Guru)', role: 'Pemilik & Pengguna', x: 190, y: 165 }
+    { id: 'anggota', name: 'Anggota Koperasi (Siswa &amp; Guru)', role: 'Pemilik &amp; Pengguna', x: 190, y: 165 }
   ];
 
   let target = org.find(o => pointer.includes(o.id)) || org[0];

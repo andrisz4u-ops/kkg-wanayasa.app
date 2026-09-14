@@ -1582,7 +1582,7 @@ export function renderPohonFaktorSvg(params: {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" width="420" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <!-- Border & Judul -->
   <rect width="420" height="280" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pohon Faktor & Faktorisasi Prima</text>
+  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pohon Faktor &amp; Faktorisasi Prima</text>
 
   <!-- Garis-garis Cabang Penghubung -->
   <line x1="${root.x}" y1="${root.y + 12}" x2="${nodeP1.x}" y2="${nodeP1.y - 12}" stroke="#64748b" stroke-width="2"/>
@@ -1657,7 +1657,7 @@ export function renderGridMatriks100Svg(params: {
 
   <!-- Border & Judul -->
   <rect width="420" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Visualisasi Nilai Desimal & Persen (Grid 100)</text>
+  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Visualisasi Nilai Desimal &amp; Persen (Grid 100)</text>
 
   <!-- Matriks 100 Kotak -->
   <g>${cellsSvg}</g>

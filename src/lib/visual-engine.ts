@@ -14,7 +14,8 @@
 import {
   VisualStimulusConfig,
   GeneratedVisualResult,
-  svgToDataUri
+  svgToDataUri,
+  sanitizeSvgXml
 } from './visuals/types';
 
 import {
@@ -910,8 +911,11 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   if (!entry) return null;
 
   const params = config.params || {};
-  const svg = entry.render(params);
-  if (!svg) return null;
+  const rawSvg = entry.render(params);
+  if (!rawSvg) return null;
+
+  // Sanitize SVG XML to guarantee 100% valid XML entities
+  const svg = sanitizeSvgXml(rawSvg);
 
   let title = config.caption;
   if (!title) {

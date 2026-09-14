@@ -97,9 +97,17 @@ export function escapeXml(str: string | number): string {
     .replace(/'/g, '&apos;');
 }
 
+// Helper: Sanitize raw ampersands in SVG XML string to ensure 100% valid XML rendering
+export function sanitizeSvgXml(svg: string): string {
+  if (!svg) return svg;
+  // Replace any '&' that is NOT part of a valid XML entity reference (&amp;, &lt;, &gt;, &quot;, &apos;, &#123;, &#x1F;)
+  return svg.replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+}
+
 // Helper: Wrap SVG string to Data URI
 export function svgToDataUri(svg: string): string {
-  const cleaned = svg.replace(/\s+/g, ' ').trim();
+  const sanitized = sanitizeSvgXml(svg);
+  const cleaned = sanitized.replace(/\s+/g, ' ').trim();
   return `data:image/svg+xml;utf8,${encodeURIComponent(cleaned)}`;
 }
 

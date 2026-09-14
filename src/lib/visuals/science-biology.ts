@@ -765,55 +765,147 @@ export function renderSimbiosisSvg(params: { tipe?: string; label?: string }): s
   else if (tipe.includes('parasit')) activeIdx = 2;
 
   const cols = [
-    { x: 15, title: 'Mutualisme', simbol: '( + / + )', efek: 'Keduanya Untung', contoh: 'Lebah &amp; Bunga' },
-    { x: 145, title: 'Komensalisme', simbol: '( + / 0 )', efek: 'Satu Untung, Satu Netral', contoh: 'Ikan Remora &amp; Hiu' },
-    { x: 275, title: 'Parasitisme', simbol: '( + / - )', efek: 'Satu Untung, Satu Rugi', contoh: 'Benalu &amp; Pohon Inang' }
+    { x: 15, w: 190, h: 300, title: 'Mutualisme', simbol: '( + / + )' },
+    { x: 215, w: 190, h: 300, title: 'Komensalisme', simbol: '( + / 0 )' },
+    { x: 415, w: 190, h: 300, title: 'Parasitisme', simbol: '( + / - )' }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 250" width="410" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Pola Interaksi Simbiosis Makhluk Hidup</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 370" width="620" height="370" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="mutGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="komGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0f9ff"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <linearGradient id="parGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+    <filter id="glowSimbiosis" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-  <!-- Kolom 1: Mutualisme -->
-  <rect x="15" y="42" width="120" height="175" rx="8" fill="#f0fdf4" stroke="${activeIdx === 0 ? '#e11d48' : '#86efac'}" stroke-width="${activeIdx === 0 ? 2.2 : 1.2}"/>
-  <text x="75" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Mutualisme` : 'Mutualisme'}</text>
-  <rect x="35" y="74" width="80" height="26" rx="13" fill="#bbf7d0"/>
-  <text x="75" y="91" text-anchor="middle" font-size="13" font-weight="bold" fill="#166534">+ / +</text>
-  <text x="75" y="125" text-anchor="middle" font-size="9" font-weight="bold" fill="#14532d">Kedua pihak saling</text>
-  <text x="75" y="138" text-anchor="middle" font-size="9" font-weight="bold" fill="#14532d">menguntungkan</text>
-  <line x1="30" y1="150" x2="120" y2="150" stroke="#86efac" stroke-width="1"/>
-  <text x="75" y="170" text-anchor="middle" font-size="8.5" fill="#475569">Contoh:</text>
-  <text x="75" y="184" text-anchor="middle" font-size="9" font-weight="600" fill="#15803d">Lebah &amp; Bunga</text>
-  <text x="75" y="198" text-anchor="middle" font-size="8" fill="#64748b">Kerbau &amp; Jalak</text>
+  <!-- Container Frame -->
+  <rect width="620" height="370" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Kolom 2: Komensalisme -->
-  <rect x="145" y="42" width="120" height="175" rx="8" fill="#f0f9ff" stroke="${activeIdx === 1 ? '#e11d48' : '#7dd3fc'}" stroke-width="${activeIdx === 1 ? 2.2 : 1.2}"/>
-  <text x="205" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Komensalisme` : 'Komensalisme'}</text>
-  <rect x="165" y="74" width="80" height="26" rx="13" fill="#bae6fd"/>
-  <text x="205" y="91" text-anchor="middle" font-size="13" font-weight="bold" fill="#0284c7">+ / 0</text>
-  <text x="205" y="125" text-anchor="middle" font-size="9" font-weight="bold" fill="#075985">Satu untung,</text>
-  <text x="205" y="138" text-anchor="middle" font-size="9" font-weight="bold" fill="#075985">satu tidak dirugikan</text>
-  <line x1="160" y1="150" x2="250" y2="150" stroke="#7dd3fc" stroke-width="1"/>
-  <text x="205" y="170" text-anchor="middle" font-size="8.5" fill="#475569">Contoh:</text>
-  <text x="205" y="184" text-anchor="middle" font-size="9" font-weight="600" fill="#0284c7">Hiu &amp; Ikan Remora</text>
-  <text x="205" y="198" text-anchor="middle" font-size="8" fill="#64748b">Anggrek &amp; Pohon</text>
+  <!-- Main Title -->
+  <text x="310" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pola Interaksi Simbiosis Makhluk Hidup dalam Ekosistem</text>
 
-  <!-- Kolom 3: Parasitisme -->
-  <rect x="275" y="42" width="120" height="175" rx="8" fill="#fff1f2" stroke="${activeIdx === 2 ? '#e11d48' : '#fda4af'}" stroke-width="${activeIdx === 2 ? 2.2 : 1.2}"/>
-  <text x="335" y="64" text-anchor="middle" font-size="11" font-weight="bold" fill="#be123c">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Parasitisme` : 'Parasitisme'}</text>
-  <rect x="295" y="74" width="80" height="26" rx="13" fill="#fecdd3"/>
-  <text x="335" y="91" text-anchor="middle" font-size="13" font-weight="bold" fill="#e11d48">+ / -</text>
-  <text x="335" y="125" text-anchor="middle" font-size="9" font-weight="bold" fill="#9f1239">Satu untung,</text>
-  <text x="335" y="138" text-anchor="middle" font-size="9" font-weight="bold" fill="#9f1239">pihak lain dirugikan</text>
-  <line x1="290" y1="150" x2="380" y2="150" stroke="#fda4af" stroke-width="1"/>
-  <text x="335" y="170" text-anchor="middle" font-size="8.5" fill="#475569">Contoh:</text>
-  <text x="335" y="184" text-anchor="middle" font-size="9" font-weight="600" fill="#be123c">Benalu &amp; Inang</text>
-  <text x="335" y="198" text-anchor="middle" font-size="8" fill="#64748b">Kutu &amp; Kucing</text>
+  <!-- ==================== KOLOM 1: MUTUALISME (+ / +) ==================== -->
+  <rect x="15" y="44" width="190" height="282" rx="8" fill="url(#mutGrad)" stroke="${activeIdx === 0 ? '#e11d48' : '#86efac'}" stroke-width="${activeIdx === 0 ? 2.5 : 1.2}"/>
+  <text x="110" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 0 ? '#be123c' : '#15803d'}">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Mutualisme` : 'Mutualisme'}</text>
+  
+  <!-- Pill Rumus Simbiosis -->
+  <rect x="65" y="80" width="90" height="24" rx="12" fill="#86efac"/>
+  <text x="110" y="96" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">+ / +</text>
+  <text x="110" y="120" text-anchor="middle" font-size="9" font-weight="bold" fill="#15803d">Saling Menguntungkan</text>
 
-  <!-- Badge X -->
-  <circle cx="${cols[activeIdx].x + 110}" cy="50" r="10.5" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cols[activeIdx].x + 110}" y="54" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Ilustrasi Vektor Detail: Lebah Madu & Bunga Mekar -->
+  <g id="simb_lebah_bunga">
+    <!-- Mahkota Bunga (Kuning-Merah) -->
+    <circle cx="110" cy="180" r="16" fill="#fef08a" stroke="#ca8a04" stroke-width="1.5"/>
+    <circle cx="88" cy="180" r="13" fill="#fda4af" stroke="#e11d48" stroke-width="1.2"/>
+    <circle cx="132" cy="180" r="13" fill="#fda4af" stroke="#e11d48" stroke-width="1.2"/>
+    <circle cx="110" cy="158" r="13" fill="#fda4af" stroke="#e11d48" stroke-width="1.2"/>
+    <circle cx="110" cy="202" r="13" fill="#fda4af" stroke="#e11d48" stroke-width="1.2"/>
+    <!-- Pusat Bunga & Serbuk Sari -->
+    <circle cx="110" cy="180" r="9" fill="#eab308"/>
+    <!-- Lebah Madu Menghisap Nektar -->
+    <ellipse cx="85" cy="150" rx="14" ry="9" transform="rotate(-25 85 150)" fill="#fbbf24" stroke="#78350f" stroke-width="1.5"/>
+    <!-- Garis Garis Hitam Lebah -->
+    <line x1="82" y1="143" x2="82" y2="157" stroke="#451a03" stroke-width="2"/>
+    <line x1="88" y1="143" x2="88" y2="157" stroke="#451a03" stroke-width="2"/>
+    <!-- Sayap Transparan Lebah -->
+    <ellipse cx="85" cy="138" rx="10" ry="5" transform="rotate(15 85 138)" fill="#e0f2fe" fill-opacity="0.8" stroke="#38bdf8" stroke-width="1"/>
+    <!-- Panah Aliran Timbal Balik -->
+    <path d="M 68,168 Q 80,185 96,182" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+  </g>
 
-  <text x="205" y="238" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bentuk interaksi pada kolom "${escapeXml(labelChar)}" adalah hubungan ...</text>
+  <!-- Keterangan Contoh -->
+  <line x1="30" y1="228" x2="190" y2="228" stroke="#86efac" stroke-width="1"/>
+  <text x="110" y="246" text-anchor="middle" font-size="9" font-weight="bold" fill="#14532d">Contoh Simbiosis:</text>
+  <text x="110" y="262" text-anchor="middle" font-size="9.5" font-weight="600" fill="#166534">Lebah &amp; Bunga</text>
+  <text x="110" y="278" text-anchor="middle" font-size="8.5" fill="#475569">Kerbau &amp; Burung Jalak</text>
+  <text x="110" y="294" text-anchor="middle" font-size="8.5" fill="#475569">Ikan Badut &amp; Anemon</text>
+
+  <!-- ==================== KOLOM 2: KOMENSALISME (+ / 0) ==================== -->
+  <rect x="215" y="44" width="190" height="282" rx="8" fill="url(#komGrad)" stroke="${activeIdx === 1 ? '#e11d48' : '#7dd3fc'}" stroke-width="${activeIdx === 1 ? 2.5 : 1.2}"/>
+  <text x="310" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 1 ? '#be123c' : '#0369a1'}">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Komensalisme` : 'Komensalisme'}</text>
+  
+  <!-- Pill Rumus Simbiosis -->
+  <rect x="265" y="80" width="90" height="24" rx="12" fill="#7dd3fc"/>
+  <text x="310" y="96" text-anchor="middle" font-size="12" font-weight="bold" fill="#0c4a6e">+ / 0</text>
+  <text x="310" y="120" text-anchor="middle" font-size="9" font-weight="bold" fill="#0284c7">Satu Untung, Satu Netral</text>
+
+  <!-- Ilustrasi Vektor Detail: Ikan Hiu & Ikan Remora -->
+  <g id="simb_hiu_remora">
+    <!-- Tubuh Ikan Hiu -->
+    <path d="M 235,170 C 260,150 330,148 375,166 C 360,178 315,188 265,180 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.8"/>
+    <!-- Sirip Punggung Hiu -->
+    <path d="M 288,154 L 302,135 L 314,152 Z" fill="#64748b" stroke="#334155" stroke-width="1.4"/>
+    <!-- Ekor Hiu -->
+    <path d="M 375,166 L 392,152 L 386,170 L 394,182 Z" fill="#64748b" stroke="#334155" stroke-width="1.4"/>
+    <!-- Mata & Insang Hiu -->
+    <circle cx="250" cy="168" r="2.5" fill="#0f172a"/>
+    <path d="M 268,165 Q 266,175 272,178" stroke="#475569" stroke-width="1.2" fill="none"/>
+    
+    <!-- Ikan Remora Kecil di Bawah Hiu -->
+    <path d="M 270,192 C 285,186 315,186 332,192 C 315,198 285,198 270,192 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2"/>
+    <!-- Bantalan Penghisap Remora -->
+    <ellipse cx="282" cy="189" rx="6" ry="2" fill="#bae6fd" stroke="#0369a1" stroke-width="0.8"/>
+    <!-- Ekor Remora -->
+    <polygon points="332,192 340,187 340,197" fill="#0284c7"/>
+  </g>
+
+  <!-- Keterangan Contoh -->
+  <line x1="230" y1="228" x2="390" y2="228" stroke="#7dd3fc" stroke-width="1"/>
+  <text x="310" y="246" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Contoh Simbiosis:</text>
+  <text x="310" y="262" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0284c7">Hiu &amp; Ikan Remora</text>
+  <text x="310" y="278" text-anchor="middle" font-size="8.5" fill="#475569">Anggrek &amp; Pohon Inang</text>
+  <text x="310" y="294" text-anchor="middle" font-size="8.5" fill="#475569">Sirih &amp; Pohon Kelor</text>
+
+  <!-- ==================== KOLOM 3: PARASITISME (+ / -) ==================== -->
+  <rect x="415" y="44" width="190" height="282" rx="8" fill="url(#parGrad)" stroke="${activeIdx === 2 ? '#e11d48' : '#fda4af'}" stroke-width="${activeIdx === 2 ? 2.5 : 1.2}"/>
+  <text x="510" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 2 ? '#be123c' : '#e11d48'}">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Parasitisme` : 'Parasitisme'}</text>
+  
+  <!-- Pill Rumus Simbiosis -->
+  <rect x="465" y="80" width="90" height="24" rx="12" fill="#fda4af"/>
+  <text x="510" y="96" text-anchor="middle" font-size="12" font-weight="bold" fill="#881337">+ / -</text>
+  <text x="510" y="120" text-anchor="middle" font-size="9" font-weight="bold" fill="#be123c">Satu Untung, Satu Rugi</text>
+
+  <!-- Ilustrasi Vektor Detail: Benalu Menghisap Batang Pohon Inang -->
+  <g id="simb_benalu_host">
+    <!-- Dahan Pohon Inang (Cokelat Berkayu) -->
+    <path d="M 430,188 Q 510,184 590,192 L 590,206 Q 510,198 430,202 Z" fill="#b45309" stroke="#78350f" stroke-width="1.8"/>
+    <!-- Batang & Daun Benalu Parasit (Tumbuh Menembus Dahan) -->
+    <path d="M 485,186 Q 470,165 475,145 M 505,185 Q 525,160 520,140" stroke="#15803d" stroke-width="2.5" fill="none"/>
+    <!-- Daun-daun Benalu -->
+    <ellipse cx="468" cy="142" rx="10" ry="5" transform="rotate(-30 468 142)" fill="#4ade80" stroke="#16a34a" stroke-width="1"/>
+    <ellipse cx="482" cy="155" rx="9" ry="5" transform="rotate(20 482 155)" fill="#4ade80" stroke="#16a34a" stroke-width="1"/>
+    <ellipse cx="522" cy="138" rx="10" ry="5" transform="rotate(25 522 138)" fill="#4ade80" stroke="#16a34a" stroke-width="1"/>
+    <!-- Akar Hisap (Haustorium) Menembus Kambium Inang -->
+    <path d="M 485,186 L 485,198 M 500,186 L 502,198" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="485" cy="198" r="2.5" fill="#b91c1c"/>
+    <circle cx="502" cy="198" r="2.5" fill="#b91c1c"/>
+  </g>
+
+  <!-- Keterangan Contoh -->
+  <line x1="430" y1="228" x2="590" y2="228" stroke="#fda4af" stroke-width="1"/>
+  <text x="510" y="246" text-anchor="middle" font-size="9" font-weight="bold" fill="#be123c">Contoh Simbiosis:</text>
+  <text x="510" y="262" text-anchor="middle" font-size="9.5" font-weight="600" fill="#dc2626">Benalu &amp; Inang</text>
+  <text x="510" y="278" text-anchor="middle" font-size="8.5" fill="#475569">Tali Putri &amp; Pagar</text>
+  <text x="510" y="294" text-anchor="middle" font-size="8.5" fill="#475569">Kutu &amp; Hewan Inang</text>
+
+  <!-- Dynamic Target Badge [X] pada Kolom Terpilih -->
+  <circle cx="${cols[activeIdx].x + cols[activeIdx].w - 18}" cy="56" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2.2" filter="url(#glowSimbiosis)"/>
+  <text x="${cols[activeIdx].x + cols[activeIdx].w - 18}" y="60.5" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="310" y="352" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bentuk interaksi pada kolom "${escapeXml(labelChar)}" adalah hubungan ...</text>
 </svg>`;
 }
 
@@ -1009,58 +1101,152 @@ export function renderAdaptasiTumbuhanSvg(params: { pointer?: string; label?: st
   else if (pointer.includes('kantong') || pointer.includes('semar') || pointer.includes('serangga')) activeIdx = 2;
 
   const cols = [
-    { x: 15, title: 'Kaktus (Xerofit)', ciri1: 'Daun berbentuk duri', ciri2: 'Batang tebal berdaging', ciri3: 'Akar panjang menyebar' },
-    { x: 145, title: 'Teratai (Hidrofit)', ciri1: 'Daun bundar lebar & tipis', ciri2: 'Batang berongga udara', ciri3: 'Stomata di sisi atas' },
-    { x: 275, title: 'Kantong Semar', ciri1: 'Daun membentuk kantung', ciri2: 'Cairan pencerna nektar', ciri3: 'Menjebak serangga (N)' }
+    { x: 15, w: 190, h: 300, title: 'Kaktus (Xerofit)' },
+    { x: 215, w: 190, h: 300, title: 'Teratai (Hidrofit)' },
+    { x: 415, w: 190, h: 300, title: 'Kantong Semar' }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 255" width="410" height="255" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Bentuk Adaptasi Morfologi Tumbuhan</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 370" width="620" height="370" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="desertGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fefce8"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="jungleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#fed7aa"/>
+    </linearGradient>
+    <filter id="glowAdaptasi" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-  <!-- Kolom 1: Kaktus -->
-  <rect x="15" y="42" width="120" height="180" rx="8" fill="#fefce8" stroke="${activeIdx === 0 ? '#e11d48' : '#fef08a'}" stroke-width="${activeIdx === 0 ? 2.2 : 1.2}"/>
-  <text x="75" y="60" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#854d0e">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Kaktus` : 'Kaktus (Xerofit)'}</text>
-  <!-- Ilustrasi Kaktus -->
-  <rect x="62" y="80" width="26" height="48" rx="12" fill="#86efac" stroke="#16a34a" stroke-width="1.5"/>
-  <path d="M 62,94 L 48,94 L 48,84 M 88,102 L 102,102 L 102,90" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round"/>
-  <!-- Duri -->
-  <line x1="68" y1="90" x2="65" y2="86" stroke="#166534" stroke-width="1.5"/>
-  <line x1="82" y1="92" x2="85" y2="88" stroke="#166534" stroke-width="1.5"/>
-  <line x1="72" y1="110" x2="68" y2="108" stroke="#166534" stroke-width="1.5"/>
-  <text x="75" y="145" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#713f12">Habitat Kering</text>
-  <text x="75" y="160" text-anchor="middle" font-size="8" fill="#475569">• Daun bentuk duri</text>
-  <text x="75" y="174" text-anchor="middle" font-size="8" fill="#475569">• Batang tebal air</text>
-  <text x="75" y="188" text-anchor="middle" font-size="8" fill="#475569">• Lapisan lilin</text>
+  <!-- Container Frame -->
+  <rect width="620" height="370" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Kolom 2: Teratai -->
-  <rect x="145" y="42" width="120" height="180" rx="8" fill="#f0fdf4" stroke="${activeIdx === 1 ? '#e11d48' : '#bbf7d0'}" stroke-width="${activeIdx === 1 ? 2.2 : 1.2}"/>
-  <text x="205" y="60" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#166534">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Teratai` : 'Teratai (Hidrofit)'}</text>
-  <!-- Ilustrasi Teratai -->
-  <ellipse cx="205" cy="98" rx="35" ry="12" fill="#4ade80" stroke="#15803d" stroke-width="1.5"/>
-  <path d="M 205,98 L 225,88" stroke="#f0fdf4" stroke-width="2"/>
-  <circle cx="205" cy="90" r="8" fill="#f472b6" stroke="#db2777" stroke-width="1"/>
-  <text x="205" y="145" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#14532d">Habitat Berair</text>
-  <text x="205" y="160" text-anchor="middle" font-size="8" fill="#475569">• Daun lebar &amp; tipis</text>
-  <text x="205" y="174" text-anchor="middle" font-size="8" fill="#475569">• Batang berongga</text>
-  <text x="205" y="188" text-anchor="middle" font-size="8" fill="#475569">• Mengapung di air</text>
+  <!-- Title Header -->
+  <text x="310" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Bentuk Adaptasi Morfologi &amp; Fisiologi Tumbuhan</text>
 
-  <!-- Kolom 3: Kantong Semar -->
-  <rect x="275" y="42" width="120" height="180" rx="8" fill="#fff7ed" stroke="${activeIdx === 2 ? '#e11d48' : '#fed7aa'}" stroke-width="${activeIdx === 2 ? 2.2 : 1.2}"/>
-  <text x="335" y="60" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#c2410c">${activeIdx === 2 ? `[${escapeXml(labelChar)}] K. Semar` : 'Kantong Semar'}</text>
-  <!-- Ilustrasi Kantung -->
-  <path d="M 320,78 Q 315,100 322,120 Q 335,128 345,120 Q 352,100 348,78 Z" fill="#fb923c" stroke="#c2410c" stroke-width="1.5"/>
-  <ellipse cx="334" cy="78" rx="14" ry="5" fill="#fdba74" stroke="#c2410c" stroke-width="1"/>
-  <path d="M 334,73 Q 338,62 346,68" fill="none" stroke="#ea580c" stroke-width="2"/>
-  <text x="335" y="145" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#7c2d12">Insektivora</text>
-  <text x="335" y="160" text-anchor="middle" font-size="8" fill="#475569">• Daun jadi kantung</text>
-  <text x="335" y="174" text-anchor="middle" font-size="8" fill="#475569">• Menjebak serangga</text>
-  <text x="335" y="188" text-anchor="middle" font-size="8" fill="#475569">• Memperoleh nitrogen</text>
+  <!-- ==================== PANEL 1: KAKTUS (XEROFIT) ==================== -->
+  <rect x="15" y="44" width="190" height="282" rx="8" fill="url(#desertGrad)" stroke="${activeIdx === 0 ? '#e11d48' : '#facc15'}" stroke-width="${activeIdx === 0 ? 2.5 : 1.2}"/>
+  <text x="110" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 0 ? '#be123c' : '#854d0e'}">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Kaktus` : 'Kaktus (Xerofit)'}</text>
+  
+  <!-- Pill Habitat -->
+  <rect x="55" y="78" width="110" height="22" rx="11" fill="#fef08a"/>
+  <text x="110" y="93" text-anchor="middle" font-size="9" font-weight="bold" fill="#713f12">Habitat Kering / Gersang</text>
 
-  <!-- Target Badge X -->
-  <circle cx="${cols[activeIdx].x + 105}" cy="54" r="10.5" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cols[activeIdx].x + 105}" y="58" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Ilustrasi Vektor Kaktus Saguaro Gurun -->
+  <g id="adapt_kaktus">
+    <!-- Gundukan Pasir Gurun & Panas Mentari -->
+    <ellipse cx="110" cy="205" rx="75" ry="12" fill="#fde047" opacity="0.6"/>
+    <!-- Batang Utama Sukulen Hijau Berdaging -->
+    <rect x="94" y="112" width="32" height="88" rx="16" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+    <!-- Alur Tulang Rusuk Batang Vertikal -->
+    <line x1="102" y1="116" x2="102" y2="198" stroke="#16a34a" stroke-width="1.5"/>
+    <line x1="110" y1="114" x2="110" y2="198" stroke="#16a34a" stroke-width="1.5"/>
+    <line x1="118" y1="116" x2="118" y2="198" stroke="#16a34a" stroke-width="1.5"/>
+    <!-- Cabang Kiri Melengkung ke Atas -->
+    <path d="M 94,142 L 78,142 Q 72,142 72,135 L 72,125" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 94,142 L 78,142 Q 72,142 72,135 L 72,125" fill="none" stroke="#15803d" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Cabang Kanan Melengkung ke Atas -->
+    <path d="M 126,155 L 142,155 Q 148,155 148,148 L 148,136" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 126,155 L 142,155 Q 148,155 148,148 L 148,136" fill="none" stroke="#15803d" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Duri-Duri Tajam Kaktus (Modifikasi Daun) -->
+    <line x1="92" y1="126" x2="86" y2="122" stroke="#14532d" stroke-width="1.4"/>
+    <line x1="128" y1="128" x2="134" y2="124" stroke="#14532d" stroke-width="1.4"/>
+    <line x1="92" y1="168" x2="85" y2="168" stroke="#14532d" stroke-width="1.4"/>
+    <line x1="128" y1="172" x2="135" y2="172" stroke="#14532d" stroke-width="1.4"/>
+    <!-- Akar Panjang di Bawah Pasir -->
+    <path d="M 110,200 L 110,222 M 105,204 L 88,218 M 115,204 L 132,218" stroke="#a16207" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
 
-  <text x="205" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Ciri adaptasi tumbuhan pada tanda "${escapeXml(labelChar)}" bertujuan untuk ...</text>
+  <!-- Poin-Poin Ciri Adaptasi -->
+  <line x1="30" y1="228" x2="190" y2="228" stroke="#facc15" stroke-width="1"/>
+  <text x="110" y="246" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#854d0e">• Daun berbentuk duri</text>
+  <text x="110" y="262" text-anchor="middle" font-size="8.5" fill="#475569">• Batang tebal berlapis lilin</text>
+  <text x="110" y="278" text-anchor="middle" font-size="8.5" fill="#475569">• Menyimpan cadangan air</text>
+  <text x="110" y="294" text-anchor="middle" font-size="8.5" fill="#475569">• Akar panjang menyebar</text>
+
+  <!-- ==================== PANEL 2: TERATAI (HIDROFIT) ==================== -->
+  <rect x="215" y="44" width="190" height="282" rx="8" fill="url(#waterGrad)" stroke="${activeIdx === 1 ? '#e11d48' : '#86efac'}" stroke-width="${activeIdx === 1 ? 2.5 : 1.2}"/>
+  <text x="310" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 1 ? '#be123c' : '#15803d'}">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Teratai` : 'Teratai (Hidrofit)'}</text>
+  
+  <!-- Pill Habitat -->
+  <rect x="255" y="78" width="110" height="22" rx="11" fill="#bbf7d0"/>
+  <text x="310" y="93" text-anchor="middle" font-size="9" font-weight="bold" fill="#14532d">Habitat Air / Kolam</text>
+
+  <!-- Ilustrasi Vektor Teratai Mekar Mengapung -->
+  <g id="adapt_teratai">
+    <!-- Riak Permukaan Air -->
+    <path d="M 230,175 Q 260,170 290,175 Q 320,180 350,175 Q 375,170 390,175" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.7"/>
+    <!-- Daun Bundar Lebar Mengapung (Lily Pad dengan Torehan V) -->
+    <path d="M 310,170 C 270,170 252,150 270,136 C 290,122 340,122 355,136 C 368,148 350,170 310,170 Z" fill="#4ade80" stroke="#15803d" stroke-width="2"/>
+    <!-- Celah Torehan Daun -->
+    <path d="M 310,146 L 330,130" stroke="#15803d" stroke-width="1.8"/>
+    <!-- Urat Daun Menyebar -->
+    <path d="M 310,146 Q 285,142 278,138 M 310,146 Q 338,150 348,144 M 310,146 Q 302,160 300,166" stroke="#22c55e" stroke-width="1.2" fill="none"/>
+    <!-- Bunga Teratai Merah Muda Mekar Indah -->
+    <ellipse cx="310" cy="126" rx="8" ry="16" fill="#f472b6" stroke="#db2777" stroke-width="1.2"/>
+    <ellipse cx="302" cy="128" rx="7" ry="14" transform="rotate(-20 302 128)" fill="#fbcfe8" stroke="#db2777" stroke-width="1"/>
+    <ellipse cx="318" cy="128" rx="7" ry="14" transform="rotate(20 318 128)" fill="#fbcfe8" stroke="#db2777" stroke-width="1"/>
+    <!-- Batang Berongga Menyelam ke Bawah Air -->
+    <path d="M 310,170 Q 306,195 310,220" fill="none" stroke="#16a34a" stroke-width="4"/>
+    <path d="M 310,170 Q 306,195 310,220" fill="none" stroke="#86efac" stroke-width="1.5" stroke-dasharray="2 2"/>
+  </g>
+
+  <!-- Poin-Poin Ciri Adaptasi -->
+  <line x1="230" y1="228" x2="390" y2="228" stroke="#86efac" stroke-width="1"/>
+  <text x="310" y="246" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#15803d">• Daun lebar &amp; tipis</text>
+  <text x="310" y="262" text-anchor="middle" font-size="8.5" fill="#475569">• Stomata di permukaan atas</text>
+  <text x="310" y="278" text-anchor="middle" font-size="8.5" fill="#475569">• Batang berongga udara</text>
+  <text x="310" y="294" text-anchor="middle" font-size="8.5" fill="#475569">• Mempercepat penguapan</text>
+
+  <!-- ==================== PANEL 3: KANTONG SEMAR (INSEKTIVORA) ==================== -->
+  <rect x="415" y="44" width="190" height="282" rx="8" fill="url(#jungleGrad)" stroke="${activeIdx === 2 ? '#e11d48' : '#fb923c'}" stroke-width="${activeIdx === 2 ? 2.5 : 1.2}"/>
+  <text x="510" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="${activeIdx === 2 ? '#be123c' : '#c2410c'}">${activeIdx === 2 ? `[${escapeXml(labelChar)}] K. Semar` : 'Kantong Semar'}</text>
+  
+  <!-- Pill Habitat -->
+  <rect x="450" y="78" width="120" height="22" rx="11" fill="#fed7aa"/>
+  <text x="510" y="93" text-anchor="middle" font-size="9" font-weight="bold" fill="#9a3412">Insektivora (Miskin Hara)</text>
+
+  <!-- Ilustrasi Vektor Kantong Semar Nepenthes -->
+  <g id="adapt_nepenthes">
+    <!-- Sulur Daun Hijau Menggantung -->
+    <path d="M 460,110 Q 480,105 495,125 Q 505,140 500,155" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Piala Kantong (Perangkap) -->
+    <path d="M 488,155 C 480,185 488,212 505,214 C 522,212 530,185 522,155 Z" fill="#fb923c" stroke="#c2410c" stroke-width="2"/>
+    <!-- Sayap Bersekat Vertikal pada Kantong -->
+    <path d="M 500,165 Q 496,188 502,210 M 512,165 Q 516,188 510,210" fill="none" stroke="#ea580c" stroke-width="1.2"/>
+    <!-- Bibir Licin Bernektar (Peristom) -->
+    <ellipse cx="505" cy="155" rx="17" ry="5.5" fill="#ea580c" stroke="#9a3412" stroke-width="1.5"/>
+    <ellipse cx="505" cy="155" rx="11" ry="3.5" fill="#431407"/>
+    <!-- Tutup Kantong (Operkulum) Melindungi dari Air Hujan -->
+    <path d="M 496,148 Q 505,135 522,142" fill="none" stroke="#c2410c" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="510" cy="140" rx="9" ry="3" transform="rotate(-15 510 140)" fill="#fdba74" stroke="#c2410c" stroke-width="1"/>
+    <!-- Cairan Enzim Pencerna di Dasar Kantong -->
+    <path d="M 494,195 Q 505,200 516,195 C 518,206 512,212 505,213 C 498,212 492,206 494,195 Z" fill="#38bdf8" fill-opacity="0.7"/>
+    <!-- Serangga Terbang Terpikat Menuju Bibir Kantong -->
+    <circle cx="538" cy="146" r="2.5" fill="#1e293b"/>
+    <path d="M 536,144 Q 532,138 535,142 M 540,144 Q 544,138 541,142" stroke="#64748b" stroke-width="0.8" fill="none"/>
+  </g>
+
+  <!-- Poin-Poin Ciri Adaptasi -->
+  <line x1="430" y1="228" x2="590" y2="228" stroke="#fb923c" stroke-width="1"/>
+  <text x="510" y="246" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#c2410c">• Daun membentuk kantung</text>
+  <text x="510" y="262" text-anchor="middle" font-size="8.5" fill="#475569">• Menghasilkan nektar manis</text>
+  <text x="510" y="278" text-anchor="middle" font-size="8.5" fill="#475569">• Cairan asam pencerna</text>
+  <text x="510" y="294" text-anchor="middle" font-size="8.5" fill="#475569">• Memperoleh Nitrogen (N)</text>
+
+  <!-- Dynamic Target Badge [X] pada Kolom Terpilih -->
+  <circle cx="${cols[activeIdx].x + cols[activeIdx].w - 18}" cy="56" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2.2" filter="url(#glowAdaptasi)"/>
+  <text x="${cols[activeIdx].x + cols[activeIdx].w - 18}" y="60.5" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="310" y="352" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Ciri adaptasi tumbuhan pada tanda "${escapeXml(labelChar)}" bertujuan untuk ...</text>
 </svg>`;
 }
 
@@ -1137,68 +1323,195 @@ export function renderPerkembangbiakanTumbuhanSvg(params: { pointer?: string; la
 
   let activeIdx = 2; // 0: Tunas, 1: Umbi Batang, 2: Rizoma, 3: Geragih, 4: Spora
   if (pointer.includes('tunas') || pointer.includes('pisang') || pointer.includes('bambu')) activeIdx = 0;
-  else if (pointer.includes('umbi') || pointer.includes('kentang')) activeIdx = 1;
-  else if (pointer.includes('geragih') || pointer.includes('stolon') || pointer.includes('stroberi')) activeIdx = 3;
+  else if (pointer.includes('umbi') || pointer.includes('kentang') || pointer.includes('ubi')) activeIdx = 1;
+  else if (pointer.includes('geragih') || pointer.includes('stolon') || pointer.includes('stroberi') || pointer.includes('pegagan')) activeIdx = 3;
   else if (pointer.includes('spora') || pointer.includes('paku') || pointer.includes('lumut')) activeIdx = 4;
+  else if (pointer.includes('rizoma') || pointer.includes('rhizoma') || pointer.includes('jahe') || pointer.includes('kunyit') || pointer.includes('lengkuas')) activeIdx = 2;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Perkembangbiakan Vegetatif Alami Tumbuhan</text>
+  const cards = [
+    { x: 14, title: 'Tunas', ex1: 'Pisang', ex2: 'Bambu', mechanism: 'Anakan Pangkal', note: 'Ketiak Batang' },
+    { x: 138, title: 'Umbi Batang', ex1: 'Kentang', ex2: 'Ubi Jalar', mechanism: 'Mata Tunas Umbi', note: 'Simpan Amilum' },
+    { x: 262, title: 'Rizoma', ex1: 'Jahe, Kunyit', ex2: 'Lengkuas', mechanism: 'Buku Rimpang', note: 'Bawah Tanah' },
+    { x: 386, title: 'Geragih', ex1: 'Stroberi', ex2: 'Pegagan', mechanism: 'Sulur Menjalar', note: 'Atas Permukaan' },
+    { x: 510, title: 'Spora', ex1: 'Tumb. Paku', ex2: 'Lumut', mechanism: 'Kotak Sporangium', note: 'Butir Spora' }
+  ];
 
-  <!-- 1. Tunas -->
-  <rect x="10" y="45" width="75" height="155" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <text x="47.5" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Tunas</text>
-  <!-- Ilustrasi Batang Utama & Tunas Kecil -->
-  <rect x="36" y="85" width="16" height="55" rx="4" fill="#86efac" stroke="#16a34a" stroke-width="1.5"/>
-  <rect x="52" y="110" width="10" height="30" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.2"/>
-  <text x="47.5" y="165" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">Pisang</text>
-  <text x="47.5" y="178" text-anchor="middle" font-size="8" fill="#64748b">Bambu</text>
+  const activeCard = cards[activeIdx];
 
-  <!-- 2. Umbi Batang -->
-  <rect x="90" y="45" width="75" height="155" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <text x="127.5" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Umbi Batang</text>
-  <!-- Ilustrasi Kentang Bertunas -->
-  <ellipse cx="127.5" cy="115" rx="20" ry="15" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <circle cx="120" cy="110" r="2" fill="#78350f"/>
-  <path d="M 120,110 Q 115,102 118,98" stroke="#16a34a" stroke-width="1.5" fill="none"/>
-  <circle cx="135" cy="118" r="2" fill="#78350f"/>
-  <text x="127.5" y="165" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">Kentang</text>
-  <text x="127.5" y="178" text-anchor="middle" font-size="8" fill="#64748b">Ubi Jalar</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 370" width="640" height="370" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="veg_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+    </filter>
+    <linearGradient id="veg_card_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="veg_active_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+  </defs>
 
-  <!-- 3. Rizoma (Akar Tinggal) -->
-  <rect x="170" y="45" width="80" height="155" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <text x="210" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Rizoma</text>
-  <!-- Ilustrasi Rimpang Jahe Bercabang -->
-  <path d="M 185,120 Q 200,105 215,115 Q 225,100 235,118 Q 220,128 200,125 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1.5"/>
-  <line x1="200" y1="112" x2="200" y2="98" stroke="#16a34a" stroke-width="2"/>
-  <text x="210" y="165" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">Jahe, Kunyit</text>
-  <text x="210" y="178" text-anchor="middle" font-size="8" fill="#64748b">Lengkuas</text>
+  <!-- Frame Background -->
+  <rect x="4" y="4" width="632" height="362" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
 
-  <!-- 4. Geragih (Stolon) -->
-  <rect x="255" y="45" width="75" height="155" rx="6" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
-  <text x="292.5" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Geragih</text>
-  <!-- Ilustrasi Sulur Mendatar -->
-  <path d="M 265,120 Q 292,105 320,120" fill="none" stroke="#16a34a" stroke-width="2.5"/>
-  <circle cx="265" cy="120" r="4" fill="#22c55e"/>
-  <circle cx="320" cy="120" r="4" fill="#22c55e"/>
-  <text x="292.5" y="165" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">Stroberi</text>
-  <text x="292.5" y="178" text-anchor="middle" font-size="8" fill="#64748b">Pegagan</text>
+  <!-- Header Section -->
+  <rect x="180" y="10" width="280" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="320" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">BIOLOGI TUMBUHAN - VEGETATIF ALAMI</text>
+  <text x="320" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Perkembangbiakan Vegetatif Alami Tumbuhan</text>
+  <text x="320" y="58" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Reproduksi aseksual alami tumbuhan menggunakan modifikasi organ vegetatif</text>
 
-  <!-- 5. Spora -->
-  <rect x="335" y="45" width="75" height="155" rx="6" fill="#f8fafc" stroke="${activeIdx === 4 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 4 ? 2 : 1}"/>
-  <text x="372.5" y="65" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Spora</text>
-  <!-- Ilustrasi Kotak Spora (Sporangium) -->
-  <circle cx="372.5" cy="105" r="10" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <line x1="372.5" y1="115" x2="372.5" y2="135" stroke="#16a34a" stroke-width="2"/>
-  <circle cx="366" cy="100" r="1.5" fill="#78350f"/>
-  <circle cx="376" cy="102" r="1.5" fill="#78350f"/>
-  <text x="372.5" y="165" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">Tumb. Paku</text>
-  <text x="372.5" y="178" text-anchor="middle" font-size="8" fill="#64748b">Lumut</text>
+  <!-- 5 Botanical Specimen Panels -->
+  ${cards.map((c, i) => {
+    const isActive = i === activeIdx;
+    const strokeColor = isActive ? '#e11d48' : '#cbd5e1';
+    const strokeWidth = isActive ? 2.5 : 1;
+    const bgFill = isActive ? 'url(#veg_active_bg)' : 'url(#veg_card_bg)';
+    const headerFill = isActive ? '#e11d48' : '#0284c7';
+
+    return `
+    <g>
+      <!-- Panel Card -->
+      <rect x="${c.x}" y="74" width="114" height="246" rx="8" fill="${bgFill}" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#veg_shadow)"/>
+
+      <!-- Panel Header Badge -->
+      <rect x="${c.x + 6}" y="82" width="102" height="22" rx="5" fill="${headerFill}"/>
+      <text x="${c.x + 57}" y="96" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${c.title}</text>
+
+      <!-- Botanical Illustration Container -->
+      ${i === 0 ? `
+        <!-- 1. Tunas (Pisang & Bambu) -->
+        <g>
+          <!-- Soil Line -->
+          <line x1="${c.x + 6}" y1="182" x2="${c.x + 108}" y2="182" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <!-- Induk Batang Semu Pisang -->
+          <path d="M ${c.x + 30},182 L ${c.x + 34},126 Q ${c.x + 40},116 ${c.x + 48},122 L ${c.x + 52},182 Z" fill="#86efac" stroke="#16a34a" stroke-width="1.8"/>
+          <!-- Daun Induk Pisang -->
+          <path d="M ${c.x + 36},126 Q ${c.x + 14},112 ${c.x + 10},122 Q ${c.x + 20},132 ${c.x + 36},128" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+          <path d="M ${c.x + 44},122 Q ${c.x + 54},102 ${c.x + 74},114 Q ${c.x + 64},128 ${c.x + 44},125" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+          <path d="M ${c.x + 40},118 Q ${c.x + 40},98 ${c.x + 44},102 Q ${c.x + 45},114 ${c.x + 41},118" fill="#4ade80" stroke="#15803d" stroke-width="1.2"/>
+          <!-- Anakan Tunas Baru dari Pangkal Batang -->
+          <path d="M ${c.x + 58},182 Q ${c.x + 63},148 ${c.x + 69},150 Q ${c.x + 74},158 ${c.x + 71},182 Z" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.8"/>
+          <path d="M ${c.x + 64},150 Q ${c.x + 76},138 ${c.x + 82},145 Q ${c.x + 72},154 ${c.x + 65},152" fill="#86efac" stroke="#16a34a" stroke-width="1.2"/>
+          <path d="M ${c.x + 69},150 Q ${c.x + 68},136 ${c.x + 72},138 Q ${c.x + 73},146 ${c.x + 70},151" fill="#4ade80" stroke="#15803d" stroke-width="1.2"/>
+          <!-- Akar Serabut Bawah Tanah -->
+          <path d="M ${c.x + 34},182 Q ${c.x + 30},195 ${c.x + 24},206 M ${c.x + 44},182 Q ${c.x + 46},198 ${c.x + 48},210 M ${c.x + 62},182 Q ${c.x + 66},196 ${c.x + 72},208 M ${c.x + 54},182 Q ${c.x + 56},195 ${c.x + 58},205" stroke="#d97706" stroke-width="1.3" fill="none"/>
+        </g>
+      ` : ''}
+
+      ${i === 1 ? `
+        <!-- 2. Umbi Batang (Kentang Bertunas) -->
+        <g>
+          <!-- Soil Line -->
+          <line x1="${c.x + 6}" y1="140" x2="${c.x + 108}" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <!-- Batang Kecambah di Atas Tanah -->
+          <path d="M ${c.x + 57},140 Q ${c.x + 54},122 ${c.x + 48},112 M ${c.x + 57},140 Q ${c.x + 62},125 ${c.x + 70},116" stroke="#16a34a" stroke-width="2" fill="none"/>
+          <ellipse cx="${c.x + 45}" cy="110" rx="6" ry="3.5" transform="rotate(-20 ${c.x + 45} 110)" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+          <ellipse cx="${c.x + 73}" cy="114" rx="6" ry="3.5" transform="rotate(25 ${c.x + 73} 114)" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+          <!-- Umbi Kentang di Bawah Tanah -->
+          <path d="M ${c.x + 28},172 C ${c.x + 22},154 ${c.x + 40},144 ${c.x + 62},146 C ${c.x + 86},148 ${c.x + 92},164 ${c.x + 89},180 C ${c.x + 86},196 ${c.x + 68},204 ${c.x + 48},200 C ${c.x + 30},196 ${c.x + 26},184 ${c.x + 28},172 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="2"/>
+          <!-- Mata Tunas & Nodus -->
+          <path d="M ${c.x + 42},160 Q ${c.x + 47},163 ${c.x + 44},166 M ${c.x + 72},165 Q ${c.x + 77},168 ${c.x + 74},172 M ${c.x + 54},185 Q ${c.x + 59},188 ${c.x + 56},191" stroke="#9a3412" stroke-width="1.6" fill="none"/>
+          <circle cx="${c.x + 44}" cy="162" r="1.5" fill="#7c2d12"/>
+          <circle cx="${c.x + 74}" cy="167" r="1.5" fill="#7c2d12"/>
+          <circle cx="${c.x + 56}" cy="187" r="1.5" fill="#7c2d12"/>
+          <!-- Akar Adventif Bawah Umbi -->
+          <path d="M ${c.x + 40},198 Q ${c.x + 34},208 ${c.x + 30},216 M ${c.x + 57},201 Q ${c.x + 59},212 ${c.x + 63},218 M ${c.x + 77},193 Q ${c.x + 84},204 ${c.x + 87},214" stroke="#d97706" stroke-width="1.3" fill="none"/>
+        </g>
+      ` : ''}
+
+      ${i === 2 ? `
+        <!-- 3. Rizoma / Rimpang (Jahe Bercabang) -->
+        <g>
+          <!-- Soil Line -->
+          <line x1="${c.x + 6}" y1="140" x2="${c.x + 108}" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <!-- Tunas Tegak Menembus Tanah -->
+          <path d="M ${c.x + 57},140 L ${c.x + 57},106" stroke="#16a34a" stroke-width="2.5" fill="none"/>
+          <path d="M ${c.x + 57},130 Q ${c.x + 40},118 ${c.x + 34},124 Q ${c.x + 46},128 ${c.x + 57},130" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+          <path d="M ${c.x + 57},118 Q ${c.x + 74},106 ${c.x + 80},112 Q ${c.x + 68},118 ${c.x + 57},120" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+          <path d="M ${c.x + 57},106 Q ${c.x + 53},96 ${c.x + 57},94 Q ${c.x + 61},96 ${c.x + 57},106" fill="#4ade80" stroke="#15803d" stroke-width="1.2"/>
+          <!-- Rimpang Jahe Horizontal Bawah Tanah -->
+          <path d="M ${c.x + 14},170 Q ${c.x + 30},154 ${c.x + 54},162 Q ${c.x + 72},148 ${c.x + 93},165 Q ${c.x + 102},178 ${c.x + 88},188 Q ${c.x + 66},180 ${c.x + 48},192 Q ${c.x + 26},188 ${c.x + 14},170 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="2"/>
+          <!-- Garis Nodus Ruas Melintang -->
+          <path d="M ${c.x + 30},162 Q ${c.x + 28},172 ${c.x + 32},180 M ${c.x + 48},165 Q ${c.x + 50},174 ${c.x + 53},185 M ${c.x + 70},160 Q ${c.x + 71},170 ${c.x + 74},182 M ${c.x + 84},168 Q ${c.x + 83},176 ${c.x + 86},184" stroke="#a16207" stroke-width="1.5" fill="none"/>
+          <!-- Akar Rimpang Adventif -->
+          <path d="M ${c.x + 23},182 Q ${c.x + 20},198 ${c.x + 16},212 M ${c.x + 53},188 Q ${c.x + 54},202 ${c.x + 56},216 M ${c.x + 80},185 Q ${c.x + 84},198 ${c.x + 88},212" stroke="#d97706" stroke-width="1.3" fill="none"/>
+        </g>
+      ` : ''}
+
+      ${i === 3 ? `
+        <!-- 4. Geragih / Stolon (Stroberi Menjalar) -->
+        <g>
+          <!-- Soil Line -->
+          <line x1="${c.x + 6}" y1="176" x2="${c.x + 108}" y2="176" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <!-- Rumpun Induk Stroberi -->
+          <path d="M ${c.x + 26},168 Q ${c.x + 10},150 ${c.x + 18},144 Q ${c.x + 28},154 ${c.x + 26},168" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+          <path d="M ${c.x + 26},168 Q ${c.x + 26},142 ${c.x + 33},142 Q ${c.x + 32},154 ${c.x + 28},168" fill="#16a34a" stroke="#14532d" stroke-width="1.3"/>
+          <path d="M ${c.x + 28},168 Q ${c.x + 40},148 ${c.x + 48},154 Q ${c.x + 38},162 ${c.x + 28},168" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+          <path d="M ${c.x + 22},176 Q ${c.x + 18},192 ${c.x + 14},208 M ${c.x + 28},176 Q ${c.x + 30},194 ${c.x + 32},210" stroke="#d97706" stroke-width="1.3" fill="none"/>
+          <!-- Sulur Stolon Melengkung Mendatar -->
+          <path d="M ${c.x + 28},168 Q ${c.x + 56},144 ${c.x + 86},172" fill="none" stroke="#15803d" stroke-width="2.5"/>
+          <!-- Anakan Baru di Nodus Ujung Stolon -->
+          <path d="M ${c.x + 86},172 Q ${c.x + 76},156 ${c.x + 82},152 Q ${c.x + 88},160 ${c.x + 86},172" fill="#86efac" stroke="#16a34a" stroke-width="1.2"/>
+          <path d="M ${c.x + 88},172 Q ${c.x + 98},158 ${c.x + 104},164 Q ${c.x + 94},170 ${c.x + 88},172" fill="#86efac" stroke="#16a34a" stroke-width="1.2"/>
+          <path d="M ${c.x + 86},176 Q ${c.x + 84},192 ${c.x + 82},206 M ${c.x + 90},176 Q ${c.x + 92},194 ${c.x + 96},208" stroke="#d97706" stroke-width="1.3" fill="none"/>
+          <!-- Buah Stroberi Kecil -->
+          <circle cx="${c.x + 48}" cy="182" r="4.5" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+          <path d="M ${c.x + 48},177 L ${c.x + 48},174" stroke="#16a34a" stroke-width="1.2"/>
+        </g>
+      ` : ''}
+
+      ${i === 4 ? `
+        <!-- 5. Spora (Daun Paku Sporofil) -->
+        <g>
+          <!-- Tangkai Daun Paku (Rachis) -->
+          <path d="M ${c.x + 26},215 Q ${c.x + 46},160 ${c.x + 54},106" fill="none" stroke="#15803d" stroke-width="2.5"/>
+          <!-- Pinnae / Anak Daun Menyirip -->
+          <path d="M ${c.x + 32},192 Q ${c.x + 16},182 ${c.x + 20},178 Q ${c.x + 30},184 ${c.x + 34},190" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <path d="M ${c.x + 36},186 Q ${c.x + 52},176 ${c.x + 54},182 Q ${c.x + 42},188 ${c.x + 38},188" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <path d="M ${c.x + 39},165 Q ${c.x + 23},155 ${c.x + 27},151 Q ${c.x + 37},157 ${c.x + 41},163" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <path d="M ${c.x + 43},159 Q ${c.x + 59},149 ${c.x + 61},155 Q ${c.x + 49},161 ${c.x + 45},161" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <path d="M ${c.x + 47},138 Q ${c.x + 33},130 ${c.x + 37},126 Q ${c.x + 45},132 ${c.x + 49},136" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <path d="M ${c.x + 50},132 Q ${c.x + 64},124 ${c.x + 66},130 Q ${c.x + 56},134 ${c.x + 52},134" fill="#22c55e" stroke="#15803d" stroke-width="1.2"/>
+          <!-- Bintik Sorus di Bawah Anak Daun -->
+          <circle cx="${c.x + 24}" cy="182" r="2" fill="#b45309"/>
+          <circle cx="${c.x + 46}" cy="180" r="2" fill="#b45309"/>
+          <circle cx="${c.x + 31}" cy="155" r="2" fill="#b45309"/>
+          <circle cx="${c.x + 53}" cy="153" r="2" fill="#b45309"/>
+          <!-- Zoom Inset Kotak Sporangium -->
+          <circle cx="${c.x + 84}" cy="132" r="16" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+          <path d="M ${c.x + 80},145 L ${c.x + 84},136" stroke="#b45309" stroke-width="1.5"/>
+          <circle cx="${c.x + 85}" cy="132" r="5.5" fill="#fed7aa" stroke="#b45309" stroke-width="1.2"/>
+          <path d="M ${c.x + 82},128 Q ${c.x + 87},124 ${c.x + 90},129" stroke="#78350f" stroke-width="1.5" fill="none"/>
+          <circle cx="${c.x + 90}" cy="124" r="1" fill="#b45309"/>
+          <circle cx="${c.x + 94}" cy="128" r="1" fill="#b45309"/>
+          <circle cx="${c.x + 93}" cy="122" r="0.8" fill="#d97706"/>
+          <circle cx="${c.x + 87}" cy="121" r="0.8" fill="#d97706"/>
+        </g>
+      ` : ''}
+
+      <!-- Mechanism & Botanical Labels -->
+      <rect x="${c.x + 6}" y="222" width="102" height="18" rx="4" fill="#f1f5f9"/>
+      <text x="${c.x + 57}" y="234" text-anchor="middle" font-size="8.5" font-weight="600" fill="#334155">${c.mechanism}</text>
+
+      <line x1="${c.x + 12}" y1="246" x2="${c.x + 102}" y2="246" stroke="#e2e8f0" stroke-width="1"/>
+
+      <text x="${c.x + 57}" y="258" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">${c.ex1}</text>
+      <text x="${c.x + 57}" y="274" text-anchor="middle" font-size="8.5" font-weight="500" fill="#64748b">${c.ex2}</text>
+
+      <rect x="${c.x + 10}" y="286" width="94" height="18" rx="3" fill="#e0f2fe"/>
+      <text x="${c.x + 57}" y="298" text-anchor="middle" font-size="7.8" font-weight="600" fill="#0369a1">${c.note}</text>
+    </g>`;
+  }).join('')}
 
   <!-- Target Badge X -->
-  <circle cx="${[47.5, 127.5, 210, 292.5, 372.5][activeIdx]}" cy="45" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${[47.5, 127.5, 210, 292.5, 372.5][activeIdx]}" y="49" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${activeCard.x + 57}" cy="72" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#veg_shadow)"/>
+  <text x="${activeCard.x + 57}" y="76.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="210" y="235" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Cara perkembangbiakan vegetatif pada kolom "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="338" width="520" height="24" rx="6" fill="#0f172a"/>
+  <text x="320" y="354" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Cara perkembangbiakan vegetatif pada kolom "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -1207,48 +1520,166 @@ export function renderSelHewanTumbuhanSvg(params: { pointer?: string; label?: st
   const pointer = (params.pointer || 'kloroplas').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 95, y: 145, name: 'Kloroplas' };
-  if (pointer.includes('dinding') || pointer.includes('selulosa')) target = { x: 50, y: 105, name: 'Dinding Sel' };
-  else if (pointer.includes('vakuola')) target = { x: 125, y: 110, name: 'Vakuola Sentral' };
-  else if (pointer.includes('nukleus') || pointer.includes('inti')) target = { x: 300, y: 120, name: 'Inti Sel (Nukleus)' };
-  else if (pointer.includes('membran')) target = { x: 345, y: 95, name: 'Membran Sel' };
+  let targetKey = 'kloroplas';
+  let target = { x: 90, y: 135, organ: 'Kloroplas' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Perbandingan Struktur Sel Tumbuhan vs Sel Hewan</text>
+  if (pointer.includes('dinding') || pointer.includes('selulosa')) {
+    targetKey = 'dinding';
+    target = { x: 42, y: 195, organ: 'Dinding Sel' };
+  } else if (pointer.includes('vakuola')) {
+    targetKey = 'vakuola';
+    target = { x: 212, y: 192, organ: 'Vakuola Sentral' };
+  } else if (pointer.includes('nukleus') || pointer.includes('inti')) {
+    targetKey = 'nukleus';
+    target = { x: 475, y: 195, organ: 'Inti Sel (Nukleus)' };
+  } else if (pointer.includes('membran')) {
+    targetKey = 'membran';
+    target = { x: 580, y: 128, organ: 'Membran Sel' };
+  } else if (pointer.includes('sentriol') || pointer.includes('sentrosom')) {
+    targetKey = 'sentriol';
+    target = { x: 405, y: 145, organ: 'Sentriol' };
+  } else if (pointer.includes('mitokondria')) {
+    targetKey = 'mitokondria';
+    target = { x: 550, y: 245, organ: 'Mitokondria' };
+  } else if (pointer.includes('lisosom')) {
+    targetKey = 'lisosom';
+    target = { x: 380, y: 240, organ: 'Lisosom' };
+  }
 
-  <!-- Sisi Kiri: Sel Tumbuhan (Bentuk Kaku Bersudut) -->
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" width="640" height="380" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="cell_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08"/>
+    </filter>
+    <linearGradient id="plant_cytoplasm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="animal_cytoplasm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect x="4" y="4" width="632" height="372" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Header Section -->
+  <rect x="170" y="10" width="300" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="320" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">SITOLOGI - PERBANDINGAN STRUKTUR SEL</text>
+  <text x="320" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Perbandingan Struktur Sel Tumbuhan vs Sel Hewan</text>
+  <text x="320" y="58" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Identifikasi organel sel eukariotik: organel khas tumbuhan dan hewan</text>
+
+  <!-- Sisi Kiri: Sel Tumbuhan (Bentuk Bersudut Kaku & Dinding Sel) -->
   <g>
-    <rect x="30" y="55" width="160" height="145" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="4"/>
-    <rect x="36" y="61" width="148" height="133" rx="10" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
-    <!-- Vakuola Besar di Tengah -->
-    <rect x="95" y="85" width="60" height="55" rx="12" fill="#bae6fd" fill-opacity="0.8" stroke="#0284c7" stroke-width="1.5"/>
-    <text x="125" y="114" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Vakuola</text>
-    <!-- Kloroplas Hijau -->
-    <ellipse cx="65" cy="90" rx="12" ry="7" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
-    <ellipse cx="65" cy="145" rx="12" ry="7" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
-    <!-- Inti Sel Kecil di Sisi -->
-    <circle cx="150" cy="155" r="14" fill="#fbcfe8" stroke="#db2777" stroke-width="1.5"/>
-    <text x="110" y="218" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">Sel Tumbuhan</text>
+    <!-- Card Container -->
+    <rect x="18" y="74" width="294" height="254" rx="10" fill="#fafffb" stroke="#bbf7d0" stroke-width="1.5" filter="url(#cell_shadow)"/>
+
+    <!-- Label Panel Sel Tumbuhan -->
+    <rect x="28" y="82" width="105" height="20" rx="4" fill="#15803d"/>
+    <text x="80" y="96" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">Sel Tumbuhan</text>
+
+    <!-- Dinding Selulosa Luar (Tebal & Kaku Bersudut) -->
+    <polygon points="56,135 110,108 225,108 280,135 280,250 225,282 110,282 56,250" fill="url(#plant_cytoplasm)" stroke="#15803d" stroke-width="5"/>
+    <!-- Membran Plasma Bagian Dalam -->
+    <polygon points="59,137 112,111 223,111 277,137 277,248 223,279 112,279 59,248" fill="none" stroke="#22c55e" stroke-width="1.8"/>
+
+    <!-- Vakuola Sentral Raksasa (Tonoplas & Cairan Getah) -->
+    <path d="M 160,145 Q 220,135 258,160 Q 268,210 248,245 Q 188,260 152,230 Q 142,180 160,145 Z" fill="#bae6fd" fill-opacity="0.85" stroke="#0284c7" stroke-width="2"/>
+    ${targetKey !== 'vakuola' ? `<text x="212" y="195" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Vakuola</text>` : ''}
+
+    <!-- Kloroplas Hijau dengan Tilakoid Grana -->
+    <!-- Kloroplas Atas -->
+    <g transform="rotate(-25 90 135)">
+      <ellipse cx="90" cy="135" rx="15" ry="9" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+      <line x1="82" y1="132" x2="82" y2="138" stroke="#86efac" stroke-width="1.5"/>
+      <line x1="90" y1="131" x2="90" y2="139" stroke="#86efac" stroke-width="1.5"/>
+      <line x1="98" y1="132" x2="98" y2="138" stroke="#86efac" stroke-width="1.5"/>
+    </g>
+    ${targetKey !== 'kloroplas' ? `<text x="90" y="156" text-anchor="middle" font-size="8.5" font-weight="600" fill="#14532d">Kloroplas</text>` : ''}
+
+    <!-- Kloroplas Bawah -->
+    <g transform="rotate(15 82 242)">
+      <ellipse cx="82" cy="242" rx="15" ry="9" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+      <line x1="74" y1="239" x2="74" y2="245" stroke="#86efac" stroke-width="1.5"/>
+      <line x1="82" y1="238" x2="82" y2="246" stroke="#86efac" stroke-width="1.5"/>
+      <line x1="90" y1="239" x2="90" y2="245" stroke="#86efac" stroke-width="1.5"/>
+    </g>
+
+    <!-- Inti Sel / Nukleus di Tepi -->
+    <circle cx="100" cy="202" r="18" fill="#fce7f3" stroke="#db2777" stroke-width="1.8"/>
+    <circle cx="100" cy="202" r="6" fill="#9d174d"/>
+    ${targetKey !== 'nukleus' ? `<text x="100" y="205" text-anchor="middle" font-size="7.8" font-weight="bold" fill="#ffffff">Nukleus</text>` : ''}
+
+    <!-- Mitokondria Tumbuhan -->
+    <g transform="rotate(20 215 122)">
+      <ellipse cx="215" cy="122" rx="10" ry="5" fill="#fed7aa" stroke="#ea580c" stroke-width="1.2"/>
+      <path d="M 210,122 Q 215,120 220,122" stroke="#c2410c" stroke-width="1" fill="none"/>
+    </g>
+
+    <!-- Callout Dinding Sel Kiri -->
+    <line x1="42" y1="184" x2="56" y2="184" stroke="#15803d" stroke-width="1.5"/>
+    ${targetKey !== 'dinding' ? `<text x="42" y="195" text-anchor="middle" font-size="8.5" font-weight="600" fill="#15803d">Dinding Sel</text>` : ''}
+
+    <!-- Catatan Karakteristik Sel Tumbuhan -->
+    <text x="165" y="312" text-anchor="middle" font-size="8.5" font-weight="600" fill="#15803d">Berdinding selulosa, berkloroplas &amp; vakuola besar</text>
   </g>
 
-  <!-- Sisi Kanan: Sel Hewan (Bentuk Bulat Fleksibel) -->
+  <!-- Sisi Kanan: Sel Hewan (Bentuk Fleksibel Bulat & Membran) -->
   <g>
-    <ellipse cx="300" cy="125" rx="85" ry="68" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
-    <!-- Inti Sel Besar di Tengah -->
-    <circle cx="300" cy="125" r="22" fill="#fbcfe8" stroke="#db2777" stroke-width="2"/>
-    <circle cx="300" cy="125" r="8" fill="#be185d"/>
-    <text x="300" y="129" text-anchor="middle" font-size="8" font-weight="bold" fill="#ffffff">Nukleus</text>
-    <!-- Mitokondria Oval -->
-    <ellipse cx="250" cy="100" rx="11" ry="6" fill="#fed7aa" stroke="#ea580c" stroke-width="1"/>
-    <ellipse cx="345" cy="145" rx="11" ry="6" fill="#fed7aa" stroke="#ea580c" stroke-width="1"/>
-    <text x="300" y="218" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">Sel Hewan</text>
+    <!-- Card Container -->
+    <rect x="328" y="74" width="294" height="254" rx="10" fill="#fffbfa" stroke="#fca5a5" stroke-width="1.5" filter="url(#cell_shadow)"/>
+
+    <!-- Label Panel Sel Hewan -->
+    <rect x="338" y="82" width="95" height="20" rx="4" fill="#b91c1c"/>
+    <text x="385" y="96" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">Sel Hewan</text>
+
+    <!-- Membran Sel Fleksibel Bulat Amorf -->
+    <path d="M 370,140 Q 420,105 480,110 Q 560,115 585,160 Q 605,220 575,260 Q 520,295 450,285 Q 380,275 355,225 Q 340,175 370,140 Z" fill="url(#animal_cytoplasm)" stroke="#ef4444" stroke-width="3"/>
+
+    <!-- Nukleus Sentral Besar -->
+    <circle cx="475" cy="195" r="28" fill="#fce7f3" stroke="#db2777" stroke-width="2"/>
+    <circle cx="475" cy="195" r="10" fill="#831843"/>
+    ${targetKey !== 'nukleus' ? `<text x="475" y="199" text-anchor="middle" font-size="9" font-weight="bold" fill="#ffffff">Nukleus</text>` : ''}
+
+    <!-- Sentriol / Sentrosom (Khas Hewan) -->
+    <g>
+      <rect x="400" y="142" width="10" height="5" rx="1" fill="#fbbf24" stroke="#d97706" stroke-width="1.2"/>
+      <rect x="402" y="137" width="5" height="10" rx="1" fill="#fbbf24" stroke="#d97706" stroke-width="1.2"/>
+      ${targetKey !== 'sentriol' ? `<text x="405" y="130" text-anchor="middle" font-size="8.5" font-weight="600" fill="#b45309">Sentriol</text>` : ''}
+    </g>
+
+    <!-- Membran Sel Callout -->
+    <line x1="565" y1="135" x2="580" y2="128" stroke="#dc2626" stroke-width="1.5"/>
+    ${targetKey !== 'membran' ? `<text x="580" y="128" text-anchor="middle" font-size="8.5" font-weight="600" fill="#dc2626">Membran Sel</text>` : ''}
+
+    <!-- Lisosom (Vesikel Pencerna Khas Hewan) -->
+    <circle cx="380" cy="240" r="8.5" fill="#fca5a5" stroke="#dc2626" stroke-width="1.5"/>
+    <circle cx="378" cy="238" r="2" fill="#b91c1c"/>
+    <circle cx="383" cy="242" r="1.5" fill="#b91c1c"/>
+    ${targetKey !== 'lisosom' ? `<text x="380" y="256" text-anchor="middle" font-size="8" font-weight="600" fill="#dc2626">Lisosom</text>` : ''}
+
+    <!-- Mitokondria Hewan -->
+    <g transform="rotate(-30 550 245)">
+      <ellipse cx="550" cy="245" rx="14" ry="7" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+      <path d="M 542,245 Q 550,241 558,245" stroke="#c2410c" stroke-width="1.2" fill="none"/>
+    </g>
+    ${targetKey !== 'mitokondria' ? `<text x="550" y="264" text-anchor="middle" font-size="8" font-weight="600" fill="#c2410c">Mitokondria</text>` : ''}
+
+    <!-- Vakuola Kecil / Vesikel -->
+    <circle cx="520" cy="265" r="5.5" fill="#bae6fd" stroke="#0284c7" stroke-width="1.2"/>
+
+    <!-- Catatan Karakteristik Sel Hewan -->
+    <text x="475" y="312" text-anchor="middle" font-size="8.5" font-weight="600" fill="#dc2626">Bentuk fleksibel, tanpa dinding sel/kloroplas, ada sentriol</text>
   </g>
 
   <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+  <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#cell_shadow)"/>
   <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="210" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Organel sel yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="340" width="520" height="26" rx="6" fill="#0f172a"/>
+  <text x="320" y="357" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Organel sel yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

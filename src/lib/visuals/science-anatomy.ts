@@ -1660,34 +1660,150 @@ export function renderAlatEkskresiGinjalSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const parts = [
-    { id: 'korteks', name: 'Korteks Ginjal (Penyaringan)', x: 110, y: 70 },
-    { id: 'medula', name: 'Medula (Piramida Ginjal)', x: 170, y: 105 },
-    { id: 'pelvis', name: 'Pelvis Renalis (Rongga Ginjal)', x: 220, y: 115 },
-    { id: 'ureter', name: 'Saluran Ureter (Ke Kandung Kemih)', x: 245, y: 175 }
+    { id: 'korteks', name: 'Korteks Ginjal (Penyaringan)', x: 175, y: 90 },
+    { id: 'medula', name: 'Medula (Piramida Ginjal)', x: 205, y: 148 },
+    { id: 'pelvis', name: 'Pelvis Renalis (Rongga Ginjal)', x: 265, y: 165 },
+    { id: 'ureter', name: 'Saluran Ureter (Ke Kandung Kemih)', x: 288, y: 260 },
+    { id: 'arteri', name: 'Arteri & Vena Renalis', x: 300, y: 135 }
   ];
 
   let target = parts.find(p => pointer.includes(p.id)) || parts[0];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 230" width="380" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="380" height="230" fill="#fff1f2" stroke="#fecdd3" stroke-width="1.5" rx="8"/>
-  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#881337">Struktur Anatomi Ginjal Manusia</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" width="540" height="340" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="kidneyOuterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#be123c"/>
+      <stop offset="60%" stop-color="#9f1239"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+    <linearGradient id="cortexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="pyramidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <linearGradient id="pelvisTubeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#fde047"/>
+    </linearGradient>
+    <filter id="glowKidney" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-  <!-- Bentuk Ginjal (Kacang Merah) -->
-  <path d="M 130 45 C 70 65, 60 160, 130 185 C 180 195, 200 165, 185 140 C 170 115, 175 90, 195 70 C 180 50, 160 40, 130 45 Z" fill="#e11d48" stroke="#9f1239" stroke-width="2.5"/>
+  <!-- Container Border -->
+  <rect width="540" height="340" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Medula Piramida Segitiga di Dalam -->
-  <polygon points="120,75 140,85 125,95" fill="#f43f5e" stroke="#be123c" stroke-width="1"/>
-  <polygon points="115,105 135,115 118,125" fill="#f43f5e" stroke="#be123c" stroke-width="1"/>
-  <polygon points="125,135 145,140 130,155" fill="#f43f5e" stroke="#be123c" stroke-width="1"/>
+  <!-- Title -->
+  <text x="270" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Struktur Anatomi Organ Ekskresi Ginjal Manusia</text>
 
-  <!-- Ureter Saluran Urine ke Bawah -->
-  <path d="M 180 140 Q 195 165 210 200 Q 218 200 205 165 Q 192 135 185 130" fill="#fbbf24" stroke="#d97706" stroke-width="1.5"/>
+  <!-- Siluet Irisan Melintang Ginjal (Kiri-Tengah Kanvas) -->
+  <!-- 1. Kapsul Fibrosa Luar Ginjal -->
+  <path d="M 180,42 C 110,48 90,140 120,225 C 145,290 225,295 270,270 C 295,255 295,210 270,185 C 240,155 242,120 280,88 C 255,50 215,40 180,42 Z" fill="url(#kidneyOuterGrad)" stroke="#4c0519" stroke-width="3"/>
 
-  <!-- Target Badge -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#0f172a" stroke="#ffffff" stroke-width="2"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <!-- 2. Korteks Renalis (Zona Luar Bergranula Tempat Badan Malpighi) -->
+  <path d="M 182,50 C 120,56 102,142 128,218 C 150,278 220,282 258,260 C 275,248 268,212 250,192 C 228,168 228,118 268,94 C 246,62 212,50 182,50 Z" fill="url(#cortexGrad)" stroke="#be123c" stroke-width="1.5" opacity="0.9"/>
+  <!-- Tekstur Stipple Bintik Nefron pada Korteks -->
+  <path d="M 135,100 L 136,100 M 145,80 L 146,80 M 165,65 L 166,65 M 125,140 L 126,140 M 130,175 L 131,175 M 145,210 L 146,210 M 175,250 L 176,250 M 215,268 L 216,268" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
 
-  <text x="190" y="218" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Bagian ginjal yang bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+  <!-- 3. Medula Renalis (7 Piramida Ginjal / Pyramides Renales Bergaris Radial) -->
+  <!-- Piramida 1 (Atas) -->
+  <path d="M 175,68 L 205,80 L 188,102 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <line x1="190" y1="74" x2="188" y2="102" stroke="#e11d48" stroke-width="0.8" stroke-dasharray="1 1"/>
+  <!-- Piramida 2 -->
+  <path d="M 148,92 L 182,106 L 168,126 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <line x1="165" y1="99" x2="168" y2="126" stroke="#e11d48" stroke-width="0.8" stroke-dasharray="1 1"/>
+  <!-- Piramida 3 (Tengah Atas) -->
+  <path d="M 136,134 L 172,138 L 164,158 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <!-- Piramida 4 (Tengah Bawah) -->
+  <path d="M 138,172 L 175,166 L 172,188 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <!-- Piramida 5 -->
+  <path d="M 152,210 L 188,194 L 190,218 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <!-- Piramida 6 (Bawah) -->
+  <path d="M 180,244 L 210,218 L 218,242 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+  <!-- Piramida 7 (Bawah Kanan) -->
+  <path d="M 226,260 L 234,228 L 250,246 Z" fill="url(#pyramidGrad)" stroke="#be123c" stroke-width="1.2"/>
+
+  <!-- Kolumna Bertini (Pilar Korteks Antar Piramida) -->
+  <line x1="172" y1="88" x2="155" y2="98" stroke="#fda4af" stroke-width="1.5"/>
+  <line x1="155" y1="130" x2="140" y2="135" stroke="#fda4af" stroke-width="1.5"/>
+
+  <!-- 4. Kaliks Minor & Kaliks Mayor (Cawan Penampung Urin) -->
+  <path d="M 188,102 Q 220,120 236,140 M 168,126 Q 210,135 236,145 M 164,158 Q 212,158 238,158 M 172,188 Q 215,178 242,172 M 190,218 Q 225,200 248,185 M 218,242 Q 236,218 250,192" fill="none" stroke="#fde047" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 5. Pelvis Renalis (Rongga Corong Utama Ginjal) -->
+  <path d="M 236,138 C 255,130 270,145 272,165 C 274,185 260,195 248,195 C 235,195 232,145 236,138 Z" fill="url(#pelvisTubeGrad)" stroke="#ca8a04" stroke-width="2"/>
+
+  <!-- 6. Ureter (Saluran Penyalur Urin ke Kandung Kemih) -->
+  <path d="M 262,185 Q 282,215 288,295 L 304,292 Q 298,218 274,180 Z" fill="url(#pelvisTubeGrad)" stroke="#ca8a04" stroke-width="2"/>
+  <path d="M 276,195 Q 292,230 296,290" fill="none" stroke="#eab308" stroke-width="1.5" stroke-dasharray="3 2"/>
+
+  <!-- 7. Arteri Renalis & Vena Renalis (Pembuluh Darah Hilum) -->
+  <!-- Vena Renalis (Biru) -->
+  <path d="M 260,156 Q 310,150 338,144 L 340,158 Q 308,164 262,170 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5"/>
+  <!-- Arteri Renalis (Merah) -->
+  <path d="M 258,138 Q 315,128 342,122 L 344,136 Q 312,142 260,150 Z" fill="#f87171" stroke="#dc2626" stroke-width="1.5"/>
+
+  <!-- 8. Inset Nefron Mikroskopis (Pojok Kanan Atas) -->
+  <g>
+    <rect x="375" y="44" width="150" height="116" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="450" y="60" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Nefron (Unit Penyaring)</text>
+    <!-- Glomerulus & Kapsula Bowman -->
+    <circle cx="400" cy="80" r="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+    <circle cx="400" cy="80" r="5.5" fill="#ef4444"/>
+    <text x="400" y="100" text-anchor="middle" font-size="7.5" font-weight="600" fill="#991b1b">Glomerulus</text>
+    <!-- Tubulus Nefron & Lengkung Henle -->
+    <path d="M 410,80 Q 430,72 445,82 Q 448,110 458,110 Q 468,110 470,82 L 495,82" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round"/>
+    <path d="M 495,74 L 495,130" stroke="#ca8a04" stroke-width="3" stroke-linecap="round"/>
+    <text x="475" y="138" text-anchor="middle" font-size="7.5" fill="#64748b">Tubulus Kolektivus</text>
+  </g>
+
+  <!-- Callout Labels Kiri (Anti-Overlap) -->
+  <!-- 1. Korteks Ginjal -->
+  <g>
+    <rect x="14" y="60" width="130" height="20" rx="4" fill="#ffffff" stroke="#e11d48" stroke-width="1.2"/>
+    <text x="79" y="74" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#be123c">1. Korteks (Penyaringan)</text>
+    <line x1="144" y1="70" x2="175" y2="88" stroke="#e11d48" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 2. Medula Ginjal -->
+  <g>
+    <rect x="14" y="125" width="130" height="20" rx="4" fill="#ffffff" stroke="#be123c" stroke-width="1.2"/>
+    <text x="79" y="139" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#9f1239">2. Medula (Piramida)</text>
+    <line x1="144" y1="135" x2="195" y2="148" stroke="#be123c" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 3. Kapsul Ginjal -->
+  <g>
+    <rect x="14" y="190" width="130" height="20" rx="4" fill="#ffffff" stroke="#4c0519" stroke-width="1.2"/>
+    <text x="79" y="204" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#4c0519">3. Kapsul Fibrosa Luar</text>
+    <line x1="144" y1="200" x2="130" y2="225" stroke="#4c0519" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Callout Labels Kanan (Anti-Overlap) -->
+  <!-- 4. Pelvis Renalis -->
+  <g>
+    <rect x="375" y="180" width="150" height="20" rx="4" fill="#ffffff" stroke="#ca8a04" stroke-width="1.2"/>
+    <text x="450" y="194" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#854d0e">4. Pelvis Renalis (Rongga)</text>
+    <line x1="375" y1="190" x2="274" y2="168" stroke="#ca8a04" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 5. Ureter -->
+  <g>
+    <rect x="375" y="238" width="150" height="20" rx="4" fill="#ffffff" stroke="#eab308" stroke-width="1.2"/>
+    <text x="450" y="252" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#713f12">5. Saluran Ureter (Ke Kemih)</text>
+    <line x1="375" y1="248" x2="295" y2="260" stroke="#eab308" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Dynamic Target Badge [X] -->
+  <circle cx="${target.x}" cy="${target.y}" r="17" fill="none" stroke="#e11d48" stroke-width="1.8" opacity="0.4"/>
+  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowKidney)"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="270" y="322" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian ginjal yang bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
 </svg>`;
 }
 
@@ -1697,43 +1813,128 @@ export function renderIndraPengecapLidahSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const regions = [
-    { id: 'pahit', name: 'Pahit', x: 170, y: 70 },
-    { id: 'asam', name: 'Asam', x: 105, y: 110 },
-    { id: 'asin', name: 'Asin', x: 115, y: 150 },
-    { id: 'manis', name: 'Manis', x: 170, y: 175 }
+    { id: 'pahit', name: 'Pahit', x: 195, y: 88 },
+    { id: 'asam', name: 'Asam', x: 130, y: 145 },
+    { id: 'asin', name: 'Asin', x: 138, y: 205 },
+    { id: 'manis', name: 'Manis', x: 195, y: 258 },
+    { id: 'umami', name: 'Umami', x: 195, y: 165 }
   ];
 
   let target = regions.find(r => pointer.includes(r.id)) || regions[3];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 230" width="340" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="340" height="230" fill="#fff5f5" stroke="#fed7d7" stroke-width="1.5" rx="8"/>
-  <text x="170" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#9b2c2c">Peta Daerah Rasa pada Lidah</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" width="540" height="340" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="tongueBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fecaca"/>
+      <stop offset="60%" stop-color="#fca5a5"/>
+      <stop offset="100%" stop-color="#f87171"/>
+    </linearGradient>
+    <filter id="glowTongue" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#e11d48" flood-opacity="0.35"/>
+    </filter>
+  </defs>
 
-  <!-- Bentuk Lidah -->
-  <path d="M 120 50 C 120 30, 220 30, 220 50 C 240 100, 230 180, 170 200 C 110 180, 100 100, 120 50 Z" fill="#feb2b2" stroke="#e53e3e" stroke-width="2.5"/>
+  <!-- Container Border -->
+  <rect width="540" height="340" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Garis Tengah Lidah -->
-  <line x1="170" y1="55" x2="170" y2="165" stroke="#e53e3e" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <!-- Title -->
+  <text x="270" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Peta Daerah Rasa &amp; Papila Indra Pengecap Lidah</text>
 
-  <!-- Daerah Pahit (Pangkal Belakang) -->
-  <ellipse cx="170" cy="65" rx="35" ry="12" fill="#9b2c2c25" stroke="#9b2c2c" stroke-width="1"/>
+  <!-- Siluet Anatomi Lidah Manusia (Dorsum Linguae) -->
+  <!-- Pangkal & Badan Lidah -->
+  <path d="M 130,55 C 130,36 260,36 260,55 C 285,115 272,225 195,274 C 118,225 105,115 130,55 Z" fill="url(#tongueBodyGrad)" stroke="#e11d48" stroke-width="2.5"/>
 
-  <!-- Daerah Asam (Tepi Kiri & Kanan) -->
-  <ellipse cx="125" cy="110" rx="14" ry="18" fill="#dd6b2025" stroke="#dd6b20" stroke-width="1"/>
-  <ellipse cx="215" cy="110" rx="14" ry="18" fill="#dd6b2025" stroke="#dd6b20" stroke-width="1"/>
+  <!-- Sulkus Medianus (Lekukan Garis Tengah Lidah) -->
+  <path d="M 195,60 L 195,245" stroke="#ef4444" stroke-width="1.6" stroke-dasharray="3 3"/>
 
-  <!-- Daerah Asin (Tepi Depan Kiri & Kanan) -->
-  <ellipse cx="135" cy="150" rx="12" ry="14" fill="#3182ce25" stroke="#3182ce" stroke-width="1"/>
-  <ellipse cx="205" cy="150" rx="12" ry="14" fill="#3182ce25" stroke="#3182ce" stroke-width="1"/>
+  <!-- Sulkus Terminalis (Lekuk Berbentuk Huruf V pada Pangkal Lidah) -->
+  <path d="M 145,74 Q 195,98 245,74" fill="none" stroke="#be123c" stroke-width="2.2"/>
 
-  <!-- Daerah Manis (Ujung Depan Lidah) -->
-  <ellipse cx="170" cy="180" rx="22" ry="12" fill="#38a16925" stroke="#38a169" stroke-width="1"/>
+  <!-- 1. ZONA PAHIT (Pangkal Belakang Lidah) -->
+  <path d="M 148,72 Q 195,96 242,72 C 238,55 152,55 148,72 Z" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5" opacity="0.85"/>
+  <!-- Papila Sirkumvalata (Bulatan Berjejer di Huruf V) -->
+  <circle cx="160" cy="74" r="3" fill="#b91c1c"/>
+  <circle cx="178" cy="81" r="3" fill="#b91c1c"/>
+  <circle cx="195" cy="85" r="3.5" fill="#b91c1c"/>
+  <circle cx="212" cy="81" r="3" fill="#b91c1c"/>
+  <circle cx="230" cy="74" r="3" fill="#b91c1c"/>
 
-  <!-- Target Badge -->
-  <circle cx="${target.x}" cy="${target.y}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <!-- 2. ZONA ASAM (Tepi Samping Kiri & Kanan Belakang) -->
+  <path d="M 124,106 C 118,140 128,168 145,178 C 152,168 148,126 142,106 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" opacity="0.9"/>
+  <path d="M 266,106 C 272,140 262,168 245,178 C 238,168 242,126 248,106 Z" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" opacity="0.9"/>
 
-  <text x="170" y="220" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Sensasi rasa yang paling peka pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
+  <!-- 3. ZONA ASIN (Tepi Samping Kiri & Kanan Depan) -->
+  <path d="M 132,175 C 142,212 165,242 178,252 C 172,238 156,205 146,175 Z" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" opacity="0.9"/>
+  <path d="M 258,175 C 248,212 225,242 212,252 C 218,238 234,205 244,175 Z" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" opacity="0.9"/>
+
+  <!-- 4. ZONA MANIS (Ujung Depan Lidah) -->
+  <path d="M 166,242 C 180,268 210,268 224,242 C 205,248 185,248 166,242 Z" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5" opacity="0.9"/>
+
+  <!-- 5. ZONA UMAMI (Bagian Tengah Lidah - Gurih) -->
+  <ellipse cx="195" cy="165" rx="28" ry="24" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.85"/>
+  <text x="195" y="169" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7e22ce">Umami (Gurih)</text>
+
+  <!-- Bintik Papila Fungiformis & Filiformis Tersebar -->
+  <circle cx="170" cy="225" r="1.5" fill="#e11d48"/>
+  <circle cx="220" cy="225" r="1.5" fill="#e11d48"/>
+  <circle cx="185" cy="205" r="1.5" fill="#e11d48"/>
+  <circle cx="205" cy="205" r="1.5" fill="#e11d48"/>
+
+  <!-- Inset Penampang Kuncup Pengecap (Taste Bud) di Pojok Kanan -->
+  <g>
+    <rect x="365" y="52" width="160" height="155" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="445" y="70" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Kuncup Pengecap (Taste Bud)</text>
+    <!-- Lapisan Epitel Papila -->
+    <path d="M 380,84 C 410,84 415,96 445,96 C 475,96 480,84 510,84" fill="none" stroke="#f43f5e" stroke-width="2"/>
+    <!-- Pori Pengecap (Taste Pore) -->
+    <ellipse cx="445" cy="98" rx="5" ry="3" fill="#991b1b"/>
+    <!-- Sel Reseptor Pengecap Berbentuk Bawang -->
+    <path d="M 445,98 C 420,115 422,155 445,160 C 468,155 470,115 445,98 Z" fill="#fee2e2" stroke="#e11d48" stroke-width="1.5"/>
+    <!-- Mikrovili / Rambut Pengecap Menjulur Keluar Pori -->
+    <line x1="443" y1="98" x2="442" y2="92" stroke="#dc2626" stroke-width="1.2"/>
+    <line x1="445" y1="98" x2="445" y2="90" stroke="#dc2626" stroke-width="1.2"/>
+    <line x1="447" y1="98" x2="448" y2="92" stroke="#dc2626" stroke-width="1.2"/>
+    <!-- Serabut Saraf Gustatori Keluar ke Bawah -->
+    <path d="M 440,160 Q 436,180 430,192 M 450,160 Q 454,180 460,192" fill="none" stroke="#eab308" stroke-width="1.8"/>
+    <text x="445" y="174" text-anchor="middle" font-size="7.5" fill="#64748b">Serabut Saraf Sensorik</text>
+  </g>
+
+  <!-- Callout Labels Kiri (Anti-Overlap) -->
+  <!-- 1. Rasa Pahit -->
+  <g>
+    <rect x="14" y="65" width="105" height="20" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1.2"/>
+    <text x="66" y="79" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#b91c1c">Pahit (Pangkal)</text>
+    <line x1="119" y1="75" x2="162" y2="82" stroke="#dc2626" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 2. Rasa Asam -->
+  <g>
+    <rect x="14" y="120" width="105" height="20" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1.2"/>
+    <text x="66" y="134" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#c2410c">Asam (Tepi Belakang)</text>
+    <line x1="119" y1="130" x2="135" y2="140" stroke="#ea580c" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 3. Rasa Asin -->
+  <g>
+    <rect x="14" y="178" width="105" height="20" rx="4" fill="#ffffff" stroke="#0284c7" stroke-width="1.2"/>
+    <text x="66" y="192" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Asin (Tepi Depan)</text>
+    <line x1="119" y1="188" x2="142" y2="200" stroke="#0284c7" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- 4. Rasa Manis -->
+  <g>
+    <rect x="14" y="235" width="105" height="20" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+    <text x="66" y="249" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#15803d">Manis (Ujung Depan)</text>
+    <line x1="119" y1="245" x2="176" y2="255" stroke="#16a34a" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Dynamic Target Badge [X] -->
+  <circle cx="${target.x}" cy="${target.y}" r="17" fill="none" stroke="#e11d48" stroke-width="1.8" opacity="0.4"/>
+  <circle cx="${target.x}" cy="${target.y}" r="12.5" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#glowTongue)"/>
+  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+
+  <!-- Pedagogical Question Prompt -->
+  <text x="270" y="322" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Sensasi rasa yang paling peka pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
 </svg>`;
 }
 

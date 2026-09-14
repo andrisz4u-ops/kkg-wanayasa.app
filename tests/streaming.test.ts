@@ -1,10 +1,98 @@
 import { describe, it, expect } from 'vitest';
-import { buildAssessmentPrompt } from '../src/routes/kisi';
+import { buildAssessmentPrompt, calculateAdaptiveVisualQuota } from '../src/routes/kisi';
 import { buildRppPrompt, calculateTimeDistribution } from '../src/routes/rpp';
 import { AIService, STREAM_INITIAL_TIMEOUT_MS, STREAM_IDLE_TIMEOUT_MS, STREAM_MAX_TOTAL_TIMEOUT_MS } from '../src/services/ai';
 
 describe('AI Streaming Prompt & Pipeline Tests', () => {
+    describe('calculateAdaptiveVisualQuota', () => {
+        it('should assign high visual quota (35% -> 4 images/10 PG) for IPAS and science topics', () => {
+            const quota = calculateAdaptiveVisualQuota('IPAS', 'Sistem Pencernaan Manusia', 10, 'Kelas 5');
+            expect(quota.category).toBe('high');
+            expect(quota.ratio).toBe(0.35);
+            expect(quota.exactImages).toBe(4);
+            expect(quota.categoryLabel).toContain('35%');
+
+            // 20 questions -> 7 images
+            const quota20 = calculateAdaptiveVisualQuota('Ilmu Pengetahuan Alam', 'Rantai Makanan dan Ekosistem', 20, 'Kelas 6');
+            expect(quota20.exactImages).toBe(7);
+        });
+
+        it('should assign high visual quota (35% -> 4 images/10 PG) for Math geometry, measurement, and spatial topics', () => {
+            const quota = calculateAdaptiveVisualQuota('Matematika', 'Jaring-Jaring Kubus dan Balok', 10, 'Kelas 5');
+            expect(quota.category).toBe('high');
+            expect(quota.ratio).toBe(0.35);
+            expect(quota.exactImages).toBe(4);
+
+            const quotaPecahan = calculateAdaptiveVisualQuota('Matematika', 'Pecahan Senilai dan Arsiran', 10, 'Kelas 4');
+            expect(quotaPecahan.category).toBe('high');
+            expect(quotaPecahan.exactImages).toBe(4);
+        });
+
+        it('should assign high visual quota for early grade Fase A (Kelas 1-2) concrete learners', () => {
+            const quota = calculateAdaptiveVisualQuota('Pendidikan Lingkungan', 'Benda di Sekitar Kita', 10, 'Kelas 1');
+            expect(quota.category).toBe('high');
+            expect(quota.exactImages).toBe(4);
+        });
+
+        it('should assign medium visual quota (25% -> 3 images/10 PG) for Social, Pancasila, PJOK, and Arts', () => {
+            const quotaPkn = calculateAdaptiveVisualQuota('Pendidikan Pancasila', 'Keragaman Suku dan Budaya', 10, 'Kelas 4');
+            expect(quotaPkn.category).toBe('medium');
+            expect(quotaPkn.ratio).toBe(0.25);
+            expect(quotaPkn.exactImages).toBe(3);
+
+            const quotaPjok = calculateAdaptiveVisualQuota('PJOK', 'Teknik Dasar Bola Voli', 10, 'Kelas 5');
+            expect(quotaPjok.category).toBe('medium');
+            expect(quotaPjok.exactImages).toBe(3);
+
+            const quotaSeni = calculateAdaptiveVisualQuota('Seni Rupa', 'Motif Ragam Hias Nusantara', 10, 'Kelas 5');
+            expect(quotaSeni.category).toBe('medium');
+            expect(quotaSeni.exactImages).toBe(3);
+        });
+
+        it('should assign low/essential visual quota (20% -> 2 images/10 PG) for arithmetic and religion', () => {
+            const quotaAritmatika = calculateAdaptiveVisualQuota('Matematika', 'Operasi Hitung Campuran Bilangan Bulat', 10, 'Kelas 6');
+            expect(quotaAritmatika.category).toBe('low');
+            expect(quotaAritmatika.ratio).toBe(0.20);
+            expect(quotaAritmatika.exactImages).toBe(2);
+
+            const quotaAgama = calculateAdaptiveVisualQuota('Pendidikan Agama Islam', 'Kisah Keteladanan Nabi', 10, 'Kelas 4');
+            expect(quotaAgama.category).toBe('low');
+            expect(quotaAgama.exactImages).toBe(2);
+        });
+
+        it('should handle zero or negative question count safely', () => {
+            const quotaZero = calculateAdaptiveVisualQuota('IPAS', 'Tata Surya', 0);
+            expect(quotaZero.exactImages).toBe(0);
+        });
+    });
+
     describe('buildAssessmentPrompt', () => {
+        it('should dynamically include adaptive visual quota rule in PG prompt', () => {
+            const promptHigh = buildAssessmentPrompt({
+                type: 'pg',
+                startNo: 1,
+                count: 10,
+                mataPelajaran: 'IPAS',
+                topik: 'Organ Pencernaan Manusia',
+                jenjangKelas: 'Kelas 5',
+                resolvedCP: 'Peserta didik menganalisis sistem organ pencernaan manusia.',
+                isGambarEnabled: true
+            });
+            expect(promptHigh).toContain('KUNCI TEPAT 4 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 35%');
+
+            const promptMedium = buildAssessmentPrompt({
+                type: 'pg',
+                startNo: 1,
+                count: 10,
+                mataPelajaran: 'Pendidikan Pancasila',
+                topik: 'Gotong Royong di Lingkungan Sekitar',
+                jenjangKelas: 'Kelas 5',
+                resolvedCP: 'Peserta didik memahami pentingnya gotong royong dalam keberagaman.',
+                isGambarEnabled: true
+            });
+            expect(promptMedium).toContain('KUNCI TEPAT 3 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 25%');
+        });
+
         it('should build structured prompt for PG questions including BSKAP 046/2025 CP', () => {
             const prompt = buildAssessmentPrompt({
                 type: 'pg',

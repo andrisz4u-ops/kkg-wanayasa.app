@@ -821,6 +821,74 @@ export const shouldEnableVisualStimulusForTopic = (mataPelajaran: string, topik:
     return isExplicitVisual;
 };
 
+export interface AdaptiveVisualQuota {
+    exactImages: number;
+    ratio: number;
+    category: 'high' | 'medium' | 'low';
+    categoryLabel: string;
+}
+
+// Helper: perhitungan kuota stimulus visual adaptif berdasarkan karakteristik mata pelajaran, topik materi, & jenjang kelas
+export const calculateAdaptiveVisualQuota = (
+    mataPelajaran: string,
+    topik: string,
+    count: number,
+    jenjangKelas?: string
+): AdaptiveVisualQuota => {
+    if (count <= 0) {
+        return { exactImages: 0, ratio: 0, category: 'low', categoryLabel: 'Tanpa Gambar' };
+    }
+
+    const m = String(mataPelajaran || '').toLowerCase();
+    const t = String(topik || '').toLowerCase();
+    const k = String(jenjangKelas || '').toLowerCase();
+    const combined = `${m} ${t}`;
+
+    // 1. Kategori Tinggi (High Visual: 35% -> 3 s.d. 4 butir per 10 soal PG)
+    // Mencakup: Sains / IPAS, Geometri/Bangun Ruang/Data Statistika Matematika, Koding/Informatika/Robotika, TDBA, atau Fase Fondasi/Rendah (Kelas 1-2 SD)
+    const isSains = /ipas|ipa|sains|science|fisika|biologi|kimia/i.test(m);
+    const isMathVisual = /matematika/i.test(m) && /geometri|bangun|ruang|datar|sudut|busur|pecahan|koordinat|kartesius|diagram|grafik|batang|lingkaran|trapesium|jajar|belah|layang|kubus|balok|tabung|kerucut|bola|prisma|limas|jaring|simetri|jam|waktu|pengukuran/i.test(combined);
+    const isScienceVisualTopic = /organ|anatomi|pencernaan|pernapasan|darah|tata surya|planet|siklus air|metamorfosis|rantai makanan|ekosistem|bunga|tumbuhan|rangkaian listrik|listrik|magnet|cahaya|optik|bunyi|energi|wujud zat|kalor|suhu|termometer|pesawat sederhana|katrol/i.test(combined);
+    const isTechAgri = /koding|coding|informatika|robot|scratch|komputer|tdba|hidroponik|pertanian/i.test(combined);
+    const isEarlyGradeConcrete = /kelas\s*[12]\b|fase\s*a\b/i.test(k) && !/bahasa/i.test(m);
+
+    if (isSains || isMathVisual || isScienceVisualTopic || isTechAgri || isEarlyGradeConcrete) {
+        const ratio = 0.35;
+        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+        return {
+            exactImages,
+            ratio,
+            category: 'high',
+            categoryLabel: 'Sains & Spasial Geometris (Visual Kaya 35%)'
+        };
+    }
+
+    // 2. Kategori Sedang (Medium Visual: 25% -> 2 s.d. 3 butir per 10 soal PG)
+    // Mencakup: IPS, Sejarah, Geografi, PKn / Pendidikan Pancasila, PJOK, Seni Budaya & Prakarya (SBdP), Kesenian Daerah
+    const isSocialCulture = /pancasila|pkn|kewarganegaraan|ips|sejarah|geografi|pjok|jasmani|olahraga|seni|budaya|sbdp|musik|rupa|tari|batik/i.test(combined);
+    if (isSocialCulture) {
+        const ratio = 0.25;
+        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+        return {
+            exactImages,
+            ratio,
+            category: 'medium',
+            categoryLabel: 'Sosial, Budaya & Praktik (Visual Proporsional 25%)'
+        };
+    }
+
+    // 3. Kategori Standar / Moderat (Low Visual: 20% -> 2 butir per 10 soal PG)
+    // Mencakup: Matematika Aritmatika Murni, Agama / Budi Pekerti, Bahasa bertopik visual konkret khusus (rambu, dsb)
+    const ratio = 0.20;
+    const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+    return {
+        exactImages,
+        ratio,
+        category: 'low',
+        categoryLabel: 'Konseptual & Aritmatika (Visual Esensial 20%)'
+    };
+};
+
 // Helper: perumusan prompt asesmen & kisi-kisi terstandar Puspendik & BSKAP 046/2025
 export const buildAssessmentPrompt = (params: {
     type: string;
@@ -931,8 +999,9 @@ export const buildAssessmentPrompt = (params: {
         if (!effectiveGambarEnabled && isLanguageSubject) {
             gambarRule = `\n                7. ATURAN STIMULUS MAPEL BAHASA (STIMULUS TEKS / WACANA): Untuk materi kebahasaan/sastra "${topik}", stimulus soal WAJIB berupa teks wacana pendek, kalimat autentik, dialog, atau kutipan sastra yang kaya konteks (BUKAN stimulus gambar). DILARANG KERAS menyertakan stimulus gambar visual dan DILARANG menuliskan frasa "Perhatikan gambar berikut!" di naskah soal. Field "visual_stimulus", "gambar_keyword", dan "gambar_prompt_en" WAJIB diisi null/string kosong.`;
         } else if (effectiveGambarEnabled) {
-            const exactImages = Math.max(1, Math.round(count * 0.2));
-            gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR): Fitur ilustrasi gambar AKTIF. Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa foto/objek/diagram konkret yang jelas.
+            const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, count, jenjangKelas);
+            const exactImages = adaptiveQuota.exactImages;
+            gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${Math.round(adaptiveQuota.ratio * 100)}%): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa diagram SVG presisi / foto objek konkret yang jelas.
             - PERENCANAAN VARIASI VISUAL (SANGAT PENTING — BACA SEBELUM MULAI MENYUSUN SOAL):
               * SEBELUM mulai menulis soal, RENCANAKAN terlebih dahulu ${exactImages} jenis stimulus visual yang BERBEDA-BEDA untuk ${exactImages} butir soal bergambar.
               * Setiap butir soal bergambar WAJIB menggunakan tipe visual_stimulus atau gambar_keyword yang UNIK dan BERBEDA dari butir soal bergambar lainnya.
@@ -1142,9 +1211,10 @@ export async function enrichAndNormalizePG(
         const scoredQuestions = deduped.map((q: any, index: number) => {
             let score = 0;
             const soalText = String(q.soal || '').toLowerCase();
+            if (q.visual_stimulus && q.visual_stimulus.type) score += 20;
             if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
-            if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik')) score += 5;
-            if (soalText.includes('perhatikan') || soalText.includes('berikut')) score += 3;
+            if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta') || soalText.includes('tabel')) score += 5;
+            if (soalText.includes('perhatikan') || soalText.includes('berikut') || soalText.includes('amatilah')) score += 3;
             return { q, index, score };
         });
 
@@ -1336,7 +1406,8 @@ kisi.post('/generate', async (c) => {
         // Generate PG
         if (totalPG > 0) {
             const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
-            const exactImageCount = effectiveGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
+            const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, totalPG, jenjangKelas);
+            const exactImageCount = effectiveGambarEnabled ? adaptiveQuota.exactImages : 0;
             const BATCH_SIZE = 20;
             const unsplash = effectiveGambarEnabled ? new UnsplashService(c.env) : null;
 
@@ -1483,7 +1554,8 @@ kisi.post('/generate-stream', async (c) => {
                     });
 
                     const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
-                    const exactImageCount = effectiveGambarEnabled ? Math.max(1, Math.round(totalPG * 0.2)) : 0;
+                    const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, totalPG, jenjangKelas);
+                    const exactImageCount = effectiveGambarEnabled ? adaptiveQuota.exactImages : 0;
                     const BATCH_SIZE = 20;
                     const unsplash = effectiveGambarEnabled ? new UnsplashService(c.env) : null;
 

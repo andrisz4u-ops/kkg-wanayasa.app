@@ -18,8 +18,8 @@ export function renderStopwatchAnalogSvg(params: {
   const menit = Math.max(0, Math.min(30, params.menit != null ? params.menit : 3));
   const labelChar = params.label || 'X';
 
-  const cx = 190;
-  const cy = 135;
+  const cx = 175;
+  const cy = 145;
   const r = 85;
 
   // Jarum detik utama
@@ -30,10 +30,10 @@ export function renderStopwatchAnalogSvg(params: {
 
   // Sub-dial menit di bagian atas
   const subCx = cx;
-  const subCy = cy - 32;
+  const subCy = cy - 30;
   const subR = 24;
   const minAngle = (menit * 12 - 90) * (Math.PI / 180);
-  const minLen = subR - 5;
+  const minLen = subR - 6;
   const minX = subCx + minLen * Math.cos(minAngle);
   const minY = subCy + minLen * Math.sin(minAngle);
 
@@ -57,23 +57,35 @@ export function renderStopwatchAnalogSvg(params: {
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 270" width="400" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <!-- Border & Judul -->
-  <rect width="400" height="270" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="200" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Waktu: Stopwatch Analog</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 280" width="460" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="bezelGradStopwatch" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="40%" stop-color="#cbd5e1"/>
+      <stop offset="70%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <filter id="badgeShdwWatch" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Tombol Stopwatch Atas -->
-  <rect x="${cx - 9}" y="32" width="18" height="14" rx="2" fill="#64748b" stroke="#334155" stroke-width="1.5"/>
-  <rect x="${cx - 14}" y="26" width="28" height="8" rx="3" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+  <!-- Frame & Judul -->
+  <rect x="2" y="2" width="456" height="276" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="230" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Pengukuran Waktu: Stopwatch Analog</text>
+
+  <!-- Tombol Stopwatch Atas (Start/Stop) -->
+  <rect x="${cx - 9}" y="38" width="18" height="15" rx="2" fill="#64748b" stroke="#334155" stroke-width="1.5"/>
+  <rect x="${cx - 15}" y="32" width="30" height="8" rx="3" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
 
   <!-- Tombol Lap Kanan Atas -->
-  <g transform="translate(${cx + 48}, 48) rotate(35)">
+  <g transform="translate(${cx + 52}, 52) rotate(35)">
     <rect x="-6" y="-12" width="12" height="12" rx="2" fill="#64748b"/>
     <rect x="-9" y="-16" width="18" height="6" rx="2" fill="#e11d48"/>
   </g>
 
-  <!-- Badan Luar & Casing -->
-  <circle cx="${cx}" cy="${cy}" r="${r + 7}" fill="#f1f5f9" stroke="#334155" stroke-width="3"/>
+  <!-- Badan Luar & Casing Bezel Logam -->
+  <circle cx="${cx}" cy="${cy}" r="${r + 9}" fill="url(#bezelGradStopwatch)" stroke="#334155" stroke-width="2.5"/>
   <circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
 
   <!-- Ticks & Skala -->
@@ -81,22 +93,30 @@ export function renderStopwatchAnalogSvg(params: {
 
   <!-- Sub-dial Menit -->
   <circle cx="${subCx}" cy="${subCy}" r="${subR}" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
-  <line x1="${subCx}" y1="${subCy}" x2="${minX.toFixed(1)}" y2="${minY.toFixed(1)}" stroke="#0284c7" stroke-width="1.8"/>
-  <circle cx="${subCx}" cy="${subCy}" r="2" fill="#0284c7"/>
-  <text x="${subCx}" y="${subCy + 15}" text-anchor="middle" font-size="7" fill="#64748b">menit</text>
+  <line x1="${subCx}" y1="${subCy}" x2="${minX.toFixed(1)}" y2="${minY.toFixed(1)}" stroke="#0284c7" stroke-width="2"/>
+  <circle cx="${subCx}" cy="${subCy}" r="2.5" fill="#0284c7"/>
+  <text x="${subCx}" y="${subCy + 15}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#64748b">menit</text>
 
-  <!-- Jarum Detik Utama -->
+  <!-- Jarum Detik Utama Merah -->
+  <!-- Ekor Jarum Counterweight -->
+  <line x1="${cx}" y1="${cy}" x2="${cx - 14 * Math.cos(secAngle)}" y2="${cy - 14 * Math.sin(secAngle)}" stroke="#dc2626" stroke-width="2.5"/>
+  <!-- Batang Jarum Menunjuk Detik -->
   <line x1="${cx}" y1="${cy}" x2="${secX.toFixed(1)}" y2="${secY.toFixed(1)}" stroke="#dc2626" stroke-width="2"/>
   <circle cx="${cx}" cy="${cy}" r="4" fill="#dc2626"/>
 
-  <!-- Callout Target X -->
-  <g transform="translate(325, 110)">
-    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
-    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
-    <text x="0" y="26" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Waktu = ... s</text>
+  <!-- Callout Target X & Kartu Bacaan (Kanan) -->
+  <g transform="translate(355, 120)">
+    <rect x="-55" y="-30" width="110" height="75" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <g filter="url(#badgeShdwWatch)">
+      <circle cx="0" cy="-6" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="0" y="-1.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    </g>
+    <text x="0" y="24" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Waktu = ... s</text>
+    <text x="0" y="38" text-anchor="middle" font-size="8" fill="#64748b">(Menit + Detik)</text>
   </g>
 
-  <text x="200" y="254" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Berapakah hasil pengukuran waktu yang ditunjukkan oleh jarum "${escapeXml(labelChar)}"?</text>
+  <!-- Bottom Prompt -->
+  <text x="230" y="262" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Berapakah hasil pengukuran waktu yang ditunjukkan oleh jarum "${escapeXml(labelChar)}"?</text>
 </svg>`;
 }
 
@@ -110,9 +130,9 @@ export function renderJangkaSorongSvg(params: {
   const val = Math.max(0.5, Math.min(6.0, params.nilaiCm != null ? params.nilaiCm : 2.35));
   const labelChar = params.label || 'X';
 
-  const startX = 40;
-  const startY = 80;
-  const pxPerCm = 36;
+  const startX = 45;
+  const startY = 82;
+  const pxPerCm = 40;
   const noniusOffset = val * pxPerCm;
 
   // Skala utama: 0 s/d 7 cm
@@ -122,9 +142,9 @@ export function renderJangkaSorongSvg(params: {
     const isCm = mm % 10 === 0;
     const isHalf = mm % 5 === 0;
     const tickH = isCm ? 18 : isHalf ? 12 : 7;
-    mainScaleTicks += `<line x1="${x.toFixed(1)}" y1="${startY + 26}" x2="${x.toFixed(1)}" y2="${startY + 26 - tickH}" stroke="#0f172a" stroke-width="${isCm ? '1.5' : '0.9'}"/>`;
+    mainScaleTicks += `<line x1="${x.toFixed(1)}" y1="${startY + 28}" x2="${x.toFixed(1)}" y2="${startY + 28 - tickH}" stroke="#0f172a" stroke-width="${isCm ? '1.5' : '0.9'}"/>`;
     if (isCm) {
-      mainScaleTicks += `<text x="${x.toFixed(1)}" y="${startY + 5}" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">${mm / 10}</text>`;
+      mainScaleTicks += `<text x="${x.toFixed(1)}" y="${startY + 6}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">${mm / 10}</text>`;
     }
   }
 
@@ -135,45 +155,58 @@ export function renderJangkaSorongSvg(params: {
     const nx = noniusX + (n * 0.9 * pxPerCm) / 10;
     const isMajor = n % 5 === 0;
     const tickH = isMajor ? 14 : 8;
-    noniusTicks += `<line x1="${nx.toFixed(1)}" y1="${startY + 32}" x2="${nx.toFixed(1)}" y2="${startY + 32 + tickH}" stroke="#0284c7" stroke-width="1.2"/>`;
+    noniusTicks += `<line x1="${nx.toFixed(1)}" y1="${startY + 34}" x2="${nx.toFixed(1)}" y2="${startY + 34 + tickH}" stroke="#0284c7" stroke-width="1.2"/>`;
     if (isMajor) {
-      noniusTicks += `<text x="${nx.toFixed(1)}" y="${startY + 58}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0284c7">${n}</text>`;
+      noniusTicks += `<text x="${nx.toFixed(1)}" y="${startY + 60}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0284c7">${n}</text>`;
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 260" width="440" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="440" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="220" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Panjang Presisi: Jangka Sorong (Vernier Caliper)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 280" width="520" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="beamGradJangka" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <filter id="badgeShdwJangka" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Batang Utama Jangka Sorong -->
-  <rect x="${startX - 20}" y="${startY - 2}" width="380" height="30" fill="#f8fafc" stroke="#334155" stroke-width="1.8"/>
-  <!-- Rahang Tetap Kiri Luar & Dalam -->
-  <path d="M ${startX - 20},${startY - 2} L ${startX - 20},${startY + 90} L ${startX - 4},${startY + 90} L ${startX - 4},${startY + 28} L ${startX - 20},${startY + 28} Z" fill="#e2e8f0" stroke="#334155" stroke-width="1.8"/>
-  <path d="M ${startX - 20},${startY - 2} L ${startX - 20},${startY - 35} L ${startX - 6},${startY - 35} L ${startX - 6},${startY - 2} Z" fill="#e2e8f0" stroke="#334155" stroke-width="1.8"/>
+  <!-- Frame -->
+  <rect x="2" y="2" width="516" height="276" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="260" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Pengukuran Panjang Presisi: Jangka Sorong (Vernier Caliper)</text>
+
+  <!-- Batang Utama Jangka Sorong Logam -->
+  <rect x="${startX - 22}" y="${startY}" width="430" height="32" fill="url(#beamGradJangka)" stroke="#334155" stroke-width="1.8"/>
+  <!-- Rahang Tetap Kiri (Luar Bawah & Dalam Atas) -->
+  <path d="M ${startX - 22},${startY} L ${startX - 22},${startY + 98} L ${startX - 4},${startY + 98} L ${startX - 4},${startY + 32} L ${startX - 22},${startY + 32} Z" fill="#e2e8f0" stroke="#334155" stroke-width="1.8"/>
+  <path d="M ${startX - 22},${startY} L ${startX - 22},${startY - 36} L ${startX - 6},${startY - 36} L ${startX - 6},${startY} Z" fill="#e2e8f0" stroke="#334155" stroke-width="1.8"/>
 
   <!-- Skala Utama -->
   ${mainScaleTicks}
-  <text x="${startX + 270}" y="${startY + 17}" font-size="9.5" font-weight="bold" fill="#64748b">cm (0.1 cm)</text>
+  <text x="${startX + 325}" y="${startY + 20}" font-size="9.5" font-weight="bold" fill="#64748b">cm (0.1 cm)</text>
 
-  <!-- Benda yang Diukur (Silinder / Kelereng) di antara rahang -->
-  <rect x="${startX - 4}" y="${startY + 40}" width="${noniusOffset}" height="32" rx="3" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
-  <text x="${startX - 4 + noniusOffset / 2}" y="${startY + 60}" text-anchor="middle" font-size="9" font-weight="bold" fill="#9a3412">Benda</text>
+  <!-- Benda yang Diukur (Silinder Logam Kuningan) di antara rahang -->
+  <rect x="${startX - 4}" y="${startY + 44}" width="${noniusOffset}" height="36" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="${startX - 4 + noniusOffset / 2}" y="${startY + 66}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#92400e">Benda</text>
 
-  <!-- Rahang Geser (Nonius) -->
-  <rect x="${noniusX - 10}" y="${startY + 28}" width="78" height="42" fill="#eff6ff" stroke="#0284c7" stroke-width="1.8" rx="2"/>
-  <path d="M ${noniusX},${startY + 28} L ${noniusX},${startY + 90} L ${noniusX + 14},${startY + 90} L ${noniusX + 14},${startY + 70} L ${noniusX},${startY + 70} Z" fill="#dbeafe" stroke="#0284c7" stroke-width="1.8"/>
+  <!-- Rahang Geser (Nonius Carriage) -->
+  <rect x="${noniusX - 10}" y="${startY + 30}" width="82" height="45" fill="#eff6ff" stroke="#0284c7" stroke-width="1.8" rx="2"/>
+  <path d="M ${noniusX},${startY + 30} L ${noniusX},${startY + 98} L ${noniusX + 16},${startY + 98} L ${noniusX + 16},${startY + 75} L ${noniusX},${startY + 75} Z" fill="#dbeafe" stroke="#0284c7" stroke-width="1.8"/>
 
   <!-- Skala Nonius -->
   ${noniusTicks}
-  <text x="${noniusX + 50}" y="${startY + 56}" font-size="8" font-weight="bold" fill="#0284c7">0.01 cm</text>
+  <text x="${noniusX + 54}" y="${startY + 58}" font-size="8" font-weight="bold" fill="#0284c7">0.01 cm</text>
 
   <!-- Callout Target X -->
-  <g transform="translate(350, 150)">
-    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
+  <g transform="translate(435, 175)" filter="url(#badgeShdwJangka)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
     <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
-  <text x="220" y="244" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Hasil pengukuran jangka sorong yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ... cm</text>
+  <!-- Bottom Prompt -->
+  <text x="260" y="262" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Hasil pengukuran jangka sorong yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ... cm</text>
 </svg>`;
 }
 
@@ -441,70 +474,174 @@ export function renderMeteranGulungSvg(params: {
  */
 export function renderDinamometerPegasSvg(params: {
   gayaNewton?: number; // e.g. 4 N
+  newton?: number;
   maxNewton?: number;
   label?: string;
 }): string {
-  const f = Math.max(0, Math.min(10, params.gayaNewton != null ? params.gayaNewton : 4));
+  const rawNewton = params.newton != null ? params.newton : params.gayaNewton;
+  const f = Math.max(0, Math.min(10, rawNewton != null ? rawNewton : 4));
   const labelChar = params.label || 'X';
 
-  const cx = 175;
-  const topY = 50;
-  const tubeH = 140;
-  const bottomY = topY + tubeH;
+  const cx = 150;
+  const topY = 46;
+  const tubeH = 146;
+  const bottomY = topY + tubeH; // 192
 
-  // Posisi collar penunjuk turun sesuai gaya
+  // Skala aktif: 0 s/d 10 N
+  const scaleTopY = topY + 24; // 70
+  const scaleBottomY = topY + 124; // 170
+  const scaleLen = scaleBottomY - scaleTopY; // 100 px (10 px per N)
+
+  // Posisi collar penunjuk turun sesuai gaya F
   const stretchRatio = f / 10;
-  const collarY = topY + 25 + stretchRatio * (tubeH - 50);
+  const collarY = scaleTopY + stretchRatio * scaleLen;
+
+  // Pegas spiral berbayang 3D
+  const springTopY = topY + 10;
+  const springBottomY = collarY - 4;
+  const springH = Math.max(16, springBottomY - springTopY);
+  const numCoils = 9;
+  const coilStep = springH / numCoils;
+
+  let springPath = `M ${cx} ${springTopY}`;
+  for (let i = 0; i < numCoils; i++) {
+    const yMid1 = springTopY + (i + 0.25) * coilStep;
+    const yPeak = springTopY + (i + 0.5) * coilStep;
+    const yMid2 = springTopY + (i + 0.75) * coilStep;
+    const yEnd = springTopY + (i + 1.0) * coilStep;
+    springPath += ` C ${cx - 12} ${yMid1.toFixed(1)}, ${cx - 12} ${yPeak.toFixed(1)}, ${cx} ${yPeak.toFixed(1)}`;
+    springPath += ` C ${cx + 12} ${yPeak.toFixed(1)}, ${cx + 12} ${yMid2.toFixed(1)}, ${cx} ${yEnd.toFixed(1)}`;
+  }
 
   // Skala Newton (kiri) & Gram (kanan)
   let ticks = '';
-  for (let n = 0; n <= 10; n += 2) {
-    const y = topY + 25 + (n / 10) * (tubeH - 50);
-    ticks += `
-      <line x1="${cx - 18}" y1="${y}" x2="${cx - 8}" y2="${y}" stroke="#0f172a" stroke-width="1.5"/>
-      <text x="${cx - 22}" y="${y + 3.5}" text-anchor="end" font-size="8.5" font-weight="bold" fill="#0f172a">${n}</text>
-      <line x1="${cx + 8}" y1="${y}" x2="${cx + 18}" y2="${y}" stroke="#0f172a" stroke-width="1.5"/>
-      <text x="${cx + 22}" y="${y + 3.5}" text-anchor="start" font-size="8.5" font-weight="bold" fill="#0284c7">${n * 100}</text>
-    `;
+  for (let n = 0; n <= 10; n++) {
+    const y = scaleTopY + (n / 10) * scaleLen;
+    const isMajor = n % 2 === 0;
+
+    if (isMajor) {
+      ticks += `
+        <line x1="${cx - 18}" y1="${y.toFixed(1)}" x2="${cx - 7}" y2="${y.toFixed(1)}" stroke="#0f172a" stroke-width="1.6"/>
+        <text x="${cx - 22}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="8.5" font-weight="bold" fill="#0f172a">${n}</text>
+        <line x1="${cx + 7}" y1="${y.toFixed(1)}" x2="${cx + 18}" y2="${y.toFixed(1)}" stroke="#0284c7" stroke-width="1.6"/>
+        <text x="${cx + 22}" y="${(y + 3.5).toFixed(1)}" text-anchor="start" font-size="8.5" font-weight="bold" fill="#0284c7">${n * 100}</text>
+      `;
+    } else {
+      ticks += `
+        <line x1="${cx - 13}" y1="${y.toFixed(1)}" x2="${cx - 7}" y2="${y.toFixed(1)}" stroke="#64748b" stroke-width="1"/>
+        <line x1="${cx + 7}" y1="${y.toFixed(1)}" x2="${cx + 13}" y2="${y.toFixed(1)}" stroke="#38bdf8" stroke-width="1"/>
+      `;
+    }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="380" height="270" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Gaya: Neraca Pegas (Dinamometer)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" width="420" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <!-- Gradien Tabung Akrilik Transparan -->
+    <linearGradient id="acrylicTubeGradDina" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.8"/>
+      <stop offset="15%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#f8fafc" stop-opacity="0.3"/>
+      <stop offset="85%" stop-color="#e2e8f0" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.8"/>
+    </linearGradient>
 
-  <!-- Cincin Gantung Atas -->
-  <circle cx="${cx}" cy="${topY - 14}" r="10" fill="none" stroke="#64748b" stroke-width="3"/>
+    <!-- Gradien Tutup Logam Aluminium -->
+    <linearGradient id="metalCapGradDina" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="30%" stop-color="#94a3b8"/>
+      <stop offset="70%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
 
-  <!-- Tabung Transparan Dinamometer -->
-  <rect x="${cx - 16}" y="${topY}" width="32" height="${tubeH}" rx="6" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+    <!-- Gradien Collar Merah Indikator -->
+    <linearGradient id="collarGradDina" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="50%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
 
-  <!-- Pegas Spiral di Dalam Tabung -->
-  <line x1="${cx}" y1="${topY + 6}" x2="${cx}" y2="${collarY}" stroke="#64748b" stroke-width="2" stroke-dasharray="3,3"/>
+    <!-- Gradien Beban Kuningan / Logam -->
+    <linearGradient id="brassWeightGradDina" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="35%" stop-color="#fbbf24"/>
+      <stop offset="70%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
 
-  <!-- Collar / Pembatas Penunjuk Merah -->
-  <rect x="${cx - 14}" y="${collarY - 3}" width="28" height="6" rx="2" fill="#dc2626"/>
+    <!-- Drop Shadow Badge -->
+    <filter id="badgeShdwDina" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Batang Penarik Bawah & Gantungan Pengait -->
-  <line x1="${cx}" y1="${collarY + 3}" x2="${cx}" y2="${bottomY + 15}" stroke="#475569" stroke-width="2.5"/>
-  <path d="M ${cx},${bottomY + 15} C ${cx - 12},${bottomY + 22} ${cx + 12},${bottomY + 30} ${cx},${bottomY + 38}" fill="none" stroke="#475569" stroke-width="2.5"/>
+  <!-- Frame Luar -->
+  <rect x="2" y="2" width="416" height="276" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="210" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Gaya: Dinamometer (Neraca Pegas)</text>
 
-  <!-- Beban Gantung Bawah -->
-  <rect x="${cx - 18}" y="${bottomY + 40}" width="36" height="20" rx="3" fill="#64748b" stroke="#1e293b" stroke-width="1.5"/>
-  <text x="${cx}" y="${bottomY + 54}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#ffffff">Beban</text>
+  <!-- Cincin Gantung Atas Stainless Steel -->
+  <circle cx="${cx}" cy="${topY - 14}" r="11" fill="none" stroke="url(#metalCapGradDina)" stroke-width="3.5"/>
+  <circle cx="${cx}" cy="${topY - 14}" r="11" fill="none" stroke="#0f172a" stroke-width="0.8" opacity="0.4"/>
 
-  <!-- Label Satuan Skala -->
-  <text x="${cx - 24}" y="${topY + 14}" text-anchor="end" font-size="9" font-weight="bold" fill="#0f172a">N</text>
-  <text x="${cx + 24}" y="${topY + 14}" text-anchor="start" font-size="9" font-weight="bold" fill="#0284c7">g</text>
+  <!-- Tutup Logam Atas -->
+  <rect x="${cx - 18}" y="${topY - 3}" width="36" height="8" rx="2" fill="url(#metalCapGradDina)" stroke="#334155" stroke-width="1"/>
 
+  <!-- Batang Poros / Pegas Spiral Internal -->
+  <!-- Poros Pandu Tengah Atas -->
+  <line x1="${cx}" y1="${topY + 5}" x2="${cx}" y2="${springTopY}" stroke="#64748b" stroke-width="2.5"/>
+  <!-- Lilitan Pegas Heliks Baja -->
+  <path d="${springPath}" fill="none" stroke="#475569" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${springPath}" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+
+  <!-- Tabung Silinder Akrilik Transparan -->
+  <rect x="${cx - 17}" y="${topY + 5}" width="34" height="${tubeH - 10}" rx="4" fill="url(#acrylicTubeGradDina)" stroke="#64748b" stroke-width="1.5"/>
+  <!-- Refleksi Kilap Tabung Kaca / Akrilik -->
+  <line x1="${cx - 13}" y1="${topY + 8}" x2="${cx - 13}" y2="${bottomY - 8}" stroke="#ffffff" stroke-width="1.5" opacity="0.65"/>
+
+  <!-- Tutup Logam Bawah -->
+  <rect x="${cx - 18}" y="${bottomY - 5}" width="36" height="8" rx="2" fill="url(#metalCapGradDina)" stroke="#334155" stroke-width="1"/>
+
+  <!-- Skala Angka & Ticks -->
+  <text x="${cx - 22}" y="${scaleTopY - 9}" text-anchor="end" font-size="9" font-weight="bold" fill="#0f172a">N (Gaya)</text>
+  <text x="${cx + 22}" y="${scaleTopY - 9}" text-anchor="start" font-size="9" font-weight="bold" fill="#0284c7">g (Massa)</text>
   ${ticks}
 
-  <!-- Target Badge X -->
-  <g transform="translate(285, 120)">
-    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
+  <!-- Poros Penarik Bawah (Stainless Steel Rod) -->
+  <line x1="${cx}" y1="${collarY + 3.5}" x2="${cx}" y2="${bottomY + 14}" stroke="#475569" stroke-width="2.8"/>
+
+  <!-- Collar Merah Indikator Nilai Ukur -->
+  <rect x="${cx - 16}" y="${collarY - 3.5}" width="32" height="7" rx="2" fill="url(#collarGradDina)" stroke="#991b1b" stroke-width="1"/>
+  <!-- Penunjuk Panah Segitiga Kiri & Kanan pada Collar -->
+  <polygon points="${cx - 16},${collarY} ${cx - 11},${collarY - 3} ${cx - 11},${collarY + 3}" fill="#ffffff"/>
+  <polygon points="${cx + 16},${collarY} ${cx + 11},${collarY - 3} ${cx + 11},${collarY + 3}" fill="#ffffff"/>
+
+  <!-- Pengait Bawah (Swivel Hook) -->
+  <path d="M ${cx},${bottomY + 14} L ${cx},${bottomY + 22} C ${cx - 14},${bottomY + 24} ${cx - 14},${bottomY + 38} ${cx},${bottomY + 38} C ${cx + 12},${bottomY + 38} ${cx + 12},${bottomY + 28} ${cx + 7},${bottomY + 28}" fill="none" stroke="#334155" stroke-width="2.8" stroke-linecap="round"/>
+
+  <!-- Beban Tergantung (Beban Uji Kuningan) -->
+  <ellipse cx="${cx}" cy="${bottomY + 41}" rx="4" ry="2" fill="none" stroke="#b45309" stroke-width="1.8"/>
+  <rect x="${cx - 18}" y="${bottomY + 43}" width="36" height="20" rx="3" fill="url(#brassWeightGradDina)" stroke="#b45309" stroke-width="1.4"/>
+  <text x="${cx}" y="${bottomY + 56}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#78350f">Beban Uji</text>
+
+  <!-- Garis Penunjuk Target Badge [X] -->
+  <line x1="${cx + 17}" y1="${collarY}" x2="238" y2="${collarY}" stroke="#e11d48" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <g transform="translate(252, ${collarY.toFixed(1)})" filter="url(#badgeShdwDina)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.2"/>
     <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
-  <text x="190" y="254" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Besar gaya tarikan pegas yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ... N</text>
+  <!-- Kartu Spesifikasi & Konversi Alat (Sisi Kanan Bebas Tabrakan) -->
+  <g transform="translate(345, 118)">
+    <rect x="-56" y="-50" width="112" height="100" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+    <text x="0" y="-30" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Spesifikasi Alat</text>
+    <line x1="-42" y1="-22" x2="42" y2="-22" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="0" y="-8" text-anchor="middle" font-size="9" fill="#475569">Kapasitas: 10 N</text>
+    <text x="0" y="8" text-anchor="middle" font-size="9" fill="#475569">Ketelitian: 0.1 N</text>
+    <rect x="-44" y="20" width="88" height="20" rx="4" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+    <text x="0" y="33.5" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1d4ed8">1 N &#x2248; 100 gram</text>
+  </g>
+
+  <!-- Prompt Pertanyaan Pedagogis -->
+  <text x="210" y="266" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Berapakah besar gaya tarikan yang ditunjukkan oleh penunjuk "${escapeXml(labelChar)}"?</text>
 </svg>`;
 }
 

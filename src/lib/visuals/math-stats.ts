@@ -1363,60 +1363,129 @@ export function renderTermometerSvg(params: {
   const cx = 175;
   const tubeTopY = 48;
   const tubeH = 155;
-  const tubeBottomY = tubeTopY + tubeH;
-  const bulbCy = tubeBottomY + 16;
+  const tubeBottomY = tubeTopY + tubeH; // 203
+  const bulbCy = tubeBottomY + 16; // 219
 
   // Hitung ketinggian kolom cairan merah
   const ratio = (suhu - min) / (max - min || 1);
   const liquidTopY = tubeBottomY - ratio * (tubeH - 10);
 
-  // Garis-garis skala termometer
+  // Garis-garis skala termometer presisi
   let scaleTicks = '';
   const range = max - min;
-  const step = 10;
-  for (let val = min; val <= max; val += 5) {
+  for (let val = min; val <= max; val += 1) {
     const tickRatio = (val - min) / range;
     const ty = tubeBottomY - tickRatio * (tubeH - 10);
-    const isMajor = val % step === 0;
+    const isMajor = val % 10 === 0;
+    const isMedium = val % 5 === 0;
 
     if (isMajor) {
       scaleTicks += `
-        <line x1="${cx - 16}" y1="${ty}" x2="${cx - 6}" y2="${ty}" stroke="#0f172a" stroke-width="1.5"/>
-        <text x="${cx - 20}" y="${ty + 4}" text-anchor="end" font-size="10" font-weight="bold" fill="#334155">${val}</text>
+        <line x1="${cx - 17}" y1="${ty.toFixed(1)}" x2="${cx - 6}" y2="${ty.toFixed(1)}" stroke="#0f172a" stroke-width="1.6"/>
+        <text x="${cx - 21}" y="${(ty + 3.5).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="bold" fill="#1e293b">${val}</text>
       `;
+    } else if (isMedium) {
+      scaleTicks += `<line x1="${cx - 13}" y1="${ty.toFixed(1)}" x2="${cx - 6}" y2="${ty.toFixed(1)}" stroke="#475569" stroke-width="1.2"/>`;
     } else {
-      scaleTicks += `<line x1="${cx - 12}" y1="${ty}" x2="${cx - 6}" y2="${ty}" stroke="#64748b" stroke-width="1"/>`;
+      scaleTicks += `<line x1="${cx - 10}" y1="${ty.toFixed(1)}" x2="${cx - 6}" y2="${ty.toFixed(1)}" stroke="#94a3b8" stroke-width="0.8"/>`;
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <!-- Border & Judul -->
-  <rect width="380" height="270" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Suhu: Termometer Skala ${escapeXml(unit)}</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 270" width="380" height="270" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <!-- Gradien Papan Dudukan Kayu / Akrilik -->
+    <linearGradient id="plaqueGradTermo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
 
-  <!-- Papan Kayu / Dudukan Belakang -->
-  <rect x="110" y="36" width="130" height="198" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <!-- Gradien Tabung Kaca Borosilikat -->
+    <linearGradient id="glassTubeGradTermo" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.8"/>
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#f8fafc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.8"/>
+    </linearGradient>
 
-  <!-- Tabung Kaca Termometer -->
-  <rect x="${cx - 6}" y="${tubeTopY}" width="12" height="${tubeH}" rx="6" fill="#ffffff" stroke="#64748b" stroke-width="1.5"/>
+    <!-- Gradien Kolom Cairan Termometrik (Alkohol Merah / Raksa) -->
+    <linearGradient id="liquidGradTermo" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b91c1c"/>
+      <stop offset="40%" stop-color="#ef4444"/>
+      <stop offset="80%" stop-color="#f87171"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
 
-  <!-- Kolom Cairan Merah Raksa/Alkohol -->
-  <rect x="${cx - 3.5}" y="${liquidTopY}" width="7" height="${tubeBottomY - liquidTopY + 10}" fill="#ef4444"/>
+    <!-- Gradien Bola Reservoir 3D -->
+    <radialGradient id="bulbRadTermo" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fca5a5"/>
+      <stop offset="25%" stop-color="#ef4444"/>
+      <stop offset="75%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#7f1d1d"/>
+    </radialGradient>
 
-  <!-- Bola Reservoir Bawah (Bulb) -->
-  <circle cx="${cx}" cy="${bulbCy}" r="18" fill="#ef4444" stroke="#64748b" stroke-width="2"/>
-  <circle cx="${cx - 5}" cy="${bulbCy - 5}" r="5" fill="#fca5a5" opacity="0.6"/>
+    <!-- Gradien Klem Logam Penjepit Tabung -->
+    <linearGradient id="bracketGradTermo" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <!-- Drop Shadow Badge -->
+    <filter id="badgeShdwTermo" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Border Luar -->
+  <rect x="2" y="2" width="376" height="266" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="190" y="22" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pengukuran Suhu: Termometer Laboratorium Skala ${escapeXml(unit)}</text>
+
+  <!-- Papan Dudukan Kayu / Akrilik Instrumen -->
+  <rect x="95" y="32" width="160" height="206" rx="10" fill="url(#plaqueGradTermo)" stroke="#cbd5e1" stroke-width="1.5"/>
+  <!-- Sekrup Penjepit Papan di 4 Sudut -->
+  <circle cx="106" cy="42" r="3" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="244" cy="42" r="3" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="106" cy="228" r="3" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="244" cy="228" r="3" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+
+  <!-- Alur Kapiler Tabung Kaca Belakang -->
+  <rect x="${cx - 6}" y="${tubeTopY}" width="12" height="${tubeH}" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- Kolom Cairan Merah Alkohol Termometrik -->
+  <rect x="${cx - 3.5}" y="${liquidTopY.toFixed(1)}" width="7" height="${(tubeBottomY - liquidTopY + 12).toFixed(1)}" fill="url(#liquidGradTermo)"/>
+
+  <!-- Meniskus Cairan di Permukaan Atas -->
+  <ellipse cx="${cx}" cy="${liquidTopY.toFixed(1)}" rx="3.5" ry="1.5" fill="#fca5a5"/>
+
+  <!-- Tabung Kaca Borosilikat Depan (Efek Transparan Berbayang) -->
+  <rect x="${cx - 6}" y="${tubeTopY}" width="12" height="${tubeH}" rx="6" fill="url(#glassTubeGradTermo)" stroke="#94a3b8" stroke-width="1.4"/>
+  <!-- Refleksi Kilau Kaca Sepanjang Pipa -->
+  <line x1="${cx - 3}" y1="${tubeTopY + 5}" x2="${cx - 3}" y2="${tubeBottomY}" stroke="#ffffff" stroke-width="1.2" opacity="0.75"/>
+
+  <!-- Klem Logam Penjepit Tabung Atas & Bawah -->
+  <rect x="${cx - 9}" y="${tubeTopY + 8}" width="18" height="5" rx="1" fill="url(#bracketGradTermo)" stroke="#334155" stroke-width="0.8"/>
+  <rect x="${cx - 9}" y="${tubeBottomY - 8}" width="18" height="5" rx="1" fill="url(#bracketGradTermo)" stroke="#334155" stroke-width="0.8"/>
+
+  <!-- Bola Reservoir Kaca Bawah (Bulb) -->
+  <circle cx="${cx}" cy="${bulbCy}" r="18" fill="url(#bulbRadTermo)" stroke="#94a3b8" stroke-width="2"/>
+  <!-- Kilap Spesular Bola Kaca 3D -->
+  <ellipse cx="${cx - 5}" cy="${bulbCy - 5}" rx="5" ry="3.5" transform="rotate(-30 ${cx - 5} ${bulbCy - 5})" fill="#ffffff" opacity="0.75"/>
 
   <!-- Skala Angka & Ticks -->
   ${scaleTicks}
-  <text x="${cx - 20}" y="${tubeTopY - 2}" text-anchor="end" font-size="11" font-weight="bold" fill="#dc2626">${escapeXml(unit)}</text>
+  <text x="${cx - 21}" y="${tubeTopY - 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#dc2626">${escapeXml(unit)}</text>
 
-  <!-- Penunjuk Target X di Permukaan Raksa -->
-  <line x1="${cx + 8}" y1="${liquidTopY}" x2="${cx + 38}" y2="${liquidTopY}" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="3,2"/>
-  <circle cx="${cx + 52}" cy="${liquidTopY}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
-  <text x="${cx + 52}" y="${liquidTopY + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Penunjuk Panah & Garis Pandu Meniskus Target [X] -->
+  <polygon points="${cx + 8},${liquidTopY.toFixed(1)} ${cx + 15},${(liquidTopY - 3.5).toFixed(1)} ${cx + 15},${(liquidTopY + 3.5).toFixed(1)}" fill="#dc2626"/>
+  <line x1="${cx + 15}" y1="${liquidTopY.toFixed(1)}" x2="${cx + 40}" y2="${liquidTopY.toFixed(1)}" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <g transform="translate(${cx + 54}, ${liquidTopY.toFixed(1)})" filter="url(#badgeShdwTermo)">
+    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.2"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
 
-  <text x="190" y="254" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Suhu yang ditunjukkan oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Prompt Pertanyaan Pedagogis Bawah -->
+  <text x="190" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Suhu yang ditunjukkan oleh penunjuk "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

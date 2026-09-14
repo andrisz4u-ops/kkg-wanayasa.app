@@ -286,78 +286,165 @@ export function renderPerubahanWujudSvg(params: any): string {
     const isActive = activeNum === num;
     if (isActive) {
       return `
-        <circle cx="${x}" cy="${y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-        <text x="${x}" y="${y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+        <g filter="url(#dropShdwWujud)">
+          <circle cx="${x}" cy="${y}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+          <text x="${x}" y="${y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+        </g>
       `;
     }
     return `
-      <circle cx="${x}" cy="${y}" r="11" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
-      <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${num}</text>
+      <g filter="url(#dropShdwWujud)">
+        <circle cx="${x}" cy="${y}" r="12" fill="#334155" stroke="#ffffff" stroke-width="2"/>
+        <text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${num}</text>
+      </g>
     `;
   };
 
-  const getArrowColor = (num: number) => activeNum === num ? '#e11d48' : '#64748b';
-  const getArrowWidth = (num: number) => activeNum === num ? '3' : '2';
+  const getArrowColor = (num: number) => {
+    if (activeNum === num) return '#e11d48';
+    // 1, 3, 5: Memerlukan kalor (+Q / Panas -> Oranye Merah)
+    if (num === 1 || num === 3 || num === 5) return '#ea580c';
+    // 2, 4, 6: Melepaskan kalor (-Q / Dingin -> Biru Laut)
+    return '#0284c7';
+  };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 280" width="440" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  const getArrowMarker = (num: number) => {
+    if (activeNum === num) return 'arrWujudActive';
+    if (num === 1 || num === 3 || num === 5) return 'arrWujudHeat';
+    return 'arrWujudCool';
+  };
+
+  const getArrowWidth = (num: number) => (activeNum === num ? '3.5' : '2.5');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 370" width="580" height="370" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <marker id="arrWujudNormal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#64748b" />
+    <linearGradient id="cairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a7f3d0" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#34d399" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="padatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <linearGradient id="gasGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f3e8ff"/>
+      <stop offset="100%" stop-color="#d8b4fe"/>
+    </linearGradient>
+    <filter id="dropShdwWujud" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.2"/>
+    </filter>
+    <marker id="arrWujudHeat" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ea580c" />
     </marker>
-    <marker id="arrWujudActive" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="arrWujudCool" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0284c7" />
+    </marker>
+    <marker id="arrWujudActive" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
     </marker>
   </defs>
 
-  <rect width="440" height="280" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="220" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Perubahan Wujud Zat</text>
+  <!-- Outer Card Frame -->
+  <rect x="2" y="2" width="576" height="366" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
 
-  <!-- KOTAK WUJUD ZAT -->
-  <!-- 1. CAIR (Atas Tengah) -->
-  <g transform="translate(170, 42)">
-    <rect width="100" height="46" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
-    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#065f46">CAIR</text>
+  <!-- Title Header -->
+  <text x="290" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#0f172a">Diagram Perubahan Wujud Zat</text>
+
+  <!-- 1. ZAT CAIR (Atas Tengah) -->
+  <g transform="translate(230, 42)">
+    <rect width="120" height="66" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+    <!-- Glass Beaker Liquid Fill -->
+    <path d="M 12 36 Q 30 33 60 36 T 108 36 L 108 58 Q 108 62 104 62 L 16 62 Q 12 62 12 58 Z" fill="url(#cairGrad)"/>
+    <!-- Liquid Bubbles / Free moving particles -->
+    <circle cx="28" cy="48" r="3" fill="#065f46" opacity="0.6"/>
+    <circle cx="45" cy="52" r="3.5" fill="#065f46" opacity="0.6"/>
+    <circle cx="68" cy="46" r="3" fill="#065f46" opacity="0.6"/>
+    <circle cx="92" cy="50" r="3.5" fill="#065f46" opacity="0.6"/>
+    <text x="60" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#065f46">CAIR</text>
+    <text x="60" y="58" text-anchor="middle" font-size="8.5" font-weight="600" fill="#064e3b">Vol Tetap, Bentuk Berubah</text>
   </g>
 
-  <!-- 2. PADAT (Kiri Bawah) -->
-  <g transform="translate(35, 190)">
-    <rect width="100" height="46" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
-    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e3a8a">PADAT</text>
+  <!-- 2. ZAT PADAT (Kiri Bawah) -->
+  <g transform="translate(38, 202)">
+    <rect width="124" height="74" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <!-- 3D Ice Cube Illustration -->
+    <g transform="translate(14, 12)">
+      <polygon points="12,12 24,5 36,12 24,19" fill="#bfdbfe" stroke="#3b82f6" stroke-width="0.8"/>
+      <polygon points="12,12 24,19 24,33 12,26" fill="#93c5fd" stroke="#3b82f6" stroke-width="0.8"/>
+      <polygon points="24,19 36,12 36,26 24,33" fill="#60a5fa" stroke="#3b82f6" stroke-width="0.8"/>
+    </g>
+    <!-- Micro-lattice tightly packed circles -->
+    <g transform="translate(68, 12)">
+      <circle cx="8" cy="8" r="3" fill="#1e3a8a"/>
+      <circle cx="16" cy="8" r="3" fill="#1e3a8a"/>
+      <circle cx="24" cy="8" r="3" fill="#1e3a8a"/>
+      <circle cx="8" cy="16" r="3" fill="#1e3a8a"/>
+      <circle cx="16" cy="16" r="3" fill="#1e3a8a"/>
+      <circle cx="24" cy="16" r="3" fill="#1e3a8a"/>
+      <circle cx="8" cy="24" r="3" fill="#1e3a8a"/>
+      <circle cx="16" cy="24" r="3" fill="#1e3a8a"/>
+      <circle cx="24" cy="24" r="3" fill="#1e3a8a"/>
+    </g>
+    <text x="62" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e3a8a">PADAT</text>
+    <text x="62" y="66" text-anchor="middle" font-size="8.5" font-weight="600" fill="#1d4ed8">Bentuk &amp; Vol Tetap</text>
   </g>
 
-  <!-- 3. GAS (Kanan Bawah) -->
-  <g transform="translate(305, 190)">
-    <rect width="100" height="46" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="2"/>
-    <text x="50" y="28" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b21a8">GAS</text>
+  <!-- 3. ZAT GAS (Kanan Bawah) -->
+  <g transform="translate(418, 202)">
+    <rect width="124" height="74" rx="10" fill="#faf5ff" stroke="#a855f7" stroke-width="2"/>
+    <!-- Gas Chamber with Scattered Free Particles -->
+    <g transform="translate(15, 8)">
+      <rect x="4" y="4" width="86" height="28" rx="4" fill="#f3e8ff" stroke="#c084fc" stroke-width="1"/>
+      <circle cx="14" cy="12" r="2.5" fill="#7e22ce"/>
+      <circle cx="32" cy="22" r="2.5" fill="#7e22ce"/>
+      <circle cx="48" cy="10" r="2.5" fill="#7e22ce"/>
+      <circle cx="68" cy="20" r="2.5" fill="#7e22ce"/>
+      <circle cx="80" cy="12" r="2.5" fill="#7e22ce"/>
+    </g>
+    <text x="62" y="52" text-anchor="middle" font-size="14" font-weight="bold" fill="#6b21a8">GAS</text>
+    <text x="62" y="66" text-anchor="middle" font-size="8.5" font-weight="600" fill="#7e22ce">Bentuk &amp; Vol Berubah</text>
   </g>
 
-  <!-- 6 PANAH PERUBAHAN WUJUD (ZERO-SPOILER) -->
-  <!-- Panah 1: Padat -> Cair (Mencair) -->
-  <path d="M 90,185 Q 115,115 170,80" fill="none" stroke="${getArrowColor(1)}" stroke-width="${getArrowWidth(1)}" marker-end="url(#${activeNum === 1 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(118, 125, 1)}
+  <!-- 6 PANAH PERUBAHAN WUJUD (KURVA ELEGAN & ZERO-SPOILER) -->
+  <!-- Panah 1: Padat -> Cair (Mencair, Serap Kalor) -->
+  <path d="M 148,198 Q 170,118 226,92" fill="none" stroke="${getArrowColor(1)}" stroke-width="${getArrowWidth(1)}" marker-end="url(#${getArrowMarker(1)})"/>
+  ${drawArrowBadge(182, 132, 1)}
 
-  <!-- Panah 2: Cair -> Padat (Membeku) -->
-  <path d="M 165,70 Q 75,100 70,185" fill="none" stroke="${getArrowColor(2)}" stroke-width="${getArrowWidth(2)}" marker-end="url(#${activeNum === 2 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(150, 150, 2)}
+  <!-- Panah 2: Cair -> Padat (Membeku, Lepas Kalor) -->
+  <path d="M 226,76 Q 138,96 116,198" fill="none" stroke="${getArrowColor(2)}" stroke-width="${getArrowWidth(2)}" marker-end="url(#${getArrowMarker(2)})"/>
+  ${drawArrowBadge(145, 156, 2)}
 
-  <!-- Panah 3: Cair -> Gas (Menguap) -->
-  <path d="M 270,80 Q 325,115 350,185" fill="none" stroke="${getArrowColor(3)}" stroke-width="${getArrowWidth(3)}" marker-end="url(#${activeNum === 3 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(322, 125, 3)}
+  <!-- Panah 3: Cair -> Gas (Menguap, Serap Kalor) -->
+  <path d="M 354,92 Q 410,118 432,198" fill="none" stroke="${getArrowColor(3)}" stroke-width="${getArrowWidth(3)}" marker-end="url(#${getArrowMarker(3)})"/>
+  ${drawArrowBadge(398, 132, 3)}
 
-  <!-- Panah 4: Gas -> Cair (Mengembun) -->
-  <path d="M 370,185 Q 365,100 275,70" fill="none" stroke="${getArrowColor(4)}" stroke-width="${getArrowWidth(4)}" marker-end="url(#${activeNum === 4 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(290, 150, 4)}
+  <!-- Panah 4: Gas -> Cair (Mengembun, Lepas Kalor) -->
+  <path d="M 464,198 Q 442,96 354,76" fill="none" stroke="${getArrowColor(4)}" stroke-width="${getArrowWidth(4)}" marker-end="url(#${getArrowMarker(4)})"/>
+  ${drawArrowBadge(435, 156, 4)}
 
-  <!-- Panah 5: Padat -> Gas (Menyublim) -->
-  <path d="M 140,205 Q 220,185 300,205" fill="none" stroke="${getArrowColor(5)}" stroke-width="${getArrowWidth(5)}" marker-end="url(#${activeNum === 5 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(220, 190, 5)}
+  <!-- Panah 5: Padat -> Gas (Menyublim, Serap Kalor) -->
+  <path d="M 166,220 Q 290,196 414,220" fill="none" stroke="${getArrowColor(5)}" stroke-width="${getArrowWidth(5)}" marker-end="url(#${getArrowMarker(5)})"/>
+  ${drawArrowBadge(290, 202, 5)}
 
-  <!-- Panah 6: Gas -> Padat (Mengkristal) -->
-  <path d="M 300,225 Q 220,245 140,225" fill="none" stroke="${getArrowColor(6)}" stroke-width="${getArrowWidth(6)}" marker-end="url(#${activeNum === 6 ? 'arrWujudActive' : 'arrWujudNormal'})"/>
-  ${drawArrowBadge(220, 240, 6)}
+  <!-- Panah 6: Gas -> Padat (Mengkristal, Lepas Kalor) -->
+  <path d="M 414,256 Q 290,280 166,256" fill="none" stroke="${getArrowColor(6)}" stroke-width="${getArrowWidth(6)}" marker-end="url(#${getArrowMarker(6)})"/>
+  ${drawArrowBadge(290, 274, 6)}
+
+  <!-- LEGENDA TERMODINAMIKA (Menyerap vs Melepas Kalor) -->
+  <g transform="translate(150, 310)">
+    <!-- Serap Kalor -->
+    <rect x="0" y="0" width="130" height="24" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="1.2"/>
+    <line x1="12" y1="12" x2="32" y2="12" stroke="#ea580c" stroke-width="2.5" marker-end="url(#arrWujudHeat)"/>
+    <text x="80" y="16" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">Menyerap Kalor (+Q)</text>
+
+    <!-- Lepas Kalor -->
+    <rect x="150" y="0" width="130" height="24" rx="12" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.2"/>
+    <line x1="162" y1="12" x2="182" y2="12" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrWujudCool)"/>
+    <text x="230" y="16" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Melepaskan Kalor (-Q)</text>
+  </g>
 
   <!-- Keterangan Soal di Bawah -->
-  <text x="220" y="270" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan proses perubahan wujud zat yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+  <text x="290" y="354" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan proses perubahan wujud zat yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
 </svg>`;
 }
 
@@ -522,81 +609,163 @@ export function renderSifatCahayaSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   if (peristiwa === 'pemantulan') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 250" width="460" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" width="560" height="320" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <marker id="arrCahaya" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <linearGradient id="mirrorGradCahaya" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="50%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <filter id="laserGlowCahaya" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <marker id="arrCahayaDatang" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#d97706" />
+    </marker>
+    <marker id="arrCahayaPantul" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#d97706" />
     </marker>
   </defs>
 
-  <rect width="460" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pemantulan)</text>
+  <!-- Frame -->
+  <rect x="2" y="2" width="556" height="316" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="280" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pemantulan)</text>
 
-  <line x1="230" y1="40" x2="230" y2="180" stroke="#475569" stroke-width="1.8" stroke-dasharray="4,4"/>
-  <text x="230" y="34" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#475569">Garis Normal</text>
+  <!-- Garis Normal (Tegak Lurus Cermin) -->
+  <line x1="280" y1="52" x2="280" y2="210" stroke="#475569" stroke-width="1.8" stroke-dasharray="5,4"/>
+  <text x="280" y="44" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#475569">Garis Normal</text>
 
-  <rect x="50" y="180" width="360" height="8" fill="#94a3b8" rx="1"/>
-  <g stroke="#cbd5e1" stroke-width="1.5">
-    ${[70, 110, 150, 190, 230, 270, 310, 350, 390].map(x => `<line x1="${x}" y1="188" x2="${x - 10}" y2="200"/>`).join('')}
+  <!-- Cermin Datar -->
+  <rect x="60" y="210" width="440" height="10" rx="2" fill="url(#mirrorGradCahaya)" stroke="#64748b" stroke-width="1.5"/>
+  <line x1="60" y1="210" x2="500" y2="210" stroke="#ffffff" stroke-width="1.5"/>
+  <!-- Lapisan Belakang Cermin (Hatched) -->
+  <g stroke="#94a3b8" stroke-width="1.5">
+    ${[80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480].map(x => `<line x1="${x}" y1="220" x2="${x - 12}" y2="232"/>`).join('')}
   </g>
-  <text x="230" y="210" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cermin Datar</text>
+  <text x="280" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">Cermin Datar</text>
 
-  <line x1="100" y1="65" x2="230" y2="180" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahaya)"/>
-  <text x="120" y="105" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
+  <!-- Laser Senter Sumber Cahaya -->
+  <g transform="translate(100, 68) rotate(42)">
+    <rect x="-8" y="-12" width="16" height="36" rx="3" fill="#334155" stroke="#1e293b"/>
+    <rect x="-6" y="-16" width="12" height="4" fill="#e2e8f0"/>
+    <path d="M -8 24 L 8 24 L 12 30 L -12 30 Z" fill="#64748b"/>
+  </g>
 
-  <line x1="230" y1="180" x2="360" y2="65" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahaya)"/>
-  <text x="310" y="105" font-size="11" font-weight="bold" fill="#b45309">Sinar Pantul</text>
+  <!-- Sinar Datang -->
+  <line x1="125" y1="85" x2="280" y2="210" stroke="#fef08a" stroke-width="7" opacity="0.45"/>
+  <line x1="125" y1="85" x2="280" y2="210" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaDatang)"/>
+  <text x="160" y="132" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
 
-  <path d="M 210,160 A 30 30 0 0 1 230,150" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <text x="215" y="152" font-size="12" font-weight="bold" fill="#dc2626">i</text>
-  <path d="M 230,150 A 30 30 0 0 1 250,160" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <text x="240" y="152" font-size="12" font-weight="bold" fill="#dc2626">r</text>
+  <!-- Sinar Pantul -->
+  <line x1="280" y1="210" x2="435" y2="85" stroke="#fef08a" stroke-width="7" opacity="0.45"/>
+  <line x1="280" y1="210" x2="435" y2="85" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaPantul)"/>
+  <text x="400" y="132" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">Sinar Pantul</text>
 
-  <circle cx="370" cy="55" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="370" y="59.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Sudut Datang (i) & Sudut Pantul (r) -->
+  <path d="M 252,185 A 36 36 0 0 1 280,174" fill="none" stroke="#dc2626" stroke-width="1.8"/>
+  <text x="258" y="172" font-size="12" font-weight="bold" fill="#dc2626">i</text>
+  <path d="M 280,174 A 36 36 0 0 1 308,185" fill="none" stroke="#dc2626" stroke-width="1.8"/>
+  <text x="296" y="172" font-size="12" font-weight="bold" fill="#dc2626">r</text>
 
-  <text x="230" y="238" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan sifat pemantulan cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+  <!-- Hukum Pemantulan Pill -->
+  <rect x="165" y="265" width="230" height="20" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="280" y="279" text-anchor="middle" font-size="9.5" font-weight="600" fill="#475569">Hukum Pemantulan: Sudut i = Sudut r</text>
+
+  <!-- Dynamic Target Badge X -->
+  <g transform="translate(445, 75)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <line x1="-12" y1="12" x2="-22" y2="22" stroke="#e11d48" stroke-width="1.8"/>
+  </g>
+
+  <!-- Bottom Prompt -->
+  <text x="280" y="306" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan sifat pemantulan cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
 </svg>`;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 260" width="460" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  // Default: Pembiasan (Refraksi Cahaya)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" width="560" height="320" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
-    <marker id="arrCahayaBias" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <linearGradient id="waterGradBias" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+    <marker id="arrCahayaBiasR" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#d97706" />
     </marker>
   </defs>
 
-  <rect width="460" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pembiasan)</text>
+  <!-- Frame -->
+  <rect x="2" y="2" width="556" height="316" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="280" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Diagram Sifat Cahaya (Pembiasan)</text>
 
-  <rect x="20" y="130" width="420" height="95" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1" rx="2"/>
-  <text x="40" y="160" font-size="11" font-weight="bold" fill="#0369a1">Medium 2: Air</text>
-  <text x="40" y="100" font-size="11" font-weight="bold" fill="#475569">Medium 1: Udara</text>
+  <!-- Medium 1: Udara (Top Half) -->
+  <rect x="30" y="42" width="370" height="113" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="45" y="62" font-size="11" font-weight="bold" fill="#475569">Medium 1: Udara</text>
+  <text x="45" y="78" font-size="9" fill="#64748b">(Medium Kurang Rapat, n = 1,00)</text>
 
-  <line x1="20" y1="130" x2="440" y2="130" stroke="#0284c7" stroke-width="1.8"/>
+  <!-- Medium 2: Air (Bottom Half) -->
+  <rect x="30" y="155" width="370" height="120" fill="url(#waterGradBias)" stroke="#38bdf8" stroke-width="1.2"/>
+  <text x="45" y="185" font-size="11" font-weight="bold" fill="#0369a1">Medium 2: Air</text>
+  <text x="45" y="201" font-size="9" fill="#0284c7">(Medium Lebih Rapat, n = 1,33)</text>
 
-  <line x1="230" y1="40" x2="230" y2="220" stroke="#475569" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <text x="230" y="38" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Garis Normal</text>
+  <!-- Boundary Interface Line -->
+  <line x1="30" y1="155" x2="400" y2="155" stroke="#0284c7" stroke-width="2"/>
 
-  <line x1="110" y1="45" x2="230" y2="130" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBias)"/>
-  <text x="125" y="80" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
+  <!-- Garis Normal (Tegak Lurus Bidang Batas) -->
+  <line x1="250" y1="46" x2="250" y2="270" stroke="#475569" stroke-width="1.6" stroke-dasharray="5,4"/>
+  <text x="250" y="42" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Garis Normal</text>
 
-  <line x1="230" y1="130" x2="295" y2="215" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBias)"/>
-  <text x="310" y="195" font-size="11" font-weight="bold" fill="#b45309">Sinar Bias</text>
+  <!-- Sinar Datang (Udara) -->
+  <line x1="140" y1="65" x2="250" y2="155" stroke="#fef08a" stroke-width="7" opacity="0.45"/>
+  <line x1="140" y1="65" x2="250" y2="155" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBiasR)"/>
+  <text x="165" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#b45309">Sinar Datang</text>
 
-  <path d="M 215,115 A 25 25 0 0 1 230,105" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <text x="220" y="112" font-size="11" font-weight="bold" fill="#dc2626">i</text>
+  <!-- Sinar Bias (Air - Membelok mendekati Garis Normal) -->
+  <line x1="250" y1="155" x2="315" y2="265" stroke="#fef08a" stroke-width="7" opacity="0.45"/>
+  <line x1="250" y1="155" x2="315" y2="265" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrCahayaBiasR)"/>
+  <text x="330" y="215" font-size="11" font-weight="bold" fill="#b45309">Sinar Bias</text>
 
-  <path d="M 230,155 A 25 25 0 0 1 245,150" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <text x="235" y="166" font-size="11" font-weight="bold" fill="#dc2626">r</text>
+  <!-- Sudut Datang (i) & Sudut Bias (r) -->
+  <path d="M 235,142 A 25 25 0 0 1 250,130" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="238" y="136" font-size="11" font-weight="bold" fill="#dc2626">i</text>
+  <path d="M 250,180 A 25 25 0 0 1 262,174" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="256" y="190" font-size="11" font-weight="bold" fill="#dc2626">r</text>
 
-  <g>
-    <circle cx="340" cy="180" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="340" y="184.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
-    <line x1="326" y1="182" x2="280" y2="190" stroke="#e11d48" stroke-width="1.8"/>
+  <!-- Inset Visual: Gelas Air dengan Pensil Patah -->
+  <g transform="translate(415, 60)">
+    <rect x="0" y="0" width="125" height="215" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="62.5" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Contoh Pembiasan</text>
+
+    <!-- Gelas Kaca Beker -->
+    <rect x="25" y="55" width="75" height="120" rx="6" fill="#f0fdf4" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- Air dalam gelas -->
+    <rect x="26" y="95" width="73" height="78" rx="4" fill="#bae6fd" opacity="0.75"/>
+    <ellipse cx="62.5" cy="95" rx="36" ry="5" fill="#7dd3fc"/>
+
+    <!-- Pensil Bagian Atas (Udara) -->
+    <line x1="38" y1="36" x2="62" y2="95" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+    <line x1="40" y1="36" x2="64" y2="95" stroke="#d97706" stroke-width="2"/>
+    <!-- Pensil Bagian Bawah (Air - Tampak Patah/Bergeser ke R) -->
+    <line x1="70" y1="95" x2="88" y2="155" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+    <line x1="72" y1="95" x2="90" y2="155" stroke="#d97706" stroke-width="2"/>
+
+    <text x="62.5" y="195" text-anchor="middle" font-size="9" font-weight="600" fill="#0369a1">Pensil Tampak Patah</text>
   </g>
 
-  <text x="230" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan jalannya berkas cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+  <!-- Dynamic Target Badge X -->
+  <g transform="translate(345, 235)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <line x1="-12" y1="-8" x2="-35" y2="-18" stroke="#e11d48" stroke-width="1.8"/>
+  </g>
+
+  <!-- Bottom Prompt -->
+  <text x="280" y="306" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan jalannya berkas cahaya yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
 </svg>`;
 }
 
@@ -977,54 +1146,103 @@ export function renderPemuaianBimetalSvg(params: { kondisi?: string; label?: str
   if (kondisi.includes('normal')) activeIdx = 0;
   else if (kondisi.includes('dingin')) activeIdx = 2;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Prinsip Pemuaian Keping Bimetal</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 330" width="560" height="330" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <linearGradient id="logamAGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="logamBGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <filter id="badgeShdwBimetal" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Frame -->
+  <rect x="2" y="2" width="556" height="326" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="280" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Prinsip Pemuaian Keping Bimetal</text>
 
   <!-- Keterangan Koefisien Muai Panjang Logam -->
-  <g>
-    <rect x="50" y="38" width="14" height="8" fill="#f59e0b"/>
-    <text x="70" y="46" font-size="8.5" fill="#334155">Logam A (Koefisien Muai Lebih Besar)</text>
-    <rect x="230" y="38" width="14" height="8" fill="#64748b"/>
-    <text x="250" y="46" font-size="8.5" fill="#334155">Logam B (Koefisien Muai Lebih Kecil)</text>
+  <g transform="translate(60, 36)">
+    <rect x="0" y="0" width="18" height="10" rx="2" fill="url(#logamAGrad)" stroke="#b45309" stroke-width="1"/>
+    <text x="26" y="9" font-size="9" font-weight="bold" fill="#334155">Logam A (Koefisien Muai Lebih Besar)</text>
+    <rect x="240" y="0" width="18" height="10" rx="2" fill="url(#logamBGrad)" stroke="#475569" stroke-width="1"/>
+    <text x="266" y="9" font-size="9" font-weight="bold" fill="#334155">Logam B (Koefisien Muai Lebih Kecil)</text>
   </g>
 
   <!-- Keadaan 1: Suhu Normal (Lurus) -->
-  <g>
-    <rect x="20" y="65" width="115" height="150" rx="6" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-    <text x="77.5" y="82" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">1. Suhu Normal</text>
-    <rect x="35" y="115" width="75" height="9" fill="#f59e0b"/>
-    <rect x="35" y="124" width="75" height="9" fill="#64748b"/>
-    <text x="77.5" y="160" text-anchor="middle" font-size="8.5" fill="#475569">Lurus Sejajar</text>
-    <text x="77.5" y="174" text-anchor="middle" font-size="8" fill="#94a3b8">Panjang sama</text>
+  <g transform="translate(25, 58)">
+    <rect width="156" height="225" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2.5 : 1}"/>
+    <text x="78" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">1. Suhu Normal</text>
+    <text x="78" y="39" text-anchor="middle" font-size="8.5" fill="#64748b">(Suhu Ruang T₀ ≈ 25°C)</text>
+
+    <!-- Straight Bimetal Strip -->
+    <rect x="20" y="90" width="116" height="11" rx="1" fill="url(#logamAGrad)" stroke="#b45309" stroke-width="0.8"/>
+    <rect x="20" y="101" width="116" height="11" rx="1" fill="url(#logamBGrad)" stroke="#475569" stroke-width="0.8"/>
+    <!-- Paku Keling (Rivets) -->
+    ${[32, 58, 84, 110].map(x => `<circle cx="${x}" cy="101" r="2.2" fill="#1e293b"/>`).join('')}
+
+    <text x="78" y="160" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Lurus Sejajar</text>
+    <text x="78" y="176" text-anchor="middle" font-size="8.5" fill="#94a3b8">Panjang sama</text>
+    <text x="78" y="196" text-anchor="middle" font-size="8" fill="#64748b">ΔL_A = ΔL_B = 0</text>
   </g>
 
   <!-- Keadaan 2: Dipanaskan (Membengkok ke Logam B) -->
-  <g>
-    <rect x="150" y="65" width="120" height="150" rx="6" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-    <text x="210" y="82" text-anchor="middle" font-size="10" font-weight="bold" fill="#ea580c">2. Dipanaskan (Api)</text>
-    <!-- Kurva Bimetal Lengkung ke Bawah -->
-    <path d="M 165,115 Q 210,145 255,130" fill="none" stroke="#f59e0b" stroke-width="8"/>
-    <path d="M 165,123 Q 210,153 255,138" fill="none" stroke="#64748b" stroke-width="8"/>
-    <text x="210" y="175" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#c2410c">Membengkok ke Logam B</text>
-    <text x="210" y="190" text-anchor="middle" font-size="8" fill="#64748b">(Koefisien kecil)</text>
+  <g transform="translate(202, 58)">
+    <rect width="156" height="225" rx="8" fill="#fff7ed" stroke="${activeIdx === 1 ? '#e11d48' : '#fed7aa'}" stroke-width="${activeIdx === 1 ? 2.5 : 1}"/>
+    <text x="78" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#ea580c">2. Dipanaskan (Api)</text>
+    <text x="78" y="39" text-anchor="middle" font-size="8.5" fill="#c2410c">(Suhu Tinggi T &gt; T₀)</text>
+
+    <!-- Nyala Api Bunsen -->
+    <g transform="translate(68, 110)">
+      <path d="M 10,25 C 2,15 4,5 10,0 C 16,5 18,15 10,25 Z" fill="#f59e0b"/>
+      <path d="M 10,24 C 6,17 7,10 10,6 C 13,10 14,17 10,24 Z" fill="#ef4444"/>
+      <ellipse cx="10" cy="24" rx="3.5" ry="2" fill="#3b82f6"/>
+    </g>
+
+    <!-- Kurva Bimetal Lengkung ke Bawah (ke Logam B) -->
+    <path d="M 22,82 Q 78,126 134,106" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round"/>
+    <path d="M 22,92 Q 78,136 134,116" fill="none" stroke="#64748b" stroke-width="10" stroke-linecap="round"/>
+
+    <text x="78" y="160" text-anchor="middle" font-size="10" font-weight="bold" fill="#c2410c">Membengkok ke Logam B</text>
+    <text x="78" y="176" text-anchor="middle" font-size="8.5" fill="#ea580c">(Koefisien kecil)</text>
+    <text x="78" y="196" text-anchor="middle" font-size="8" fill="#9a3412">Logam A memanjang lebih besar</text>
   </g>
 
   <!-- Keadaan 3: Didinginkan (Membengkok ke Logam A) -->
-  <g>
-    <rect x="285" y="65" width="120" height="150" rx="6" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-    <text x="345" y="82" text-anchor="middle" font-size="10" font-weight="bold" fill="#0284c7">3. Didinginkan (Es)</text>
-    <!-- Kurva Bimetal Lengkung ke Atas -->
-    <path d="M 300,135 Q 345,105 390,120" fill="none" stroke="#f59e0b" stroke-width="8"/>
-    <path d="M 300,143 Q 345,113 390,128" fill="none" stroke="#64748b" stroke-width="8"/>
-    <text x="345" y="175" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Membengkok ke Logam A</text>
-    <text x="345" y="190" text-anchor="middle" font-size="8" fill="#64748b">(Koefisien besar)</text>
+  <g transform="translate(379, 58)">
+    <rect width="156" height="225" rx="8" fill="#f0f9ff" stroke="${activeIdx === 2 ? '#e11d48' : '#bae6fd'}" stroke-width="${activeIdx === 2 ? 2.5 : 1}"/>
+    <text x="78" y="24" text-anchor="middle" font-size="11" font-weight="bold" fill="#0284c7">3. Didinginkan (Es)</text>
+    <text x="78" y="39" text-anchor="middle" font-size="8.5" fill="#0369a1">(Suhu Rendah T &lt; T₀)</text>
+
+    <!-- Vector Es Batu Dingin -->
+    <g transform="translate(68, 68)">
+      <rect x="0" y="4" width="12" height="12" rx="2" fill="#bfdbfe" stroke="#60a5fa" stroke-width="1"/>
+      <rect x="10" y="0" width="12" height="12" rx="2" fill="#93c5fd" stroke="#3b82f6" stroke-width="1"/>
+    </g>
+
+    <!-- Kurva Bimetal Lengkung ke Atas (ke Logam A) -->
+    <path d="M 22,118 Q 78,74 134,94" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round"/>
+    <path d="M 22,128 Q 78,84 134,104" fill="none" stroke="#64748b" stroke-width="10" stroke-linecap="round"/>
+
+    <text x="78" y="160" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Membengkok ke Logam A</text>
+    <text x="78" y="176" text-anchor="middle" font-size="8.5" fill="#0284c7">(Koefisien besar)</text>
+    <text x="78" y="196" text-anchor="middle" font-size="8" fill="#075985">Logam A menyusut lebih besar</text>
   </g>
 
   <!-- Target Badge X -->
-  <circle cx="${[77.5, 210, 345][activeIdx]}" cy="65" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${[77.5, 210, 345][activeIdx]}" y="69" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <g transform="translate(${[103, 280, 457][activeIdx]}, 58)" filter="url(#badgeShdwBimetal)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
 
-  <text x="210" y="248" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Perilaku pemuaian bimetal pada kolom "${escapeXml(labelChar)}" menunjukkan ...</text>
+  <!-- Bottom Prompt -->
+  <text x="280" y="312" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perilaku pemuaian bimetal pada kolom "${escapeXml(labelChar)}" menunjukkan ...</text>
 </svg>`;
 }
 
@@ -1033,74 +1251,117 @@ export function renderGelombangBunyiSvg(params: { pointer?: string; label?: stri
   const pointer = (params.pointer || 'rapatan').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 175, y: 115, name: 'Zona Rapatan' };
-  if (pointer.includes('renggang')) target = { x: 235, y: 115, name: 'Zona Renggangan' };
-  else if (pointer.includes('panjang') || pointer.includes('lambda')) target = { x: 205, y: 65, name: 'Panjang Gelombang (λ)' };
-  else if (pointer.includes('garputala') || pointer.includes('sumber')) target = { x: 60, y: 115, name: 'Garputala' };
+  let target = { x: 260, y: 115, name: 'Zona Rapatan' };
+  if (pointer.includes('renggang')) target = { x: 200, y: 115, name: 'Zona Renggangan' };
+  else if (pointer.includes('panjang') || pointer.includes('lambda')) target = { x: 200, y: 55, name: 'Panjang Gelombang (λ)' };
+  else if (pointer.includes('garputala') || pointer.includes('sumber')) target = { x: 55, y: 115, name: 'Garputala' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="210" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Karakteristik Gelombang Bunyi (Longitudinal)</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 330" width="560" height="330" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="badgeShdwBunyi" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrBunyiL" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#e11d48" />
+    </marker>
+    <marker id="arrBunyiR" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#e11d48" />
+    </marker>
+  </defs>
 
-  <!-- Garputala Bergetar -->
-  <path d="M 45,85 L 45,135 Q 45,145 55,145 L 65,145 Q 75,145 75,135 L 75,85" fill="none" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
-  <line x1="60" y1="145" x2="60" y2="185" stroke="#475569" stroke-width="6" stroke-linecap="round"/>
-  <!-- Garis Getar -->
-  <path d="M 38,95 Q 40,110 38,125 M 82,95 Q 80,110 82,125" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-  <text x="60" y="205" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#334155">Garputala</text>
+  <!-- Frame -->
+  <rect x="2" y="2" width="556" height="326" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="280" y="24" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Karakteristik Gelombang Bunyi (Longitudinal)</text>
 
-  <!-- Pola Partikel Medium Udara: Rapatan 1 -->
-  <g stroke="#0284c7" stroke-width="2.5">
-    <line x1="105" y1="95" x2="105" y2="145"/>
-    <line x1="111" y1="95" x2="111" y2="145"/>
-    <line x1="117" y1="95" x2="117" y2="145"/>
-    <line x1="123" y1="95" x2="123" y2="145"/>
+  <!-- 1. Garputala Sumber Bunyi (Kiri) -->
+  <g transform="translate(18, 55)">
+    <!-- Prongs -->
+    <path d="M 30,25 L 30,70 Q 30,80 38,80 L 42,80 Q 50,80 50,70 L 50,25" fill="none" stroke="#475569" stroke-width="6" stroke-linecap="round"/>
+    <!-- Stem -->
+    <line x1="40" y1="80" x2="40" y2="108" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
+    <!-- Resonance Wooden Box -->
+    <rect x="18" y="108" width="44" height="24" rx="2" fill="#b45309" stroke="#78350f" stroke-width="1.2"/>
+    <ellipse cx="40" cy="120" rx="6" ry="6" fill="#451a03"/>
+    <!-- Vibration waves -->
+    <path d="M 23,30 Q 20,47 23,65 M 57,30 Q 60,47 57,65" stroke="#94a3b8" stroke-width="1.8" fill="none"/>
+    <text x="40" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="#334155">Garputala</text>
   </g>
 
-  <!-- Renggangan 1 -->
+  <!-- 2. Partikel Medium Udara (Longitudinal) -->
+  <!-- Rapatan 1 (x = 140) -->
+  <g stroke="#0284c7" stroke-width="2.5">
+    ${[130, 134, 138, 142, 146, 150].map(x => `<line x1="${x}" y1="85" x2="${x}" y2="135"/>`).join('')}
+  </g>
+
+  <!-- Renggangan 1 (x = 200) -->
   <g stroke="#94a3b8" stroke-width="1.5">
-    <line x1="145" y1="95" x2="145" y2="145"/>
-    <line x1="165" y1="95" x2="165" y2="145"/>
+    ${[180, 200, 220].map(x => `<line x1="${x}" y1="85" x2="${x}" y2="135"/>`).join('')}
   </g>
 
-  <!-- Rapatan 2 -->
+  <!-- Rapatan 2 (x = 260) -->
   <g stroke="#0284c7" stroke-width="2.5">
-    <line x1="195" y1="95" x2="195" y2="145"/>
-    <line x1="201" y1="95" x2="201" y2="145"/>
-    <line x1="207" y1="95" x2="207" y2="145"/>
-    <line x1="213" y1="95" x2="213" y2="145"/>
+    ${[250, 254, 258, 262, 266, 270].map(x => `<line x1="${x}" y1="85" x2="${x}" y2="135"/>`).join('')}
   </g>
 
-  <!-- Renggangan 2 -->
+  <!-- Renggangan 2 (x = 320) -->
   <g stroke="#94a3b8" stroke-width="1.5">
-    <line x1="235" y1="95" x2="235" y2="145"/>
-    <line x1="255" y1="95" x2="255" y2="145"/>
+    ${[300, 320, 340].map(x => `<line x1="${x}" y1="85" x2="${x}" y2="135"/>`).join('')}
   </g>
 
-  <!-- Rapatan 3 -->
+  <!-- Rapatan 3 (x = 380) -->
   <g stroke="#0284c7" stroke-width="2.5">
-    <line x1="285" y1="95" x2="285" y2="145"/>
-    <line x1="291" y1="95" x2="291" y2="145"/>
-    <line x1="297" y1="95" x2="297" y2="145"/>
-    <line x1="303" y1="95" x2="303" y2="145"/>
+    ${[370, 374, 378, 382, 386, 390].map(x => `<line x1="${x}" y1="85" x2="${x}" y2="135"/>`).join('')}
   </g>
 
-  <!-- Bracket Panjang Gelombang λ (Dari Rapatan ke Rapatan Berikutnya) -->
-  <line x1="114" y1="75" x2="204" y2="75" stroke="#e11d48" stroke-width="1.8"/>
-  <line x1="114" y1="70" x2="114" y2="80" stroke="#e11d48" stroke-width="1.8"/>
-  <line x1="204" y1="70" x2="204" y2="80" stroke="#e11d48" stroke-width="1.8"/>
-  <text x="159" y="70" text-anchor="middle" font-size="9" font-weight="bold" fill="#e11d48">Panjang Gelombang (λ)</text>
+  <!-- Bracket Panjang Gelombang λ (Dari Rapatan 1 ke Rapatan 2) -->
+  <line x1="140" y1="62" x2="260" y2="62" stroke="#e11d48" stroke-width="2" marker-start="url(#arrBunyiL)" marker-end="url(#arrBunyiR)"/>
+  <line x1="140" y1="56" x2="140" y2="68" stroke="#e11d48" stroke-width="1.8"/>
+  <line x1="260" y1="56" x2="260" y2="68" stroke="#e11d48" stroke-width="1.8"/>
+  <text x="200" y="52" text-anchor="middle" font-size="10" font-weight="bold" fill="#e11d48">Panjang Gelombang (λ)</text>
 
-  <!-- Label Bawah -->
-  <text x="114" y="170" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Rapatan</text>
-  <text x="155" y="170" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#64748b">Renggangan</text>
-  <text x="204" y="170" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Rapatan</text>
-  <text x="245" y="170" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#64748b">Renggangan</text>
+  <!-- Label Bagian Udara -->
+  <text x="140" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Rapatan</text>
+  <text x="200" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#64748b">Renggangan</text>
+  <text x="260" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Rapatan</text>
+  <text x="320" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#64748b">Renggangan</text>
+  <text x="380" y="155" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Rapatan</text>
+
+  <!-- 3. Representasi Gelombang Sinus Tekanan (Bawah) -->
+  <g transform="translate(0, 45)">
+    <!-- Garis Keseimbangan (Equilibrium) -->
+    <line x1="110" y1="185" x2="410" y2="185" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="4,3"/>
+    <!-- Proyeksi Garis Bantu Vertikal -->
+    <line x1="140" y1="140" x2="140" y2="165" stroke="#93c5fd" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="200" y1="140" x2="200" y2="205" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="260" y1="140" x2="260" y2="165" stroke="#93c5fd" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="320" y1="140" x2="320" y2="205" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="380" y1="140" x2="380" y2="165" stroke="#93c5fd" stroke-width="1" stroke-dasharray="2,2"/>
+
+    <!-- Kurva Sinusoidal -->
+    <path d="M 110,185 Q 125,165 140,165 T 200,205 T 260,165 T 320,205 T 380,165 T 410,185" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+
+    <!-- Indikator Amplitudo -->
+    <line x1="155" y1="185" x2="155" y2="165" stroke="#059669" stroke-width="1.5"/>
+    <text x="168" y="178" font-size="8.5" font-weight="bold" fill="#059669">Amplitudo</text>
+  </g>
+
+  <!-- 4. Penerima Telinga (Kanan) -->
+  <g transform="translate(440, 80)">
+    <rect x="0" y="0" width="96" height="135" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <!-- Ilustrasi Daun Telinga Vektor -->
+    <path d="M 36,30 C 56,20 66,35 60,65 C 56,85 45,95 38,98 C 30,100 28,90 32,80 C 36,70 46,65 44,52 C 42,42 32,45 28,42" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+    <path d="M 40,55 C 46,62 44,72 38,76" fill="none" stroke="#c2410c" stroke-width="1.2"/>
+    <text x="48" y="120" text-anchor="middle" font-size="9" font-weight="bold" fill="#475569">Pendengar</text>
+  </g>
 
   <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <g transform="translate(${target.x}, ${target.y})" filter="url(#badgeShdwBunyi)">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
 
-  <text x="210" y="238" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Bagian gelombang longitudinal pada huruf "${escapeXml(labelChar)}" disebut ...</text>
+  <!-- Bottom Prompt -->
+  <text x="280" y="312" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian gelombang longitudinal pada huruf "${escapeXml(labelChar)}" disebut ...</text>
 </svg>`;
 }
 

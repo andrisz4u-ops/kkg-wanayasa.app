@@ -912,130 +912,309 @@ export function renderAlatMusikTradisionalSvg(params: { pointer?: string; label?
 }
 
 /** 28. Render Trias Politika (Pembagian Kekuasaan Negara) */
-export function renderTriasPolitikaSvg(params: { pointer?: string; label?: string }): string {
-  const pointer = (params.pointer || 'legislatif').toLowerCase();
+export function renderTriasPolitikaSvg(params: { pointer?: string; cabang?: string; label?: string }): string {
+  const pointer = (params.pointer || params.cabang || 'legislatif').toLowerCase();
   const labelChar = params.label || 'X';
 
   let activeIdx = 0; // 0: Legislatif, 1: Eksekutif, 2: Yudikatif
   if (pointer.includes('eksekutif') || pointer.includes('presiden')) activeIdx = 1;
   else if (pointer.includes('yudikatif') || pointer.includes('mahkamah') || pointer.includes('kehakiman')) activeIdx = 2;
 
-  const cols = [
-    { x: 15, nama: 'Legislatif', fungsi: 'Membuat Undang-Undang', lembaga: 'DPR / DPD / MPR' },
-    { x: 145, nama: 'Eksekutif', fungsi: 'Menjalankan Undang-Undang', lembaga: 'Presiden &amp; Wapres' },
-    { x: 275, nama: 'Yudikatif', fungsi: 'Mengadili Pelanggaran UU', lembaga: 'MA / MK / KY' }
-  ];
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="bgTriasSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <marker id="arrowCb" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b"/>
+    </marker>
+  </defs>
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 250" width="410" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Sistem Pembagian Kekuasaan Negara (Trias Politika)</text>
+  <rect width="420" height="260" fill="url(#bgTriasSky)" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Sistem Pembagian Kekuasaan Negara (Trias Politika)</text>
+
+  <!-- Garis Keseimbangan / Checks and Balances Antarpilar -->
+  <line x1="138" y1="56" x2="148" y2="56" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arrowCb)"/>
+  <line x1="272" y1="56" x2="282" y2="56" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arrowCb)"/>
 
   <!-- Kolom 1: Legislatif -->
-  <rect x="15" y="45" width="120" height="168" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2.2 : 1.2}"/>
-  <rect x="25" y="55" width="100" height="24" rx="4" fill="#e0f2fe"/>
-  <text x="75" y="71" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Legislatif` : 'Legislatif'}</text>
-  <text x="75" y="105" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Fungsi:</text>
-  <text x="75" y="120" text-anchor="middle" font-size="8.5" fill="#475569">Membuat Undang-</text>
-  <text x="75" y="133" text-anchor="middle" font-size="8.5" fill="#475569">Undang (Aturan)</text>
-  <line x1="30" y1="145" x2="120" y2="145" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="75" y="165" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Lembaga:</text>
-  <text x="75" y="180" text-anchor="middle" font-size="9" font-weight="bold" fill="#0284c7">DPR / DPD / MPR</text>
+  <g transform="translate(14, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 0 ? '#ffe4e6' : '#e0f2fe'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 0 ? '#9f1239' : '#0369a1'}">LEGISLATIF</text>
+
+    <!-- Ilustrasi Ikon Gedung Parlemen DPR & Palu Sidang -->
+    <g transform="translate(62, 52)">
+      <!-- Kubah Parlemen Senayan -->
+      <path d="M -22,8 C -22,-8 22,-8 22,8 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+      <line x1="-24" y1="8" x2="24" y2="8" stroke="#0369a1" stroke-width="1.5"/>
+      <!-- Pilar Gedung -->
+      <rect x="-18" y="9" width="4" height="12" fill="#bae6fd"/>
+      <rect x="-8" y="9" width="4" height="12" fill="#bae6fd"/>
+      <rect x="4" y="9" width="4" height="12" fill="#bae6fd"/>
+      <rect x="14" y="9" width="4" height="12" fill="#bae6fd"/>
+      <rect x="-22" y="21" width="44" height="4" fill="#0284c7"/>
+    </g>
+
+    <!-- Tugas & Fungsi -->
+    <rect x="8" y="84" width="108" height="42" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="96" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Fungsi Pokok:</text>
+    <text x="62" y="108" text-anchor="middle" font-size="7.5" fill="#475569">1. Pembuat UU (Legislasi)</text>
+    <text x="62" y="119" text-anchor="middle" font-size="7.5" fill="#475569">2. Anggaran &amp; Pengawasan</text>
+
+    <!-- Lembaga Negara -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#0369a1">Lembaga Negara:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="8" font-weight="bold" fill="#0284c7">DPR / DPD / MPR</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 0 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
   <!-- Kolom 2: Eksekutif -->
-  <rect x="145" y="45" width="120" height="168" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2.2 : 1.2}"/>
-  <rect x="155" y="55" width="100" height="24" rx="4" fill="#fef3c7"/>
-  <text x="205" y="71" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b45309">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Eksekutif` : 'Eksekutif'}</text>
-  <text x="205" y="105" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Fungsi:</text>
-  <text x="205" y="120" text-anchor="middle" font-size="8.5" fill="#475569">Melaksanakan</text>
-  <text x="205" y="133" text-anchor="middle" font-size="8.5" fill="#475569">Pemerintahan</text>
-  <line x1="160" y1="145" x2="250" y2="145" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="205" y="165" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Lembaga:</text>
-  <text x="205" y="180" text-anchor="middle" font-size="9" font-weight="bold" fill="#d97706">Presiden &amp; Wapres</text>
+  <g transform="translate(148, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 1 ? '#ffe4e6' : '#fef3c7'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 1 ? '#9f1239' : '#b45309'}">EKSEKUTIF</text>
+
+    <!-- Ilustrasi Ikon Istana Presiden & Lambang Garuda -->
+    <g transform="translate(62, 52)">
+      <!-- Atap Segitiga Istana -->
+      <polygon points="0,-6 24,8 -24,8" fill="#fde047" stroke="#d97706" stroke-width="1"/>
+      <line x1="-24" y1="8" x2="24" y2="8" stroke="#b45309" stroke-width="1.5"/>
+      <!-- Pilar Putih -->
+      <rect x="-18" y="9" width="4" height="12" fill="#fef08a"/>
+      <rect x="-8" y="9" width="4" height="12" fill="#fef08a"/>
+      <rect x="4" y="9" width="4" height="12" fill="#fef08a"/>
+      <rect x="14" y="9" width="4" height="12" fill="#fef08a"/>
+      <rect x="-22" y="21" width="44" height="4" fill="#d97706"/>
+      <!-- Lambang Bintang Emas -->
+      <polygon points="0,-1 2,4 6,4 3,7 4,11 0,9 -4,11 -3,7 -6,4 -2,4" fill="#d97706"/>
+    </g>
+
+    <!-- Tugas & Fungsi -->
+    <rect x="8" y="84" width="108" height="42" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="96" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Fungsi Pokok:</text>
+    <text x="62" y="108" text-anchor="middle" font-size="7.5" fill="#475569">1. Menjalankan UU Negara</text>
+    <text x="62" y="119" text-anchor="middle" font-size="7.5" fill="#475569">2. Memimpin Pemerintahan</text>
+
+    <!-- Lembaga Negara -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#b45309">Lembaga Negara:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="8" font-weight="bold" fill="#d97706">Presiden &amp; Wapres</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 1 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
   <!-- Kolom 3: Yudikatif -->
-  <rect x="275" y="45" width="120" height="168" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2.2 : 1.2}"/>
-  <rect x="285" y="55" width="100" height="24" rx="4" fill="#dcfce7"/>
-  <text x="335" y="71" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#15803d">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Yudikatif` : 'Yudikatif'}</text>
-  <text x="335" y="105" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Fungsi:</text>
-  <text x="335" y="120" text-anchor="middle" font-size="8.5" fill="#475569">Mengadili &amp; Jaga</text>
-  <text x="335" y="133" text-anchor="middle" font-size="8.5" fill="#475569">Hukum Keadilan</text>
-  <line x1="290" y1="145" x2="380" y2="145" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="335" y="165" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Lembaga:</text>
-  <text x="335" y="180" text-anchor="middle" font-size="9" font-weight="bold" fill="#16a34a">MA / MK / KY</text>
+  <g transform="translate(282, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 2 ? '#ffe4e6' : '#dcfce7'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 2 ? '#9f1239' : '#15803d'}">YUDIKATIF</text>
 
-  <!-- Target Badge X -->
-  <circle cx="${cols[activeIdx].x + 110}" cy="52" r="10.5" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cols[activeIdx].x + 110}" y="56" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <!-- Ilustrasi Ikon Neraca Keadilan Timbangan Hukum -->
+    <g transform="translate(62, 54)">
+      <!-- Tiang Neraca -->
+      <line x1="0" y1="-8" x2="0" y2="18" stroke="#16a34a" stroke-width="2"/>
+      <circle cx="0" cy="-8" r="2.5" fill="#15803d"/>
+      <rect x="-12" y="18" width="24" height="4" fill="#16a34a" rx="1"/>
+      <!-- Lengan Palang Neraca -->
+      <line x1="-18" y1="-2" x2="18" y2="-2" stroke="#15803d" stroke-width="1.5"/>
+      <!-- Cawan Kiri -->
+      <line x1="-18" y1="-2" x2="-23" y2="9" stroke="#16a34a" stroke-width="1"/>
+      <line x1="-18" y1="-2" x2="-13" y2="9" stroke="#16a34a" stroke-width="1"/>
+      <path d="M -25,9 Q -18,15 -11,9 Z" fill="#86efac" stroke="#15803d" stroke-width="1"/>
+      <!-- Cawan Kanan -->
+      <line x1="18" y1="-2" x2="13" y2="9" stroke="#16a34a" stroke-width="1"/>
+      <line x1="18" y1="-2" x2="23" y2="9" stroke="#16a34a" stroke-width="1"/>
+      <path d="M 11,9 Q 18,15 25,9 Z" fill="#86efac" stroke="#15803d" stroke-width="1"/>
+    </g>
 
-  <text x="205" y="238" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Tugas dan fungsi lembaga negara pada kolom "${escapeXml(labelChar)}" adalah ...</text>
+    <!-- Tugas & Fungsi -->
+    <rect x="8" y="84" width="108" height="42" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="96" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Fungsi Pokok:</text>
+    <text x="62" y="108" text-anchor="middle" font-size="7.5" fill="#475569">1. Mengadili Pelanggaran UU</text>
+    <text x="62" y="119" text-anchor="middle" font-size="7.5" fill="#475569">2. Menegakkan Keadilan</text>
+
+    <!-- Lembaga Negara -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#15803d">Lembaga Negara:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="8" font-weight="bold" fill="#16a34a">MA / MK / KY</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 2 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Soal Prompt Bawah -->
+  <rect x="14" y="224" width="392" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="240" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Tugas dan fungsi lembaga negara pada kolom "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
 /** 29. Render Alur Kegiatan Ekonomi */
-export function renderAlurKegiatanEkonomiSvg(params: { pointer?: string; label?: string }): string {
-  const pointer = (params.pointer || 'distribusi').toLowerCase();
+export function renderAlurKegiatanEkonomiSvg(params: { pointer?: string; fokus?: string; label?: string }): string {
+  const pointer = (params.pointer || params.fokus || 'distribusi').toLowerCase();
   const labelChar = params.label || 'X';
 
   let activeIdx = 1; // 0: Produksi, 1: Distribusi, 2: Konsumsi
   if (pointer.includes('produksi') || pointer.includes('pabrik') || pointer.includes('petani')) activeIdx = 0;
   else if (pointer.includes('konsumsi') || pointer.includes('pembeli') || pointer.includes('makan')) activeIdx = 2;
 
-  const cards = [
-    { x: 15, title: 'Produksi', pelaku: 'Produsen', desc: 'Menghasilkan Barang' },
-    { x: 145, title: 'Distribusi', pelaku: 'Distributor', desc: 'Menyalurkan Barang' },
-    { x: 275, title: 'Konsumsi', pelaku: 'Konsumen', desc: 'Menggunakan Barang' }
-  ];
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 250" width="410" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
   <defs>
-    <marker id="econArr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7" />
+    <linearGradient id="bgEconSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <marker id="econArrBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#0284c7" />
     </marker>
   </defs>
 
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Alur Kegiatan Ekonomi Masyarakat</text>
+  <rect width="420" height="260" fill="url(#bgEconSky)" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Alur Rantai Siklus Kegiatan Ekonomi Masyarakat</text>
 
-  <!-- Panah Penghubung Antartahap -->
-  <line x1="135" y1="115" x2="145" y2="115" stroke="#0284c7" stroke-width="2.5" marker-end="url(#econArr)"/>
-  <line x1="265" y1="115" x2="275" y2="115" stroke="#0284c7" stroke-width="2.5" marker-end="url(#econArr)"/>
+  <!-- Panah Arus Barang & Jasa Antar-Tahap -->
+  <line x1="138" y1="110" x2="148" y2="110" stroke="#0284c7" stroke-width="2.2" marker-end="url(#econArrBlue)"/>
+  <line x1="272" y1="110" x2="282" y2="110" stroke="#0284c7" stroke-width="2.2" marker-end="url(#econArrBlue)"/>
 
   <!-- Tahap 1: Produksi -->
-  <rect x="15" y="45" width="118" height="150" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2.2 : 1.2}"/>
-  <text x="74" y="68" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Produksi` : '1. Produksi'}</text>
-  <!-- Ilustrasi Pabrik / Pengrajin -->
-  <path d="M 45,115 L 45,88 L 65,98 L 65,88 L 85,98 L 85,115 Z" fill="#e2e8f0" stroke="#475569" stroke-width="1.5"/>
-  <line x1="55" y1="88" x2="55" y2="78" stroke="#475569" stroke-width="2"/>
-  <text x="74" y="140" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Pelaku: Produsen</text>
-  <text x="74" y="155" text-anchor="middle" font-size="8" fill="#64748b">Menghasilkan barang</text>
-  <text x="74" y="168" text-anchor="middle" font-size="8" fill="#64748b">atau jasa</text>
+  <g transform="translate(14, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 0 ? '#ffe4e6' : '#ecfdf5'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 0 ? '#9f1239' : '#047857'}">1. PRODUKSI</text>
+
+    <!-- Ilustrasi Pabrik & Roda Gigi -->
+    <g transform="translate(62, 54)">
+      <!-- Cerobong Asap & Gedung Pabrik Gergaji -->
+      <path d="M -24,18 L -24,-2 L -12,6 L -12,-2 L 0,6 L 0,-2 L 12,6 L 12,-10 L 24,-10 L 24,18 Z" fill="#64748b" stroke="#334155" stroke-width="1"/>
+      <rect x="14" y="-12" width="8" height="4" fill="#475569"/>
+      <!-- Asap Cerobong -->
+      <circle cx="18" cy="-18" r="3" fill="#cbd5e1"/>
+      <circle cx="21" cy="-24" r="4.5" fill="#e2e8f0"/>
+      <!-- Pintu & Jendela Pabrik -->
+      <rect x="-18" y="6" width="6" height="8" fill="#fef08a"/>
+      <rect x="-6" y="6" width="6" height="8" fill="#fef08a"/>
+      <rect x="6" y="8" width="8" height="10" fill="#1e293b"/>
+    </g>
+
+    <!-- Keterangan Kegiatan -->
+    <rect x="8" y="86" width="108" height="40" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="98" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Pelaku: Produsen</text>
+    <text x="62" y="110" text-anchor="middle" font-size="7.5" fill="#475569">Membuat atau menambah</text>
+    <text x="62" y="121" text-anchor="middle" font-size="7.5" fill="#475569">nilai guna barang/jasa</text>
+
+    <!-- Contoh Pelaku -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#047857">Contoh Lapangan:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="7.5" fill="#065f46">Petani, Pabrik, Nelayan</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 0 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
   <!-- Tahap 2: Distribusi -->
-  <rect x="145" y="45" width="118" height="150" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2.2 : 1.2}"/>
-  <text x="204" y="68" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Distribusi` : '2. Distribusi'}</text>
-  <!-- Ilustrasi Truk Pengangkut Barang -->
-  <rect x="175" y="90" width="35" height="20" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
-  <path d="M 210,98 L 225,98 L 225,110 L 210,110 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>
-  <circle cx="185" cy="112" r="4.5" fill="#1e293b"/>
-  <circle cx="218" cy="112" r="4.5" fill="#1e293b"/>
-  <text x="204" y="140" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Pelaku: Distributor</text>
-  <text x="204" y="155" text-anchor="middle" font-size="8" fill="#64748b">Menyalurkan barang</text>
-  <text x="204" y="168" text-anchor="middle" font-size="8" fill="#64748b">ke pedagang / pasar</text>
+  <g transform="translate(148, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 1 ? '#ffe4e6' : '#e0f2fe'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 1 ? '#9f1239' : '#0369a1'}">2. DISTRIBUSI</text>
+
+    <!-- Ilustrasi Truk Box Kargo Logistik -->
+    <g transform="translate(62, 54)">
+      <!-- Boks Kontainer Truk -->
+      <rect x="-24" y="-8" width="30" height="20" rx="1" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+      <line x1="-24" y1="2" x2="6" y2="2" stroke="#bae6fd" stroke-width="1"/>
+      <!-- Kepala Truk Kabin -->
+      <path d="M 6,-2 L 14,-2 L 22,6 L 22,12 L 6,12 Z" fill="#0284c7"/>
+      <!-- Kaca Jendela Depan -->
+      <path d="M 8,0 L 13,0 L 19,6 L 8,6 Z" fill="#e0f2fe"/>
+      <!-- Roda Truk -->
+      <circle cx="-16" cy="14" r="4.5" fill="#1e293b"/>
+      <circle cx="-16" cy="14" r="2" fill="#94a3b8"/>
+      <circle cx="14" cy="14" r="4.5" fill="#1e293b"/>
+      <circle cx="14" cy="14" r="2" fill="#94a3b8"/>
+      <!-- Garis Jalan Raya -->
+      <line x1="-26" y1="18.5" x2="26" y2="18.5" stroke="#94a3b8" stroke-width="1"/>
+    </g>
+
+    <!-- Keterangan Kegiatan -->
+    <rect x="8" y="86" width="108" height="40" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="98" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Pelaku: Distributor</text>
+    <text x="62" y="110" text-anchor="middle" font-size="7.5" fill="#475569">Menyalurkan barang dari</text>
+    <text x="62" y="121" text-anchor="middle" font-size="7.5" fill="#475569">produsen ke konsumen</text>
+
+    <!-- Contoh Pelaku -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#0369a1">Contoh Lapangan:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="7.5" fill="#0369a1">Agen, Toko Grosir, Kurir</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 1 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
   <!-- Tahap 3: Konsumsi -->
-  <rect x="275" y="45" width="118" height="150" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2.2 : 1.2}"/>
-  <text x="334" y="68" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Konsumsi` : '3. Konsumsi'}</text>
-  <!-- Ilustrasi Keranjang Belanja -->
-  <path d="M 315,92 L 322,112 L 348,112 L 355,92 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
-  <circle cx="326" cy="116" r="3" fill="#1e293b"/>
-  <circle cx="344" cy="116" r="3" fill="#1e293b"/>
-  <text x="334" y="140" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Pelaku: Konsumen</text>
-  <text x="334" y="155" text-anchor="middle" font-size="8" fill="#64748b">Menggunakan atau</text>
-  <text x="334" y="168" text-anchor="middle" font-size="8" fill="#64748b">menghabiskan nilai</text>
+  <g transform="translate(282, 38)">
+    <rect width="124" height="174" rx="6" fill="#ffffff" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="124" height="26" rx="6" fill="${activeIdx === 2 ? '#ffe4e6' : '#fff7ed'}"/>
+    <text x="62" y="17" text-anchor="middle" font-size="10" font-weight="bold" fill="${activeIdx === 2 ? '#9f1239' : '#c2410c'}">3. KONSUMSI</text>
 
-  <!-- Target Badge X -->
-  <circle cx="${cards[activeIdx].x + 105}" cy="52" r="10.5" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cards[activeIdx].x + 105}" y="56" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <!-- Ilustrasi Troli Belanja Supermarket -->
+    <g transform="translate(62, 54)">
+      <!-- Keranjang Belanja Logam -->
+      <path d="M -16,-10 L -12,-10 L -4,8 L 16,8 L 22,-6 L -8,-6" fill="none" stroke="#ea580c" stroke-width="1.8"/>
+      <!-- Isi Keranjang: Apel & Kotak Susu -->
+      <circle cx="2" cy="0" r="4.5" fill="#ef4444"/>
+      <rect x="7" cy="-4" y="-7" width="7" height="11" rx="1" fill="#3b82f6"/>
+      <!-- Gagang Dorong & Roda Troli -->
+      <line x1="-16" y1="-10" x2="-20" y2="-6" stroke="#c2410c" stroke-width="2"/>
+      <circle cx="-2" cy="12" r="3" fill="#1e293b"/>
+      <circle cx="14" cy="12" r="3" fill="#1e293b"/>
+    </g>
 
-  <text x="205" y="235" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Tahapan kegiatan ekonomi pada kotak "${escapeXml(labelChar)}" disebut ...</text>
+    <!-- Keterangan Kegiatan -->
+    <rect x="8" y="86" width="108" height="40" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="62" y="98" text-anchor="middle" font-size="8" font-weight="bold" fill="#0f172a">Pelaku: Konsumen</text>
+    <text x="62" y="110" text-anchor="middle" font-size="7.5" fill="#475569">Memakai atau menghabiskan</text>
+    <text x="62" y="121" text-anchor="middle" font-size="7.5" fill="#475569">nilai guna barang/jasa</text>
+
+    <!-- Contoh Pelaku -->
+    <rect x="8" y="132" width="108" height="34" rx="4" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+    <text x="62" y="145" text-anchor="middle" font-size="8" font-weight="bold" fill="#c2410c">Contoh Lapangan:</text>
+    <text x="62" y="158" text-anchor="middle" font-size="7.5" fill="#9a3412">Siswa, Keluarga, Pembeli</text>
+
+    <!-- Target Badge if active -->
+    ${activeIdx === 2 ? `
+      <circle cx="110" cy="13" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="110" y="16.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Soal Prompt Bawah -->
+  <rect x="14" y="224" width="392" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="240" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Tahapan kegiatan ekonomi pada kotak "${escapeXml(labelChar)}" disebut ...</text>
 </svg>`;
 }
 
@@ -1250,55 +1429,126 @@ export function renderLapanganAtletikSvg(params: { pointer?: string; label?: str
 }
 
 /** 34. Render Peta Konsep (Mind Map Struktur Paragraf) */
-export function renderDiagramMindmapParagrafSvg(params: { pointer?: string; label?: string }): string {
-  const pointer = (params.pointer || 'pokok').toLowerCase();
+export function renderDiagramMindmapParagrafSvg(params: { pointer?: string; tipe?: string; label?: string }): string {
+  const pointer = (params.pointer || params.tipe || 'pokok').toLowerCase();
   const labelChar = params.label || 'X';
 
-  let target = { x: 205, y: 125, name: 'Gagasan Pokok (Ide Utama)' };
-  if (pointer.includes('pendukung 1') || pointer.includes('fakta')) target = { x: 80, y: 75, name: 'Gagasan Pendukung 1' };
-  else if (pointer.includes('pendukung 2') || pointer.includes('contoh')) target = { x: 330, y: 75, name: 'Gagasan Pendukung 2' };
-  else if (pointer.includes('pendukung 3') || pointer.includes('alasan')) target = { x: 80, y: 175, name: 'Gagasan Pendukung 3' };
-  else if (pointer.includes('pendukung 4') || pointer.includes('kesimpulan')) target = { x: 330, y: 175, name: 'Gagasan Pendukung 4' };
+  // Available nodes: pokok (center), pendukung1 (top-left), pendukung2 (top-right), pendukung3 (bot-left), pendukung4 (bot-right)
+  let activeNode = 'pokok';
+  let target = { x: 210, y: 125, name: 'Gagasan Pokok (Ide Utama)' };
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 255" width="410" height="255" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="205" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Peta Konsep (Mind Map): Struktur Gagasan Paragraf</text>
+  if (pointer.includes('pendukung 1') || pointer.includes('fakta') || pointer.includes('data')) {
+    activeNode = 'p1';
+    target = { x: 80, y: 68, name: 'Gagasan Pendukung 1' };
+  } else if (pointer.includes('pendukung 2') || pointer.includes('contoh') || pointer.includes('kasus')) {
+    activeNode = 'p2';
+    target = { x: 340, y: 68, name: 'Gagasan Pendukung 2' };
+  } else if (pointer.includes('pendukung 3') || pointer.includes('alasan') || pointer.includes('sebab') || pointer.includes('akibat')) {
+    activeNode = 'p3';
+    target = { x: 80, y: 182, name: 'Gagasan Pendukung 3' };
+  } else if (pointer.includes('pendukung 4') || pointer.includes('kesimpulan') || pointer.includes('penegas') || pointer.includes('kronologis')) {
+    activeNode = 'p4';
+    target = { x: 340, y: 182, name: 'Gagasan Pendukung 4' };
+  }
 
-  <!-- Garis Cabang Melengkung dari Pusat -->
-  <path d="M 205,125 Q 140,85 80,75" fill="none" stroke="#0284c7" stroke-width="2.5"/>
-  <path d="M 205,125 Q 270,85 330,75" fill="none" stroke="#16a34a" stroke-width="2.5"/>
-  <path d="M 205,125 Q 140,165 80,175" fill="none" stroke="#ea580c" stroke-width="2.5"/>
-  <path d="M 205,125 Q 270,165 330,175" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="bgMindmapSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="hubGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#fde047"/>
+    </linearGradient>
+    <filter id="mindmapGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+  </defs>
 
-  <!-- Gelembung Cabang 1 (Kiri Atas) -->
-  <rect x="25" y="55" width="110" height="40" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
-  <text x="80" y="73" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Gagasan Pendukung 1</text>
-  <text x="80" y="87" text-anchor="middle" font-size="8" fill="#64748b">(Fakta Pendukung)</text>
+  <rect width="420" height="260" fill="url(#bgMindmapSky)" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Peta Konsep (Mind Map): Struktur Gagasan Paragraf</text>
 
-  <!-- Gelembung Cabang 2 (Kanan Atas) -->
-  <rect x="275" y="55" width="110" height="40" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
-  <text x="330" y="73" text-anchor="middle" font-size="9" font-weight="bold" fill="#15803d">Gagasan Pendukung 2</text>
-  <text x="330" y="87" text-anchor="middle" font-size="8" fill="#64748b">(Contoh Penjelas)</text>
+  <!-- Garis Cabang Organik Halus (Bezier Curves) dari Hub Pusat -->
+  <!-- Cabang 1 ke Kiri Atas -->
+  <path d="M 148,114 C 115,105 105,88 80,78" fill="none" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cabang 2 ke Kanan Atas -->
+  <path d="M 272,114 C 305,105 315,88 340,78" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cabang 3 ke Kiri Bawah -->
+  <path d="M 148,136 C 115,145 105,162 80,172" fill="none" stroke="#ea580c" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cabang 4 ke Kanan Bawah -->
+  <path d="M 272,136 C 305,145 315,162 340,172" fill="none" stroke="#9333ea" stroke-width="3" stroke-linecap="round"/>
 
-  <!-- Gelembung Cabang 3 (Kiri Bawah) -->
-  <rect x="25" y="155" width="110" height="40" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
-  <text x="80" y="173" text-anchor="middle" font-size="9" font-weight="bold" fill="#c2410c">Gagasan Pendukung 3</text>
-  <text x="80" y="187" text-anchor="middle" font-size="8" fill="#64748b">(Uraian Rinci)</text>
+  <!-- Gelembung Satelit 1 (Kiri Atas - Biru / Fakta) -->
+  <g transform="translate(18, 44)">
+    <rect width="124" height="48" rx="8" fill="#ffffff" stroke="${activeNode === 'p1' ? '#e11d48' : '#0284c7'}" stroke-width="${activeNode === 'p1' ? 2.2 : 1.5}" filter="url(#mindmapGlow)"/>
+    <rect x="0" y="0" width="124" height="20" rx="8" fill="#e0f2fe"/>
+    <text x="62" y="14" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0369a1">Gagasan Pendukung 1</text>
+    <text x="62" y="31" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0f172a">Fakta &amp; Bukti Nyata</text>
+    <text x="62" y="41" text-anchor="middle" font-size="7" fill="#64748b">Data objektif penjelas</text>
+    ${activeNode === 'p1' ? `
+      <circle cx="112" cy="10" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="112" y="13.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
-  <!-- Gelembung Cabang 4 (Kanan Bawah) -->
-  <rect x="275" y="155" width="110" height="40" rx="8" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="1.5"/>
-  <text x="330" y="173" text-anchor="middle" font-size="9" font-weight="bold" fill="#6b21a8">Gagasan Pendukung 4</text>
-  <text x="330" y="187" text-anchor="middle" font-size="8" fill="#64748b">(Simpulan / Penegas)</text>
+  <!-- Gelembung Satelit 2 (Kanan Atas - Hijau / Contoh) -->
+  <g transform="translate(278, 44)">
+    <rect width="124" height="48" rx="8" fill="#ffffff" stroke="${activeNode === 'p2' ? '#e11d48' : '#16a34a'}" stroke-width="${activeNode === 'p2' ? 2.2 : 1.5}" filter="url(#mindmapGlow)"/>
+    <rect x="0" y="0" width="124" height="20" rx="8" fill="#dcfce7"/>
+    <text x="62" y="14" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#15803d">Gagasan Pendukung 2</text>
+    <text x="62" y="31" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0f172a">Contoh &amp; Ilustrasi</text>
+    <text x="62" y="41" text-anchor="middle" font-size="7" fill="#64748b">Gambaran kasus riil</text>
+    ${activeNode === 'p2' ? `
+      <circle cx="112" cy="10" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="112" y="13.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
-  <!-- Node Pusat: Gagasan Pokok -->
-  <rect x="145" y="105" width="120" height="42" rx="10" fill="#fef08a" stroke="#ca8a04" stroke-width="2.5"/>
-  <text x="205" y="123" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#854d0e">GAGASAN POKOK</text>
-  <text x="205" y="138" text-anchor="middle" font-size="8.5" font-weight="600" fill="#713f12">(Ide Utama Paragraf)</text>
+  <!-- Gelembung Satelit 3 (Kiri Bawah - Oranye / Alasan) -->
+  <g transform="translate(18, 158)">
+    <rect width="124" height="48" rx="8" fill="#ffffff" stroke="${activeNode === 'p3' ? '#e11d48' : '#ea580c'}" stroke-width="${activeNode === 'p3' ? 2.2 : 1.5}" filter="url(#mindmapGlow)"/>
+    <rect x="0" y="0" width="124" height="20" rx="8" fill="#ffedd5"/>
+    <text x="62" y="14" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#c2410c">Gagasan Pendukung 3</text>
+    <text x="62" y="31" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0f172a">Alasan Sebab-Akibat</text>
+    <text x="62" y="41" text-anchor="middle" font-size="7" fill="#64748b">Penjelasan latar masalah</text>
+    ${activeNode === 'p3' ? `
+      <circle cx="112" cy="10" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="112" y="13.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
-  <!-- Target Badge X -->
-  <circle cx="${target.x}" cy="${target.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-  <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Gelembung Satelit 4 (Kanan Bawah - Ungu / Simpulan) -->
+  <g transform="translate(278, 158)">
+    <rect width="124" height="48" rx="8" fill="#ffffff" stroke="${activeNode === 'p4' ? '#e11d48' : '#9333ea'}" stroke-width="${activeNode === 'p4' ? 2.2 : 1.5}" filter="url(#mindmapGlow)"/>
+    <rect x="0" y="0" width="124" height="20" rx="8" fill="#f3e8ff"/>
+    <text x="62" y="14" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#7e22ce">Gagasan Pendukung 4</text>
+    <text x="62" y="31" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0f172a">Simpulan &amp; Penegas</text>
+    <text x="62" y="41" text-anchor="middle" font-size="7" fill="#64748b">Ringkasan penutup alur</text>
+    ${activeNode === 'p4' ? `
+      <circle cx="112" cy="10" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="112" y="13.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
 
-  <text x="205" y="244" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Kedudukan unsur teks pada lingkaran tanda "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Node Pusat: Gagasan Pokok (Hub Tengah) -->
+  <g transform="translate(144, 98)">
+    <!-- Halo Lingkaran Cahaya -->
+    <rect x="-4" y="-4" width="140" height="62" rx="14" fill="#fef9c3" stroke="#facc15" stroke-width="1"/>
+    <!-- Inti Kapsul Utama -->
+    <rect width="132" height="54" rx="10" fill="url(#hubGradient)" stroke="${activeNode === 'pokok' ? '#e11d48' : '#ca8a04'}" stroke-width="${activeNode === 'pokok' ? 2.4 : 1.8}"/>
+    <text x="66" y="22" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#713f12">GAGASAN POKOK</text>
+    <text x="66" y="36" text-anchor="middle" font-size="8" font-weight="bold" fill="#854d0e">(Kalimat Utama)</text>
+    <text x="66" y="47" text-anchor="middle" font-size="7" fill="#a16207">Inti Pembahasan Paragraf</text>
+    ${activeNode === 'pokok' ? `
+      <circle cx="120" cy="12" r="10" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+      <text x="120" y="15.5" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Soal Prompt Bawah -->
+  <rect x="18" y="224" width="384" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="240" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Kedudukan unsur teks pada lingkaran tanda "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -1817,35 +2067,72 @@ export function renderStrukturFabelAlurCeritaSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const stages = [
-    { id: 'orientasi', name: '1. Orientasi', desc: 'Pengenalan Tokoh', x: 50, y: 140 },
-    { id: 'komplikasi', name: '2. Komplikasi', desc: 'Muncul Masalah', x: 125, y: 95 },
-    { id: 'klimaks', name: '3. Klimaks', desc: 'Puncak Ketegangan', x: 190, y: 55 },
-    { id: 'resolusi', name: '4. Resolusi', desc: 'Penyelesaian', x: 255, y: 95 },
-    { id: 'koda', name: '5. Koda', desc: 'Pesan Moral', x: 330, y: 140 }
+    { id: 'orientasi', name: '1. Orientasi', sub: 'Pengenalan Tokoh & Latar', x: 48, y: 170 },
+    { id: 'komplikasi', name: '2. Komplikasi', sub: 'Muncul Permasalahan', x: 128, y: 120 },
+    { id: 'klimaks', name: '3. Klimaks', sub: 'Puncak Ketegangan', x: 210, y: 56 },
+    { id: 'resolusi', name: '4. Resolusi', sub: 'Penyelesaian Masalah', x: 292, y: 120 },
+    { id: 'koda', name: '5. Koda', sub: 'Amanat & Pesan Moral', x: 372, y: 170 }
   ];
 
   let target = stages.find(s => pointer.includes(s.id)) || stages[2];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 210" width="380" height="210" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="380" height="210" fill="#fdf4ff" stroke="#e879f9" stroke-width="1.5" rx="8"/>
-  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#701a75">Gunung Alur Cerita Narasi / Fabel</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="bgFabelSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdf4ff"/>
+      <stop offset="100%" stop-color="#faf5ff"/>
+    </linearGradient>
+    <linearGradient id="mountainGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0abfc" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#fae8ff" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Garis Alur Gunung Segitiga -->
-  <polyline points="50,140 125,95 190,55 255,95 330,140" fill="none" stroke="#a21caf" stroke-width="2.5"/>
+  <rect width="420" height="260" fill="url(#bgFabelSky)" stroke="#f0abfc" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#701a75">Bagan Gunung Alur Cerita Fabel / Narasi (Piramida Freytag)</text>
 
-  ${stages.map(s => {
+  <!-- Siluet Bidang Gunung Freytag Bercahaya -->
+  <polygon points="48,170 128,120 210,56 292,120 372,170 372,216 48,216" fill="url(#mountainGrad)"/>
+
+  <!-- Garis Dasar Tanah Cerita -->
+  <line x1="20" y1="216" x2="400" y2="216" stroke="#e879f9" stroke-width="1.5"/>
+
+  <!-- Garis Trajektori Alur Menanjak & Menurun -->
+  <polyline points="48,170 128,120 210,56 292,120 372,170" fill="none" stroke="#a21caf" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Indikator Panah Dinamika Alur -->
+  <path d="M 88,145 L 93,139 L 83,142 Z" fill="#86198f"/>
+  <path d="M 169,88 L 174,82 L 164,85 Z" fill="#86198f"/>
+  <path d="M 251,88 L 246,82 L 256,85 Z" fill="#86198f"/>
+  <path d="M 332,145 L 327,139 L 337,142 Z" fill="#86198f"/>
+
+  <!-- 5 Titik Waypoint Alur Cerita -->
+  ${stages.map((s) => {
     const isTarget = s.id === target.id;
+    const isPeak = s.id === 'klimaks';
+    const cardY = isPeak ? 72 : (s.y + 14);
     return `
-    <circle cx="${s.x}" cy="${s.y}" r="6" fill="#fdf4ff" stroke="#701a75" stroke-width="2"/>
-    <text x="${s.x}" y="${s.y + 16}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#4a044e">${s.name}</text>
-    <text x="${s.x}" y="${s.y + 26}" text-anchor="middle" font-size="6.5" fill="#701a75">${s.desc}</text>
+    <!-- Node Lingkaran -->
+    <circle cx="${s.x}" cy="${s.y}" r="${isTarget ? 9 : 7}" fill="${isTarget ? '#e11d48' : '#ffffff'}" stroke="${isTarget ? '#ffffff' : '#86198f'}" stroke-width="${isTarget ? 2.5 : 2}"/>
+    ${!isTarget ? `<circle cx="${s.x}" cy="${s.y}" r="3" fill="#86198f"/>` : ''}
+
+    <!-- Label Kartu -->
+    <g transform="translate(${s.x}, ${cardY})">
+      <rect x="-38" y="0" width="76" height="28" rx="4" fill="#ffffff" stroke="${isTarget ? '#e11d48' : '#f0abfc'}" stroke-width="${isTarget ? 1.8 : 1}"/>
+      <text x="0" y="11" text-anchor="middle" font-size="7.5" font-weight="bold" fill="${isTarget ? '#9f1239' : '#701a75'}">${s.name}</text>
+      <text x="0" y="22" text-anchor="middle" font-size="6.5" fill="#475569">${s.sub}</text>
+    </g>
+
+    <!-- Target Badge if active -->
     ${isTarget ? `
-      <circle cx="${s.x}" cy="${s.y}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-      <text x="${s.x}" y="${s.y + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+      <circle cx="${s.x}" cy="${s.y}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="${s.x}" y="${s.y + 4}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
     ` : ''}`;
   }).join('')}
 
-  <text x="190" y="194" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Tahap alur cerita fiksi pada titik bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+  <!-- Soal Prompt Bawah -->
+  <rect x="18" y="228" width="384" height="24" rx="5" fill="#ffffff" stroke="#f5d0fe" stroke-width="1"/>
+  <text x="210" y="244" text-anchor="middle" font-size="10" font-weight="600" fill="#701a75">Tahap alur cerita narasi fabel pada titik bertanda "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

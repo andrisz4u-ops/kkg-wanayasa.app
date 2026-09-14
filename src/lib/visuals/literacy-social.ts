@@ -111,95 +111,114 @@ export function renderPiringGiziSeimbangSvg(params: {
   const pointer = params.pointer || 'makanan_pokok';
   const labelChar = params.label || 'X';
 
-  const cx = 175;
+  const cx = 165;
   const cy = 135;
-  const r = 90;
+  const r = 88;
 
-  // 4 Juring Piring Makanku:
-  // Setengah Kiri (180 derajat): Makanan Pokok (2/3 dari setengah = 120°) & Buah-buahan (1/3 dari setengah = 60°)
-  // Setengah Kanan (180 derajat): Sayuran (2/3 dari setengah = 120°) & Lauk-Pauk (1/3 dari setengah = 60°)
   const isTargetPokok = pointer === 'makanan_pokok';
   const isTargetSayur = pointer === 'sayuran';
   const isTargetLauk = pointer === 'lauk_pauk';
   const isTargetBuah = pointer === 'buah';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 280" width="450" height="280" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="plateRimGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <radialGradient id="plateInnerGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="85%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </radialGradient>
+  </defs>
+
   <!-- Border & Judul -->
-  <rect width="450" height="280" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="225" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pedoman Gizi Seimbang: Piring Makanku</text>
+  <rect width="450" height="280" fill="#fafafa" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="225" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Pedoman Gizi Seimbang: Piring Makanku (Kemenkes RI)</text>
 
-  <!-- Piring Luar & Bibir Piring -->
-  <circle cx="${cx}" cy="${cy}" r="${r + 10}" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="3"/>
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <!-- Piring Keramik Bertingkat -->
+  <circle cx="${cx}" cy="${cy}" r="${r + 14}" fill="url(#plateRimGrad)" stroke="#94a3b8" stroke-width="1"/>
+  <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#plateInnerGrad)"/>
 
-  <!-- Sektor 1: Makanan Pokok (Kiri Bawah, Karbohidrat - Oranye) -->
+  <!-- Sektor 1: Makanan Pokok (Kiri Bawah, Karbohidrat - 2/3 dari 50% = 120°) -->
   <path d="M ${cx},${cy} L ${cx - r},${cy} A ${r},${r} 0 0,0 ${cx + r * Math.cos(2.094)},${cy + r * Math.sin(2.094)} Z" fill="#fed7aa" stroke="#ffffff" stroke-width="2.5"/>
   ${isTargetPokok ? `
-    <circle cx="${cx - 45}" cy="${cy + 38}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${cx - 45}" y="${cy + 42.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="${cx - 44}" cy="${cy + 38}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${cx - 44}" y="${cy + 42.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="${cx - 45}" y="${cy + 34}" text-anchor="middle" font-size="10" font-weight="bold" fill="#c2410c">Makanan</text>
-    <text x="${cx - 45}" y="${cy + 46}" text-anchor="middle" font-size="10" font-weight="bold" fill="#c2410c">Pokok</text>
+    <text x="${cx - 44}" y="${cy + 35}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#9a3412">Makanan</text>
+    <text x="${cx - 44}" y="${cy + 47}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#9a3412">Pokok</text>
   `}
 
-  <!-- Sektor 2: Sayuran (Kanan Bawah - Hijau) -->
+  <!-- Sektor 2: Sayuran (Kanan Bawah - 2/3 dari 50% = 120°) -->
   <path d="M ${cx},${cy} L ${cx + r * Math.cos(1.047)},${cy + r * Math.sin(1.047)} A ${r},${r} 0 0,0 ${cx + r},${cy} Z" fill="#bbf7d0" stroke="#ffffff" stroke-width="2.5"/>
   ${isTargetSayur ? `
-    <circle cx="${cx + 45}" cy="${cy + 38}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${cx + 45}" y="${cy + 42.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="${cx + 44}" cy="${cy + 38}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${cx + 44}" y="${cy + 42.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="${cx + 45}" y="${cy + 40}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#15803d">Sayuran</text>
+    <text x="${cx + 44}" y="${cy + 41}" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">Sayuran</text>
   `}
 
-  <!-- Sektor 3: Buah-buahan (Kiri Atas - Merah/Kuning) -->
+  <!-- Sektor 3: Buah-buahan (Kiri Atas - 1/3 dari 50% = 60°) -->
   <path d="M ${cx},${cy} L ${cx - r * Math.cos(1.047)},${cy - r * Math.sin(1.047)} A ${r},${r} 0 0,0 ${cx - r},${cy} Z" fill="#fef08a" stroke="#ffffff" stroke-width="2.5"/>
   ${isTargetBuah ? `
-    <circle cx="${cx - 45}" cy="${cy - 35}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${cx - 45}" y="${cy - 30.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="${cx - 44}" cy="${cy - 34}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${cx - 44}" y="${cy - 29.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="${cx - 45}" y="${cy - 32}" text-anchor="middle" font-size="10" font-weight="bold" fill="#a16207">Buah</text>
+    <text x="${cx - 44}" y="${cy - 31}" text-anchor="middle" font-size="10" font-weight="bold" fill="#a16207">Buah</text>
   `}
 
-  <!-- Sektor 4: Lauk-Pauk (Kanan Atas, Protein - Merah/Cokelat) -->
+  <!-- Sektor 4: Lauk-Pauk (Kanan Atas, Protein - 1/3 dari 50% = 60°) -->
   <path d="M ${cx},${cy} L ${cx + r},${cy} A ${r},${r} 0 0,0 ${cx + r * Math.cos(1.047)},${cy - r * Math.sin(1.047)} Z" fill="#fecaca" stroke="#ffffff" stroke-width="2.5"/>
   ${isTargetLauk ? `
-    <circle cx="${cx + 45}" cy="${cy - 35}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${cx + 45}" y="${cy - 30.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="${cx + 44}" cy="${cy - 34}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="${cx + 44}" y="${cy - 29.5}" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   ` : `
-    <text x="${cx + 45}" y="${cy - 38}" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">Lauk</text>
-    <text x="${cx + 45}" y="${cy - 26}" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">Pauk</text>
+    <text x="${cx + 44}" y="${cy - 37}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#991b1b">Lauk</text>
+    <text x="${cx + 44}" y="${cy - 25}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#991b1b">Pauk</text>
   `}
 
-  <!-- Gelas Air Putih di Kanan Atas -->
-  <g transform="translate(325, 60)">
-    <rect x="0" y="8" width="28" height="40" rx="3" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
-    <rect x="2" y="18" width="24" height="28" fill="#38bdf8" fill-opacity="0.6"/>
-    <text x="14" y="58" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Air Putih</text>
+  <!-- Gelas Air Putih di Samping Kanan Piring -->
+  <g transform="translate(305, 48)">
+    <rect width="130" height="60" rx="6" fill="#f8fafc" stroke="#bae6fd" stroke-width="1"/>
+    <!-- Ilustrasi Gelas -->
+    <path d="M 16,14 L 19,46 L 35,46 L 38,14 Z" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+    <path d="M 18,24 L 20,44 L 34,44 L 36,24 Z" fill="#38bdf8" opacity="0.6"/>
+    <text x="46" y="28" font-size="9" font-weight="bold" fill="#0369a1">Air Putih</text>
+    <text x="46" y="42" font-size="7.5" fill="#64748b">Minimal 8 gelas/hari</text>
   </g>
 
-  <!-- Legenda Kandungan Zat di Sisi Kanan -->
-  <g transform="translate(305, 140)">
-    <rect width="130" height="90" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="65" y="18" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0f172a">Zat Gizi Piring</text>
-    <circle cx="15" cy="32" r="5" fill="#fed7aa"/>
-    <text x="26" y="36" font-size="9.5" fill="#334155">Karbohidrat (2/3)</text>
-    <circle cx="15" cy="48" r="5" fill="#bbf7d0"/>
-    <text x="26" y="52" font-size="9.5" fill="#334155">Sayuran (2/3)</text>
-    <circle cx="15" cy="64" r="5" fill="#fecaca"/>
-    <text x="26" y="68" font-size="9.5" fill="#334155">Lauk Protein (1/3)</text>
-    <circle cx="15" cy="80" r="5" fill="#fef08a"/>
-    <text x="26" y="84" font-size="9.5" fill="#334155">Buah Vitamin (1/3)</text>
+  <!-- Legenda Komposisi Zat Gizi -->
+  <g transform="translate(305, 118)">
+    <rect width="130" height="106" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="65" y="16" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">Proporsi Piring</text>
+
+    <rect x="10" y="26" width="10" height="10" rx="2" fill="#fed7aa" stroke="#ea580c" stroke-width="0.8"/>
+    <text x="26" y="34" font-size="8" font-weight="600" fill="#9a3412">Makanan Pokok (2/3)</text>
+
+    <rect x="10" y="45" width="10" height="10" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="0.8"/>
+    <text x="26" y="53" font-size="8" font-weight="600" fill="#166534">Sayur-Mayur (2/3)</text>
+
+    <rect x="10" y="64" width="10" height="10" rx="2" fill="#fecaca" stroke="#dc2626" stroke-width="0.8"/>
+    <text x="26" y="72" font-size="8" font-weight="600" fill="#991b1b">Lauk-Pauk (1/3)</text>
+
+    <rect x="10" y="83" width="10" height="10" rx="2" fill="#fef08a" stroke="#ca8a04" stroke-width="0.8"/>
+    <text x="26" y="91" font-size="8" font-weight="600" fill="#854d0e">Buah-buahan (1/3)</text>
   </g>
 
-  <text x="225" y="265" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian piring makan gizi seimbang yang ditunjuk huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Soal Prompt Bawah -->
+  <rect x="18" y="244" width="414" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="225" y="260" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">Bagian piring makan gizi seimbang yang ditunjuk huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
 /**
- * 3. Render Denah Lapangan Olahraga (Sepak Bola, Voli, Bulu Tangkis, Kasti)
+ * 3. Render Denah Lapangan Olahraga (Sepak Bola, Voli, Bulu Tangkis, Basket)
  */
 export function renderLapanganOlahragaSvg(params: {
-  olahraga?: 'sepak_bola' | 'voli' | 'bulu_tangkis' | 'kasti';
+  olahraga?: 'sepak_bola' | 'voli' | 'bulu_tangkis' | 'basket' | 'kasti';
   pointer?: string;
   label?: string;
 }): string {
@@ -211,10 +230,10 @@ export function renderLapanganOlahragaSvg(params: {
 
   if (c === 'voli') {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-    <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-    <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Denah Lapangan Bola Voli (18 m x 9 m)</text>
+    <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+    <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Denah Lapangan Bola Voli Standar (18 m x 9 m)</text>
 
-    <!-- Lapangan Oranye Kayu / Biru -->
+    <!-- Lapangan Oranye Kayu / Taraflex -->
     <rect x="50" y="50" width="320" height="150" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/>
 
     <!-- Net Tengah Lapangan -->
@@ -240,36 +259,79 @@ export function renderLapanganOlahragaSvg(params: {
   </svg>`;
   }
 
+  if (c === 'bulu_tangkis') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+    <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+    <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Denah Lapangan Bulu Tangkis / Badminton (13.4 m x 6.1 m)</text>
+
+    <!-- Lapangan Hijau Karpet Sintetis -->
+    <rect x="45" y="52" width="330" height="150" fill="#15803d" stroke="#14532d" stroke-width="2"/>
+
+    <!-- Garis Ganda Luar & Tunggal Dalam -->
+    <rect x="52" y="58" width="316" height="138" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+    <rect x="52" y="66" width="316" height="122" fill="none" stroke="#ffffff" stroke-width="1.2"/>
+
+    <!-- Net Tengah -->
+    <line x1="210" y1="48" x2="210" y2="206" stroke="#0f172a" stroke-width="3"/>
+    <text x="210" y="44" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">NET</text>
+
+    <!-- Garis Servis Pendek -->
+    <line x1="172" y1="58" x2="172" y2="196" stroke="#ffffff" stroke-width="1.5"/>
+    <line x1="248" y1="58" x2="248" y2="196" stroke="#ffffff" stroke-width="1.5"/>
+
+    <!-- Garis Tengah Servis Kiri & Kanan -->
+    <line x1="52" y1="127" x2="172" y2="127" stroke="#ffffff" stroke-width="1.5"/>
+    <line x1="248" y1="127" x2="368" y2="127" stroke="#ffffff" stroke-width="1.5"/>
+
+    <!-- Callout Target -->
+    <g transform="translate(112, 96)">
+      <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    </g>
+
+    <text x="210" y="242" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Area lapangan bulu tangkis yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  </svg>`;
+  }
+
   // Default: Sepak Bola
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Denah Garis Lapangan Sepak Bola</text>
+  <rect width="${w}" height="${h}" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Denah Garis Lapangan Sepak Bola Standar FIFA</text>
 
-  <!-- Rumput Hijau -->
-  <rect x="40" y="45" width="340" height="165" rx="4" fill="#22c55e" stroke="#15803d" stroke-width="2.5"/>
+  <!-- Rumput Hijau dengan Garis Potong Belang Vertikal -->
+  <g transform="translate(40, 48)">
+    <rect width="340" height="160" rx="3" fill="#16a34a"/>
+    <!-- 8 Bilah Rumput Berselang-seling -->
+    <rect x="0" y="0" width="42.5" height="160" fill="#22c55e" opacity="0.3"/>
+    <rect x="85" y="0" width="42.5" height="160" fill="#22c55e" opacity="0.3"/>
+    <rect x="170" y="0" width="42.5" height="160" fill="#22c55e" opacity="0.3"/>
+    <rect x="255" y="0" width="42.5" height="160" fill="#22c55e" opacity="0.3"/>
 
-  <!-- Garis Tepi Putih -->
-  <rect x="48" y="52" width="324" height="151" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <!-- Garis Lapangan Putih -->
+    <rect x="6" y="6" width="328" height="148" fill="none" stroke="#ffffff" stroke-width="1.8"/>
 
-  <!-- Garis Tengah & Lingkaran Tengah -->
-  <line x1="210" y1="52" x2="210" y2="203" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="210" cy="127" r="32" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="210" cy="127" r="3" fill="#ffffff"/>
+    <!-- Garis Tengah & Lingkaran Tengah -->
+    <line x1="170" y1="6" x2="170" y2="154" stroke="#ffffff" stroke-width="1.8"/>
+    <circle cx="170" cy="80" r="30" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+    <circle cx="170" cy="80" r="2.5" fill="#ffffff"/>
 
-  <!-- Kotak Penalti Kiri -->
-  <rect x="48" y="85" width="55" height="84" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <rect x="48" y="104" width="22" height="46" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="85" cy="127" r="2.5" fill="#ffffff"/>
+    <!-- Kotak Penalti Kiri -->
+    <rect x="6" y="38" width="54" height="84" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+    <rect x="6" y="56" width="20" height="48" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+    <circle cx="42" cy="80" r="2.5" fill="#ffffff"/>
+    <path d="M 60,65 A 30,30 0 0,1 60,95" fill="none" stroke="#ffffff" stroke-width="1.5"/>
 
-  <!-- Kotak Penalti Kanan -->
-  <rect x="317" y="85" width="55" height="84" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <rect x="350" y="104" width="22" height="46" fill="none" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="335" cy="127" r="2.5" fill="#ffffff"/>
+    <!-- Kotak Penalti Kanan -->
+    <rect x="280" y="38" width="54" height="84" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+    <rect x="314" y="56" width="20" height="48" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+    <circle cx="298" cy="80" r="2.5" fill="#ffffff"/>
+    <path d="M 280,65 A 30,30 0 0,0 280,95" fill="none" stroke="#ffffff" stroke-width="1.5"/>
 
-  <!-- Target Badge X di Kotak Penalti Kiri -->
-  <g transform="translate(75, 127)">
-    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <!-- Target Badge X di Kotak Penalti Kiri -->
+    <g transform="translate(35, 80)">
+      <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+      <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    </g>
   </g>
 
   <text x="210" y="242" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Area lapangan sepak bola yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
@@ -380,18 +442,22 @@ export function renderTanggaNadaSvg(params: {
   const notX = 230;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="420" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Seni Musik: Garis Paranada &amp; Tangga Nada Diatonis</text>
+  <rect width="420" height="250" fill="#fafafa" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Seni Musik: Garis Paranada &amp; Tangga Nada Diatonis</text>
 
-  <!-- 5 Garis Paranada -->
+  <!-- 5 Garis Paranada Utama -->
   ${staffLines}
 
-  <!-- Garis Birama Penutup Kanan -->
+  <!-- Garis Birama Penutup Kanan (Double Barline) -->
   <line x1="375" y1="70" x2="375" y2="134" stroke="#0f172a" stroke-width="2"/>
   <line x1="380" y1="70" x2="380" y2="134" stroke="#0f172a" stroke-width="3.5"/>
 
-  <!-- Kunci G (Treble Clef) Vektor Elegan -->
+  <!-- Tanda Kunci G (Treble Clef) Vektor Elegan -->
   <text x="55" y="132" font-size="64" font-family="'Segoe UI Symbol', Arial, sans-serif" fill="#0f172a">𝄞</text>
+
+  <!-- Tanda Sukat 4/4 -->
+  <text x="96" y="98" font-size="20" font-weight="bold" fill="#0f172a">4</text>
+  <text x="96" y="126" font-size="20" font-weight="bold" fill="#0f172a">4</text>
 
   <!-- Garis Bantu Nada Rendah jika C4 -->
   ${notY >= 148 ? `<line x1="${notX - 16}" y1="150" x2="${notX + 16}" y2="150" stroke="#0f172a" stroke-width="2"/>` : ''}
@@ -402,15 +468,21 @@ export function renderTanggaNadaSvg(params: {
 
   <!-- Target Badge X -->
   <g transform="translate(${notX + 35}, ${notY - 20})">
-    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
-    <text x="0" y="4.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    <circle cx="0" cy="0" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
   <!-- Nomor Garis di Sisi Kiri -->
   <text x="32" y="74" text-anchor="end" font-size="9" fill="#94a3b8">Garis 5</text>
   <text x="32" y="138" text-anchor="end" font-size="9" fill="#94a3b8">Garis 1</text>
 
-  <text x="210" y="234" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Nama nada diatonis yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Skala Diatonis Referensi Bawah -->
+  <rect x="40" y="165" width="340" height="26" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="182" text-anchor="middle" font-size="9" font-weight="bold" fill="#334155">Solmisasi: C(do) - D(re) - E(mi) - F(fa) - G(sol) - A(la) - B(si) - C'(do')</text>
+
+  <!-- Soal Prompt Bawah -->
+  <rect x="20" y="218" width="380" height="22" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="233" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Nama nada diatonis yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -418,15 +490,15 @@ export function renderTanggaNadaSvg(params: {
  * 6. Render Lingkaran Warna (Color Wheel - SBdP Seni Rupa)
  */
 export function renderLingkaranWarnaSvg(params: {
-  pointer?: 'sekunder' | 'primer' | 'oranye' | 'hijau' | 'ungu';
+  pointer?: 'sekunder' | 'primer' | 'oranye' | 'hijau' | 'ungu' | 'tersier';
   label?: string;
 }): string {
   const labelChar = params.label || 'X';
-  const pointer = params.pointer || 'sekunder';
+  const pointer = String(params.pointer || 'sekunder').toLowerCase();
 
-  const cx = 175;
-  const cy = 135;
-  const r = 85;
+  const cx = 165;
+  const cy = 132;
+  const r = 84;
 
   // 6 Juring Warna Primer & Sekunder:
   // Merah, Oranye, Kuning, Hijau, Biru, Ungu
@@ -452,37 +524,57 @@ export function renderLingkaranWarnaSvg(params: {
     slices += `<path d="M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 0,1 ${x2},${y2} Z" fill="${colors[i].fill}" stroke="#ffffff" stroke-width="2.5"/>`;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 260" width="430" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="430" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="215" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Teori Warna: Lingkaran Warna Primer &amp; Sekunder</text>
+  // Target badge coordinates based on pointer
+  let targetX = 222;
+  let targetY = 80;
+  if (pointer.includes('hijau')) {
+    targetX = 165;
+    targetY = 196;
+  } else if (pointer.includes('ungu')) {
+    targetX = 108;
+    targetY = 80;
+  } else if (pointer.includes('kuning')) {
+    targetX = 222;
+    targetY = 160;
+  } else if (pointer.includes('biru')) {
+    targetX = 108;
+    targetY = 160;
+  }
 
-  <!-- Roda 6 Warna -->
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 260" width="430" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="430" height="260" fill="#fafafa" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="215" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Teori Warna: Lingkaran Warna Primer &amp; Sekunder</text>
+
+  <!-- Roda 6 Warna Itten -->
   <circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
   <g>${slices}</g>
-  <circle cx="${cx}" cy="${cy}" r="24" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
-  <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">Warna</text>
+  <circle cx="${cx}" cy="${cy}" r="26" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+  <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="9" font-weight="bold" fill="#475569">Warna</text>
 
-  <!-- Target Badge X di Sektor Oranye (Perpaduan Merah + Kuning) -->
-  <g transform="translate(225, 80)">
-    <circle cx="0" cy="0" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-    <text x="0" y="4.5" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <!-- Target Badge X -->
+  <g transform="translate(${targetX}, ${targetY})">
+    <circle cx="0" cy="0" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+    <text x="0" y="4.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
   <!-- Legenda Sisi Kanan -->
-  <g transform="translate(295, 60)">
-    <rect width="115" height="135" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="57.5" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Kategori Warna</text>
+  <g transform="translate(290, 50)">
+    <rect width="124" height="150" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="62" y="20" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#0f172a">Kategori Warna</text>
 
-    <text x="14" y="42" font-size="10" font-weight="bold" fill="#dc2626">Warna Primer:</text>
-    <text x="14" y="56" font-size="9.5" fill="#475569">• Merah, Kuning, Biru</text>
+    <text x="12" y="40" font-size="9.5" font-weight="bold" fill="#dc2626">Warna Primer:</text>
+    <text x="12" y="54" font-size="8.5" fill="#475569">&#x2022; Merah, Kuning, Biru</text>
 
-    <text x="14" y="80" font-size="10" font-weight="bold" fill="#7c3aed">Warna Sekunder:</text>
-    <text x="14" y="94" font-size="9.5" fill="#475569">• Campuran 2 primer</text>
-    <text x="14" y="108" font-size="9" fill="#475569">M + K = Oranye</text>
-    <text x="14" y="120" font-size="9" fill="#475569">B + K = Hijau</text>
+    <text x="12" y="78" font-size="9.5" font-weight="bold" fill="#7c3aed">Warna Sekunder:</text>
+    <text x="12" y="92" font-size="8.5" fill="#475569">&#x2022; Campuran 2 primer</text>
+    <text x="12" y="108" font-size="8" fill="#64748b">M + K = Oranye</text>
+    <text x="12" y="122" font-size="8" fill="#64748b">B + K = Hijau</text>
+    <text x="12" y="136" font-size="8" fill="#64748b">M + B = Ungu</text>
   </g>
 
-  <text x="215" y="246" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Warna sekunder hasil percampuran yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Soal Prompt Bawah -->
+  <rect x="20" y="226" width="390" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="215" y="242" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Warna sekunder hasil percampuran yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

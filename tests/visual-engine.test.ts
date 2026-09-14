@@ -1214,8 +1214,8 @@ D. 32 cm`;
 
       const d3 = generateVisualStimulus({ type: 'pesawat_sederhana', params: { jenis: 'tuas' } });
       expect(d3).not.toBeNull();
-      expect(d3?.width).toBe(420);
-      expect(d3?.height).toBe(250);
+      expect(d3?.width).toBe(560);
+      expect(d3?.height).toBe(340);
 
       const d4 = generateVisualStimulus({ type: 'pancaindra', params: { organ: 'mata' } });
       expect(d4).not.toBeNull();

@@ -50,43 +50,46 @@ export function renderRangkaianListrikSvg(params: any): string {
   // Helper bulb
   const drawBulb = (cx: number, cy: number, name: string, isLit: boolean, targetId: string) => {
     const isTarget = pointer === targetId || pointer === name;
-    const bulbFill = isLit ? '#fef08a' : '#f1f5f9';
-    const bulbStroke = isLit ? '#eab308' : '#64748b';
-    const filColor = isLit ? '#ca8a04' : '#64748b';
+    const bulbFill = isLit ? 'url(#bulb_glass_lit)' : 'url(#bulb_glass_off)';
+    const bulbStroke = isLit ? '#d97706' : '#64748b';
+    const filColor = isLit ? '#b45309' : '#94a3b8';
 
     let rays = '';
     if (isLit) {
-      const rayCoords = [
-        [cx, cy - 20, cx, cy - 27],
-        [cx + 14, cy - 14, cx + 19, cy - 19],
-        [cx + 20, cy, cx + 27, cy],
-        [cx + 14, cy + 14, cx + 19, cy + 19],
-        [cx, cy + 20, cx, cy + 27],
-        [cx - 14, cy + 14, cx - 19, cy + 19],
-        [cx - 20, cy, cx - 27, cy],
-        [cx - 14, cy - 14, cx - 19, cy - 19],
-      ];
-      rays = rayCoords.map(([x1, y1, x2, y2]) =>
-        `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>`
-      ).join('');
+      const rayAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+      rays = rayAngles.map(deg => {
+        const rad = (deg * Math.PI) / 180;
+        const x1 = cx + Math.cos(rad) * 20;
+        const y1 = cy + Math.sin(rad) * 20;
+        const x2 = cx + Math.cos(rad) * 27;
+        const y2 = cy + Math.sin(rad) * 27;
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>`;
+      }).join('');
     }
 
     let targetBadge = '';
     if (isTarget) {
       targetBadge = `
-        <circle cx="${cx}" cy="${cy - 28}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-        <text x="${cx}" y="${cy - 24}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+        <circle cx="${cx}" cy="${cy - 28}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#elec_shadow)"/>
+        <text x="${cx}" y="${cy - 23.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
       `;
     }
 
     return `
       <g>
+        ${isLit ? `<circle cx="${cx}" cy="${cy}" r="26" fill="#fef08a" fill-opacity="0.38"/>` : ''}
         ${rays}
-        <circle cx="${cx}" cy="${cy}" r="14" fill="${bulbFill}" stroke="${bulbStroke}" stroke-width="2.5"/>
-        <path d="M ${cx - 5} ${cy + 6} L ${cx - 3} ${cy - 4} L ${cx} ${cy - 1} L ${cx + 3} ${cy - 4} L ${cx + 5} ${cy + 6}" stroke="${filColor}" stroke-width="1.8" fill="none"/>
-        <rect x="${cx - 5}" y="${cy + 13}" width="10" height="4" fill="#94a3b8" rx="1"/>
-        <text x="${cx}" y="${cy + 27}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${name}</text>
-        <text x="${cx}" y="${cy + 38}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${isLit ? '#16a34a' : '#64748b'}">${isLit ? 'Nyala' : 'Padam'}</text>
+        <!-- Glass Bulb Body -->
+        <circle cx="${cx}" cy="${cy}" r="16" fill="${bulbFill}" stroke="${bulbStroke}" stroke-width="2"/>
+        <!-- Tungsten Filament -->
+        <path d="M ${cx - 6} ${cy + 8} L ${cx - 3} ${cy - 2} L ${cx} ${cy + 1} L ${cx + 3} ${cy - 2} L ${cx + 6} ${cy + 8}" stroke="${filColor}" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+        <!-- Brass Threaded Socket Base -->
+        <rect x="${cx - 6}" y="${cy + 14}" width="12" height="6" fill="#94a3b8" stroke="#475569" stroke-width="1" rx="1"/>
+        <line x1="${cx - 5}" y1="${cy + 17}" x2="${cx + 5}" y2="${cy + 17}" stroke="#cbd5e1" stroke-width="1"/>
+        <!-- Labels -->
+        <text x="${cx}" y="${cy + 33}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${name}</text>
+        <rect x="${cx - 18}" y="${cy + 39}" width="36" height="15" rx="3" fill="${isLit ? '#dcfce7' : '#f1f5f9'}" stroke="${isLit ? '#86efac' : '#cbd5e1'}" stroke-width="1"/>
+        <text x="${cx}" y="${cy + 50}" text-anchor="middle" font-size="9" font-weight="bold" fill="${isLit ? '#15803d' : '#64748b'}">${isLit ? 'Nyala' : 'Padam'}</text>
         ${targetBadge}
       </g>
     `;
@@ -95,41 +98,50 @@ export function renderRangkaianListrikSvg(params: any): string {
   // Helper switch
   const drawSwitch = (x1: number, y: number, x2: number, name: string, isClosed: boolean, targetId: string) => {
     const isTarget = pointer === targetId || pointer === name;
-    const leverY2 = isClosed ? y : y - 14;
+    const mx = (x1 + x2) / 2;
+    const leverY2 = isClosed ? y : y - 16;
     const leverX2 = isClosed ? x2 : x1 + (x2 - x1) * 0.85;
-    const leverColor = isClosed ? '#16a34a' : '#e11d48';
+    const leverColor = isClosed ? '#16a34a' : '#dc2626';
 
     let targetBadge = '';
     if (isTarget) {
       targetBadge = `
-        <circle cx="${(x1 + x2) / 2}" cy="${y - 25}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-        <text x="${(x1 + x2) / 2}" y="${y - 21}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+        <circle cx="${mx}" cy="${y - 34}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2" filter="url(#elec_shadow)"/>
+        <text x="${mx}" y="${y - 29.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
       `;
     }
 
     return `
       <g>
-        <circle cx="${x1}" cy="${y}" r="3.5" fill="#0f172a"/>
-        <circle cx="${x2}" cy="${y}" r="3.5" fill="#0f172a"/>
-        <line x1="${x1}" y1="${y}" x2="${leverX2}" y2="${leverY2}" stroke="${leverColor}" stroke-width="2.8" stroke-linecap="round"/>
-        <text x="${(x1 + x2) / 2}" y="${y - 12}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">${name}</text>
-        <rect x="${(x1 + x2) / 2 - 24}" y="${y + 6}" width="48" height="15" rx="3" fill="${isClosed ? '#dcfce7' : '#fee2e2'}"/>
-        <text x="${(x1 + x2) / 2}" y="${y + 17}" text-anchor="middle" font-size="9" font-weight="bold" fill="${isClosed ? '#15803d' : '#b91c1c'}">${isClosed ? 'Tertutup' : 'Terbuka'}</text>
+        <!-- Ceramic Switch Mounting Pad -->
+        <rect x="${x1 - 6}" y="${y - 6}" width="${x2 - x1 + 12}" height="12" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <circle cx="${x1}" cy="${y}" r="4" fill="#b45309" stroke="#78350f" stroke-width="1"/>
+        <circle cx="${x2}" cy="${y}" r="4" fill="#b45309" stroke="#78350f" stroke-width="1"/>
+        <!-- Copper Knife Lever Arm -->
+        <line x1="${x1}" y1="${y}" x2="${leverX2}" y2="${leverY2}" stroke="${leverColor}" stroke-width="3" stroke-linecap="round"/>
+        <!-- Switch Labels -->
+        <text x="${mx}" y="${y - 14}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${name}</text>
+        <rect x="${mx - 24}" y="${y + 10}" width="48" height="15" rx="3" fill="${isClosed ? '#dcfce7' : '#fee2e2'}" stroke="${isClosed ? '#86efac' : '#fca5a5'}" stroke-width="1"/>
+        <text x="${mx}" y="${y + 21}" text-anchor="middle" font-size="9" font-weight="bold" fill="${isClosed ? '#15803d' : '#b91c1c'}">${isClosed ? 'Tertutup' : 'Terbuka'}</text>
         ${targetBadge}
       </g>
     `;
   };
 
-  // Battery helper
+  // Battery helper (3D Cylindrical Cell)
   const drawBattery = (cx: number, cy: number) => `
     <g>
-      <line x1="${cx - 16}" y1="${cy - 12}" x2="${cx + 16}" y2="${cy - 12}" stroke="#0f172a" stroke-width="1.8"/>
-      <line x1="${cx - 10}" y1="${cy - 4}" x2="${cx + 10}" y2="${cy - 4}" stroke="#0f172a" stroke-width="4"/>
-      <line x1="${cx - 16}" y1="${cy + 4}" x2="${cx + 16}" y2="${cy + 4}" stroke="#0f172a" stroke-width="1.8"/>
-      <line x1="${cx - 10}" y1="${cy + 12}" x2="${cx + 10}" y2="${cy + 12}" stroke="#0f172a" stroke-width="4"/>
-      <text x="${cx + 22}" y="${cy - 9}" font-size="14" font-weight="bold" fill="#e11d48">+</text>
-      <text x="${cx + 22}" y="${cy + 15}" font-size="16" font-weight="bold" fill="#0f172a">−</text>
-      <text x="${cx - 24}" y="${cy + 4}" text-anchor="end" font-size="11" font-weight="600" fill="#475569">Baterai</text>
+      <!-- Battery Body Outer Frame -->
+      <rect x="${cx - 13}" y="${cy - 25}" width="26" height="50" rx="4" fill="url(#elec_battery_body)" stroke="#1e293b" stroke-width="1.8"/>
+      <!-- Top Positive Terminal Nub -->
+      <rect x="${cx - 6}" y="${cy - 31}" width="12" height="6" rx="2" fill="#f59e0b" stroke="#b45309" stroke-width="1"/>
+      <!-- Positive/Negative Metallic Accent Lines -->
+      <line x1="${cx - 11}" y1="${cy - 5}" x2="${cx + 11}" y2="${cy - 5}" stroke="#475569" stroke-width="1.2"/>
+      <!-- Pole Labels -->
+      <text x="${cx}" y="${cy - 12}" text-anchor="middle" font-size="13" font-weight="bold" fill="#ef4444">+</text>
+      <text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="15" font-weight="bold" fill="#38bdf8">−</text>
+      <!-- Component Label -->
+      <text x="${cx - 22}" y="${cy + 4}" text-anchor="end" font-size="11" font-weight="bold" fill="#334155">Baterai</text>
     </g>
   `;
 
@@ -139,66 +151,121 @@ export function renderRangkaianListrikSvg(params: any): string {
   if (model === 'seri') {
     modelTitle = 'Rangkaian Listrik Seri';
     circuitContent = `
-      <path d="M 60,130 L 60,60 L 400,60 L 400,200 L 60,200 L 60,130" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      ${drawBattery(60, 130)}
-      ${drawSwitch(130, 60, 180, 'S₁', isS1Closed, 'S1')}
-      ${drawBulb(260, 60, 'L₁', l1Lit, 'L1')}
-      ${drawBulb(350, 60, 'L₂', l2Lit, 'L2')}
+      <!-- Main Circuit Loop Wires -->
+      <path d="M 80,140 L 80,100 L 480,100 L 480,230 L 80,230 L 80,190" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      ${isS1Closed ? `
+        <!-- Current Flow Arrows -->
+        <path d="M 80,118 L 80,100 L 110,100" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="4,4"/>
+        <path d="M 480,130 L 480,230 L 300,230" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="4,4"/>
+      ` : ''}
+      ${drawBattery(80, 165)}
+      ${drawSwitch(140, 100, 190, 'S₁', isS1Closed, 'S1')}
+      ${drawBulb(280, 100, 'L₁', l1Lit, 'L1')}
+      ${drawBulb(390, 100, 'L₂', l2Lit, 'L2')}
     `;
   } else if (model === 'paralel') {
     modelTitle = 'Rangkaian Listrik Paralel';
     circuitContent = `
-      <path d="M 60,130 L 60,80 L 150,80" fill="none" stroke="#1e293b" stroke-width="2.5"/>
-      <path d="M 60,130 L 60,180 L 150,180" fill="none" stroke="#1e293b" stroke-width="2.5"/>
-      <line x1="150" y1="80" x2="150" y2="180" stroke="#1e293b" stroke-width="2.5"/>
-      <circle cx="150" cy="80" r="3.5" fill="#0f172a"/>
-      <circle cx="150" cy="180" r="3.5" fill="#0f172a"/>
-      ${drawBattery(60, 130)}
+      <!-- Battery Supply Rail -->
+      <path d="M 80,140 L 80,110 L 150,110" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <path d="M 80,190 L 80,245 L 450,245 L 450,110" fill="none" stroke="#1e293b" stroke-width="3"/>
+      ${drawBattery(80, 165)}
 
-      <line x1="150" y1="80" x2="380" y2="80" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawSwitch(180, 80, 230, 'S₁', isS1Closed, 'S1')}
-      ${drawBulb(300, 80, 'L₁', l1Lit, 'L1')}
+      <!-- Parallel Node 1 (Input Split) -->
+      <line x1="150" y1="110" x2="150" y2="210" stroke="#1e293b" stroke-width="3"/>
+      <circle cx="150" cy="110" r="4" fill="#0f172a"/>
+      <circle cx="150" cy="210" r="4" fill="#0f172a"/>
 
-      <line x1="150" y1="180" x2="380" y2="180" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawSwitch(180, 180, 230, 'S₂', isS2Closed, 'S2')}
-      ${drawBulb(300, 180, 'L₂', l2Lit, 'L2')}
+      <!-- Branch 1 (Top) -->
+      <line x1="150" y1="110" x2="450" y2="110" stroke="#1e293b" stroke-width="3"/>
+      ${drawSwitch(190, 110, 240, 'S₁', isS1Closed, 'S1')}
+      ${drawBulb(330, 110, 'L₁', l1Lit, 'L1')}
 
-      <line x1="380" y1="80" x2="380" y2="180" stroke="#1e293b" stroke-width="2.5"/>
-      <circle cx="380" cy="80" r="3.5" fill="#0f172a"/>
-      <circle cx="380" cy="180" r="3.5" fill="#0f172a"/>
+      <!-- Branch 2 (Bottom) -->
+      <line x1="150" y1="210" x2="450" y2="210" stroke="#1e293b" stroke-width="3"/>
+      ${drawSwitch(190, 210, 240, 'S₂', isS2Closed, 'S2')}
+      ${drawBulb(330, 210, 'L₂', l2Lit, 'L2')}
+
+      <!-- Parallel Node 2 (Output Merge) -->
+      <line x1="450" y1="110" x2="450" y2="245" stroke="#1e293b" stroke-width="3"/>
+      <circle cx="450" cy="110" r="4" fill="#0f172a"/>
+      <circle cx="450" cy="210" r="4" fill="#0f172a"/>
     `;
   } else {
     // Campuran
+    modelTitle = 'Rangkaian Listrik Campuran';
     circuitContent = `
-      <path d="M 60,135 L 60,60 L 120,60" fill="none" stroke="#1e293b" stroke-width="2.5"/>
-      <path d="M 60,135 L 60,210 L 390,210 L 390,135" fill="none" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawBattery(60, 135)}
+      <!-- Main Supply Line from Battery -->
+      <path d="M 80,140 L 80,100 L 130,100" fill="none" stroke="#1e293b" stroke-width="3"/>
+      <path d="M 80,190 L 80,240 L 485,240 L 485,100" fill="none" stroke="#1e293b" stroke-width="3"/>
+      ${drawBattery(80, 165)}
 
-      ${drawSwitch(120, 60, 170, 'S₁', isS1Closed, 'S1')}
-      <line x1="170" y1="60" x2="220" y2="60" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawBulb(235, 60, 'L₁', l1Lit, 'L1')}
-      <line x1="250" y1="60" x2="280" y2="60" stroke="#1e293b" stroke-width="2.5"/>
+      <!-- Main Line: S1 Switch & L1 Bulb -->
+      ${drawSwitch(130, 100, 175, 'S₁', isS1Closed, 'S1')}
+      <line x1="175" y1="100" x2="235" y2="100" stroke="#1e293b" stroke-width="3"/>
+      ${drawBulb(235, 100, 'L₁', l1Lit, 'L1')}
+      <line x1="251" y1="100" x2="295" y2="100" stroke="#1e293b" stroke-width="3"/>
 
-      <circle cx="280" cy="60" r="3.5" fill="#0f172a"/>
-      <path d="M 280,60 L 280,135" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+      <!-- Split Node into Parallel Branches -->
+      <circle cx="295" cy="100" r="4" fill="#0f172a"/>
+      <path d="M 295,100 L 295,170 L 320,170" fill="none" stroke="#1e293b" stroke-width="3"/>
 
-      <line x1="280" y1="60" x2="390" y2="60" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawBulb(335, 60, 'L₂', l2Lit, 'L2')}
+      <!-- Branch A (Top): L2 Bulb -->
+      <line x1="295" y1="100" x2="485" y2="100" stroke="#1e293b" stroke-width="3"/>
+      ${drawBulb(375, 100, 'L₂', l2Lit, 'L2')}
 
-      <line x1="280" y1="135" x2="390" y2="135" stroke="#1e293b" stroke-width="2.5"/>
-      ${drawSwitch(295, 135, 335, 'S₂', isS2Closed, 'S2')}
-      ${drawBulb(365, 135, 'L₃', l3Lit, 'L3')}
+      <!-- Branch B (Bottom): S2 Switch & L3 Bulb -->
+      <line x1="320" y1="170" x2="485" y2="170" stroke="#1e293b" stroke-width="3"/>
+      ${drawSwitch(325, 170, 365, 'S₂', isS2Closed, 'S2')}
+      ${drawBulb(425, 170, 'L₃', l3Lit, 'L3')}
 
-      <circle cx="390" cy="60" r="3.5" fill="#0f172a"/>
-      <circle cx="390" cy="135" r="3.5" fill="#0f172a"/>
+      <!-- Merge Node -->
+      <circle cx="485" cy="100" r="4" fill="#0f172a"/>
+      <circle cx="485" cy="170" r="4" fill="#0f172a"/>
     `;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 260" width="460" height="260" style="background:#f8fafc; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
-  <rect width="460" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="230" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${modelTitle}</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" width="560" height="320" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="elec_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="elec_card_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="elec_battery_body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <radialGradient id="bulb_glass_lit" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#fde047"/>
+    </radialGradient>
+    <radialGradient id="bulb_glass_off" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect x="4" y="4" width="552" height="312" rx="10" fill="url(#elec_card_bg)" stroke="#cbd5e1" stroke-width="1.5" filter="url(#elec_shadow)"/>
+
+  <!-- Header Section -->
+  <rect x="150" y="10" width="260" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="280" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">FISIKA &amp; KELISTRIKAN - SIRKUIT ARUS SEARAH</text>
+  <text x="280" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">${modelTitle}</text>
+  <text x="280" y="56" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Analisis aliran arus listrik, status sakelar, dan kondisi nyala/padam lampu</text>
+
+  <!-- Circuit Schematic Area -->
   ${circuitContent}
-  <text x="230" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Perhatikan komponen yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="286" width="440" height="24" rx="6" fill="#0f172a"/>
+  <text x="280" y="302" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Perhatikan komponen yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
 </svg>`;
 }
 
@@ -300,80 +367,153 @@ export function renderMagnetSvg(params: any): string {
   const pointer = String(params.pointer || 'kanan2').toLowerCase();
 
   const isTarik = interaksi === 'tarik';
-  const m2Kiri = isTarik ? 'U' : 'S';
-  const m2Kanan = isTarik ? 'S' : 'U';
+  const m2Left = isTarik ? 'U' : 'S';
+  const m2Right = isTarik ? 'S' : 'U';
 
-  const m1X = 45;
-  const m1Y = 75;
-  const m2X = 300;
-  const m2Y = 75;
-  const mw = 135;
-  const mh = 56;
+  const m1X = 40;
+  const m1Y = 96;
+  const m2X = 370;
+  const m2Y = 96;
+  const mw = 150;
+  const mh = 62;
   const halfW = mw / 2;
 
   const isTargetM1Kiri = pointer === 'kiri1' || pointer === 'm1kiri';
   const isTargetM1Kanan = pointer === 'kanan1' || pointer === 'm1kanan';
   const isTargetM2Kiri = pointer === 'kiri2' || pointer === 'm2kiri';
-  const isTargetM2Kanan = pointer === 'kanan2' || pointer === 'x' || pointer === 'm2kanan' || (!isTargetM1Kiri && !isTargetM1Kanan && !isTargetM2Kiri);
+  const isTargetM2Right = pointer === 'kanan2' || pointer === 'x' || pointer === 'm2kanan' || (!isTargetM1Kiri && !isTargetM1Kanan && !isTargetM2Kiri);
 
   const drawPoleBadge = (bx: number, by: number) => `
-    <circle cx="${bx}" cy="${by}" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${bx}" y="${by + 4.5}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+    <circle cx="${bx}" cy="${by}" r="15" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#mag_shadow)"/>
+    <text x="${bx}" y="${by + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
   `;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 230" width="480" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
+    <filter id="mag_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="mag_card_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="mag_red_u" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="40%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="mag_blue_s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="40%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
     <marker id="arrMagR" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0f172a" />
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#1e293b" />
+    </marker>
+    <marker id="arrMagL" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#1e293b" />
+    </marker>
+    <marker id="arrFluxB" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 2 L 8 5 L 0 8 z" fill="#0284c7" />
     </marker>
   </defs>
 
-  <rect width="480" height="230" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="240" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Interaksi Gaya Magnet</text>
+  <!-- Outer Frame -->
+  <rect x="4" y="4" width="552" height="292" rx="10" fill="url(#mag_card_bg)" stroke="#cbd5e1" stroke-width="1.5" filter="url(#mag_shadow)"/>
+
+  <!-- Header Section -->
+  <rect x="150" y="10" width="260" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="280" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">FISIKA &amp; KEMAGNETAN - HUKUM KUTUB MAGNET</text>
+  <text x="280" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Interaksi Gaya Magnet</text>
+  <text x="280" y="56" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Pola garis gaya magnet dan sifat interaksi kutub senama &amp; tak senama</text>
 
   <!-- MAGNET 1 (KIRI) -->
   <g>
-    <rect x="${m1X}" y="${m1Y}" width="${halfW}" height="${mh}" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" rx="3"/>
+    <!-- Kutub Utara (U) -->
+    <rect x="${m1X}" y="${m1Y}" width="${halfW}" height="${mh}" rx="4" fill="url(#mag_red_u)" stroke="#991b1b" stroke-width="2"/>
+    <rect x="${m1X + 3}" y="${m1Y + 3}" width="${halfW - 6}" height="6" rx="2" fill="#ffffff" fill-opacity="0.25"/>
     ${isTargetM1Kiri ? drawPoleBadge(m1X + halfW / 2, m1Y + mh / 2) : `
-      <text x="${m1X + halfW / 2}" y="${m1Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">U</text>
+      <text x="${m1X + halfW / 2}" y="${m1Y + mh / 2 + 7}" text-anchor="middle" font-size="22" font-weight="bold" fill="#ffffff">U</text>
     `}
-    <rect x="${m1X + halfW}" y="${m1Y}" width="${halfW}" height="${mh}" fill="#3b82f6" stroke="#1e40af" stroke-width="1.5" rx="3"/>
+
+    <!-- Kutub Selatan (S) -->
+    <rect x="${m1X + halfW}" y="${m1Y}" width="${halfW}" height="${mh}" rx="4" fill="url(#mag_blue_s)" stroke="#1e40af" stroke-width="2"/>
+    <rect x="${m1X + halfW + 3}" y="${m1Y + 3}" width="${halfW - 6}" height="6" rx="2" fill="#ffffff" fill-opacity="0.25"/>
     ${isTargetM1Kanan ? drawPoleBadge(m1X + halfW * 1.5, m1Y + mh / 2) : `
-      <text x="${m1X + halfW * 1.5}" y="${m1Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">S</text>
+      <text x="${m1X + halfW * 1.5}" y="${m1Y + mh / 2 + 7}" text-anchor="middle" font-size="22" font-weight="bold" fill="#ffffff">S</text>
     `}
-    <text x="${m1X + halfW}" y="${m1Y + mh + 18}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Magnet 1</text>
+
+    <!-- Divider notch -->
+    <line x1="${m1X + halfW}" y1="${m1Y}" x2="${m1X + halfW}" y2="${m1Y + mh}" stroke="#0f172a" stroke-width="2"/>
+
+    <!-- Label Magnet 1 -->
+    <rect x="${m1X + halfW - 36}" y="${m1Y + mh + 10}" width="72" height="18" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="${m1X + halfW}" y="${m1Y + mh + 23}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#334155">Magnet 1</text>
   </g>
 
-  <!-- INTERAKSI GAYA (TENGAH) -->
+  <!-- INTERAKSI GAYA & MEDAN MAGNET (TENGAH) -->
   <g>
     ${isTarik ? `
-      <line x1="200" y1="${m1Y + mh / 2 - 8}" x2="235" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
-      <line x1="280" y1="${m1Y + mh / 2 - 8}" x2="245" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
-      <rect x="200" y="${m1Y + mh / 2 + 6}" width="80" height="20" rx="4" fill="#dcfce7"/>
-      <text x="240" y="${m1Y + mh / 2 + 20}" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">Tarik-Menarik</text>
+      <!-- Garis Gaya Magnetik Tarik-Menarik (Menyatu Antar Kutub) -->
+      <path d="M 190,110 Q 280,85 370,110" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,4" marker-end="url(#arrFluxB)"/>
+      <line x1="190" y1="127" x2="370" y2="127" stroke="#0284c7" stroke-width="2" stroke-dasharray="4,4"/>
+      <path d="M 190,144 Q 280,169 370,144" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="4,4" marker-end="url(#arrFluxB)"/>
+
+      <!-- Vektor Gaya Tarik (Menuju Satu Sama Lain) -->
+      <line x1="210" y1="127" x2="255" y2="127" stroke="#16a34a" stroke-width="3.5" marker-end="url(#arrMagR)"/>
+      <line x1="350" y1="127" x2="305" y2="127" stroke="#16a34a" stroke-width="3.5" marker-end="url(#arrMagL)"/>
+
+      <!-- Badge Status Interaksi -->
+      <rect x="225" y="86" width="110" height="24" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+      <text x="280" y="102" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803d">Tarik-Menarik</text>
+      <text x="280" y="160" text-anchor="middle" font-size="9" font-weight="600" fill="#64748b">Kutub Tidak Senama (U - S)</text>
     ` : `
-      <line x1="225" y1="${m1Y + mh / 2 - 8}" x2="195" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
-      <line x1="255" y1="${m1Y + mh / 2 - 8}" x2="285" y2="${m1Y + mh / 2 - 8}" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arrMagR)"/>
-      <rect x="200" y="${m1Y + mh / 2 + 6}" width="80" height="20" rx="4" fill="#fee2e2"/>
-      <text x="240" y="${m1Y + mh / 2 + 20}" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">Tolak-Menolak</text>
+      <!-- Garis Gaya Magnetik Tolak-Menolak (Membelok Menjauh) -->
+      <path d="M 190,114 Q 240,114 240,78" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="4,4"/>
+      <path d="M 190,140 Q 240,140 240,176" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="4,4"/>
+      <path d="M 370,114 Q 320,114 320,78" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="4,4"/>
+      <path d="M 370,140 Q 320,140 320,176" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="4,4"/>
+      <!-- Titik Netral di Tengah -->
+      <circle cx="280" cy="127" r="3" fill="#94a3b8"/>
+
+      <!-- Vektor Gaya Tolak (Menjauh Satu Sama Lain) -->
+      <line x1="250" y1="127" x2="205" y2="127" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrMagL)"/>
+      <line x1="310" y1="127" x2="355" y2="127" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrMagR)"/>
+
+      <!-- Badge Status Interaksi -->
+      <rect x="225" y="86" width="110" height="24" rx="12" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="280" y="102" text-anchor="middle" font-size="11" font-weight="bold" fill="#b91c1c">Tolak-Menolak</text>
+      <text x="280" y="160" text-anchor="middle" font-size="9" font-weight="600" fill="#64748b">Kutub Senama (${m2Left} - ${m2Left})</text>
     `}
   </g>
 
   <!-- MAGNET 2 (KANAN) -->
   <g>
-    <rect x="${m2X}" y="${m2Y}" width="${halfW}" height="${mh}" fill="${m2Kiri === 'U' ? '#ef4444' : '#3b82f6'}" stroke="#1e293b" stroke-width="1.5" rx="3"/>
+    <!-- Kutub Kiri Magnet 2 -->
+    <rect x="${m2X}" y="${m2Y}" width="${halfW}" height="${mh}" rx="4" fill="${m2Left === 'U' ? 'url(#mag_red_u)' : 'url(#mag_blue_s)'}" stroke="${m2Left === 'U' ? '#991b1b' : '#1e40af'}" stroke-width="2"/>
+    <rect x="${m2X + 3}" y="${m2Y + 3}" width="${halfW - 6}" height="6" rx="2" fill="#ffffff" fill-opacity="0.25"/>
     ${isTargetM2Kiri ? drawPoleBadge(m2X + halfW / 2, m2Y + mh / 2) : `
-      <text x="${m2X + halfW / 2}" y="${m2Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">${m2Kiri}</text>
+      <text x="${m2X + halfW / 2}" y="${m2Y + mh / 2 + 7}" text-anchor="middle" font-size="22" font-weight="bold" fill="#ffffff">${m2Left}</text>
     `}
 
-    <rect x="${m2X + halfW}" y="${m2Y}" width="${halfW}" height="${mh}" fill="${m2Kanan === 'U' ? '#ef4444' : '#3b82f6'}" stroke="#1e293b" stroke-width="1.5" rx="3"/>
-    ${isTargetM2Kanan ? drawPoleBadge(m2X + halfW * 1.5, m2Y + mh / 2) : `
-      <text x="${m2X + halfW * 1.5}" y="${m2Y + mh / 2 + 6}" text-anchor="middle" font-size="18" font-weight="bold" fill="#ffffff">${m2Kanan}</text>
+    <!-- Kutub Kanan Magnet 2 -->
+    <rect x="${m2X + halfW}" y="${m2Y}" width="${halfW}" height="${mh}" rx="4" fill="${m2Right === 'U' ? 'url(#mag_red_u)' : 'url(#mag_blue_s)'}" stroke="${m2Right === 'U' ? '#991b1b' : '#1e40af'}" stroke-width="2"/>
+    <rect x="${m2X + halfW + 3}" y="${m2Y + 3}" width="${halfW - 6}" height="6" rx="2" fill="#ffffff" fill-opacity="0.25"/>
+    ${isTargetM2Right ? drawPoleBadge(m2X + halfW * 1.5, m2Y + mh / 2) : `
+      <text x="${m2X + halfW * 1.5}" y="${m2Y + mh / 2 + 7}" text-anchor="middle" font-size="22" font-weight="bold" fill="#ffffff">${m2Right}</text>
     `}
-    <text x="${m2X + halfW}" y="${m2Y + mh + 18}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Magnet 2</text>
+
+    <!-- Divider notch -->
+    <line x1="${m2X + halfW}" y1="${m2Y}" x2="${m2X + halfW}" y2="${m2Y + mh}" stroke="#0f172a" stroke-width="2"/>
+
+    <!-- Label Magnet 2 -->
+    <rect x="${m2X + halfW - 36}" y="${m2Y + mh + 10}" width="72" height="18" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="${m2X + halfW}" y="${m2Y + mh + 23}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#334155">Magnet 2</text>
   </g>
 
-  <text x="240" y="215" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Perhatikan kutub magnet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!</text>
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="260" width="440" height="24" rx="6" fill="#0f172a"/>
+  <text x="280" y="276" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Perhatikan kutub magnet yang ditunjuk oleh huruf "${escapeXml(labelChar)}"!${isTargetM1Kiri || isTargetM1Kanan || isTargetM2Kiri || isTargetM2Right ? '' : ` [${escapeXml(labelChar)}]`}</text>
 </svg>`;
 }
 
@@ -480,61 +620,98 @@ export function renderPesawatSederhanaSvg(params: {
     const tipeKatrol = params.tipeKatrol || 'tetap';
     const isTetap = tipeKatrol === 'tetap';
 
-    let target = isTetap ? { x: 210, y: 65 } : { x: 210, y: 140 };
-    if (pointer.includes('beban')) target = { x: 210, y: 195 };
-    else if (pointer.includes('kuasa') || pointer.includes('tali')) target = { x: 270, y: 130 };
+    let target = isTetap ? { x: 280, y: 130 } : { x: 280, y: 165 };
+    const isTargetBeban = pointer.includes('beban');
+    const isTargetKuasa = pointer.includes('kuasa') || pointer.includes('tali');
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 260" width="380" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+    if (isTargetBeban) {
+      target = isTetap ? { x: 242, y: 236 } : { x: 280, y: 228 };
+    } else if (isTargetKuasa) {
+      target = isTetap ? { x: 356, y: 215 } : { x: 356, y: 125 };
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" width="560" height="340" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
     <defs>
+      <filter id="pulley_shadow" x="-5%" y="-5%" width="110%" height="110%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+      </filter>
+      <linearGradient id="pulley_card_bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#f8fafc"/>
+      </linearGradient>
       <marker id="arrForce" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
         <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#dc2626" />
       </marker>
+      <marker id="arrForceUp" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#dc2626" />
+      </marker>
     </defs>
-    <rect width="380" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-    <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pesawat Sederhana: Katrol ${isTetap ? 'Tetap' : 'Bebas'}</text>
 
-    <!-- Langit-langit (Gantungan) -->
-    <rect x="130" y="38" width="120" height="12" fill="#64748b" rx="2"/>
-    <line x1="140" y1="38" x2="130" y2="28" stroke="#475569" stroke-width="1.5"/>
-    <line x1="170" y1="38" x2="160" y2="28" stroke="#475569" stroke-width="1.5"/>
-    <line x1="200" y1="38" x2="190" y2="28" stroke="#475569" stroke-width="1.5"/>
-    <line x1="230" y1="38" x2="220" y2="28" stroke="#475569" stroke-width="1.5"/>
+    <!-- Frame Background -->
+    <rect x="4" y="4" width="552" height="332" rx="10" fill="url(#pulley_card_bg)" stroke="#cbd5e1" stroke-width="1.5" filter="url(#pulley_shadow)"/>
+
+    <!-- Header Section -->
+    <rect x="150" y="10" width="260" height="18" rx="9" fill="#e0f2fe"/>
+    <text x="280" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">FISIKA MEKANIKA - PESAWAT SEDERHANA</text>
+    <text x="280" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Pesawat Sederhana: Katrol ${isTetap ? 'Tetap' : 'Bebas'}</text>
+    <text x="280" y="58" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Prinsip kerja katrol ${isTetap ? 'tetap (mengubah arah gaya kuasa, KM = 1)' : 'bebas (meringankan gaya angkat beban, KM = 2)'}</text>
+
+    <!-- Langit-langit (Gantungan Tetap Berarsir) -->
+    <rect x="180" y="72" width="200" height="14" fill="#475569" rx="2"/>
+    <g stroke="#334155" stroke-width="1.5">
+      ${[190, 210, 230, 250, 270, 290, 310, 330, 350, 370].map(hx => `<line x1="${hx}" y1="72" x2="${hx - 8}" y2="64"/>`).join('')}
+    </g>
 
     ${isTetap ? `
-      <!-- Gantungan poros katrol tetap -->
-      <line x1="190" y1="50" x2="190" y2="85" stroke="#0f172a" stroke-width="3"/>
-      <!-- Roda Katrol -->
-      <circle cx="190" cy="85" r="30" fill="#f1f5f9" stroke="#0f172a" stroke-width="3"/>
-      <circle cx="190" cy="85" r="5" fill="#0f172a"/>
+      <!-- Gantungan Poros Katrol Tetap -->
+      <line x1="280" y1="86" x2="280" y2="130" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+
+      <!-- Roda Katrol Beralur -->
+      <circle cx="280" cy="130" r="38" fill="#f1f5f9" stroke="#1e293b" stroke-width="3"/>
+      <circle cx="280" cy="130" r="30" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+      <circle cx="280" cy="130" r="7" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
+
       <!-- Tali Kiri (ke Beban) -->
-      <line x1="160" y1="85" x2="160" y2="165" stroke="#334155" stroke-width="2.5"/>
-      <!-- Beban Kotak W -->
-      <rect x="138" y="165" width="44" height="40" rx="4" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
-      <text x="160" y="189" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">W</text>
-      <!-- Tali Kanan (Kuasa F) -->
-      <line x1="220" y1="85" x2="220" y2="155" stroke="#334155" stroke-width="2.5"/>
-      <line x1="220" y1="155" x2="220" y2="185" stroke="#dc2626" stroke-width="3" marker-end="url(#arrForce)"/>
-      <text x="235" y="185" font-size="12" font-weight="bold" fill="#dc2626">F (Kuasa)</text>
+      <line x1="242" y1="130" x2="242" y2="210" stroke="#334155" stroke-width="3.5"/>
+      <!-- Kait Gantungan Beban -->
+      <path d="M 242,204 Q 236,212 242,212 Q 248,212 242,204" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+      <!-- Beban Kotak W (Besi Tempa) -->
+      <rect x="218" y="212" width="48" height="42" rx="4" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+      ${!isTargetBeban ? `<text x="242" y="238" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">W</text>` : ''}
+      <text x="242" y="272" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">Beban</text>
+
+      <!-- Tali Kanan (Kuasa F ditarik ke bawah) -->
+      <line x1="318" y1="130" x2="318" y2="195" stroke="#334155" stroke-width="3.5"/>
+      <line x1="318" y1="195" x2="318" y2="245" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrForce)"/>
+      <text x="336" y="235" font-size="12" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
     ` : `
-      <!-- Tali Tetap Tergantung di Langit-langit -->
-      <line x1="160" y1="50" x2="160" y2="125" stroke="#334155" stroke-width="2.5"/>
-      <!-- Roda Katrol Bebas -->
-      <circle cx="190" cy="125" r="30" fill="#f1f5f9" stroke="#0f172a" stroke-width="3"/>
-      <circle cx="190" cy="125" r="5" fill="#0f172a"/>
-      <!-- Gantungan Beban dari Poros Katrol -->
-      <line x1="190" y1="130" x2="190" y2="165" stroke="#0f172a" stroke-width="3"/>
-      <rect x="168" y="165" width="44" height="40" rx="4" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
-      <text x="190" y="189" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">W</text>
+      <!-- Tali Tetap Tergantung di Langit-langit Kiri -->
+      <line x1="242" y1="86" x2="242" y2="165" stroke="#334155" stroke-width="3.5"/>
+      <circle cx="242" cy="86" r="4" fill="#0f172a"/>
+
+      <!-- Roda Katrol Bebas Bergerak -->
+      <circle cx="280" cy="165" r="38" fill="#f1f5f9" stroke="#1e293b" stroke-width="3"/>
+      <circle cx="280" cy="165" r="30" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+      <circle cx="280" cy="165" r="7" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
+
+      <!-- Gantungan Beban dari Poros Roda -->
+      <line x1="280" y1="172" x2="280" y2="204" stroke="#1e293b" stroke-width="3"/>
+      <rect x="256" y="204" width="48" height="42" rx="4" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+      ${!isTargetBeban ? `<text x="280" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">W</text>` : ''}
+      <text x="280" y="264" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">Beban</text>
+
       <!-- Tali Kanan Ditarik ke Atas -->
-      <line x1="220" y1="125" x2="220" y2="70" stroke="#dc2626" stroke-width="3" marker-end="url(#arrForce)"/>
-      <text x="235" y="75" font-size="12" font-weight="bold" fill="#dc2626">F (Kuasa)</text>
+      <line x1="318" y1="165" x2="318" y2="115" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrForceUp)"/>
+      <text x="336" y="125" font-size="12" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
     `}
 
     <!-- Target Badge X -->
-    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
+    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#pulley_shadow)"/>
     <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-    <text x="190" y="246" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Titik/bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+    <!-- Bottom Interactive Question Prompt Banner -->
+    <rect x="60" y="294" width="440" height="24" rx="6" fill="#0f172a"/>
+    <text x="280" y="310" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Titik/bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
   </svg>`;
   }
 
@@ -544,68 +721,105 @@ export function renderPesawatSederhanaSvg(params: {
   // Tuas Jenis 2: Tumpu - Beban - Kuasa
   // Tuas Jenis 3: Tumpu - Kuasa - Beban
 
-  let tumpuX = 190;
-  let bebanX = 90;
-  let kuasaX = 320;
+  let tumpuX = 260;
+  let bebanX = 130;
+  let kuasaX = 420;
   let kuasaDir = 'down'; // panah ke bawah
 
   if (tipeTuas === 2) {
-    tumpuX = 70;
-    bebanX = 180;
-    kuasaX = 330;
+    tumpuX = 90;
+    bebanX = 250;
+    kuasaX = 440;
     kuasaDir = 'up';
   } else if (tipeTuas === 3) {
-    tumpuX = 70;
-    kuasaX = 180;
-    bebanX = 320;
+    tumpuX = 90;
+    kuasaX = 250;
+    bebanX = 420;
     kuasaDir = 'up';
   }
 
-  let target = { x: tumpuX, y: 155 };
-  if (pointer.includes('beban')) target = { x: bebanX, y: 95 };
-  else if (pointer.includes('kuasa')) target = { x: kuasaX, y: 95 };
+  const isTargetBeban = pointer.includes('beban');
+  const isTargetKuasa = pointer.includes('kuasa');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  let target = { x: tumpuX, y: 205 };
+  if (isTargetBeban) target = { x: bebanX, y: 145 };
+  else if (isTargetKuasa) target = { x: kuasaX, y: 135 };
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 340" width="560" height="340" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
   <defs>
+    <filter id="lever_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="lever_card_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="mech_beam_grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="50%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="mech_tumpu_grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
     <marker id="arrForceTuas" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#dc2626" />
     </marker>
+    <marker id="arrForceTuasUp" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#dc2626" />
+    </marker>
   </defs>
 
-  <rect width="420" height="250" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-  <text x="210" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Pesawat Sederhana: Tuas / Pengungkit (Jenis ${tipeTuas})</text>
+  <!-- Frame Background -->
+  <rect x="4" y="4" width="552" height="332" rx="10" fill="url(#lever_card_bg)" stroke="#cbd5e1" stroke-width="1.5" filter="url(#lever_shadow)"/>
 
-  <!-- Garis Tanah / Landasan -->
-  <line x1="30" y1="180" x2="390" y2="180" stroke="#94a3b8" stroke-width="2"/>
+  <!-- Header Section -->
+  <rect x="150" y="10" width="260" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="280" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">FISIKA MEKANIKA - PESAWAT SEDERHANA</text>
+  <text x="280" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Pesawat Sederhana: Tuas / Pengungkit (Jenis ${tipeTuas})</text>
+  <text x="280" y="58" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Analisis titik tumpu, lengan beban, lengan kuasa, dan keuntungan mekanis</text>
 
-  <!-- Batang Tuas Horizontal -->
-  <rect x="50" y="132" width="320" height="12" rx="3" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+  <!-- Garis Landasan / Meja Percobaan -->
+  <line x1="40" y1="230" x2="520" y2="230" stroke="#94a3b8" stroke-width="2.5"/>
+  <g stroke="#cbd5e1" stroke-width="1.5">
+    ${[60, 100, 140, 180, 220, 260, 300, 340, 380, 420, 460, 500].map(gx => `<line x1="${gx}" y1="230" x2="${gx - 10}" y2="242"/>`).join('')}
+  </g>
 
-  <!-- Titik Tumpu (Segitiga) -->
-  <polygon points="${tumpuX},144 ${tumpuX - 18},180 ${tumpuX + 18},180" fill="#0284c7" stroke="#0f172a" stroke-width="2"/>
-  <text x="${tumpuX}" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Titik Tumpu</text>
+  <!-- Batang Tuas Berskala Logam -->
+  <rect x="50" y="165" width="460" height="15" rx="3" fill="url(#mech_beam_grad)" stroke="#1e293b" stroke-width="2"/>
+  <g stroke="#94a3b8" stroke-width="1">
+    ${[80, 110, 140, 170, 200, 230, 260, 290, 320, 350, 380, 410, 440, 470].map(tx => `<line x1="${tx}" y1="165" x2="${tx}" y2="171"/>`).join('')}
+  </g>
 
-  <!-- Beban (Kotak W) -->
-  <rect x="${bebanX - 22}" y="92" width="44" height="40" rx="4" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
-  <text x="${bebanX}" y="116" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">W</text>
-  <text x="${bebanX}" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">Beban</text>
+  <!-- Titik Tumpu (Segitiga Prisma 3D) -->
+  <polygon points="${tumpuX},180 ${tumpuX - 22},230 ${tumpuX + 22},230" fill="url(#mech_tumpu_grad)" stroke="#0f172a" stroke-width="2"/>
+  <circle cx="${tumpuX}" cy="180" r="4.5" fill="#f59e0b"/>
+  <text x="${tumpuX}" y="252" text-anchor="middle" font-size="11" font-weight="bold" fill="#0369a1">Titik Tumpu</text>
 
-  <!-- Kuasa (Panah F) -->
+  <!-- Beban (Kotak W Besi Tempa) -->
+  <rect x="${bebanX - 24}" y="115" width="48" height="48" rx="4" fill="#64748b" stroke="#0f172a" stroke-width="2"/>
+  ${!isTargetBeban ? `<text x="${bebanX}" y="145" text-anchor="middle" font-size="15" font-weight="bold" fill="#ffffff">W</text>` : ''}
+  <text x="${bebanX}" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">Beban</text>
+
+  <!-- Kuasa (Vektor Panah F) -->
   ${kuasaDir === 'down' ? `
-    <line x1="${kuasaX}" y1="80" x2="${kuasaX}" y2="128" stroke="#dc2626" stroke-width="3" marker-end="url(#arrForceTuas)"/>
-    <text x="${kuasaX}" y="72" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
+    <line x1="${kuasaX}" y1="105" x2="${kuasaX}" y2="160" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrForceTuas)"/>
+    <text x="${kuasaX}" y="95" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
   ` : `
-    <line x1="${kuasaX}" y1="144" x2="${kuasaX}" y2="92" stroke="#dc2626" stroke-width="3" marker-end="url(#arrForceTuas)"/>
-    <text x="${kuasaX}" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
+    <line x1="${kuasaX}" y1="180" x2="${kuasaX}" y2="115" stroke="#dc2626" stroke-width="3.5" marker-end="url(#arrForceTuasUp)"/>
+    <text x="${kuasaX}" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#dc2626">Kuasa (F)</text>
   `}
 
   <!-- Target Badge X -->
   <g>
-    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.25))"/>
+    <circle cx="${target.x}" cy="${target.y}" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#lever_shadow)"/>
     <text x="${target.x}" y="${target.y + 4.5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
   </g>
 
-  <text x="210" y="236" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="294" width="440" height="24" rx="6" fill="#0f172a"/>
+  <text x="280" y="310" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Bagian yang ditunjuk oleh huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -966,35 +1180,170 @@ export function renderMacamMacamGayaSvg(params: any): string {
   const labelChar = params.label || 'X';
 
   const types = [
-    { id: 'otot', name: 'Gaya Otot', icon: '💪', x: 60, y: 70 },
-    { id: 'gesek', name: 'Gaya Gesek', icon: '🛞', x: 160, y: 70 },
-    { id: 'gravitasi', name: 'Gaya Gravitasi', icon: '🍎', x: 260, y: 70 },
-    { id: 'pegas', name: 'Gaya Pegas', icon: '🏹', x: 360, y: 70 }
+    { id: 'otot', name: 'Gaya Otot', sub: 'Kontraksi otot tubuh', cat: 'Gaya Sentuh', cx: 84, x: 18 },
+    { id: 'gesek', name: 'Gaya Gesek', sub: 'Hambatan bidang sentuh', cat: 'Gaya Sentuh', cx: 228, x: 162 },
+    { id: 'gravitasi', name: 'Gaya Gravitasi', sub: 'Tarik pusat bumi', cat: 'Gaya Tak Sentuh', cx: 372, x: 306 },
+    { id: 'pegas', name: 'Gaya Pegas', sub: 'Elastisitas benda', cat: 'Gaya Sentuh', cx: 516, x: 450 }
   ];
 
   let target = types.find(t => pointer.includes(t.id)) || types[1];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" width="420" height="180" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="420" height="180" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" rx="8"/>
-  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Ragam Jenis Gaya dalam Kehidupan Sehari-hari</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 330" width="600" height="330" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <defs>
+    <filter id="gaya_shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="gaya_card_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="gaya_active_bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+    <marker id="arrGayaUp" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#dc2626" />
+    </marker>
+    <marker id="arrGayaDown" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#dc2626" />
+    </marker>
+    <marker id="arrGayaRight" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#16a34a" />
+    </marker>
+    <marker id="arrGayaLeft" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#dc2626" />
+    </marker>
+    <marker id="arrGayaBlueUp" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 10 1.5 L 0 5 L 10 8.5 z" fill="#0284c7" />
+    </marker>
+  </defs>
 
+  <!-- Outer Frame -->
+  <rect x="4" y="4" width="592" height="322" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#gaya_shadow)"/>
+
+  <!-- Header Section -->
+  <rect x="170" y="10" width="260" height="18" rx="9" fill="#e0f2fe"/>
+  <text x="300" y="22" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0369a1" letter-spacing="0.5">FISIKA &amp; MEKANIKA - MACAM-MACAM GAYA</text>
+  <text x="300" y="42" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#0f172a">Ragam Jenis Gaya dalam Kehidupan Sehari-hari</text>
+  <text x="300" y="58" text-anchor="middle" font-size="9.5" font-weight="500" fill="#64748b">Karakteristik, arah vektor, dan penerapan gaya dalam aktivitas sehari-hari</text>
+
+  <!-- 4 Illustrated Force Panels -->
   ${types.map(t => {
     const isTarget = t.id === target.id;
+    const bgFill = isTarget ? 'url(#gaya_active_bg)' : 'url(#gaya_card_bg)';
+    const strokeColor = isTarget ? '#e11d48' : '#cbd5e1';
+    const strokeWidth = isTarget ? 2.5 : 1;
+
     return `
-    <g transform="translate(${t.x - 38}, 42)">
-      <rect width="76" height="76" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.6"/>
-      <circle cx="38" cy="24" r="14" fill="#eff6ff" stroke="#2563eb" stroke-width="1"/>
-      <text x="38" y="29" text-anchor="middle" font-size="11">${t.icon}</text>
+    <g>
+      <!-- Card Container -->
+      <rect x="${t.x}" y="74" width="132" height="206" rx="8" fill="${bgFill}" stroke="${strokeColor}" stroke-width="${strokeWidth}" filter="url(#gaya_shadow)"/>
+
+      <!-- Illustrated Vector Area -->
+      ${t.id === 'otot' ? `
+        <!-- 1. Gaya Otot (Lengan Mengangkat Dumbel) -->
+        <g>
+          <!-- Palang Dumbel Logam -->
+          <line x1="48" y1="125" x2="120" y2="125" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
+          <!-- Piringan Beban Besi Kiri & Kanan -->
+          <rect x="44" y="110" width="8" height="30" rx="2" fill="#0f172a"/>
+          <rect x="116" y="110" width="8" height="30" rx="2" fill="#0f172a"/>
+          <!-- Lengan Berotot -->
+          <path d="M 80,130 L 76,160 L 92,160 L 88,130 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
+          <ellipse cx="84" cy="125" rx="8" ry="6" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
+          <path d="M 76,160 Q 64,175 76,192 L 94,188 Q 102,172 92,160 Z" fill="#fca5a5" stroke="#dc2626" stroke-width="1.5"/>
+          <!-- Vektor Gaya Angkat Otot Ke Atas -->
+          <line x1="84" y1="115" x2="84" y2="88" stroke="#dc2626" stroke-width="3" marker-end="url(#arrGayaUp)"/>
+          <rect x="94" y="90" width="30" height="15" rx="3" fill="#fee2e2"/>
+          <text x="109" y="101" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">F_otot</text>
+        </g>
+      ` : ''}
+
+      ${t.id === 'gesek' ? `
+        <!-- 2. Gaya Gesek (Balok di Lantai Kasar + Inset) -->
+        <g>
+          <!-- Lantai Bertekstur -->
+          <line x1="172" y1="168" x2="284" y2="168" stroke="#64748b" stroke-width="2.5"/>
+          <g stroke="#94a3b8" stroke-width="1">
+            ${[178, 192, 206, 220, 234, 248, 262, 276].map(lx => `<line x1="${lx}" y1="168" x2="${lx - 6}" y2="176"/>`).join('')}
+          </g>
+          <!-- Balok Kayu Bergerak ke Kanan -->
+          <rect x="198" y="128" width="60" height="40" rx="3" fill="#fed7aa" stroke="#c2410c" stroke-width="2"/>
+          <line x1="205" y1="138" x2="251" y2="138" stroke="#fcd34d" stroke-width="1"/>
+          <!-- Vektor Gaya Tarik ke Kanan -->
+          <line x1="258" y1="148" x2="282" y2="148" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arrGayaRight)"/>
+          <!-- Vektor Gaya Gesek ke Kiri di Bidang Sentuh -->
+          <line x1="228" y1="174" x2="188" y2="174" stroke="#dc2626" stroke-width="2.5" marker-end="url(#arrGayaLeft)"/>
+          <text x="186" y="187" font-size="8.5" font-weight="bold" fill="#dc2626">f_gesek</text>
+          <!-- Inset Mikroskopis Gerigi Permukaan -->
+          <circle cx="254" cy="100" r="14" fill="#f8fafc" stroke="#64748b" stroke-width="1.2"/>
+          <path d="M 243,100 L 246,97 L 249,100 L 252,97 L 255,100 L 258,97 L 261,100 L 265,100" stroke="#c2410c" stroke-width="1.3" fill="none"/>
+        </g>
+      ` : ''}
+
+      ${t.id === 'gravitasi' ? `
+        <!-- 3. Gaya Gravitasi (Apel Jatuh Bebas) -->
+        <g>
+          <!-- Dahan Pohon -->
+          <path d="M 314,92 Q 345,95 385,86" stroke="#78350f" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <ellipse cx="330" cy="88" rx="8" ry="4" fill="#22c55e"/>
+          <ellipse cx="350" cy="86" rx="7" ry="3.5" fill="#16a34a"/>
+          <!-- Buah Apel Merah Jatuh -->
+          <circle cx="372" cy="130" r="11" fill="#ef4444" stroke="#b91c1c" stroke-width="1.5"/>
+          <path d="M 372,119 Q 375,114 372,111" stroke="#78350f" stroke-width="1.5" fill="none"/>
+          <ellipse cx="376" cy="114" rx="4" ry="2" fill="#22c55e"/>
+          <!-- Lintasan Jatuh Putus-putus -->
+          <line x1="372" y1="92" x2="372" y2="116" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <!-- Vektor Percepatan Gravitasi ke Bawah -->
+          <line x1="372" y1="145" x2="372" y2="178" stroke="#dc2626" stroke-width="3" marker-end="url(#arrGayaDown)"/>
+          <rect x="382" y="152" width="22" height="15" rx="3" fill="#fee2e2"/>
+          <text x="393" y="163" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#dc2626">g</text>
+          <!-- Permukaan Tanah Rumput -->
+          <line x1="320" y1="190" x2="424" y2="190" stroke="#16a34a" stroke-width="2"/>
+        </g>
+      ` : ''}
+
+      ${t.id === 'pegas' ? `
+        <!-- 4. Gaya Pegas (Dinamometer Spiral) -->
+        <g>
+          <!-- Gantungan Atas -->
+          <rect x="496" y="86" width="40" height="6" rx="1" fill="#475569"/>
+          <!-- Tabung Dinamometer Berskala -->
+          <rect x="506" y="92" width="20" height="66" rx="3" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+          <g stroke="#94a3b8" stroke-width="1">
+            ${[98, 106, 114, 122, 130, 138, 146].map(sy => `<line x1="520" y1="${sy}" x2="524" y2="${sy}"/>`).join('')}
+          </g>
+          <!-- Pegas Spiral Baja -->
+          <path d="M 516,96 L 512,102 L 520,108 L 512,114 L 520,120 L 512,126 L 520,132 L 516,138" fill="none" stroke="#0284c7" stroke-width="2"/>
+          <!-- Beban Gantung Bawah -->
+          <line x1="516" y1="158" x2="516" y2="168" stroke="#334155" stroke-width="2"/>
+          <rect x="506" y="168" width="20" height="18" rx="2" fill="#64748b" stroke="#0f172a" stroke-width="1.2"/>
+          <!-- Vektor Gaya Pemulih Pegas ke Atas -->
+          <line x1="486" y1="148" x2="486" y2="110" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrGayaBlueUp)"/>
+          <text x="486" y="104" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#0284c7">F_pegas</text>
+        </g>
+      ` : ''}
+
+      <!-- Separator Line -->
+      <line x1="${t.x + 10}" y1="202" x2="${t.x + 122}" y2="202" stroke="#e2e8f0" stroke-width="1"/>
+
+      <!-- Label / Target Badge Section -->
       ${isTarget ? `
-        <circle cx="38" cy="54" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-        <text x="38" y="58" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+        <circle cx="${t.cx}" cy="230" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" filter="url(#gaya_shadow)"/>
+        <text x="${t.cx}" y="234.5" text-anchor="middle" font-size="12" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+        <text x="${t.cx}" y="258" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#be123c">${t.cat}</text>
       ` : `
-        <text x="38" y="55" text-anchor="middle" font-size="8" font-weight="bold" fill="#1e293b">${t.name}</text>
+        <text x="${t.cx}" y="222" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">${t.name}</text>
+        <text x="${t.cx}" y="240" text-anchor="middle" font-size="8.5" font-weight="500" fill="#64748b">${t.sub}</text>
+        <rect x="${t.cx - 36}" y="250" width="72" height="17" rx="3" fill="#e0f2fe"/>
+        <text x="${t.cx}" y="262" text-anchor="middle" font-size="8" font-weight="600" fill="#0369a1">${t.cat}</text>
       `}
     </g>`;
   }).join('')}
 
-  <text x="210" y="155" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Contoh gaya pada gambar bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+  <!-- Bottom Interactive Question Prompt Banner -->
+  <rect x="60" y="294" width="480" height="24" rx="6" fill="#0f172a"/>
+  <text x="300" y="310" text-anchor="middle" font-size="11" font-weight="600" fill="#f8fafc">Contoh gaya pada gambar bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
 </svg>`;
 }
 

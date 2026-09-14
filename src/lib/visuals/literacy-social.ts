@@ -780,54 +780,66 @@ export function renderRumahAdatNusantaraSvg(params: { pointer?: string; label?: 
   else if (pointer.includes('honai') || pointer.includes('papua')) activeIdx = 3;
 
   const cards = [
-    { x: 15, y: 42, nama: 'Rumah Gadang', daerah: 'Sumatra Barat (Minangkabau)' },
-    { x: 205, y: 42, nama: 'Rumah Joglo', daerah: 'Jawa Tengah / D.I. Yogyakarta' },
-    { x: 15, y: 145, nama: 'Rumah Tongkonan', daerah: 'Sulawesi Selatan (Toraja)' },
-    { x: 205, y: 145, nama: 'Rumah Honai', daerah: 'Papua Pegunungan' }
+    { x: 15, y: 44, nama: 'Rumah Gadang', daerah: 'Sumatra Barat (Minangkabau)' },
+    { x: 215, y: 44, nama: 'Rumah Joglo', daerah: 'Jawa Tengah / D.I. Yogyakarta' },
+    { x: 15, y: 144, nama: 'Rumah Tongkonan', daerah: 'Sulawesi Selatan (Toraja)' },
+    { x: 215, y: 144, nama: 'Rumah Honai', daerah: 'Papua Pegunungan' }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="200" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Rumah Adat Tradisional Nusantara</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="420" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Rumah Adat Tradisional Nusantara</text>
 
-  <!-- Panel 1: Rumah Gadang -->
-  <rect x="15" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <text x="25" y="58" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Rumah Gadang` : 'Rumah Gadang'}</text>
-  <!-- Ilustrasi Atap Gonjong Lengkung Runcing -->
-  <path d="M 28,82 Q 55,100 75,70 Q 95,100 122,82 L 115,115 L 35,115 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <text x="130" y="85" font-size="8.5" font-weight="bold" fill="#9a3412">Atap Gonjong</text>
-  <text x="130" y="98" font-size="8" fill="#64748b">Sumatra Barat</text>
+  <!-- Panel 1: Rumah Gadang (Sumatra Barat) -->
+  <rect x="15" y="44" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
+  <text x="26" y="60" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Rumah Gadang` : 'Rumah Gadang'}</text>
+  <!-- Atap Gonjong Lengkung Runcing -->
+  <path d="M 28,82 C 45,98 58,94 72,70 C 86,94 99,98 116,82 L 110,114 L 34,114 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
+  <!-- Dinding Berukir & Tiang Panggung -->
+  <line x1="42" y1="114" x2="42" y2="122" stroke="#78350f" stroke-width="2"/>
+  <line x1="72" y1="114" x2="72" y2="122" stroke="#78350f" stroke-width="2"/>
+  <line x1="102" y1="114" x2="102" y2="122" stroke="#78350f" stroke-width="2"/>
+  <text x="126" y="86" font-size="8.5" font-weight="bold" fill="#9a3412">Atap Gonjong</text>
+  <text x="126" y="100" font-size="8" fill="#64748b">Sumatra Barat</text>
 
-  <!-- Panel 2: Rumah Joglo -->
-  <rect x="205" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <text x="215" y="58" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Rumah Joglo` : 'Rumah Joglo'}</text>
-  <!-- Ilustrasi Atap Tajug Joglo -->
-  <polygon points="255,70 275,70 295,95 235,95" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <rect x="242" y="95" width="46" height="20" fill="#fef08a" stroke="#ca8a04" stroke-width="1"/>
-  <text x="305" y="85" font-size="8.5" font-weight="bold" fill="#9a3412">Atap Tajug</text>
-  <text x="305" y="98" font-size="8" fill="#64748b">Jawa Tengah</text>
+  <!-- Panel 2: Rumah Joglo (Jawa Tengah) -->
+  <rect x="215" y="44" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
+  <text x="226" y="60" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Rumah Joglo` : 'Rumah Joglo'}</text>
+  <!-- Atap Tajug Bertingkat -->
+  <polygon points="268,68 288,68 308,92 248,92" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
+  <rect x="254" y="92" width="48" height="22" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
+  <!-- Tiang Soko Guru -->
+  <line x1="262" y1="114" x2="262" y2="122" stroke="#78350f" stroke-width="2"/>
+  <line x1="294" y1="114" x2="294" y2="122" stroke="#78350f" stroke-width="2"/>
+  <text x="320" y="86" font-size="8.5" font-weight="bold" fill="#9a3412">Atap Tajug</text>
+  <text x="320" y="100" font-size="8" fill="#64748b">Jawa Tengah</text>
 
-  <!-- Panel 3: Rumah Tongkonan -->
-  <rect x="15" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <text x="25" y="161" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Rumah Tongkonan` : 'Rumah Tongkonan'}</text>
-  <!-- Ilustrasi Atap Perahu Menjulang -->
-  <path d="M 28,172 Q 75,200 122,172 L 105,215 L 45,215 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
-  <text x="130" y="188" font-size="8.5" font-weight="bold" fill="#9a3412">Bentuk Perahu</text>
-  <text x="130" y="201" font-size="8" fill="#64748b">Tana Toraja</text>
+  <!-- Panel 3: Rumah Tongkonan (Toraja) -->
+  <rect x="15" y="144" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
+  <text x="26" y="160" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Rumah Tongkonan` : 'Rumah Tongkonan'}</text>
+  <!-- Atap Perahu Menjulang Depan & Belakang -->
+  <path d="M 26,170 C 50,198 94,198 118,170 L 102,212 L 42,212 Z" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
+  <!-- Tiang Kolom Penyangga Tulak Somba -->
+  <line x1="50" y1="212" x2="50" y2="222" stroke="#78350f" stroke-width="2"/>
+  <line x1="94" y1="212" x2="94" y2="222" stroke="#78350f" stroke-width="2"/>
+  <text x="126" y="186" font-size="8.5" font-weight="bold" fill="#9a3412">Bentuk Perahu</text>
+  <text x="126" y="200" font-size="8" fill="#64748b">Tana Toraja</text>
 
-  <!-- Panel 4: Rumah Honai -->
-  <rect x="205" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
-  <text x="215" y="161" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Rumah Honai` : 'Rumah Honai'}</text>
-  <!-- Ilustrasi Kubah Jerami Honai -->
-  <path d="M 240,215 L 240,195 Q 265,165 290,195 L 290,215 Z" fill="#e2e8f0" stroke="#78350f" stroke-width="1.5"/>
-  <ellipse cx="265" cy="182" rx="28" ry="16" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
-  <text x="305" y="188" font-size="8.5" font-weight="bold" fill="#9a3412">Kubah Rumbia</text>
-  <text x="305" y="201" font-size="8" fill="#64748b">Papua</text>
+  <!-- Panel 4: Rumah Honai (Papua) -->
+  <rect x="215" y="144" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
+  <text x="226" y="160" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Rumah Honai` : 'Rumah Honai'}</text>
+  <!-- Dinding Kayu Silinder & Kubah Jerami -->
+  <path d="M 246,212 L 246,194 Q 272,162 298,194 L 298,212 Z" fill="#e2e8f0" stroke="#78350f" stroke-width="1.5"/>
+  <ellipse cx="272" cy="180" rx="30" ry="17" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
+  <rect x="265" y="200" width="14" height="12" rx="2" fill="#78350f"/>
+  <text x="320" y="186" font-size="8.5" font-weight="bold" fill="#9a3412">Kubah Rumbia</text>
+  <text x="320" y="200" font-size="8" fill="#64748b">Papua</text>
 
   <!-- Target Badge X -->
-  <circle cx="${cards[activeIdx].x + 165}" cy="${cards[activeIdx].y + 14}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cards[activeIdx].x + 165}" y="${cards[activeIdx].y + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${cards[activeIdx].x + 175}" cy="${cards[activeIdx].y + 14}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${cards[activeIdx].x + 175}" y="${cards[activeIdx].y + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="200" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Asal daerah rumah adat pada huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <text x="210" y="250" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Asal daerah atau ciri arsitektur rumah adat pada huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -842,59 +854,60 @@ export function renderAlatMusikTradisionalSvg(params: { pointer?: string; label?
   else if (pointer.includes('kolintang') || pointer.includes('minahasa') || pointer.includes('bilah')) activeIdx = 3;
 
   const cards = [
-    { x: 15, y: 42, nama: 'Angklung', cara: 'Digoyang (Getar)', asal: 'Jawa Barat' },
-    { x: 205, y: 42, title: 'Sasando', cara: 'Dipetik (Dawai)', asal: 'NTT (Pulau Rote)' },
-    { x: 15, y: 145, title: 'Tifa', cara: 'Dipukul (Membran)', asal: 'Maluku &amp; Papua' },
-    { x: 205, y: 145, title: 'Kolintang', cara: 'Dipukul (Bilah Kayu)', asal: 'Sulawesi Utara' }
+    { x: 15, y: 44, nama: 'Angklung', cara: 'Digoyang (Getar)', asal: 'Jawa Barat' },
+    { x: 215, y: 44, title: 'Sasando', cara: 'Dipetik (Dawai)', asal: 'NTT (Pulau Rote)' },
+    { x: 15, y: 144, title: 'Tifa', cara: 'Dipukul (Membran)', asal: 'Maluku &amp; Papua' },
+    { x: 215, y: 144, title: 'Kolintang', cara: 'Dipukul (Bilah Kayu)', asal: 'Sulawesi Utara' }
   ];
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <text x="200" y="22" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Alat Musik Tradisional &amp; Cara Memainkannya</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <rect width="420" height="260" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Alat Musik Tradisional &amp; Cara Memainkannya</text>
 
   <!-- Panel 1: Angklung -->
-  <rect x="15" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
-  <text x="25" y="58" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Angklung` : 'Angklung'}</text>
+  <rect x="15" y="44" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 0 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 0 ? 2 : 1}"/>
+  <text x="26" y="60" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 0 ? `[${escapeXml(labelChar)}] Angklung` : 'Angklung'}</text>
   <!-- Ilustrasi Tabung Bambu Angklung -->
-  <rect x="40" y="70" width="8" height="42" rx="2" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
-  <rect x="52" y="76" width="8" height="36" rx="2" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
-  <line x1="32" y1="112" x2="68" y2="112" stroke="#78350f" stroke-width="2.5"/>
-  <text x="80" y="85" font-size="9" font-weight="bold" fill="#15803d">Cara: Digoyang</text>
-  <text x="80" y="100" font-size="8.5" fill="#64748b">Bahan: Bambu</text>
+  <rect x="42" y="70" width="9" height="42" rx="2" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
+  <rect x="55" y="76" width="9" height="36" rx="2" fill="#fed7aa" stroke="#c2410c" stroke-width="1.2"/>
+  <line x1="34" y1="112" x2="72" y2="112" stroke="#78350f" stroke-width="2.5"/>
+  <text x="82" y="85" font-size="9" font-weight="bold" fill="#15803d">Cara: Digoyang</text>
+  <text x="82" y="100" font-size="8.5" fill="#64748b">Bahan: Bambu</text>
 
   <!-- Panel 2: Sasando -->
-  <rect x="205" y="42" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
-  <text x="215" y="58" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Sasando` : 'Sasando'}</text>
+  <rect x="215" y="44" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 1 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 1 ? 2 : 1}"/>
+  <text x="226" y="60" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 1 ? `[${escapeXml(labelChar)}] Sasando` : 'Sasando'}</text>
   <!-- Ilustrasi Wadah Daun Lontar Sasando -->
-  <path d="M 235,115 C 220,75 270,75 255,115 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
-  <line x1="245" y1="72" x2="245" y2="115" stroke="#78350f" stroke-width="2"/>
-  <text x="275" y="85" font-size="9" font-weight="bold" fill="#0284c7">Cara: Dipetik</text>
-  <text x="275" y="100" font-size="8.5" fill="#64748b">Daun Lontar &amp; Dawai</text>
+  <path d="M 238,114 C 224,74 274,74 260,114 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1.2"/>
+  <line x1="249" y1="72" x2="249" y2="114" stroke="#78350f" stroke-width="2"/>
+  <text x="282" y="85" font-size="9" font-weight="bold" fill="#0284c7">Cara: Dipetik</text>
+  <text x="282" y="100" font-size="8.5" fill="#64748b">Daun Lontar &amp; Dawai</text>
 
   <!-- Panel 3: Tifa -->
-  <rect x="15" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
-  <text x="25" y="161" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Tifa` : 'Tifa'}</text>
+  <rect x="15" y="144" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 2 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 2 ? 2 : 1}"/>
+  <text x="26" y="160" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 2 ? `[${escapeXml(labelChar)}] Tifa` : 'Tifa'}</text>
   <!-- Ilustrasi Gendang Tifa -->
-  <path d="M 40,175 Q 48,195 40,215 L 60,215 Q 52,195 60,175 Z" fill="#fed7aa" stroke="#78350f" stroke-width="1.2"/>
-  <ellipse cx="50" cy="175" rx="10" ry="4" fill="#f1f5f9" stroke="#78350f" stroke-width="1"/>
-  <text x="80" y="188" font-size="9" font-weight="bold" fill="#b45309">Cara: Dipukul</text>
-  <text x="80" y="203" font-size="8.5" fill="#64748b">Kulit Hewan / Kayu</text>
+  <path d="M 42,174 Q 50,194 42,214 L 62,214 Q 54,194 62,174 Z" fill="#fed7aa" stroke="#78350f" stroke-width="1.2"/>
+  <ellipse cx="52" cy="174" rx="10" ry="4" fill="#f1f5f9" stroke="#78350f" stroke-width="1"/>
+  <text x="82" y="187" font-size="9" font-weight="bold" fill="#b45309">Cara: Dipukul</text>
+  <text x="82" y="202" font-size="8.5" fill="#64748b">Kulit Hewan / Kayu</text>
 
   <!-- Panel 4: Kolintang -->
-  <rect x="205" y="145" width="180" height="92" rx="8" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
-  <text x="215" y="161" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Kolintang` : 'Kolintang'}</text>
+  <rect x="215" y="144" width="190" height="90" rx="8" fill="#f8fafc" stroke="${activeIdx === 3 ? '#e11d48' : '#cbd5e1'}" stroke-width="${activeIdx === 3 ? 2 : 1}"/>
+  <text x="226" y="160" font-size="10.5" font-weight="bold" fill="#0369a1">${activeIdx === 3 ? `[${escapeXml(labelChar)}] Kolintang` : 'Kolintang'}</text>
   <!-- Ilustrasi Bilah Kayu Berderet -->
-  <rect x="228" y="175" width="6" height="35" rx="1" fill="#a16207"/>
-  <rect x="236" y="178" width="6" height="32" rx="1" fill="#a16207"/>
-  <rect x="244" y="181" width="6" height="29" rx="1" fill="#a16207"/>
-  <rect x="252" y="184" width="6" height="26" rx="1" fill="#a16207"/>
-  <text x="275" y="188" font-size="9" font-weight="bold" fill="#b45309">Cara: Dipukul</text>
-  <text x="275" y="203" font-size="8.5" fill="#64748b">Bilah Kayu Khusus</text>
+  <rect x="236" y="174" width="6" height="36" rx="1" fill="#a16207"/>
+  <rect x="244" y="177" width="6" height="33" rx="1" fill="#a16207"/>
+  <rect x="252" y="180" width="6" height="30" rx="1" fill="#a16207"/>
+  <rect x="260" y="183" width="6" height="27" rx="1" fill="#a16207"/>
+  <text x="282" y="187" font-size="9" font-weight="bold" fill="#b45309">Cara: Dipukul</text>
+  <text x="282" y="202" font-size="8.5" fill="#64748b">Bilah Kayu Khusus</text>
 
   <!-- Target Badge X -->
-  <circle cx="${cards[activeIdx].x + 165}" cy="${cards[activeIdx].y + 14}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="${cards[activeIdx].x + 165}" y="${cards[activeIdx].y + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  <circle cx="${cards[activeIdx].x + 175}" cy="${cards[activeIdx].y + 14}" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+  <text x="${cards[activeIdx].x + 175}" y="${cards[activeIdx].y + 18}" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
 
-  <text x="200" y="252" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Cara memainkan alat musik pada huruf "${escapeXml(labelChar)}" adalah ...</text>
+  <text x="210" y="250" text-anchor="middle" font-size="10.5" font-weight="600" fill="#475569">Cara memainkan alat musik daerah pada huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 
@@ -1358,86 +1371,332 @@ export function renderGarisWallaceWeberSvg(params: any): string {
 
 // 25. Candi & Peninggalan Sejarah (Borobudur vs Prambanan)
 export function renderCandiDanPeninggalanSejarahSvg(params: any): string {
-  const jenis = String(params.jenis || params.candi || 'borobudur').toLowerCase();
+  const pointer = String(params.pointer || params.jenis || params.candi || 'stupa').toLowerCase();
   const labelChar = params.label || 'X';
-  const isBorobudur = jenis.includes('borobudur') || jenis.includes('buddha');
+  const isBorobudur = !pointer.includes('hindu') && !pointer.includes('prambanan') && !pointer.includes('ratna') && !pointer.includes('siwa');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 230" width="380" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="380" height="230" fill="#fafaf9" stroke="#d6d3d1" stroke-width="1.5" rx="8"/>
-  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#292524">Arsitektur Candi Bersejarah Nusantara</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 260" width="420" height="260" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <linearGradient id="bgCandiSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="stoneDark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="50%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="stoneWarm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#78716c"/>
+      <stop offset="100%" stop-color="#57534e"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Profil Candi Borobudur (Stupa Bertingkat Buddha - Kiri) -->
-  <g transform="translate(100, 115)">
-    <rect x="-65" y="45" width="130" height="15" fill="#78716c" rx="2"/>
-    <rect x="-55" y="30" width="110" height="15" fill="#a8a29e" rx="2"/>
-    <rect x="-45" y="15" width="90" height="15" fill="#78716c" rx="2"/>
-    <!-- Teras Melingkar & Stupa Utama -->
-    <ellipse cx="0" cy="15" rx="35" ry="10" fill="#a8a29e"/>
-    <ellipse cx="0" cy="0" rx="20" ry="18" fill="#78716c"/>
-    <rect x="-3" y="-22" width="6" height="12" fill="#57534e"/>
-    <text x="0" y="75" text-anchor="middle" font-size="9" font-weight="bold" fill="#44403c">Candi Borobudur</text>
-    <text x="0" y="87" text-anchor="middle" font-size="7.5" fill="#78716c">(Candi Buddha)</text>
+  <rect width="420" height="260" fill="url(#bgCandiSky)" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Komparasi Arsitektur Candi Bersejarah Nusantara</text>
+
+  <!-- Panel Kiri: Candi Borobudur (Buddha - Dinasti Syailendra) -->
+  <g transform="translate(15, 36)">
+    <rect width="190" height="182" rx="6" fill="#ffffff" stroke="${isBorobudur ? '#e11d48' : '#e2e8f0'}" stroke-width="${isBorobudur ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="190" height="26" rx="6" fill="${isBorobudur ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="95" y="17" text-anchor="middle" font-size="10.5" font-weight="bold" fill="${isBorobudur ? '#9f1239' : '#334155'}">Candi Borobudur (Buddha)</text>
+
+    <!-- Visual Candi Borobudur: Stepped Stupa Pyramidal Structure -->
+    <g transform="translate(95, 108)">
+      <!-- Landasan Dasar (Kamadhatu) -->
+      <path d="M -75,42 L 75,42 L 70,32 L -70,32 Z" fill="#57534e"/>
+      <line x1="-68" y1="37" x2="68" y2="37" stroke="#44403c" stroke-width="1"/>
+      
+      <!-- Undakan Persegi Bertingkat 1-4 (Rupadhatu) -->
+      <path d="M -68,32 L 68,32 L 64,22 L -64,22 Z" fill="#78716c"/>
+      <path d="M -62,22 L 62,22 L 57,12 L -57,12 Z" fill="#6c6660"/>
+      <path d="M -55,12 L 55,12 L 50,2 L -50,2 Z" fill="#78716c"/>
+      <path d="M -48,2 L 48,2 L 44,-8 L -44,-8 Z" fill="#6c6660"/>
+
+      <!-- Teras Melingkar Bertingkat 1-3 (Arupadhatu) -->
+      <ellipse cx="0" cy="-8" rx="42" ry="7" fill="#a8a29e" stroke="#57534e" stroke-width="0.8"/>
+      <ellipse cx="0" cy="-14" rx="34" ry="6" fill="#78716c" stroke="#57534e" stroke-width="0.8"/>
+      <ellipse cx="0" cy="-20" rx="26" ry="5" fill="#a8a29e" stroke="#57534e" stroke-width="0.8"/>
+
+      <!-- Deretan Stupa Berterawang Mini di teras melingkar -->
+      <path d="M -28,-14 Q -28,-22 -24,-22 Q -20,-22 -20,-14 Z" fill="#57534e"/>
+      <line x1="-24" y1="-22" x2="-24" y2="-25" stroke="#44403c" stroke-width="1"/>
+      
+      <path d="M -10,-12 Q -10,-20 -6,-20 Q -2,-20 -2,-12 Z" fill="#57534e"/>
+      <line x1="-6" y1="-20" x2="-6" y2="-23" stroke="#44403c" stroke-width="1"/>
+
+      <path d="M 10,-12 Q 10,-20 14,-20 Q 18,-20 18,-12 Z" fill="#57534e"/>
+      <line x1="14" y1="-20" x2="14" y2="-23" stroke="#44403c" stroke-width="1"/>
+
+      <path d="M 28,-14 Q 28,-22 32,-22 Q 36,-22 36,-14 Z" fill="#57534e"/>
+      <line x1="32" y1="-22" x2="32" y2="-25" stroke="#44403c" stroke-width="1"/>
+
+      <!-- Stupa Induk Agung Puncak -->
+      <ellipse cx="0" cy="-24" rx="16" ry="6" fill="#78716c"/>
+      <path d="M -16,-24 C -16,-42 16,-42 16,-24 Z" fill="url(#stoneWarm)" stroke="#44403c" stroke-width="1"/>
+      <!-- Puncak Tiang Chattra / Pinakel -->
+      <rect x="-2" y="-48" width="4" height="8" fill="#44403c"/>
+      <circle cx="0" cy="-49" r="2" fill="#eab308"/>
+    </g>
+
+    <!-- Keterangan Ciri Khas Arsitektur -->
+    <rect x="10" y="136" width="170" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="148" font-size="7.5" font-weight="bold" fill="#047857">&#x25AA; Puncak: Stupa Melingkar Berongga</text>
+    <text x="16" y="159" font-size="7.5" fill="#475569">&#x25AA; Bentuk: Tambun, Lebar &amp; Berundak</text>
+    <text x="16" y="170" font-size="7.5" fill="#64748b">&#x25AA; Dinasti Syailendra (Abad ke-8 M)</text>
+
+    <!-- Target Badge if Borobudur is targeted -->
     ${isBorobudur ? `
-      <circle cx="0" cy="0" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-      <text x="0" y="4" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+      <circle cx="170" cy="14" r="10" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+      <text x="170" y="18" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
     ` : ''}
   </g>
 
-  <!-- Profil Candi Prambanan (Menara Meruncing Hindu - Kanan) -->
-  <g transform="translate(280, 115)">
-    <rect x="-45" y="45" width="90" height="15" fill="#78716c" rx="2"/>
-    <!-- Menara Runcing Ramping -->
-    <polygon points="-35,45 -18,10 -8,-25 0,-35 8,-25 18,10 35,45" fill="#a8a29e" stroke="#57534e" stroke-width="1.5"/>
-    <!-- Hiasan Ratna / Puncak Meruncing -->
-    <circle cx="0" cy="-37" r="4" fill="#57534e"/>
-    <text x="0" y="75" text-anchor="middle" font-size="9" font-weight="bold" fill="#44403c">Candi Prambanan</text>
-    <text x="0" y="87" text-anchor="middle" font-size="7.5" fill="#78716c">(Candi Hindu)</text>
+  <!-- Panel Kanan: Candi Prambanan (Hindu - Dinasti Sanjaya) -->
+  <g transform="translate(215, 36)">
+    <rect width="190" height="182" rx="6" fill="#ffffff" stroke="${!isBorobudur ? '#e11d48' : '#e2e8f0'}" stroke-width="${!isBorobudur ? 2 : 1.2}"/>
+    <!-- Header Card -->
+    <rect x="0" y="0" width="190" height="26" rx="6" fill="${!isBorobudur ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="95" y="17" text-anchor="middle" font-size="10.5" font-weight="bold" fill="${!isBorobudur ? '#9f1239' : '#334155'}">Candi Prambanan (Hindu)</text>
+
+    <!-- Visual Candi Prambanan: Slender Soaring Shikhara / Prasada -->
+    <g transform="translate(95, 108)">
+      <!-- Landasan Dasar Berteras (Bhurloka) -->
+      <rect x="-65" y="36" width="130" height="8" rx="1" fill="#475569"/>
+      <rect x="-55" y="28" width="110" height="8" rx="1" fill="#64748b"/>
+      
+      <!-- Candi Sayap Pendamping (Candi Brahma & Wisnu) Silhouette -->
+      <polygon points="-50,28 -46,10 -40,-6 -36,-14 -32,-6 -26,10 -22,28" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+      <circle cx="-36" cy="-16" r="2.5" fill="#64748b"/>
+
+      <polygon points="22,28 26,10 32,-6 36,-14 40,-6 46,10 50,28" fill="#94a3b8" stroke="#64748b" stroke-width="0.8"/>
+      <circle cx="36" cy="-16" r="2.5" fill="#64748b"/>
+
+      <!-- Candi Utama Siwa (Menjulang 47 meter - Bhuvarloka & Svarloka) -->
+      <polygon points="-28,28 -26,8 -20,-12 -15,-30 -8,-45 0,-52 8,-45 15,-30 20,-12 26,8 28,28" fill="url(#stoneDark)" stroke="#334155" stroke-width="1"/>
+
+      <!-- Detail Undakan Vertikal Ramping / Sabuk Relief -->
+      <line x1="-25" y1="18" x2="25" y2="18" stroke="#cbd5e1" stroke-width="0.8"/>
+      <line x1="-22" y1="6" x2="22" y2="6" stroke="#cbd5e1" stroke-width="0.8"/>
+      <line x1="-18" y1="-8" x2="18" y2="-8" stroke="#cbd5e1" stroke-width="0.8"/>
+      <line x1="-13" y1="-22" x2="13" y2="-22" stroke="#cbd5e1" stroke-width="0.8"/>
+      <line x1="-8" y1="-38" x2="8" y2="-38" stroke="#cbd5e1" stroke-width="0.8"/>
+
+      <!-- Relung Pintu Masuk / Bilik Utama Arc -->
+      <path d="M -7,28 L -7,12 Q 0,8 7,12 L 7,28 Z" fill="#1e293b"/>
+
+      <!-- Puncak Mahkota Ratna / Amalaka Lingga -->
+      <ellipse cx="0" cy="-52" rx="4.5" ry="2.5" fill="#94a3b8"/>
+      <circle cx="0" cy="-56" r="3.2" fill="#eab308" stroke="#b45309" stroke-width="0.8"/>
+      <line x1="0" y1="-59" x2="0" y2="-62" stroke="#b45309" stroke-width="1.2"/>
+    </g>
+
+    <!-- Keterangan Ciri Khas Arsitektur -->
+    <rect x="10" y="136" width="170" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="148" font-size="7.5" font-weight="bold" fill="#0284c7">&#x25AA; Puncak: Ratna / Amalaka Meruncing</text>
+    <text x="16" y="159" font-size="7.5" fill="#475569">&#x25AA; Bentuk: Ramping, Tinggi &amp; Menjulang</text>
+    <text x="16" y="170" font-size="7.5" fill="#64748b">&#x25AA; Dinasti Sanjaya (Kerajaan Mataram Kuno)</text>
+
+    <!-- Target Badge if Prambanan is targeted -->
     ${!isBorobudur ? `
-      <circle cx="0" cy="0" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-      <text x="0" y="4" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+      <circle cx="170" cy="14" r="10" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+      <text x="170" y="18" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
     ` : ''}
   </g>
 
-  <text x="190" y="215" text-anchor="middle" font-size="9.5" font-weight="600" fill="#44403c">Candi pada simbol "[${escapeXml(labelChar)}]" dibangun pada masa kerajaan bercorak ...</text>
+  <!-- Soal Prompt Bawah -->
+  <rect x="15" y="226" width="390" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="242" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Candi pada simbol "${escapeXml(labelChar)}" dibangun pada masa kerajaan yang bercorak ...</text>
 </svg>`;
 }
 
 // 26. Motif Batik Nusantara (Pola Geometris & Non-Geometris)
 export function renderMotifBatikNusantaraSvg(params: any): string {
-  const pointer = String(params.motif || params.pointer || 'parang').toLowerCase();
+  const pointer = String(params.motif || params.pointer || 'megamendung').toLowerCase();
   const labelChar = params.label || 'X';
 
   const motifs = [
-    { id: 'parang', name: 'Parang Rusak', daerah: 'Yogyakarta/Solo', x: 60, icon: '〰️' },
-    { id: 'kawung', name: 'Kawung', daerah: 'Jawa Tengah', x: 160, icon: '💠' },
-    { id: 'megamendung', name: 'Mega Mendung', daerah: 'Cirebon', x: 260, icon: '☁️' },
-    { id: 'tambal', name: 'Tambal', daerah: 'Jawa', x: 360, icon: '🔲' }
+    { id: 'parang', name: 'Parang Rusak', daerah: 'Yogyakarta / Solo', makna: 'Pantang Menyerah' },
+    { id: 'kawung', name: 'Batik Kawung', daerah: 'Jawa Tengah', makna: 'Kesucian & Keadilan' },
+    { id: 'megamendung', name: 'Mega Mendung', daerah: 'Cirebon', makna: 'Kesejukan Hati' },
+    { id: 'ceplok', name: 'Ceplok / Tambal', daerah: 'Yogyakarta / Solo', makna: 'Keseimbangan Hidup' }
   ];
 
-  let target = motifs.find(m => pointer.includes(m.id)) || motifs[0];
+  let activeIdx = motifs.findIndex(m => pointer.includes(m.id));
+  if (activeIdx < 0) {
+    if (pointer.includes('tambal')) activeIdx = 3;
+    else activeIdx = 2; // default megamendung
+  }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" width="420" height="180" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="420" height="180" fill="#fdfbf7" stroke="#e7e5e4" stroke-width="1.5" rx="8"/>
-  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#451a03">Ragam Motif Batik Nusantara</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" width="420" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:8px;">
+  <defs>
+    <!-- Pattern 1: Parang Rusak (Diagonal machete curve & mlinjon) -->
+    <clipPath id="clipParang">
+      <rect x="0" y="0" width="80" height="80" rx="4"/>
+    </clipPath>
 
-  ${motifs.map(m => {
-    const isTarget = m.id === target.id;
-    return `
-    <g transform="translate(${m.x - 38}, 42)">
-      <rect width="76" height="76" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="1.6"/>
-      <circle cx="38" cy="24" r="14" fill="#fef3c7" stroke="#d97706" stroke-width="1"/>
-      <text x="38" y="28" text-anchor="middle" font-size="11">${m.icon}</text>
-      ${isTarget ? `
-        <circle cx="38" cy="54" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-        <text x="38" y="58" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
-      ` : `
-        <text x="38" y="52" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#78350f">${m.name}</text>
-        <text x="38" y="63" text-anchor="middle" font-size="6.5" fill="#92400e">${m.daerah}</text>
-      `}
-    </g>`;
-  }).join('')}
+    <!-- Pattern 2: Kawung (Four oval petals meeting in cross) -->
+    <clipPath id="clipKawung">
+      <rect x="0" y="0" width="80" height="80" rx="4"/>
+    </clipPath>
 
-  <text x="210" y="155" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Nama dan makna motif batik pada gambar bertanda "[${escapeXml(labelChar)}]" adalah ...</text>
+    <!-- Pattern 3: Mega Mendung (Layered cloud curves Cirebon) -->
+    <clipPath id="clipMega">
+      <rect x="0" y="0" width="80" height="80" rx="4"/>
+    </clipPath>
+
+    <!-- Pattern 4: Ceplok (Geometric rosette star) -->
+    <clipPath id="clipCeplok">
+      <rect x="0" y="0" width="80" height="80" rx="4"/>
+    </clipPath>
+  </defs>
+
+  <rect width="420" height="250" fill="#fafaf9" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#451a03">Ragam Pola &amp; Filosofi Motif Batik Nusantara</text>
+
+  <!-- 4 Kolom Motif Batik (Width: 92px each, Gap: 8px) -->
+  <!-- Card 1: Parang Rusak -->
+  <g transform="translate(12, 38)">
+    <rect width="92" height="170" rx="6" fill="#ffffff" stroke="${activeIdx === 0 ? '#e11d48' : '#e2e8f0'}" stroke-width="${activeIdx === 0 ? 2 : 1.2}"/>
+    <!-- Canvas Batik Parang (80x80) -->
+    <g transform="translate(6, 8)" clip-path="url(#clipParang)">
+      <rect width="80" height="80" fill="#fef3c7"/>
+      <!-- Diagonal Sogan Parang Waves -->
+      <path d="M -10,10 Q 15,0 25,25 Q 15,50 40,50 Q 55,25 65,50 Q 55,75 80,75" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+      <path d="M 15,-15 Q 40,-25 50,0 Q 40,25 65,25 Q 80,0 90,25" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+      <path d="M -35,35 Q -10,25 0,50 Q -10,75 15,75 Q 30,50 40,75 Q 30,100 55,100" fill="none" stroke="#78350f" stroke-width="6" stroke-linecap="round"/>
+      <!-- Garis Lidah Lereng Mini -->
+      <line x1="0" y1="0" x2="80" y2="80" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="-20" y1="20" x2="60" y2="100" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="20" y1="-20" x2="100" y2="60" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <!-- Belah Ketupat Mlinjon -->
+      <polygon points="25,12 30,17 25,22 20,17" fill="#92400e"/>
+      <polygon points="65,52 70,57 65,62 60,57" fill="#92400e"/>
+      <polygon points="50,-13 55,-8 50,-3 45,-8" fill="#92400e"/>
+      <polygon points="10,52 15,57 10,62 5,57" fill="#92400e"/>
+    </g>
+    <!-- Label -->
+    <rect x="6" y="94" width="80" height="20" rx="4" fill="${activeIdx === 0 ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="46" y="108" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${activeIdx === 0 ? '#9f1239' : '#1e293b'}">Parang Rusak</text>
+    <text x="46" y="125" text-anchor="middle" font-size="7.5" font-weight="600" fill="#78350f">Pola Diagonal S</text>
+    <text x="46" y="137" text-anchor="middle" font-size="7" fill="#64748b">Yogyakarta / Solo</text>
+    <rect x="6" y="145" width="80" height="18" rx="3" fill="#fef3c7"/>
+    <text x="46" y="157" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#92400e">Pantang Mundur</text>
+    ${activeIdx === 0 ? `
+      <circle cx="80" cy="14" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="80" y="17.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Card 2: Batik Kawung -->
+  <g transform="translate(112, 38)">
+    <rect width="92" height="170" rx="6" fill="#ffffff" stroke="${activeIdx === 1 ? '#e11d48' : '#e2e8f0'}" stroke-width="${activeIdx === 1 ? 2 : 1.2}"/>
+    <!-- Canvas Batik Kawung (80x80) -->
+    <g transform="translate(6, 8)" clip-path="url(#clipKawung)">
+      <rect width="80" height="80" fill="#fefce8"/>
+      <!-- Pola 4 Daun/Buah Aren Oval Tengah (cx=40, cy=40) -->
+      <ellipse cx="40" cy="24" rx="11" ry="16" fill="#ca8a04" stroke="#854d0e" stroke-width="1.2"/>
+      <ellipse cx="40" cy="56" rx="11" ry="16" fill="#ca8a04" stroke="#854d0e" stroke-width="1.2"/>
+      <ellipse cx="24" cy="40" rx="16" ry="11" fill="#ca8a04" stroke="#854d0e" stroke-width="1.2"/>
+      <ellipse cx="56" cy="40" rx="16" ry="11" fill="#ca8a04" stroke="#854d0e" stroke-width="1.2"/>
+      <!-- Inti Titik Biji Buah Kawung -->
+      <circle cx="40" cy="24" r="3" fill="#fef08a"/>
+      <circle cx="40" cy="56" r="3" fill="#fef08a"/>
+      <circle cx="24" cy="40" r="3" fill="#fef08a"/>
+      <circle cx="56" cy="40" r="3" fill="#fef08a"/>
+      <!-- Salib Pusat Titik 4 Sudut -->
+      <circle cx="40" cy="40" r="4" fill="#713f12"/>
+      <polygon points="40,33 42,40 40,47 38,40" fill="#ffffff"/>
+      <polygon points="33,40 40,42 47,40 40,38" fill="#ffffff"/>
+      <!-- Sudut Kuadran Pinggir -->
+      <ellipse cx="0" cy="0" rx="14" ry="14" fill="#ca8a04" stroke="#854d0e" stroke-width="1"/>
+      <ellipse cx="80" cy="0" rx="14" ry="14" fill="#ca8a04" stroke="#854d0e" stroke-width="1"/>
+      <ellipse cx="0" cy="80" rx="14" ry="14" fill="#ca8a04" stroke="#854d0e" stroke-width="1"/>
+      <ellipse cx="80" cy="80" rx="14" ry="14" fill="#ca8a04" stroke="#854d0e" stroke-width="1"/>
+    </g>
+    <!-- Label -->
+    <rect x="6" y="94" width="80" height="20" rx="4" fill="${activeIdx === 1 ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="46" y="108" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${activeIdx === 1 ? '#9f1239' : '#1e293b'}">Batik Kawung</text>
+    <text x="46" y="125" text-anchor="middle" font-size="7.5" font-weight="600" fill="#854d0e">Pola 4 Buah Aren</text>
+    <text x="46" y="137" text-anchor="middle" font-size="7" fill="#64748b">Jawa Tengah</text>
+    <rect x="6" y="145" width="80" height="18" rx="3" fill="#fefce8"/>
+    <text x="46" y="157" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#a16207">Kesucian &amp; Keadilan</text>
+    ${activeIdx === 1 ? `
+      <circle cx="80" cy="14" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="80" y="17.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Card 3: Mega Mendung -->
+  <g transform="translate(212, 38)">
+    <rect width="92" height="170" rx="6" fill="#ffffff" stroke="${activeIdx === 2 ? '#e11d48' : '#e2e8f0'}" stroke-width="${activeIdx === 2 ? 2 : 1.2}"/>
+    <!-- Canvas Batik Mega Mendung (80x80) -->
+    <g transform="translate(6, 8)" clip-path="url(#clipMega)">
+      <rect width="80" height="80" fill="#f0f9ff"/>
+      <!-- Lapisan Awan Megamendung Gradasi Berundak (Navy -> Biru -> Biru Muda -> Putih) -->
+      <!-- Awan Atas -->
+      <path d="M 0,22 Q 18,10 32,18 Q 50,4 66,16 Q 78,12 80,18 L 80,0 L 0,0 Z" fill="#1e3a8a"/>
+      <path d="M 0,26 Q 18,15 32,23 Q 50,10 66,21 Q 78,17 80,22 L 80,20 Q 78,14 66,18 Q 50,6 32,20 Q 18,12 0,24 Z" fill="#2563eb"/>
+      <!-- Awan Tengah Utama (Cirebon Horizontal Cloud Swirl) -->
+      <path d="M -5,48 C 15,35 25,52 42,42 C 60,32 75,50 85,38 L 85,62 C 65,72 50,56 36,65 C 18,74 -5,56 -5,48 Z" fill="#1e40af"/>
+      <path d="M 2,47 C 18,38 27,51 42,44 C 58,36 71,51 80,42 L 80,56 C 68,64 54,52 38,60 C 22,67 5,53 2,47 Z" fill="#3b82f6"/>
+      <path d="M 8,46 C 20,40 28,49 41,45 C 55,40 66,51 74,45 L 74,53 C 65,58 53,48 40,54 C 27,59 13,49 8,46 Z" fill="#93c5fd"/>
+      <path d="M 16,46 C 24,42 30,48 40,46 C 50,43 59,50 66,47 L 66,50 C 58,54 48,46 40,50 C 31,54 22,48 16,46 Z" fill="#ffffff"/>
+      <!-- Awan Bawah -->
+      <path d="M 0,66 Q 16,76 35,68 Q 52,80 72,70 Q 78,74 80,72 L 80,80 L 0,80 Z" fill="#1e3a8a"/>
+    </g>
+    <!-- Label -->
+    <rect x="6" y="94" width="80" height="20" rx="4" fill="${activeIdx === 2 ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="46" y="108" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${activeIdx === 2 ? '#9f1239' : '#1e293b'}">Mega Mendung</text>
+    <text x="46" y="125" text-anchor="middle" font-size="7.5" font-weight="600" fill="#0369a1">Awan Berlapis Biru</text>
+    <text x="46" y="137" text-anchor="middle" font-size="7" fill="#64748b">Cirebon</text>
+    <rect x="6" y="145" width="80" height="18" rx="3" fill="#e0f2fe"/>
+    <text x="46" y="157" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#0369a1">Kesejukan &amp; Sabar</text>
+    ${activeIdx === 2 ? `
+      <circle cx="80" cy="14" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="80" y="17.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Card 4: Ceplok / Tambal -->
+  <g transform="translate(312, 38)">
+    <rect width="92" height="170" rx="6" fill="#ffffff" stroke="${activeIdx === 3 ? '#e11d48' : '#e2e8f0'}" stroke-width="${activeIdx === 3 ? 2 : 1.2}"/>
+    <!-- Canvas Batik Ceplok (80x80) -->
+    <g transform="translate(6, 8)" clip-path="url(#clipCeplok)">
+      <rect width="80" height="80" fill="#fef2f2"/>
+      <!-- Grid Geometris Ceplok Mandala Bunga Bintang -->
+      <!-- Belah Ketupat Luar -->
+      <polygon points="40,8 72,40 40,72 8,40" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.2"/>
+      <polygon points="40,16 64,40 40,64 16,40" fill="#fca5a5" stroke="#991b1b" stroke-width="1"/>
+      <polygon points="40,24 56,40 40,56 24,40" fill="#7f1d1d"/>
+      <!-- 8-Kelopak Bintang Bunga Emas di Pusat -->
+      <circle cx="40" cy="40" r="7" fill="#fbbf24" stroke="#d97706" stroke-width="0.8"/>
+      <circle cx="40" cy="40" r="3" fill="#78350f"/>
+      <line x1="40" y1="28" x2="40" y2="52" stroke="#ffffff" stroke-width="1"/>
+      <line x1="28" y1="40" x2="52" y2="40" stroke="#ffffff" stroke-width="1"/>
+      <!-- Ornamen 4 Sudut Grid -->
+      <polygon points="0,0 18,0 0,18" fill="#b91c1c"/>
+      <polygon points="80,0 62,0 80,18" fill="#b91c1c"/>
+      <polygon points="0,80 18,80 0,62" fill="#b91c1c"/>
+      <polygon points="80,80 62,80 80,62" fill="#b91c1c"/>
+    </g>
+    <!-- Label -->
+    <rect x="6" y="94" width="80" height="20" rx="4" fill="${activeIdx === 3 ? '#ffe4e6' : '#f8fafc'}"/>
+    <text x="46" y="108" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${activeIdx === 3 ? '#9f1239' : '#1e293b'}">Ceplok / Tambal</text>
+    <text x="46" y="125" text-anchor="middle" font-size="7.5" font-weight="600" fill="#b91c1c">Pola Geometris Roset</text>
+    <text x="46" y="137" text-anchor="middle" font-size="7" fill="#64748b">Yogyakarta / Solo</text>
+    <rect x="6" y="145" width="80" height="18" rx="3" fill="#fee2e2"/>
+    <text x="46" y="157" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#991b1b">Keseimbangan</text>
+    ${activeIdx === 3 ? `
+      <circle cx="80" cy="14" r="9" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
+      <text x="80" y="17.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : ''}
+  </g>
+
+  <!-- Soal Prompt Bawah -->
+  <rect x="12" y="218" width="396" height="24" rx="5" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="210" y="234" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">Nama, daerah asal, dan karakteristik motif batik pada huruf "${escapeXml(labelChar)}" adalah ...</text>
 </svg>`;
 }
 

@@ -1945,15 +1945,23 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
     }
   },
 
-  // Rule 157: siklus_air
+  // Rule 157: siklus_air (Siklus Hidrologi Lengkap)
   {
     id: 'siklus_air',
-    match: (text, stemText, mapel) => text.includes('siklus air') || text.includes('daur air') || text.includes('evaporasi') || text.includes('kondensasi') || text.includes('presipitasi'),
+    match: (text, stemText, mapel) => text.includes('siklus air') || text.includes('daur air') || text.includes('hidrologi') || text.includes('evaporasi') || text.includes('transpirasi') || text.includes('kondensasi') || text.includes('presipitasi') || text.includes('infiltrasi'),
     extract: (text, stemText, mapel) => {
       let ptr = 'evaporasi';
-    if (text.includes('kondensasi')) ptr = 'kondensasi';
-    else if (text.includes('presipitasi') || text.includes('hujan')) ptr = 'presipitasi';
-    return { type: 'siklus_air', params: { pointer: ptr, label: 'X' } };
+      if (text.includes('transpirasi')) ptr = 'transpirasi';
+      else if (text.includes('kondensasi')) ptr = 'kondensasi';
+      else if (text.includes('presipitasi') || text.includes('hujan')) ptr = 'presipitasi';
+      else if (text.includes('infiltrasi') || text.includes('peresapan') || text.includes('meresap')) ptr = 'infiltrasi';
+      else if (text.includes('runoff') || text.includes('limpasan')) ptr = 'runoff';
+      else if (text.includes('salju') || text.includes('gletser')) ptr = 'salju';
+      else if (text.includes('air tanah') || text.includes('subsurface')) ptr = 'air_tanah';
+      else if (text.includes('siklus panjang')) ptr = 'siklus_panjang';
+      else if (text.includes('siklus sedang')) ptr = 'siklus_sedang';
+      else if (text.includes('siklus pendek')) ptr = 'siklus_pendek';
+      return { type: 'siklus_air', params: { pointer: ptr, label: 'X' } };
     }
   },
 

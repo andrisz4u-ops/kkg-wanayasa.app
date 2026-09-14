@@ -5,66 +5,394 @@
 
 import { escapeXml } from './types';
 
-/** Render Siklus Air dengan Panah Tahapan dan Tanda Huruf X */
+/** 
+ * Render Siklus Air / Hidrologi Lengkap Berdasarkan Diagram Standar Kurikulum Nasional
+ * Mencakup: Siklus Pendek, Siklus Sedang, Siklus Panjang, Evaporasi, Transpirasi, Kondensasi,
+ * Presipitasi (Hujan & Salju), Runoff (Limpasan), Infiltrasi, Air Tanah & Subsurface Outflow.
+ */
 export function renderSiklusAirSvg(params: { pointer?: string; label?: string }): string {
-  const pointer = (params.pointer || 'evaporasi').toLowerCase();
+  const pointer = (params.pointer || '').toLowerCase().trim();
   const labelChar = params.label || 'X';
 
-  let target = { x: 75, y: 155, name: 'Evaporasi' };
-  if (pointer.includes('kondensasi') || pointer.includes('awan')) target = { x: 130, y: 65, name: 'Kondensasi' };
-  else if (pointer.includes('presipitasi') || pointer.includes('hujan')) target = { x: 220, y: 95, name: 'Presipitasi (Hujan)' };
-  else if (pointer.includes('infiltrasi') || pointer.includes('tanah')) target = { x: 260, y: 195, name: 'Infiltrasi / Penyerapan' };
+  // Koordinat penanda target untuk soal asesmen HOTS
+  let target: { x: number; y: number; name: string } | null = null;
+  if (pointer.includes('evaporasi') || pointer.includes('menguap')) {
+    target = { x: 595, y: 250, name: 'Evaporasi' };
+  } else if (pointer.includes('transpirasi') || pointer.includes('tumbuhan') || pointer.includes('pohon')) {
+    target = { x: 435, y: 215, name: 'Transpirasi' };
+  } else if (pointer.includes('kondensasi') || pointer.includes('awan')) {
+    target = { x: 205, y: 65, name: 'Kondensasi' };
+  } else if (pointer.includes('presipitasi') || pointer.includes('hujan')) {
+    target = { x: 380, y: 175, name: 'Presipitasi (Hujan)' };
+  } else if (pointer.includes('salju') || pointer.includes('gletser') || pointer.includes('es')) {
+    target = { x: 95, y: 145, name: 'Salju / Gletser' };
+  } else if (pointer.includes('infiltrasi') || pointer.includes('peresapan') || pointer.includes('serap')) {
+    target = { x: 55, y: 345, name: 'Infiltrasi' };
+  } else if (pointer.includes('runoff') || pointer.includes('limpasan')) {
+    target = { x: 505, y: 280, name: 'Limpasan Permukaan (Runoff)' };
+  } else if (pointer.includes('air tanah') || pointer.includes('subsurface') || pointer.includes('groundwater')) {
+    target = { x: 440, y: 365, name: 'Aliran Air Tanah (Subsurface Outflow)' };
+  } else if (pointer.includes('pendek')) {
+    target = { x: 650, y: 170, name: 'Siklus Pendek' };
+  } else if (pointer.includes('sedang')) {
+    target = { x: 335, y: 135, name: 'Siklus Sedang' };
+  } else if (pointer.includes('panjang')) {
+    target = { x: 80, y: 105, name: 'Siklus Panjang' };
+  }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 250" width="350" height="250" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  // Generate 24 berkas sinar matahari radiasi
+  const sunRays = Array.from({ length: 24 }).map((_, i) => {
+    const angle = (i * 15 * Math.PI) / 180;
+    const r1 = 36;
+    const r2 = 48 + (i % 2 === 0 ? 8 : 4);
+    const x1 = (535 + Math.cos(angle) * r1).toFixed(1);
+    const y1 = (72 + Math.sin(angle) * r1).toFixed(1);
+    const x2 = (535 + Math.cos(angle) * r2).toFixed(1);
+    const y2 = (72 + Math.sin(angle) * r2).toFixed(1);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round"/>`;
+  }).join('');
+
+  // Tetesan hujan awan sedang
+  const rainDropsSedang = [
+    { x: 360, y: 170 }, { x: 375, y: 168 }, { x: 390, y: 172 }, { x: 405, y: 169 },
+    { x: 365, y: 182 }, { x: 380, y: 180 }, { x: 395, y: 184 }, { x: 410, y: 181 },
+    { x: 370, y: 194 }, { x: 385, y: 192 }, { x: 400, y: 196 }
+  ].map(d => `<line x1="${d.x}" y1="${d.y}" x2="${d.x - 4}" y2="${d.y + 10}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="1.5,1.5"/>`).join('');
+
+  // Tetesan hujan awan pendek di laut
+  const rainDropsPendek = [
+    { x: 625, y: 155 }, { x: 640, y: 153 }, { x: 655, y: 157 },
+    { x: 630, y: 167 }, { x: 645, y: 165 }, { x: 660, y: 169 },
+    { x: 635, y: 179 }, { x: 650, y: 177 }, { x: 665, y: 181 }
+  ].map(d => `<line x1="${d.x}" y1="${d.y}" x2="${d.x - 3}" y2="${d.y + 10}" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="1.5,1.5"/>`).join('');
+
+  // Tetesan salju awan panjang di gunung
+  const snowDropsPanjang = [
+    { x: 170, y: 125 }, { x: 190, y: 120 }, { x: 210, y: 125 },
+    { x: 160, y: 138 }, { x: 180, y: 134 }, { x: 200, y: 138 }, { x: 220, y: 134 },
+    { x: 170, y: 150 }, { x: 190, y: 147 }, { x: 210, y: 151 }
+  ].map(d => `<circle cx="${d.x}" cy="${d.y}" r="2" fill="#e0f2fe" stroke="#38bdf8" stroke-width="0.8"/>`).join('');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" width="720" height="440" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif; border-radius:10px;">
   <defs>
-    <marker id="arrRed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48" />
-    </marker>
-    <marker id="arrBlue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7" />
-    </marker>
+    <!-- Gradien Langit -->
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="45%" stop-color="#bae6fd" />
+      <stop offset="100%" stop-color="#f0f9ff" />
+    </linearGradient>
+
+    <!-- Gradien Matahari -->
+    <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="40%" stop-color="#fef08a" />
+      <stop offset="85%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </radialGradient>
+
+    <!-- Gradien Danau -->
+    <linearGradient id="lakeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <!-- Gradien Laut / Samudra -->
+    <linearGradient id="oceanGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#0284c7" />
+      <stop offset="75%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Gradien Pegunungan Belakang -->
+    <linearGradient id="mountBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+
+    <!-- Gradien Pegunungan Depan -->
+    <linearGradient id="mountFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+
+    <!-- Gradien Perbukitan Hijau -->
+    <linearGradient id="hillGrad1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bef264" />
+      <stop offset="50%" stop-color="#84cc16" />
+      <stop offset="100%" stop-color="#4d7c0f" />
+    </linearGradient>
+
+    <linearGradient id="hillGrad2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#86efac" />
+      <stop offset="60%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+
+    <!-- Gradien Panah Merah Aliran -->
+    <linearGradient id="arrowRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+
+    <!-- Pola Batuan Vertikal (Infiltrasi / Aerasi) -->
+    <pattern id="patRockCol" width="8" height="24" patternUnits="userSpaceOnUse">
+      <rect width="8" height="24" fill="#e7e5e4"/>
+      <line x1="4" y1="0" x2="4" y2="24" stroke="#a8a29e" stroke-width="1.2"/>
+      <line x1="0" y1="12" x2="8" y2="12" stroke="#d6d3d1" stroke-width="0.8"/>
+    </pattern>
+
+    <!-- Pola Kerikil Akuifer Pasir -->
+    <pattern id="patGravel" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect width="20" height="20" fill="#fef08a"/>
+      <circle cx="5" cy="5" r="1.6" fill="#78716c"/>
+      <circle cx="15" cy="7" r="2.2" fill="#a8a29e" stroke="#57534e" stroke-width="0.5"/>
+      <circle cx="8" cy="14" r="1.8" fill="#78716c"/>
+      <circle cx="16" cy="16" r="1.4" fill="#57534e"/>
+      <circle cx="2" cy="17" r="1.0" fill="#a8a29e"/>
+    </pattern>
+
+    <!-- Filter Bayangan Halus -->
+    <filter id="shadowBox" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-opacity="0.18" />
+    </filter>
   </defs>
 
-  <text x="175" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Bagan Siklus Air di Bumi</text>
+  <!-- Latar Belakang Kotak Bingkai -->
+  <rect width="720" height="440" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
 
-  <!-- Matahari -->
-  <circle cx="45" cy="55" r="18" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
-  <line x1="45" y1="28" x2="45" y2="34" stroke="#f59e0b" stroke-width="2"/>
-  <line x1="45" y1="76" x2="45" y2="82" stroke="#f59e0b" stroke-width="2"/>
+  <!-- ==================== 1. LANGIT (ATMOSFER) ==================== -->
+  <rect x="1" y="1" width="718" height="275" fill="url(#skyGrad)"/>
 
-  <!-- Lautan / Air -->
-  <rect x="10" y="195" width="140" height="35" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5" rx="3"/>
-  <text x="75" y="217" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">Laut / Danau</text>
-
-  <!-- Daratan / Gunung -->
-  <polygon points="150,230 220,135 280,230" fill="#a3e635" stroke="#65a30d" stroke-width="1.5"/>
-  <polygon points="250,230 300,155 340,230" fill="#86efac" stroke="#16a34a" stroke-width="1.5"/>
-  <text x="240" y="215" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">Daratan</text>
-
-  <!-- Panah Evaporasi -->
-  <path d="M 60,185 Q 65,145 75,115" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="3,3" marker-end="url(#arrBlue)"/>
-  <path d="M 85,185 Q 90,145 95,115" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="3,3" marker-end="url(#arrBlue)"/>
-
-  <!-- Awan (Kondensasi) -->
-  <path d="M 120,80 A 15,15 0 0,1 145,65 A 22,22 0 0,1 180,68 A 16,16 0 0,1 195,85 L 115,85 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
-  <!-- Awan Hujan Tebal -->
-  <path d="M 210,75 A 18,18 0 0,1 240,60 A 25,25 0 0,1 280,65 A 18,18 0 0,1 295,82 L 205,82 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
-
-  <!-- Tetesan Hujan (Presipitasi) -->
-  <line x1="225" y1="92" x2="220" y2="108" stroke="#0284c7" stroke-width="2" stroke-dasharray="2,3"/>
-  <line x1="245" y1="92" x2="240" y2="108" stroke="#0284c7" stroke-width="2" stroke-dasharray="2,3"/>
-  <line x1="265" y1="92" x2="260" y2="108" stroke="#0284c7" stroke-width="2" stroke-dasharray="2,3"/>
-
-  <!-- Aliran Air Tanah (Infiltrasi) -->
-  <path d="M 235,180 Q 180,210 145,210" fill="none" stroke="#0284c7" stroke-width="2" marker-end="url(#arrBlue)"/>
-
-  <!-- Target Huruf X -->
+  <!-- Matahari Terik dengan 24 Berkas Sinar Radiasi -->
   <g>
-    <circle cx="${target.x}" cy="${target.y}" r="15" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-    <text x="${target.x}" y="${target.y + 5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ${sunRays}
+    <circle cx="535" cy="72" r="32" fill="url(#sunGrad)" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="535" cy="72" r="28" fill="#fef08a" opacity="0.4"/>
   </g>
 
-  <text x="175" y="244" text-anchor="middle" font-size="11" fill="#64748b">Tahapan yang ditunjuk oleh huruf "${escapeXml(labelChar)}"</text>
+  <!-- ==================== 2. PEGUNUNGAN & SALJU (KIRI) ==================== -->
+  <!-- Gunung Belakang -->
+  <polygon points="40,240 185,135 305,240" fill="url(#mountBack)"/>
+  <!-- Gunung Depan (Puncak Salju Utama) -->
+  <polygon points="0,240 75,155 175,240" fill="url(#mountFront)"/>
+  <polygon points="120,240 215,160 310,240" fill="url(#mountFront)" opacity="0.9"/>
+
+  <!-- Topi Salju Puncak Gunung (Gletser) -->
+  <path d="M 185,135 L 205,155 Q 197,163 190,157 Q 182,166 175,158 Q 168,162 165,155 Z" fill="#ffffff" stroke="#e0f2fe" stroke-width="1"/>
+  <path d="M 75,155 L 98,175 Q 90,183 82,177 Q 75,185 68,178 Q 60,182 52,175 Z" fill="#ffffff" stroke="#e0f2fe" stroke-width="1"/>
+
+  <!-- Hutan Pinus di Lereng Pegunungan -->
+  <g fill="#14532d">
+    <polygon points="25,230 30,215 35,230"/>
+    <polygon points="35,232 40,217 45,232"/>
+    <polygon points="45,228 50,213 55,228"/>
+    <polygon points="55,230 60,214 65,230"/>
+    <polygon points="65,228 70,212 75,228"/>
+    <polygon points="75,232 80,216 85,232"/>
+    <polygon points="85,229 90,215 95,229"/>
+    <polygon points="95,233 100,217 105,233"/>
+  </g>
+
+  <!-- ==================== 3. PERBUKITAN HIJAU, LEMBAH & SUNGAI ==================== -->
+  <!-- Bukit Hijau Kiri Menuju Danau -->
+  <path d="M 0,240 Q 60,230 115,245 L 115,280 L 0,280 Z" fill="url(#hillGrad1)"/>
+
+  <!-- Bukit Tengah dan Lembah -->
+  <path d="M 270,245 Q 340,215 410,225 Q 470,235 510,265 L 510,300 L 270,300 Z" fill="url(#hillGrad2)"/>
+  <path d="M 330,245 Q 380,220 445,235 Q 480,245 505,280 L 505,300 L 330,300 Z" fill="url(#hillGrad1)" opacity="0.8"/>
+
+  <!-- Sungai Mengalir dari Lembah Pegunungan ke Danau -->
+  <path d="M 155,185 Q 165,198 148,212 Q 138,225 158,235 Q 170,242 180,248 L 192,250 Q 180,242 168,235 Q 148,225 158,212 Q 172,198 162,185 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.2"/>
+
+  <!-- Danau Air Tawar Luas -->
+  <path d="M 105,248 Q 160,240 235,242 Q 295,244 335,249 L 335,286 Q 260,296 190,292 Q 140,290 105,282 Z" fill="url(#lakeGrad)" stroke="#0284c7" stroke-width="1.5"/>
+  <!-- Riak Permukaan Danau -->
+  <path d="M 130,256 Q 145,254 160,256 M 220,254 Q 240,252 260,254 M 180,270 Q 200,268 220,270" stroke="#bae6fd" stroke-width="1.2" fill="none"/>
+
+  <!-- Perahu Layar Kecil di Danau -->
+  <g transform="translate(155, 235)">
+    <path d="M 0,11 L 18,11 L 14,16 L 4,16 Z" fill="#ffffff" stroke="#334155" stroke-width="1"/>
+    <line x1="9" y1="11" x2="9" y2="1" stroke="#334155" stroke-width="1.2"/>
+    <polygon points="9,1 17,9 9,9" fill="#f43f5e"/>
+  </g>
+
+  <!-- Ikan Kecil di Danau -->
+  <g fill="#facc15" opacity="0.85">
+    <ellipse cx="205" cy="272" rx="3.5" ry="2"/>
+    <polygon points="208,272 212,270 212,274"/>
+    <ellipse cx="275" cy="268" rx="3.5" ry="2"/>
+    <polygon points="278,268 282,266 282,270"/>
+  </g>
+
+  <!-- Gugusan Hutan Pohon Rimbun di Bukit (Transpirasi) -->
+  <g fill="#15803d" stroke="#14532d" stroke-width="0.8">
+    <circle cx="380" cy="242" r="11"/>
+    <circle cx="395" cy="238" r="14"/>
+    <circle cx="410" cy="242" r="12"/>
+    <circle cx="425" cy="236" r="15"/>
+    <circle cx="440" cy="240" r="13"/>
+    <circle cx="455" cy="244" r="11"/>
+    <circle cx="405" cy="232" r="12" fill="#16a34a"/>
+    <circle cx="420" cy="230" r="13" fill="#22c55e"/>
+  </g>
+
+  <!-- Lereng Tebing Bebatuan & Runoff Air Menuju Laut -->
+  <path d="M 465,248 L 515,280 L 505,305 L 460,295 Z" fill="#94a3b8" stroke="#64748b" stroke-width="1"/>
+  <!-- Aliran Air Berbusa Runoff di Lereng -->
+  <path d="M 475,252 Q 490,268 510,285 Q 520,292 525,298" stroke="#38bdf8" stroke-width="3" fill="none" stroke-dasharray="4,2"/>
+  <path d="M 482,256 Q 495,272 515,290" stroke="#ffffff" stroke-width="1.5" fill="none"/>
+
+  <!-- Pantai Pasir Keemasan -->
+  <path d="M 505,278 Q 522,292 538,300 L 535,320 L 500,320 Z" fill="#fde047" stroke="#eab308" stroke-width="0.8"/>
+
+  <!-- ==================== 4. LAUT / SAMUDRA (KANAN) ==================== -->
+  <path d="M 515,282 Q 545,280 620,280 L 719,280 L 719,365 L 515,365 Z" fill="url(#oceanGrad)"/>
+  <!-- Ombak / Riak Buih Laut -->
+  <path d="M 535,285 Q 550,282 565,285 M 590,284 Q 610,281 630,284 M 660,284 Q 685,281 710,284" stroke="#ffffff" stroke-width="1.8" fill="none"/>
+  <!-- Kapal Kecil di Laut -->
+  <g transform="translate(665, 275)">
+    <path d="M 0,5 L 18,5 L 15,9 L 3,9 Z" fill="#ffffff" stroke="#0f172a" stroke-width="0.8"/>
+    <polygon points="8,1 14,5 8,5" fill="#3b82f6"/>
+  </g>
+  <!-- Biota / Ikan Laut -->
+  <g fill="#93c5fd" opacity="0.75">
+    <ellipse cx="585" cy="315" rx="5" ry="2.5"/>
+    <polygon points="580,315 575,312 575,318"/>
+    <ellipse cx="645" cy="335" rx="6" ry="3"/>
+    <polygon points="639,335 633,331 633,339"/>
+  </g>
+
+  <!-- ==================== 5. PENAMPANG GEOLOGIS BAWAH TANAH ==================== -->
+  <!-- Lapisan 1: Tanah Humus / Topsoil Cokelat -->
+  <path d="M 0,280 L 105,282 Q 190,292 335,286 L 515,282 L 515,302 L 335,306 Q 190,312 105,302 L 0,300 Z" fill="#78350f"/>
+
+  <!-- Lapisan 2: Batuan Retak Bertiang Vertikal (Zona Infiltrasi) -->
+  <path d="M 0,300 L 105,302 Q 190,312 335,306 L 515,302 L 515,350 L 335,355 Q 190,360 105,352 L 0,350 Z" fill="url(#patRockCol)" stroke="#a8a29e" stroke-width="1"/>
+
+  <!-- Lapisan 3: Akuifer Pasir & Kerikil Permeabel -->
+  <path d="M 0,350 L 105,352 Q 190,360 335,355 L 719,348 L 719,410 L 335,415 Q 190,420 105,415 L 0,412 Z" fill="url(#patGravel)" stroke="#d97706" stroke-width="1"/>
+
+  <!-- Lapisan 4: Air Tanah Jenuh (Groundwater Aquifer Biru) -->
+  <path d="M 0,395 L 140,395 Q 220,400 280,412 L 0,412 Z" fill="#0284c7" opacity="0.9"/>
+  <path d="M 15,404 Q 40,401 65,404 M 85,404 Q 115,401 145,404" stroke="#7dd3fc" stroke-width="1.2" fill="none"/>
+
+  <!-- Lapisan Dasar Batuan Kedap Air (Impermeable Bedrock) -->
+  <rect x="0" y="415" width="719" height="24" fill="#475569" stroke="#334155" stroke-width="1"/>
+
+  <!-- ==================== 6. PANAH PROSES ALIRAN HIDROLOGI (MERAH TEBAL) ==================== -->
+  <!-- Panah 1: EVAPORASI (Dari Laut Naik ke Awan) -->
+  <path d="M 608,272 Q 622,242 612,212" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="612,206 604,218 620,218" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- Panah 2: TRANSPIRASI (Dari Pepohonan Naik ke Awan) -->
+  <line x1="432" y1="262" x2="432" y2="198" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="432,190 424,202 440,202" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- Panah 3: ADVEKSI HORIZONTAL (Uap Air Bergerak ke Darat / Pegunungan) -->
+  <path d="M 500,105 Q 425,122 345,116" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="336,115 348,107 348,123" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- Panah 4: PRESIPITASI CURAH HUJAN KE DANAU -->
+  <path d="M 235,188 Q 235,215 228,242" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+  <polygon points="227,248 222,236 234,238" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- Panah 5: INFILTRASI (Air Meresap ke Dalam Tanah) -->
+  <line x1="55" y1="315" x2="55" y2="370" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="55,378 47,366 63,366" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- Panah 6: SUBSURFACE OUTFLOW (Aliran Air Tanah Menuju Laut) -->
+  <path d="M 345,360 Q 430,368 515,362" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="524,362 512,354 512,370" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+
+  <!-- ==================== 7. AWAN & PRESIPITASI (3 SIKLUS LENGKAP) ==================== -->
+  <!-- Awan 1: Pegunungan Tinggi (Kondensasi & Presipitasi Salju) -->
+  <g filter="url(#shadowBox)">
+    <!-- Gumpalan Awan Putih-Abu -->
+    <path d="M 135,108 A 18,18 0 0,1 160,88 A 26,26 0 0,1 205,82 A 28,28 0 0,1 250,92 A 20,20 0 0,1 265,110 A 16,16 0 0,1 250,122 L 140,122 Z" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 148,110 A 14,14 0 0,1 170,95 A 22,22 0 0,1 210,95 A 16,16 0 0,1 235,115 L 148,115 Z" fill="#ffffff"/>
+  </g>
+  <!-- Curahan Salju -->
+  <g>${snowDropsPanjang}</g>
+
+  <!-- Awan 2: Daratan Tengah (Siklus Sedang) -->
+  <g filter="url(#shadowBox)">
+    <path d="M 335,142 A 16,16 0 0,1 355,126 A 22,22 0 0,1 395,122 A 24,24 0 0,1 430,132 A 16,16 0 0,1 440,148 L 330,148 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 345,145 A 12,12 0 0,1 365,132 A 18,18 0 0,1 405,130 A 14,14 0 0,1 425,145 L 345,145 Z" fill="#f1f5f9"/>
+  </g>
+  <!-- Curahan Hujan Daratan -->
+  <g>${rainDropsSedang}</g>
+
+  <!-- Awan 3: Samudra Kanan (Siklus Pendek) -->
+  <g filter="url(#shadowBox)">
+    <path d="M 525,128 A 18,18 0 0,1 550,108 A 28,28 0 0,1 600,102 A 30,30 0 0,1 650,114 A 20,20 0 0,1 668,134 L 520,134 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <path d="M 540,130 A 14,14 0 0,1 565,115 A 22,22 0 0,1 615,112 A 18,18 0 0,1 645,130 L 540,130 Z" fill="#ffffff"/>
+  </g>
+  <!-- Curahan Hujan Laut -->
+  <g>${rainDropsPendek}</g>
+
+  <!-- ==================== 8. LABEL TEKS ILMIAH KURIKULUM LENGKAP ==================== -->
+  <!-- Header Judul Diagram -->
+  <rect x="200" y="8" width="320" height="22" rx="6" fill="#0f172a" opacity="0.85"/>
+  <text x="360" y="23" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#ffffff" letter-spacing="0.5">Bagan Siklus Air (Daur Hidrologi Lengkap)</text>
+
+  <!-- Label Siklus Utama -->
+  <!-- 1. Siklus Panjang (Kiri) -->
+  <g>
+    <text x="75" y="96" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Siklus</text>
+    <text x="75" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Panjang</text>
+    <text x="88" y="145" text-anchor="middle" font-size="10" font-weight="bold" fill="#0284c7">Salju</text>
+  </g>
+
+  <!-- 2. Kondensasi (Atas Awan Kiri) -->
+  <text x="205" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Kondensasi</text>
+
+  <!-- 3. Siklus Sedang (Tengah) -->
+  <g>
+    <text x="385" y="110" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Siklus</text>
+    <text x="385" y="124" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Sedang</text>
+  </g>
+
+  <!-- 4. Transpirasi (Di Atas Hutan) -->
+  <text x="435" y="185" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Transpirasi</text>
+
+  <!-- 5. Siklus Pendek (Kanan) -->
+  <g>
+    <text x="660" y="162" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Siklus</text>
+    <text x="660" y="176" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">Pendek</text>
+  </g>
+
+  <!-- 6. Evaporasi (Di Atas Laut) -->
+  <text x="610" y="240" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#0f172a">Evaporasi</text>
+
+  <!-- 7. Danau & Sungai -->
+  <text x="165" y="206" text-anchor="middle" font-size="9" font-weight="bold" fill="#0369a1">Sungai</text>
+  <text x="215" y="278" text-anchor="middle" font-size="11" font-weight="bold" fill="#ffffff" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.5))">Danau</text>
+
+  <!-- 8. Runoff / Limpasan -->
+  <text x="508" y="274" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#0f172a">Runoff</text>
+
+  <!-- 9. Infiltrasi (Bawah Tanah Kiri) -->
+  <rect x="18" y="326" width="68" height="17" rx="4" fill="#ffffff" opacity="0.9"/>
+  <text x="52" y="339" text-anchor="middle" font-size="10" font-weight="bold" fill="#0f172a">Infiltrasi</text>
+
+  <!-- 10. Air Tanah & Subsurface Outflow -->
+  <text x="85" y="408" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">Air tanah</text>
+  <rect x="365" y="372" width="130" height="16" rx="4" fill="#ffffff" opacity="0.85"/>
+  <text x="430" y="384" text-anchor="middle" font-size="9" font-weight="bold" fill="#0f172a">Subsurface Outflow</text>
+
+  <!-- ==================== 9. TARGET PIN [X] UNTUK ASESMEN HOTS ==================== -->
+  ${target ? `
+  <g filter="url(#shadowBox)">
+    <circle cx="${target.x}" cy="${target.y}" r="16" fill="#e11d48" stroke="#ffffff" stroke-width="2.5"/>
+    <text x="${target.x}" y="${target.y + 5.5}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+  </g>
+  <rect x="${Math.max(10, target.x - 120)}" y="415" width="240" height="21" rx="4" fill="#0f172a"/>
+  <text x="${Math.max(130, target.x)}" y="430" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">Tahapan yang ditunjuk oleh huruf "${escapeXml(labelChar)}": ${escapeXml(target.name)}</text>
+  ` : `
+  <rect x="240" y="416" width="240" height="19" rx="4" fill="#0f172a" opacity="0.85"/>
+  <text x="360" y="429" text-anchor="middle" font-size="9.5" font-weight="600" fill="#ffffff">Daur Hidrologi: Pendek, Sedang, &amp; Panjang</text>
+  `}
 </svg>`;
 }
 

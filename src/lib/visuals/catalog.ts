@@ -60,7 +60,7 @@ export function getVisualCatalog(): VisualCatalogItem[] {
     { id: 'lambung_detail', category: 'Sains / IPAS', name: 'Lambung & Enzim Detail', description: 'Penampang dinding lambung, rugae, kardia, dan pilorus', sampleParams: { pointer: 'rugae', label: 'X' } },
     { id: 'organ_pernapasan', category: 'Sains / IPAS', name: 'Sistem Pernapasan', description: 'Organ pernapasan manusia berlabel target X', sampleParams: { pointer: 'trakea', label: 'X' } },
     { id: 'alveolus', category: 'Sains / IPAS', name: 'Alveolus & Pertukaran Gas', description: 'Penampang mikroskopis kapiler dan difusi O2/CO2', sampleParams: { pointer: 'alveolus', label: 'X' } },
-    { id: 'siklus_air', category: 'Sains / IPAS', name: 'Siklus Air', description: 'Daur air (evaporasi, kondensasi, presipitasi, infiltrasi)', sampleParams: { pointer: 'evaporasi', label: 'X' } },
+    { id: 'siklus_air', category: 'Sains / IPAS', name: 'Siklus Air / Hidrologi Lengkap', description: 'Daur air lengkap (Siklus Pendek, Sedang, Panjang, Evaporasi, Transpirasi, Kondensasi, Presipitasi/Salju, Infiltrasi, Runoff, Air Tanah)', sampleParams: { pointer: 'evaporasi', label: 'X' } },
     { id: 'metamorfosis', category: 'Sains / IPAS', name: 'Metamorfosis Kupu-kupu', description: 'Daur hidup telur, ulat, kepompong, kupu-kupu berlabel X', sampleParams: { pointer: 'kepompong', label: 'X' } },
     { id: 'bagian_bunga', category: 'Sains / IPAS', name: 'Bagian Bunga', description: 'Penampang putik, benang sari, mahkota, kelopak berlabel X', sampleParams: { pointer: 'putik', label: 'X' } },
     { id: 'rantai_makanan', category: 'Sains / IPAS', name: 'Rantai Makanan', description: 'Alur produsen -> konsumen 1, 2, 3 -> pengurai berlabel X', sampleParams: { pointer: 'produsen', label: 'X' } },

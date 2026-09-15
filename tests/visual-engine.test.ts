@@ -72,6 +72,17 @@ import {
   renderLingkaranWarnaSvg,
   renderStrukturPemdaSvg,
   renderGridMazeKodingSvg,
+  renderSudutLuarSegitigaSvg,
+  renderJaringKerucutSvg,
+  renderJaringTabungSvg,
+  renderLuasPermukaanGabunganSvg,
+  svgCanvas,
+  svgHeader,
+  svgTargetBadge,
+  svgBottomPrompt,
+  svgDimensionLine,
+  svgGroundShadow,
+  svgCommonDefs,
   generateVisualStimulus,
   detectStimulusFromSoalText,
   getVisualCatalog,
@@ -80,6 +91,7 @@ import {
   getRegisteredVisualTypes,
   DETECTION_RULES
 } from '../src/lib/visual-engine';
+import { safeNum, minifySvg } from '../src/lib/visuals/types';
 import { buildStimulusSignature } from '../src/routes/kisi';
 
 describe('Examplate Visual Stimulus Engine Tests', () => {
@@ -1507,6 +1519,167 @@ D. 32 cm`;
 
       const detGarisBilangan = detectStimulusFromSoalText('Tentukan titik P pada garis bilangan berikut!', 'Matematika');
       expect(detGarisBilangan?.type).toBe('garis_bilangan');
+    });
+  });
+
+  describe('Enterprise Visual Stimulus Improvements & Primitives', () => {
+    describe('SVG Primitives Builder', () => {
+      it('should generate valid svgCanvas with accessibility attributes', () => {
+        const svg = svgCanvas({
+          width: 400,
+          height: 250,
+          title: 'Uji Stimulus Geometri',
+          desc: 'Diagram balok 3D untuk asesmen matematika',
+          content: '<circle cx="200" cy="125" r="50" fill="#38bdf8"/>'
+        });
+
+        expect(svg).toContain('<svg');
+        expect(svg).toContain('role="img"');
+        expect(svg).toContain('aria-labelledby');
+        expect(svg).toContain('<title id=');
+        expect(svg).toContain('Uji Stimulus Geometri</title>');
+        expect(svg).toContain('<desc id=');
+        expect(svg).toContain('Diagram balok 3D untuk asesmen matematika</desc>');
+        expect(svg).toContain('viewBox="0 0 400 250"');
+        expect(svg).toContain('</svg>');
+      });
+
+      it('should generate header banner with category badge and subtitle', () => {
+        const header = svgHeader({
+          title: 'Hukum Newton II',
+          subtitle: 'Analisis percepatan benda dan resultan gaya',
+          badge: 'FISIKA & MEKANIKA',
+          cx: 250
+        });
+
+        expect(header).toContain('FISIKA &amp; MEKANIKA');
+        expect(header).toContain('Hukum Newton II');
+        expect(header).toContain('Analisis percepatan benda');
+      });
+
+      it('should generate crisp target badge and bottom prompt', () => {
+        const badge = svgTargetBadge(150, 80, 'A', 11);
+        expect(badge).toContain('<circle cx="150" cy="80" r="11"');
+        expect(badge).toContain('[A]');
+
+        const prompt = svgBottomPrompt('Perhatikan arah panah gaya pada gambar di atas!', 400, 220);
+        expect(prompt).toContain('Perhatikan arah panah gaya pada gambar di atas!');
+        expect(prompt).toContain('rect');
+      });
+
+      it('should generate dimension lines, ground shadow, and enterprise defs', () => {
+        const dim = svgDimensionLine(50, 100, 250, 100, 'p = 15 cm', 'h');
+        expect(dim).toContain('p = 15 cm');
+        expect(dim).toContain('dimension-line');
+
+        const shadow = svgGroundShadow(200, 180, 80, 12, 'testShadow');
+        expect(shadow).toContain('ellipse cx="200" cy="180" rx="80" ry="12" fill="url(#testShadow)"');
+
+        const defs = svgCommonDefs('ent');
+        expect(defs).toContain('id="entDropShadow"');
+        expect(defs).toContain('id="entGroundShadow"');
+        expect(defs).toContain('id="entCardBg"');
+      });
+    });
+
+    describe('Runtime Number Validation (safeNum)', () => {
+      it('should validate finite numbers and clamp between min and max', () => {
+        expect(safeNum(25, 10)).toBe(25);
+        expect(safeNum('42', 10)).toBe(42);
+        expect(safeNum(5, 10, 10, 100)).toBe(10);
+        expect(safeNum(150, 10, 10, 100)).toBe(100);
+      });
+
+      it('should prevent NaN, undefined, and non-numeric injection', () => {
+        expect(safeNum(NaN, 50)).toBe(50);
+        expect(safeNum(undefined, 50)).toBe(50);
+        expect(safeNum(null, 50)).toBe(0); // Number(null) is 0, which is finite
+        expect(safeNum('<script>', 50)).toBe(50);
+        expect(safeNum('invalid', 20)).toBe(20);
+        expect(safeNum(Infinity, 50)).toBe(50);
+        expect(safeNum(-Infinity, 50)).toBe(50);
+      });
+    });
+
+    describe('SVG Output Optimization (minifySvg)', () => {
+      it('should remove XML comments and collapse excessive whitespace', () => {
+        const raw = `
+          <svg viewBox="0 0 100 100">
+            <!-- This is an XML comment -->
+            <rect x="10"    y="20"   width="30" height="40" />
+            <!-- Another comment -->
+          </svg>
+        `;
+        const minified = minifySvg(raw);
+        expect(minified).not.toContain('<!--');
+        expect(minified).not.toContain('This is an XML comment');
+        expect(minified.startsWith('<svg')).toBe(true);
+        expect(minified.endsWith('</svg>')).toBe(true);
+        expect(minified).not.toMatch(/\s{2,}/);
+      });
+    });
+
+    describe('Accessibility Injection in generateVisualStimulus', () => {
+      it('should automatically inject <title>, <desc>, and role="img" when missing', () => {
+        const result = generateVisualStimulus({
+          type: 'sudut_luar_segitiga',
+          params: { sudutA: 45, sudutB: 65, label: 'Z' },
+          caption: 'Sudut Luar Segitiga Uji'
+        });
+
+        expect(result).not.toBeNull();
+        expect(result?.svg).toContain('role="img"');
+        expect(result?.svg).toContain('<title id="stimulus-title">Sudut Luar Segitiga Uji</title>');
+        expect(result?.svg).toContain('<desc id="stimulus-desc">');
+      });
+    });
+
+    describe('Upgraded Batch 3 Geometry Templates', () => {
+      it('should render upgraded sudut_luar_segitiga with defs, gradient, and ground shadow', () => {
+        const svg = renderSudutLuarSegitigaSvg({ sudutA: 55, sudutB: 65, label: 'K' });
+        expect(svg).toContain('<defs>');
+        expect(svg).toContain('linearGradient id="triBodyGrad"');
+        expect(svg).toContain('radialGradient id="triFloorShdw"');
+        expect(svg).toContain('fill="url(#triFloorShdw)"');
+        expect(svg).toContain('55°');
+        expect(svg).toContain('65°');
+        expect(svg).toContain('[K]');
+      });
+
+      it('should render upgraded jaring_kerucut with defs, warm gradient, and ground shadow', () => {
+        const svg = renderJaringKerucutSvg({ r: 9, s: 28, label: 'M' });
+        expect(svg).toContain('<defs>');
+        expect(svg).toContain('linearGradient id="coneJuringGrad"');
+        expect(svg).toContain('radialGradient id="coneBaseGrad"');
+        expect(svg).toContain('radialGradient id="coneFloorShdw"');
+        expect(svg).toContain('r = 9 cm');
+        expect(svg).toContain('s = 28 cm');
+        expect(svg).toContain('[M]');
+      });
+
+      it('should render upgraded jaring_tabung with crisp typography >= 9.5px and shadows', () => {
+        const svg = renderJaringTabungSvg({ r: 8, t: 15, label: 'P' });
+        expect(svg).toContain('<defs>');
+        expect(svg).toContain('radialGradient id="tubeLidGrad"');
+        expect(svg).toContain('linearGradient id="tubeBodyGrad"');
+        expect(svg).toContain('font-size="9.5"');
+        expect(svg).not.toContain('font-size="7.5"');
+        expect(svg).toContain('r = 8');
+        expect(svg).toContain('t = 15 cm');
+        expect(svg).toContain('[P]');
+      });
+
+      it('should render upgraded luas_permukaan_gabungan with isometric gradients and ground shadow', () => {
+        const svg = renderLuasPermukaanGabunganSvg({ p: 14, l: 10, t: 16, label: 'G' });
+        expect(svg).toContain('<defs>');
+        expect(svg).toContain('linearGradient id="balokFrontGradLP"');
+        expect(svg).toContain('linearGradient id="limasFrontGradLP"');
+        expect(svg).toContain('radialGradient id="gabunganFloorShdw"');
+        expect(svg).toContain('p = 14 cm');
+        expect(svg).toContain('l = 10 cm');
+        expect(svg).toContain('t = 16 cm');
+        expect(svg).toContain('[G]');
+      });
     });
   });
 });

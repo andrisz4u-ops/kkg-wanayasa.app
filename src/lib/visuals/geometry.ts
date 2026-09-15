@@ -3,7 +3,15 @@
  * 2D & 3D Geometric Shape SVG Renderers
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  safeNum,
+  SudutLuarSegitigaParams,
+  JaringKerucutParams,
+  JaringTabungParams,
+  LuasPermukaanGabunganParams,
+  PerisaiPancasilaParams
+} from './types';
 
 /** Render Balok 3D Isometrik dengan dimensi p, l, t dan garis putus-putus rusuk belakang */
 export function renderBalokSvg(params: { p?: number; l?: number; t?: number; unit?: string; label?: string }): string {
@@ -1366,7 +1374,7 @@ export function renderBangunGabunganSvg(params: { bentuk?: string; segmen?: Arra
 </svg>`;
 }
 
-export function renderPerisaiPancasilaSvg(params: any): string {
+export function renderPerisaiPancasilaSvg(params: PerisaiPancasilaParams): string {
   const silaParam = String(params.sila || params.pointer || '1').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2425,127 +2433,266 @@ export function renderJuringBusurLingkaranSvg(params: { r?: number; sudut?: numb
 // =========================================================================
 
 // 35. Teorema Sudut Luar Segitiga
-export function renderSudutLuarSegitigaSvg(params: any): string {
-  const a = params.sudutA || 50;
-  const b = params.sudutB || 60;
+export function renderSudutLuarSegitigaSvg(params: SudutLuarSegitigaParams): string {
+  const a = safeNum(params.sudutA, 50, 10, 170);
+  const b = safeNum(params.sudutB, 60, 10, 170);
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 220" width="380" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="380" height="220" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
-  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Teorema Sudut Luar Segitiga</text>
+  <defs>
+    <filter id="sudutDropShdw" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="sudutCardBg" x1="0%" y1="0%" x2="0%" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="triBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="50%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#7dd3fc"/>
+    </linearGradient>
+    <radialGradient id="triFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.16"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect width="380" height="220" fill="url(#sudutCardBg)" stroke="#cbd5e1" stroke-width="1.5" rx="8" filter="url(#sudutDropShdw)"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Teorema Sudut Luar Segitiga</text>
+
+  <!-- Ground Shadow Lantai -->
+  <ellipse cx="195" cy="164" rx="135" ry="7" fill="url(#triFloorShdw)"/>
 
   <!-- Segitiga dengan Garis Perpanjangan Alas -->
-  <polygon points="60,160 250,160 140,70" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <polygon points="60,160 250,160 140,70" fill="url(#triBodyGrad)" stroke="#0284c7" stroke-width="2.2" stroke-linejoin="round"/>
   <!-- Perpanjangan Garis Alas ke Kanan -->
   <line x1="250" y1="160" x2="340" y2="160" stroke="#0284c7" stroke-width="2" stroke-dasharray="4,3"/>
 
-  <!-- Sudut A di Atas (140, 70) -->
-  <text x="140" y="95" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">${a}°</text>
+  <!-- Busur Sudut Dalam A -->
+  <path d="M 125,82 A 18 18 0 0 0 152,80" fill="none" stroke="#0369a1" stroke-width="1.6"/>
+  <text x="140" y="98" text-anchor="middle" font-size="10" font-weight="bold" fill="#0369a1">${a}°</text>
 
-  <!-- Sudut B di Kiri Bawah (60, 160) -->
-  <text x="90" y="152" font-size="10" font-weight="bold" fill="#0369a1">${b}°</text>
+  <!-- Busur Sudut Dalam B -->
+  <path d="M 85,160 A 24 24 0 0 0 75,145" fill="none" stroke="#0369a1" stroke-width="1.6"/>
+  <text x="92" y="152" font-size="10" font-weight="bold" fill="#0369a1">${b}°</text>
 
   <!-- Busur Sudut Luar di Kanan (250, 160) -->
-  <path d="M 280 160 A 30 30 0 0 0 230 143" fill="none" stroke="#e11d48" stroke-width="2"/>
+  <path d="M 280 160 A 30 30 0 0 0 230 143" fill="none" stroke="#e11d48" stroke-width="2.2"/>
 
   <!-- Target Badge Sudut Luar -->
-  <circle cx="270" cy="135" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
-  <text x="270" y="139" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <g filter="url(#sudutDropShdw)">
+    <circle cx="270" cy="135" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+    <text x="270" y="139" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  </g>
 
-  <text x="190" y="200" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Besar sudut luar segitiga pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
+  <!-- Bottom Interactive Question Prompt -->
+  <rect x="25" y="188" width="330" height="22" rx="5" fill="#0f172a" fill-opacity="0.92"/>
+  <text x="190" y="202.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#f8fafc">Besar sudut luar segitiga pada huruf "[${escapeXml(labelChar)}]" adalah ...</text>
 </svg>`;
 }
 
 // 36. Jaring-jaring Kerucut (Bukaan Juring & Alas)
-export function renderJaringKerucutSvg(params: any): string {
-  const r = params.r || 7;
-  const s = params.s || 25;
+export function renderJaringKerucutSvg(params: JaringKerucutParams): string {
+  const r = safeNum(params.r, 7, 1, 100);
+  const s = safeNum(params.s, 25, 1, 100);
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 230" width="360" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="360" height="230" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
-  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Jaring-jaring Kerucut</text>
+  <defs>
+    <filter id="coneDropShdw" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="coneCardBg" x1="0%" y1="0%" x2="0%" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="coneJuringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="60%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#fdba74"/>
+    </linearGradient>
+    <radialGradient id="coneBaseGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#eff6ff"/>
+      <stop offset="60%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#bfdbfe"/>
+    </radialGradient>
+    <radialGradient id="coneFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.16"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect width="360" height="230" fill="url(#coneCardBg)" stroke="#cbd5e1" stroke-width="1.5" rx="8" filter="url(#coneDropShdw)"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Jaring-jaring Kerucut</text>
+
+  <!-- Ground Shadow under Base Circle -->
+  <ellipse cx="180" cy="197" rx="34" ry="6" fill="url(#coneFloorShdw)"/>
 
   <!-- Juring Selimut Kerucut (Atas) -->
-  <path d="M 180,45 L 260,125 A 115 115 0 0 1 100,125 Z" fill="#fed7aa" stroke="#ea580c" stroke-width="2"/>
-  <text x="180" y="95" text-anchor="middle" font-size="9" font-weight="bold" fill="#9a3412">Selimut Kerucut</text>
-  <text x="235" y="80" font-size="8.5" font-weight="bold" fill="#c2410c">s = ${s} cm</text>
+  <path d="M 180,45 L 260,125 A 115 115 0 0 1 100,125 Z" fill="url(#coneJuringGrad)" stroke="#ea580c" stroke-width="2" stroke-linejoin="round"/>
+  <text x="180" y="94" text-anchor="middle" font-size="10" font-weight="bold" fill="#9a3412">Selimut Kerucut</text>
+  <text x="235" y="80" font-size="9.5" font-weight="bold" fill="#c2410c">s = ${s} cm</text>
 
   <!-- Lingkaran Alas (Bawah) -->
-  <circle cx="180" cy="165" r="30" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-  <line x1="180" y1="165" x2="210" y2="165" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="2,2"/>
-  <text x="180" y="160" text-anchor="middle" font-size="8" font-weight="bold" fill="#1e40af">Alas</text>
-  <text x="195" y="178" font-size="8" font-weight="bold" fill="#1d4ed8">r = ${r} cm</text>
+  <circle cx="180" cy="165" r="30" fill="url(#coneBaseGrad)" stroke="#2563eb" stroke-width="2"/>
+  <line x1="180" y1="165" x2="210" y2="165" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="3,2"/>
+  <text x="180" y="159" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1e40af">Alas</text>
+  <text x="195" y="178" font-size="9.5" font-weight="bold" fill="#1d4ed8">r = ${r} cm</text>
 
   <!-- Target Badge -->
-  <circle cx="280" cy="165" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-  <text x="280" y="169" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <g filter="url(#coneDropShdw)">
+    <circle cx="280" cy="165" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+    <text x="280" y="169" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  </g>
 
-  <text x="180" y="214" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Luas juring selimut kerucut pada gambar di atas adalah ...</text>
+  <!-- Bottom Interactive Question Prompt -->
+  <rect x="20" y="202" width="320" height="22" rx="5" fill="#0f172a" fill-opacity="0.92"/>
+  <text x="180" y="216.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#f8fafc">Luas juring selimut kerucut pada gambar di atas adalah ...</text>
 </svg>`;
 }
 
 // 37. Jaring-jaring Tabung (Bukaan Selimut & 2 Lingkaran)
-export function renderJaringTabungSvg(params: any): string {
-  const r = params.r || 7;
-  const t = params.t || 10;
+export function renderJaringTabungSvg(params: JaringTabungParams): string {
+  const r = safeNum(params.r, 7, 1, 100);
+  const t = safeNum(params.t, 10, 1, 100);
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 230" width="380" height="230" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="380" height="230" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
-  <text x="190" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Jaring-jaring Tabung (Silinder)</text>
+  <defs>
+    <filter id="tubeDropShdw" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="tubeCardBg" x1="0%" y1="0%" x2="0%" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <radialGradient id="tubeLidGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="60%" stop-color="#dcfce7"/>
+      <stop offset="100%" stop-color="#bbf7d0"/>
+    </radialGradient>
+    <linearGradient id="tubeBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="60%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+    <radialGradient id="tubeFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.16"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect width="380" height="230" fill="url(#tubeCardBg)" stroke="#cbd5e1" stroke-width="1.5" rx="8" filter="url(#tubeDropShdw)"/>
+  <text x="190" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Jaring-jaring Tabung (Silinder)</text>
 
   <!-- Lingkaran Tutup Atas -->
-  <circle cx="190" cy="55" r="22" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
-  <text x="190" y="58" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#166534">Tutup (r=${r})</text>
+  <circle cx="190" cy="55" r="22" fill="url(#tubeLidGrad)" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="190" y="58.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#166534">Tutup (r = ${r})</text>
 
   <!-- Persegi Panjang Selimut -->
-  <rect x="70" y="78" width="240" height="65" fill="#fef3c7" stroke="#d97706" stroke-width="1.8" rx="2"/>
-  <text x="190" y="115" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400e">Selimut Tabung (Persegi Panjang)</text>
-  <text x="190" y="128" text-anchor="middle" font-size="7.5" fill="#b45309">Panjang = 2πr | Lebar = t = ${t} cm</text>
+  <rect x="70" y="78" width="240" height="65" fill="url(#tubeBodyGrad)" stroke="#d97706" stroke-width="1.8" rx="3"/>
+  <text x="190" y="112" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400e">Selimut Tabung (Persegi Panjang)</text>
+  <text x="190" y="127" text-anchor="middle" font-size="9.5" font-weight="500" fill="#b45309">Panjang = 2πr | Lebar = t = ${t} cm</text>
+
+  <!-- Ground Shadow under Bottom Circle -->
+  <ellipse cx="190" cy="190" rx="26" ry="5" fill="url(#tubeFloorShdw)"/>
 
   <!-- Lingkaran Alas Bawah -->
-  <circle cx="190" cy="166" r="22" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
-  <text x="190" y="169" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#166534">Alas (r=${r})</text>
+  <circle cx="190" cy="166" r="22" fill="url(#tubeLidGrad)" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="190" y="169.5" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#166534">Alas (r = ${r})</text>
 
   <!-- Target Badge -->
-  <circle cx="335" cy="110" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-  <text x="335" y="114" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <g filter="url(#tubeDropShdw)">
+    <circle cx="335" cy="110" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+    <text x="335" y="114" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  </g>
 
-  <text x="190" y="210" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Panjang selimut tabung jika jari-jari r = ${r} cm adalah ...</text>
+  <!-- Bottom Interactive Question Prompt -->
+  <rect x="25" y="198" width="330" height="22" rx="5" fill="#0f172a" fill-opacity="0.92"/>
+  <text x="190" y="212.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#f8fafc">Panjang selimut tabung jika jari-jari r = ${r} cm adalah ...</text>
 </svg>`;
 }
 
 // 38. Luas Permukaan Bangun Gabungan (Balok + Limas)
-export function renderLuasPermukaanGabunganSvg(params: any): string {
-  const p = params.p || 10;
-  const l = params.l || 8;
-  const t = params.t || 12;
+export function renderLuasPermukaanGabunganSvg(params: LuasPermukaanGabunganParams): string {
+  const p = safeNum(params.p, 10, 1, 100);
+  const l = safeNum(params.l, 8, 1, 100);
+  const t = safeNum(params.t, 12, 1, 100);
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 240" width="360" height="240" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
-  <rect width="360" height="240" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
-  <text x="180" y="24" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Bangun Ruang Gabungan (Balok &amp; Limas)</text>
+  <defs>
+    <filter id="gabunganDropShdw" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+    <linearGradient id="gabunganCardBg" x1="0%" y1="0%" x2="0%" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="balokTopGradLP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#bfdbfe"/>
+    </linearGradient>
+    <linearGradient id="balokFrontGradLP" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#bfdbfe"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <linearGradient id="balokRightGradLP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="limasFrontGradLP" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="100%" stop-color="#fed7aa"/>
+    </linearGradient>
+    <linearGradient id="limasRightGradLP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdba74"/>
+      <stop offset="100%" stop-color="#fb923c"/>
+    </linearGradient>
+    <radialGradient id="gabunganFloorShdw" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.16"/>
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect width="360" height="240" fill="url(#gabunganCardBg)" stroke="#cbd5e1" stroke-width="1.5" rx="8" filter="url(#gabunganDropShdw)"/>
+  <text x="180" y="24" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Bangun Ruang Gabungan (Balok &amp; Limas)</text>
+
+  <!-- Ground Shadow Lantai -->
+  <ellipse cx="178" cy="194" rx="72" ry="10" fill="url(#gabunganFloorShdw)"/>
 
   <!-- Balok Bawah Isometrik -->
-  <polygon points="120,130 200,130 230,110 150,110" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.8"/>
-  <polygon points="120,130 120,185 200,185 200,130" fill="#93c5fd" stroke="#1d4ed8" stroke-width="1.8"/>
-  <polygon points="200,130 200,185 230,165 230,110" fill="#60a5fa" stroke="#1d4ed8" stroke-width="1.8"/>
+  <polygon points="120,130 200,130 230,110 150,110" fill="url(#balokTopGradLP)" stroke="#1d4ed8" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="120,130 120,185 200,185 200,130" fill="url(#balokFrontGradLP)" stroke="#1d4ed8" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="200,130 200,185 230,165 230,110" fill="url(#balokRightGradLP)" stroke="#1d4ed8" stroke-width="1.8" stroke-linejoin="round"/>
 
   <!-- Atap Limas Segiempat di Atas Balok -->
-  <polygon points="120,130 200,130 175,60" fill="#fed7aa" stroke="#ea580c" stroke-width="1.8"/>
-  <polygon points="200,130 230,110 175,60" fill="#fdba74" stroke="#ea580c" stroke-width="1.8"/>
+  <polygon points="120,130 200,130 175,60" fill="url(#limasFrontGradLP)" stroke="#ea580c" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="200,130 230,110 175,60" fill="url(#limasRightGradLP)" stroke="#ea580c" stroke-width="1.8" stroke-linejoin="round"/>
 
   <!-- Dimensi -->
-  <text x="160" y="198" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1e40af">p = ${p} cm</text>
-  <text x="225" y="180" font-size="8.5" font-weight="bold" fill="#1e40af">l = ${l} cm</text>
-  <text x="95" y="155" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1e40af">t = ${t} cm</text>
+  <text x="160" y="198" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1e40af">p = ${p} cm</text>
+  <text x="225" y="180" font-size="9.5" font-weight="bold" fill="#1e40af">l = ${l} cm</text>
+  <text x="95" y="155" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1e40af">t = ${t} cm</text>
 
   <!-- Target Badge -->
-  <circle cx="175" cy="60" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.5"/>
-  <text x="175" y="64" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  <g filter="url(#gabunganDropShdw)">
+    <circle cx="175" cy="60" r="11" fill="#e11d48" stroke="#ffffff" stroke-width="1.8"/>
+    <text x="175" y="64" text-anchor="middle" font-size="10" font-weight="bold" fill="#ffffff">[${escapeXml(labelChar)}]</text>
+  </g>
 
-  <text x="180" y="222" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Luas permukaan gabungan bangun ruang di atas adalah ...</text>
+  <!-- Bottom Interactive Question Prompt -->
+  <rect x="20" y="210" width="320" height="22" rx="5" fill="#0f172a" fill-opacity="0.92"/>
+  <text x="180" y="224.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="#f8fafc">Luas permukaan gabungan bangun ruang di atas adalah ...</text>
 </svg>`;
 }
 

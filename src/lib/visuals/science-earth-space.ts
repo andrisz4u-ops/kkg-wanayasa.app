@@ -3,7 +3,13 @@
  * Earth Science, Geography & Astronomy SVG Visual Stimulus Renderers (12 Templates)
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  TataSuryaParams,
+  GerakSemuMatahariParams,
+  MusimDanRevolusiBumiParams,
+  SiklusKarbonOksigenParams
+} from './types';
 
 /** 
  * Render Siklus Air / Hidrologi Lengkap Berdasarkan Diagram Standar Kurikulum Nasional
@@ -564,7 +570,7 @@ export function renderPetaIndonesiaSvg(params: { pointer?: string; label?: strin
 </svg>`;
 }
 
-export function renderTataSuryaSvg(params: any): string {
+export function renderTataSuryaSvg(params: TataSuryaParams): string {
   const pointer = String(params.pointer || '3').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1255,7 +1261,7 @@ export function renderSiklusBatuanSvg(params: { pointer?: string; label?: string
 }
 
 // 21. Gerak Semu Tahunan Matahari
-export function renderGerakSemuMatahariSvg(params: any): string {
+export function renderGerakSemuMatahariSvg(params: GerakSemuMatahariParams): string {
   const pointer = String(params.bulan || params.pointer || 'juni').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1294,7 +1300,7 @@ export function renderGerakSemuMatahariSvg(params: any): string {
 }
 
 // 22. Musim dan Revolusi Bumi (Kemiringan Sumbu 23.5°)
-export function renderMusimDanRevolusiBumiSvg(params: any): string {
+export function renderMusimDanRevolusiBumiSvg(params: MusimDanRevolusiBumiParams): string {
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220" style="background:#0f172a; font-family:'Segoe UI',Arial,sans-serif;">
@@ -1330,7 +1336,7 @@ export function renderMusimDanRevolusiBumiSvg(params: any): string {
 }
 
 // 23. Siklus Karbon dan Oksigen
-export function renderSiklusKarbonOksigenSvg(params: any): string {
+export function renderSiklusKarbonOksigenSvg(params: SiklusKarbonOksigenParams): string {
   const pointer = String(params.pointer || params.tahap || 'fotosintesis').toLowerCase();
   const labelChar = params.label || 'X';
 

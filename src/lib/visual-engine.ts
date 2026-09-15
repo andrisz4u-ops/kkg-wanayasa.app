@@ -15,8 +15,11 @@ import {
   VisualStimulusConfig,
   GeneratedVisualResult,
   svgToDataUri,
-  sanitizeSvgXml
+  sanitizeSvgXml,
+  escapeXml,
+  minifySvg
 } from './visuals/types';
+export * from './visuals/svg-primitives';
 
 import {
   renderBalokSvg,
@@ -914,13 +917,30 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
   const rawSvg = entry.render(params);
   if (!rawSvg) return null;
 
-  // Sanitize SVG XML to guarantee 100% valid XML entities
-  const svg = sanitizeSvgXml(rawSvg);
-
   let title = config.caption;
   if (!title) {
     title = typeof entry.defaultTitle === 'function' ? entry.defaultTitle(params) : entry.defaultTitle;
   }
+  const cleanTitle = title || 'Visual Stimulus Soal';
+
+  // Inject Accessibility: <title>, <desc>, dan role="img" jika belum ada
+  let accessibleSvg = rawSvg;
+  const hasRole = /role=["'][^"']*["']/i.test(accessibleSvg);
+  const hasTitle = /<title[\s>]/i.test(accessibleSvg);
+  const hasDesc = /<desc[\s>]/i.test(accessibleSvg);
+
+  if (!hasTitle) {
+    const roleAttr = !hasRole ? ' role="img" aria-labelledby="stimulus-title stimulus-desc"' : '';
+    const titleTag = `<title id="stimulus-title">${escapeXml(cleanTitle)}</title>`;
+    const descTag = !hasDesc ? `<desc id="stimulus-desc">Visual stimulus asesmen: ${escapeXml(cleanTitle)}</desc>` : '';
+    accessibleSvg = accessibleSvg.replace(/<svg\b([^>]*)>/, `<svg$1${roleAttr}>${titleTag}${descTag}`);
+  } else if (!hasRole) {
+    accessibleSvg = accessibleSvg.replace(/<svg\b([^>]*)>/, '<svg$1 role="img">');
+  }
+
+  // Sanitize SVG XML to guarantee 100% valid XML entities & minify output
+  const minified = minifySvg(accessibleSvg);
+  const svg = sanitizeSvgXml(minified);
 
   // Parse viewBox untuk mendapatkan width/height dinamis (fix hardcoded dimensions)
   let width = 360;
@@ -936,7 +956,7 @@ export function generateVisualStimulus(config: VisualStimulusConfig): GeneratedV
     dataUri: svgToDataUri(svg),
     width,
     height,
-    title,
+    title: cleanTitle,
     credit: 'Examplate Visual Engine',
     type: 'svg'
   };

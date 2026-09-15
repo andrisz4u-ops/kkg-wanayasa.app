@@ -3,7 +3,18 @@
  * Biology, Ecology, Animal & Plant Life Cycles SVG Visual Stimulus Renderers (22 Templates)
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  RantaiMakananLautParams,
+  RantaiMakananHutanParams,
+  DaurHidupKupuDetailParams,
+  DaurHidupBelalangParams,
+  DaurHidupKecoaParams,
+  BagianAkarTumbuhanParams,
+  BagianBatangDikotilMonokotilParams,
+  BagianDaunAnatomiParams,
+  PiramidaMakananEkologiParams
+} from './types';
 
 /** Render Rantai Makanan & Aliran Energi Ekosistem (Enterprise Textbook Grade) */
 export function renderRantaiMakananSvg(params: { pointer?: string; label?: string; organisme?: string[] }): string {
@@ -1688,7 +1699,7 @@ export function renderSelHewanTumbuhanSvg(params: { pointer?: string; label?: st
 // =========================================================================
 
 // 1. Rantai Makanan Laut
-export function renderRantaiMakananLautSvg(params: any): string {
+export function renderRantaiMakananLautSvg(params: RantaiMakananLautParams): string {
   const pointer = String(params.pointer || params.target || 'tuna').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1743,7 +1754,7 @@ export function renderRantaiMakananLautSvg(params: any): string {
 }
 
 // 2. Rantai Makanan Hutan
-export function renderRantaiMakananHutanSvg(params: any): string {
+export function renderRantaiMakananHutanSvg(params: RantaiMakananHutanParams): string {
   const pointer = String(params.pointer || params.target || 'harimau').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1793,7 +1804,7 @@ export function renderRantaiMakananHutanSvg(params: any): string {
 }
 
 // 3. Daur Hidup Kupu-kupu Detail
-export function renderDaurHidupKupuDetailSvg(params: any): string {
+export function renderDaurHidupKupuDetailSvg(params: DaurHidupKupuDetailParams): string {
   const tahap = String(params.tahap || params.pointer || 'kepompong').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1844,7 +1855,7 @@ export function renderDaurHidupKupuDetailSvg(params: any): string {
 }
 
 // 4. Daur Hidup Belalang (Metamorfosis Tidak Sempurna)
-export function renderDaurHidupBelalangSvg(params: any): string {
+export function renderDaurHidupBelalangSvg(params: DaurHidupBelalangParams): string {
   const pointer = String(params.tahap || params.pointer || 'nimfa').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1894,7 +1905,7 @@ export function renderDaurHidupBelalangSvg(params: any): string {
 }
 
 // 5. Daur Hidup Kecoa (Metamorfosis Tidak Sempurna)
-export function renderDaurHidupKecoaSvg(params: any): string {
+export function renderDaurHidupKecoaSvg(params: DaurHidupKecoaParams): string {
   const pointer = String(params.tahap || params.pointer || 'ootheca').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1944,7 +1955,7 @@ export function renderDaurHidupKecoaSvg(params: any): string {
 }
 
 // 6. Bagian Akar Tumbuhan (Morfologi & Anatomi)
-export function renderBagianAkarTumbuhanSvg(params: any): string {
+export function renderBagianAkarTumbuhanSvg(params: BagianAkarTumbuhanParams): string {
   const pointer = String(params.bagian || params.pointer || 'rambut_akar').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1986,7 +1997,7 @@ export function renderBagianAkarTumbuhanSvg(params: any): string {
 }
 
 // 7. Penampang Batang Dikotil vs Monokotil
-export function renderBagianBatangDikotilMonokotilSvg(params: any): string {
+export function renderBagianBatangDikotilMonokotilSvg(params: BagianBatangDikotilMonokotilParams): string {
   const jenis = String(params.jenis || params.tipe || 'dikotil').toLowerCase();
   const labelChar = params.label || 'X';
   const isDikotil = jenis.includes('dikotil') && !jenis.includes('monokotil');
@@ -2037,7 +2048,7 @@ export function renderBagianBatangDikotilMonokotilSvg(params: any): string {
 }
 
 // 8. Bagian Daun (Anatomi Jaringan Fotosintesis)
-export function renderBagianDaunAnatomiSvg(params: any): string {
+export function renderBagianDaunAnatomiSvg(params: BagianDaunAnatomiParams): string {
   const pointer = String(params.pointer || params.jaringan || 'palisade').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2086,7 +2097,7 @@ export function renderBagianDaunAnatomiSvg(params: any): string {
 }
 
 // 10. Piramida Makanan Ekologi (Tingkat Trofik & Energi)
-export function renderPiramidaMakananEkologiSvg(params: any): string {
+export function renderPiramidaMakananEkologiSvg(params: PiramidaMakananEkologiParams): string {
   const pointer = String(params.tingkat || params.pointer || 'produsen').toLowerCase();
   const labelChar = params.label || 'X';
 

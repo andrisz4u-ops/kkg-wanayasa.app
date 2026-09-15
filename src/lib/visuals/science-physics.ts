@@ -3,9 +3,23 @@
  * Physics, Mechanics, Energy, Heat & Optics SVG Visual Stimulus Renderers (19 Templates)
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  RangkaianListrikParams,
+  PerubahanWujudParams,
+  MagnetParams,
+  SifatCahayaParams,
+  MacamMacamGayaParams,
+  PesawatSederhanaBidangMiringParams,
+  PesawatSederhanaRodaBerporosParams,
+  PembangkitListrikPltaParams,
+  PanelSuryaPltsParams,
+  EnergiAnginPltbParams,
+  TermosAirPanasParams,
+  PerpindahanPanasParams
+} from './types';
 
-export function renderRangkaianListrikSvg(params: any): string {
+export function renderRangkaianListrikSvg(params: RangkaianListrikParams): string {
   const model = (params.model || 'campuran').toLowerCase();
   const pointer = String(params.pointer || 'L1').toUpperCase();
   const labelChar = params.label || 'X';
@@ -269,7 +283,7 @@ export function renderRangkaianListrikSvg(params: any): string {
 </svg>`;
 }
 
-export function renderPerubahanWujudSvg(params: any): string {
+export function renderPerubahanWujudSvg(params: PerubahanWujudParams): string {
   const pointer = String(params.pointer || '1').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -448,7 +462,7 @@ export function renderPerubahanWujudSvg(params: any): string {
 </svg>`;
 }
 
-export function renderMagnetSvg(params: any): string {
+export function renderMagnetSvg(params: MagnetParams): string {
   const interaksi = (params.interaksi || 'tarik').toLowerCase();
   const labelChar = params.label || 'X';
   const pointer = String(params.pointer || 'kanan2').toLowerCase();
@@ -604,7 +618,7 @@ export function renderMagnetSvg(params: any): string {
 </svg>`;
 }
 
-export function renderSifatCahayaSvg(params: any): string {
+export function renderSifatCahayaSvg(params: SifatCahayaParams): string {
   const peristiwa = (params.peristiwa || 'pembiasan').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1436,7 +1450,7 @@ export function renderPerubahanEnergiSvg(params: { pointer?: string; label?: str
 // =========================================================================
 
 // 13. Macam-Macam Gaya Fisika
-export function renderMacamMacamGayaSvg(params: any): string {
+export function renderMacamMacamGayaSvg(params: MacamMacamGayaParams): string {
   const pointer = String(params.jenis || params.pointer || 'gesek').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1609,7 +1623,7 @@ export function renderMacamMacamGayaSvg(params: any): string {
 }
 
 // 14. Pesawat Sederhana Bidang Miring
-export function renderPesawatSederhanaBidangMiringSvg(params: any): string {
+export function renderPesawatSederhanaBidangMiringSvg(params: PesawatSederhanaBidangMiringParams): string {
   const h = params.h || 3;
   const s = params.s || 5;
   const labelChar = params.label || 'X';
@@ -1652,7 +1666,7 @@ export function renderPesawatSederhanaBidangMiringSvg(params: any): string {
 }
 
 // 15. Pesawat Sederhana Roda Berporos
-export function renderPesawatSederhanaRodaBerporosSvg(params: any): string {
+export function renderPesawatSederhanaRodaBerporosSvg(params: PesawatSederhanaRodaBerporosParams): string {
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" width="360" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
@@ -1681,7 +1695,7 @@ export function renderPesawatSederhanaRodaBerporosSvg(params: any): string {
 }
 
 // 16. Pembangkit Listrik Tenaga Air (PLTA)
-export function renderPembangkitListrikPltaSvg(params: any): string {
+export function renderPembangkitListrikPltaSvg(params: PembangkitListrikPltaParams): string {
   const pointer = String(params.pointer || params.komponen || 'turbin').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1730,7 +1744,7 @@ export function renderPembangkitListrikPltaSvg(params: any): string {
 }
 
 // 17. Panel Surya (PLTS)
-export function renderPanelSuryaPltsSvg(params: any): string {
+export function renderPanelSuryaPltsSvg(params: PanelSuryaPltsParams): string {
   const pointer = String(params.pointer || params.komponen || 'panel').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1781,7 +1795,7 @@ export function renderPanelSuryaPltsSvg(params: any): string {
 }
 
 // 18. Energi Angin (PLTB)
-export function renderEnergiAnginPltbSvg(params: any): string {
+export function renderEnergiAnginPltbSvg(params: EnergiAnginPltbParams): string {
   const labelChar = params.label || 'X';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 220" width="340" height="220" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
@@ -1813,7 +1827,7 @@ export function renderEnergiAnginPltbSvg(params: any): string {
 }
 
 // 19. Termos Air Panas (Isolator Kalor)
-export function renderTermosAirPanasSvg(params: any): string {
+export function renderTermosAirPanasSvg(params: TermosAirPanasParams): string {
   const pointer = String(params.pointer || params.bagian || 'ruang_hampa').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1851,7 +1865,7 @@ export function renderTermosAirPanasSvg(params: any): string {
 }
 
 // 20. Perpindahan Panas (Konduksi, Konveksi, Radiasi)
-export function renderPerpindahanPanasKonduksiKonveksiRadiasiSvg(params: any): string {
+export function renderPerpindahanPanasKonduksiKonveksiRadiasiSvg(params: PerpindahanPanasParams): string {
   const pointer = String(params.jenis || params.pointer || 'konveksi').toLowerCase();
   const labelChar = params.label || 'X';
 

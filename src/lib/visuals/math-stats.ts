@@ -3,7 +3,18 @@
  * Fractions, Measurement, and Statistical Chart SVG Renderers
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  MistarParams,
+  BusurDerajatParams,
+  DiagramAlurLogikaGerbangParams,
+  KodingVariabelOperatorParams,
+  GarisBilanganBulatOperasiParams,
+  PecahanDesimalPersenSenilaiParams,
+  JamDigitalKomparasiParams,
+  DiagramSankeyEnergiParams,
+  SkalaPetaBatangParams
+} from './types';
 
 /** Render Pecahan Lingkaran dengan n bagian, k bagian diarsir (Mendukung Pecahan Campuran) */
 export function renderPecahanLingkaranSvg(params: { pembagi?: number; diarsir?: number; utuh?: number; caption?: string }): string {
@@ -450,7 +461,7 @@ export function renderDiagramVennSvg(params: { judul?: string; labelA?: string; 
 }
 
 /** Render Pictogram / Diagram Gambar dengan ikon berulang */
-export function renderPictogramSvg(params: { judul?: string; labels?: string[]; data?: number[]; ikon?: string; nilaiIkon?: number }): string {
+export function renderPictogramSvg(params: { judul?: string; labels?: string[]; data?: number[]; ikon?: string; nilaiIkon?: number; showValues?: boolean }): string {
   const judul = params.judul || 'Diagram Gambar';
   const labels = params.labels?.length ? params.labels : ['Apel', 'Jeruk', 'Mangga'];
   const data = params.data?.length ? params.data : [4, 3, 5];
@@ -556,7 +567,7 @@ export function renderDiagramLingkaranSvg(params: { judul?: string; labels?: str
 </svg>`;
 }
 
-export function renderMistarSvg(params: any): string {
+export function renderMistarSvg(params: MistarParams): string {
   const start = Math.max(0, Math.min(10, Number(params.start ?? 3.0)));
   const end = Math.max(start + 0.5, Math.min(12, Number(params.end ?? 8.5)));
   const objectType = (params.objectType || 'pensil').toLowerCase();
@@ -648,7 +659,7 @@ export function renderMistarSvg(params: any): string {
 </svg>`;
 }
 
-export function renderBusurDerajatSvg(params: any): string {
+export function renderBusurDerajatSvg(params: BusurDerajatParams): string {
   const deg = Math.max(10, Math.min(170, Number(params.derajat ?? 60)));
   const labelChar = params.label || 'X';
 
@@ -3151,7 +3162,7 @@ export function renderKodingBlokPerulanganSvg(params: { loopCount?: number; labe
 // =========================================================================
 
 // 39. Gerbang Logika Komputasional (Logic Gates AND, OR, NOT)
-export function renderDiagramAlurLogikaGerbangSvg(params: any): string {
+export function renderDiagramAlurLogikaGerbangSvg(params: DiagramAlurLogikaGerbangParams): string {
   const gerbang = String(params.gerbang || 'AND').toUpperCase();
   const a = params.inputA ?? 1;
   const b = params.inputB ?? 0;
@@ -3194,7 +3205,7 @@ export function renderDiagramAlurLogikaGerbangSvg(params: any): string {
 }
 
 // 40. Koding Scratch: Variabel & Operator Logika
-export function renderKodingVariabelOperatorSvg(params: any): string {
+export function renderKodingVariabelOperatorSvg(params: KodingVariabelOperatorParams): string {
   const varName = params.varName || 'skor';
   const op = params.op || '+';
   const nilai = params.nilai || 10;
@@ -3228,7 +3239,7 @@ export function renderKodingVariabelOperatorSvg(params: any): string {
 }
 
 // 41. Operasi Hitung pada Garis Bilangan Bulat
-export function renderGarisBilanganBulatOperasiSvg(params: any): string {
+export function renderGarisBilanganBulatOperasiSvg(params: GarisBilanganBulatOperasiParams): string {
   const a = params.a ?? 3;
   const b = params.b ?? -5;
   const labelChar = params.label || 'X';
@@ -3279,7 +3290,7 @@ export function renderGarisBilanganBulatOperasiSvg(params: any): string {
 }
 
 // 42. Ekuivalensi Pecahan, Desimal, dan Persen Senilai
-export function renderPecahanDesimalPersenSenilaiSvg(params: any): string {
+export function renderPecahanDesimalPersenSenilaiSvg(params: PecahanDesimalPersenSenilaiParams): string {
   const pecahan = params.pecahan || '1/4';
   const desimal = params.desimal || '0.25';
   const persen = params.persen || '25%';
@@ -3314,7 +3325,7 @@ export function renderPecahanDesimalPersenSenilaiSvg(params: any): string {
 }
 
 // 43. Komparasi Jam Digital (Selisih Waktu & Durasi)
-export function renderJamDigitalKomparasiSvg(params: any): string {
+export function renderJamDigitalKomparasiSvg(params: JamDigitalKomparasiParams): string {
   const jamAwal = params.jamAwal || '07:30';
   const jamAkhir = params.jamAkhir || '09:15';
   const labelChar = params.label || 'X';
@@ -3355,7 +3366,7 @@ export function renderJamDigitalKomparasiSvg(params: any): string {
 }
 
 // 44. Diagram Sankey Aliran Energi
-export function renderDiagramSankeyEnergiSvg(params: any): string {
+export function renderDiagramSankeyEnergiSvg(params: DiagramSankeyEnergiParams): string {
   const masuk = params.masuk || 100;
   const berguna = params.berguna || 75;
   const terbuang = params.terbuang || 25;
@@ -3387,7 +3398,7 @@ export function renderDiagramSankeyEnergiSvg(params: any): string {
 }
 
 // 45. Skala Peta Batang (Skala Garis / Grafis)
-export function renderSkalaPetaBatangSvg(params: any): string {
+export function renderSkalaPetaBatangSvg(params: SkalaPetaBatangParams): string {
   const kmPerCm = params.kmPerCm || 5;
   const labelChar = params.label || 'X';
 

@@ -3,7 +3,20 @@
  * Visual Stimulus SVG Renderers for Language, Civics/Pancasila, Sports (PJOK), Arts (SBdP), English, and Robotics/Coding
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  GarisWallaceWeberParams,
+  CandiDanPeninggalanSejarahParams,
+  MotifBatikNusantaraParams,
+  SenjataTradisionalNusantaraParams,
+  TarianDaerahNusantaraParams,
+  PiramidaPendudukParams,
+  StrukturFabelAlurCeritaParams,
+  JenisParagrafInduktifDeduktifParams,
+  UnsurIklanMediaCetakParams,
+  PohonKeluargaGenealogiParams,
+  KoperasiSekolahParams
+} from './types';
 
 /**
  * 1. Render Rambu Lalu Lintas (Traffic & Safety Signs)
@@ -1649,7 +1662,7 @@ export function renderDiagramMindmapParagrafSvg(params: { pointer?: string; tipe
 // =========================================================================
 
 // 24. Garis Wallace dan Weber (Persebaran Fauna Indonesia)
-export function renderGarisWallaceWeberSvg(params: any): string {
+export function renderGarisWallaceWeberSvg(params: GarisWallaceWeberParams): string {
   const pointer = String(params.zona || params.pointer || 'peralihan').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1712,7 +1725,7 @@ export function renderGarisWallaceWeberSvg(params: any): string {
 }
 
 // 25. Candi & Peninggalan Sejarah (Borobudur vs Prambanan)
-export function renderCandiDanPeninggalanSejarahSvg(params: any): string {
+export function renderCandiDanPeninggalanSejarahSvg(params: CandiDanPeninggalanSejarahParams): string {
   const pointer = String(params.pointer || params.jenis || params.candi || 'stupa').toLowerCase();
   const labelChar = params.label || 'X';
   const isBorobudur = !pointer.includes('hindu') && !pointer.includes('prambanan') && !pointer.includes('ratna') && !pointer.includes('siwa');
@@ -1854,7 +1867,7 @@ export function renderCandiDanPeninggalanSejarahSvg(params: any): string {
 }
 
 // 26. Motif Batik Nusantara (Pola Geometris & Non-Geometris)
-export function renderMotifBatikNusantaraSvg(params: any): string {
+export function renderMotifBatikNusantaraSvg(params: MotifBatikNusantaraParams): string {
   const pointer = String(params.motif || params.pointer || 'megamendung').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2043,7 +2056,7 @@ export function renderMotifBatikNusantaraSvg(params: any): string {
 }
 
 // 27. Senjata Tradisional Nusantara
-export function renderSenjataTradisionalNusantaraSvg(params: any): string {
+export function renderSenjataTradisionalNusantaraSvg(params: SenjataTradisionalNusantaraParams): string {
   const pointer = String(params.senjata || params.pointer || 'kujang').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2082,7 +2095,7 @@ export function renderSenjataTradisionalNusantaraSvg(params: any): string {
 }
 
 // 28. Tarian Daerah Nusantara
-export function renderTarianDaerahNusantaraSvg(params: any): string {
+export function renderTarianDaerahNusantaraSvg(params: TarianDaerahNusantaraParams): string {
   const pointer = String(params.tari || params.pointer || 'pendet').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2121,7 +2134,7 @@ export function renderTarianDaerahNusantaraSvg(params: any): string {
 }
 
 // 29. Piramida Penduduk (Ekspansif, Stasioner, Konstruktif)
-export function renderPiramidaPendudukSvg(params: any): string {
+export function renderPiramidaPendudukSvg(params: PiramidaPendudukParams): string {
   const pointer = String(params.tipe || params.pointer || 'ekspansif').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2154,7 +2167,7 @@ export function renderPiramidaPendudukSvg(params: any): string {
 }
 
 // 30. Struktur Fabel & Alur Cerita (Freytag Pyramid)
-export function renderStrukturFabelAlurCeritaSvg(params: any): string {
+export function renderStrukturFabelAlurCeritaSvg(params: StrukturFabelAlurCeritaParams): string {
   const pointer = String(params.tahap || params.pointer || 'klimaks').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2229,7 +2242,7 @@ export function renderStrukturFabelAlurCeritaSvg(params: any): string {
 }
 
 // 31. Jenis Paragraf (Deduktif, Induktif, Campuran)
-export function renderJenisParagrafInduktifDeduktifSvg(params: any): string {
+export function renderJenisParagrafInduktifDeduktifSvg(params: JenisParagrafInduktifDeduktifParams): string {
   const pointer = String(params.jenis || params.pointer || 'deduktif').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2271,7 +2284,7 @@ export function renderJenisParagrafInduktifDeduktifSvg(params: any): string {
 }
 
 // 32. Unsur Iklan Media Cetak
-export function renderUnsurIklanMediaCetakSvg(params: any): string {
+export function renderUnsurIklanMediaCetakSvg(params: UnsurIklanMediaCetakParams): string {
   const pointer = String(params.bagian || params.pointer || 'headline').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2311,7 +2324,7 @@ export function renderUnsurIklanMediaCetakSvg(params: any): string {
 }
 
 // 33. Pohon Keluarga (Genealogi Silsilah)
-export function renderPohonKeluargaGenealogiSvg(params: any): string {
+export function renderPohonKeluargaGenealogiSvg(params: PohonKeluargaGenealogiParams): string {
   const pointer = String(params.posisi || params.pointer || 'ayah').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -2355,7 +2368,7 @@ export function renderPohonKeluargaGenealogiSvg(params: any): string {
 }
 
 // 34. Koperasi Sekolah (Struktur Organisasi)
-export function renderKoperasiSekolahSvg(params: any): string {
+export function renderKoperasiSekolahSvg(params: KoperasiSekolahParams): string {
   const pointer = String(params.jabatan || params.pointer || 'rat').toLowerCase();
   const labelChar = params.label || 'X';
 

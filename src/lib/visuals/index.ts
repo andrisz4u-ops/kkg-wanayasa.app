@@ -15,4 +15,5 @@ export * from './literacy-social';
 export * from './measurement';
 export * from './detector';
 export * from './catalog';
+export * from './svg-primitives';
 

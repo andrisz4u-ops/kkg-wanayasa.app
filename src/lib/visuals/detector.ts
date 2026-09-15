@@ -1836,6 +1836,7 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
         return { type: 'pecahan_lingkaran', params: { pembagi: n, diarsir: k } };
       }
     }
+    return null;
     }
   },
 
@@ -2014,6 +2015,7 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
         return { type: 'jam_analog', params: { jam, menit } };
       }
     }
+    return null;
     }
   },
 

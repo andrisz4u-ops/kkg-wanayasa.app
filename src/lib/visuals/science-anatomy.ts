@@ -3,7 +3,12 @@
  * Human Anatomy & Organ Systems SVG Visual Stimulus Renderers (13 Templates)
  */
 
-import { escapeXml } from './types';
+import {
+  escapeXml,
+  AlatEkskresiGinjalParams,
+  IndraPengecapLidahParams,
+  IndraPembauHidungParams
+} from './types';
 
 /** Render Organ Pernapasan Manusia dengan Siluet Torso Anatomis & Inset Alveolus (Enterprise Textbook Grade) */
 export function renderOrganPernapasanSvg(params: { pointer?: string; label?: string }): string {
@@ -1655,7 +1660,7 @@ export function renderSendiGerakSvg(params: { pointer?: string; label?: string }
 }
 
 // 9. Alat Ekskresi Ginjal Manusia
-export function renderAlatEkskresiGinjalSvg(params: any): string {
+export function renderAlatEkskresiGinjalSvg(params: AlatEkskresiGinjalParams): string {
   const pointer = String(params.bagian || params.pointer || 'korteks').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1808,7 +1813,7 @@ export function renderAlatEkskresiGinjalSvg(params: any): string {
 }
 
 // 11. Indra Pengecap Lidah (Peta Rasa)
-export function renderIndraPengecapLidahSvg(params: any): string {
+export function renderIndraPengecapLidahSvg(params: IndraPengecapLidahParams): string {
   const pointer = String(params.rasa || params.pointer || 'manis').toLowerCase();
   const labelChar = params.label || 'X';
 
@@ -1939,7 +1944,7 @@ export function renderIndraPengecapLidahSvg(params: any): string {
 }
 
 // 12. Indra Pembau Hidung (Anatomi Olfaktori)
-export function renderIndraPembauHidungSvg(params: any): string {
+export function renderIndraPembauHidungSvg(params: IndraPembauHidungParams): string {
   const pointer = String(params.bagian || params.pointer || 'saraf_olfaktori').toLowerCase();
   const labelChar = params.label || 'X';
 

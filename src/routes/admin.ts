@@ -14,6 +14,7 @@ import {
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSchema, updateSettingsSchema, listUsersQuerySchema, auditLogsQuerySchema, bulkApproveSchema, cleanupLogsSchema, createAiProviderSchema, updateAiProviderSchema } from '../lib/validation';
 import { AIService, parseKeyPool } from '../services/ai';
+import { cpData, cpElementsData, seedDefaultCPToDatabase } from '../lib/cp-data';
 
 import type { DashboardStats } from '../types';
 import type { AppBindings, AppVariables } from '../types/env';
@@ -1735,6 +1736,333 @@ admin.get('/ai-providers/presets', async (c) => {
   ];
 
   return successResponse(c, presets);
+});
+
+// ============================================
+// Capaian Pembelajaran (CP) Management Routes
+// ============================================
+
+// GET /cp — List all CP with optional filters and auto-seeding
+admin.get('/cp', async (c) => {
+  try {
+    const db = c.env.DB;
+    // Auto-seed if empty
+    await seedDefaultCPToDatabase(db);
+
+    const mapelFilter = c.req.query('mata_pelajaran');
+    const faseFilter = c.req.query('fase');
+    const searchQuery = c.req.query('search');
+
+    let sql = 'SELECT * FROM capaian_pembelajaran WHERE 1=1';
+    const params: any[] = [];
+
+    if (mapelFilter && mapelFilter !== 'all') {
+      sql += ' AND mata_pelajaran = ?';
+      params.push(mapelFilter);
+    }
+    if (faseFilter && faseFilter !== 'all') {
+      sql += ' AND fase = ?';
+      params.push(faseFilter);
+    }
+    if (searchQuery && searchQuery.trim()) {
+      sql += ' AND (mata_pelajaran LIKE ? OR teks_cp LIKE ? OR elemen_json LIKE ?)';
+      const term = `%${searchQuery.trim()}%`;
+      params.push(term, term, term);
+    }
+
+    sql += ' ORDER BY mata_pelajaran ASC, fase ASC';
+
+    const stmt = params.length > 0 ? db.prepare(sql).bind(...params) : db.prepare(sql);
+    const result = await stmt.all();
+
+    const items = (result.results || []).map((row: any) => {
+      let elements = {};
+      try {
+        elements = JSON.parse(row.elemen_json || '{}');
+      } catch {
+        elements = {};
+      }
+      return {
+        ...row,
+        elements,
+      };
+    });
+
+    return successResponse(c, {
+      items,
+      total: items.length
+    });
+  } catch (err: any) {
+    console.error('Error fetching CP:', err);
+    return Errors.internal(c, 'Gagal mengambil data Capaian Pembelajaran');
+  }
+});
+
+// GET /cp/:id — Get detail of a specific CP
+admin.get('/cp/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id) return Errors.badRequest(c, 'ID tidak valid');
+
+    const row: any = await c.env.DB.prepare('SELECT * FROM capaian_pembelajaran WHERE id = ?').bind(id).first();
+    if (!row) return Errors.notFound(c, 'Data CP tidak ditemukan');
+
+    let elements = {};
+    try {
+      elements = JSON.parse(row.elemen_json || '{}');
+    } catch {
+      elements = {};
+    }
+
+    return successResponse(c, {
+      ...row,
+      elements
+    });
+  } catch (err: any) {
+    console.error('Error fetching CP detail:', err);
+    return Errors.internal(c);
+  }
+});
+
+// POST /cp — Create new CP
+admin.post('/cp', async (c) => {
+  try {
+    const currentUser: any = c.get('user');
+    const body = await c.req.json();
+    const { mata_pelajaran, fase, teks_cp, elemen_json, regulasi } = body;
+
+    if (!mata_pelajaran || !fase || !teks_cp) {
+      return Errors.badRequest(c, 'Mata Pelajaran, Fase, dan Teks CP wajib diisi');
+    }
+
+    let serializedElements = '{}';
+    if (typeof elemen_json === 'object') {
+      serializedElements = JSON.stringify(elemen_json);
+    } else if (typeof elemen_json === 'string') {
+      serializedElements = elemen_json;
+    }
+
+    const reg = regulasi || 'BSKAP No. 046 Tahun 2025';
+
+    await c.env.DB.prepare(`
+      INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(mata_pelajaran, fase) DO UPDATE SET
+        teks_cp = excluded.teks_cp,
+        elemen_json = excluded.elemen_json,
+        regulasi = excluded.regulasi,
+        updated_by = excluded.updated_by,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      mata_pelajaran.trim(),
+      fase.trim(),
+      teks_cp.trim(),
+      serializedElements,
+      reg.trim(),
+      currentUser?.id || null
+    ).run();
+
+    await createAuditLog(c.env.DB, {
+      user_id: currentUser?.id || null,
+      action: 'ADMIN_ACTION',
+      entity_type: 'capaian_pembelajaran',
+      details: { action: 'CREATE_OR_UPDATE_CP', mata_pelajaran, fase }
+    });
+
+    return successResponse(c, null, 'Capaian Pembelajaran berhasil disimpan');
+  } catch (err: any) {
+    console.error('Error creating CP:', err);
+    return Errors.internal(c, 'Gagal menyimpan Capaian Pembelajaran');
+  }
+});
+
+// PUT /cp/:id — Update existing CP
+admin.put('/cp/:id', async (c) => {
+  try {
+    const currentUser: any = c.get('user');
+    const id = parseInt(c.req.param('id'));
+    if (!id) return Errors.badRequest(c, 'ID tidak valid');
+
+    const existing: any = await c.env.DB.prepare('SELECT * FROM capaian_pembelajaran WHERE id = ?').bind(id).first();
+    if (!existing) return Errors.notFound(c, 'Data CP tidak ditemukan');
+
+    const body = await c.req.json();
+    const { teks_cp, elemen_json, regulasi, mata_pelajaran, fase } = body;
+
+    let serializedElements = existing.elemen_json;
+    if (elemen_json !== undefined) {
+      if (typeof elemen_json === 'object') {
+        serializedElements = JSON.stringify(elemen_json);
+      } else if (typeof elemen_json === 'string') {
+        serializedElements = elemen_json;
+      }
+    }
+
+    const updatedMapel = mata_pelajaran ? mata_pelajaran.trim() : existing.mata_pelajaran;
+    const updatedFase = fase ? fase.trim() : existing.fase;
+    const updatedCp = teks_cp ? teks_cp.trim() : existing.teks_cp;
+    const updatedRegulasi = regulasi ? regulasi.trim() : existing.regulasi;
+
+    await c.env.DB.prepare(`
+      UPDATE capaian_pembelajaran
+      SET mata_pelajaran = ?, fase = ?, teks_cp = ?, elemen_json = ?, regulasi = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      updatedMapel,
+      updatedFase,
+      updatedCp,
+      serializedElements,
+      updatedRegulasi,
+      currentUser?.id || null,
+      id
+    ).run();
+
+    await createAuditLog(c.env.DB, {
+      user_id: currentUser?.id || null,
+      action: 'ADMIN_ACTION',
+      entity_type: 'capaian_pembelajaran',
+      entity_id: id,
+      details: { action: 'UPDATE_CP', mata_pelajaran: updatedMapel, fase: updatedFase }
+    });
+
+    return successResponse(c, null, 'Capaian Pembelajaran berhasil diperbarui');
+  } catch (err: any) {
+    console.error('Error updating CP:', err);
+    return Errors.internal(c, 'Gagal memperbarui Capaian Pembelajaran');
+  }
+});
+
+// DELETE /cp/:id — Delete CP (Strict Admin)
+admin.delete('/cp/:id', requireStrictAdmin, async (c) => {
+  try {
+    const currentUser: any = c.get('user');
+    const id = parseInt(c.req.param('id'));
+    if (!id) return Errors.badRequest(c, 'ID tidak valid');
+
+    const existing: any = await c.env.DB.prepare('SELECT mata_pelajaran, fase FROM capaian_pembelajaran WHERE id = ?').bind(id).first();
+    if (!existing) return Errors.notFound(c, 'Data CP tidak ditemukan');
+
+    await c.env.DB.prepare('DELETE FROM capaian_pembelajaran WHERE id = ?').bind(id).run();
+
+    await createAuditLog(c.env.DB, {
+      user_id: currentUser?.id || null,
+      action: 'ADMIN_ACTION',
+      entity_type: 'capaian_pembelajaran',
+      entity_id: id,
+      details: { action: 'DELETE_CP', mata_pelajaran: existing.mata_pelajaran, fase: existing.fase }
+    });
+
+    return successResponse(c, null, 'Capaian Pembelajaran berhasil dihapus');
+  } catch (err: any) {
+    console.error('Error deleting CP:', err);
+    return Errors.internal(c);
+  }
+});
+
+// POST /cp/reset — Reset CP to default BSKAP No. 046 Tahun 2025 constants
+admin.post('/cp/reset', async (c) => {
+  try {
+    const currentUser: any = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const { mata_pelajaran, fase, reset_all } = body;
+
+    if (reset_all) {
+      // Re-seed all from static memory
+      const phases = ['Fase A', 'Fase B', 'Fase C'];
+      const subjects = Object.keys(cpData);
+      let count = 0;
+
+      for (const subject of subjects) {
+        for (const f of phases) {
+          const defaultCp = cpData[subject]?.[f];
+          if (!defaultCp) continue;
+          const defaultElements = cpElementsData[subject]?.[f] || {};
+          const reg = (subject === 'B.Sunda' || subject === 'Tatanen di Bale Atikan' || subject === 'AKPK')
+            ? 'Muatan Lokal Kurikulum Merdeka'
+            : 'BSKAP No. 046 Tahun 2025';
+
+          await c.env.DB.prepare(`
+            INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(mata_pelajaran, fase) DO UPDATE SET
+              teks_cp = excluded.teks_cp,
+              elemen_json = excluded.elemen_json,
+              regulasi = excluded.regulasi,
+              updated_by = excluded.updated_by,
+              updated_at = CURRENT_TIMESTAMP
+          `).bind(
+            subject,
+            f,
+            defaultCp,
+            JSON.stringify(defaultElements),
+            reg,
+            currentUser?.id || null
+          ).run();
+          count++;
+        }
+      }
+
+      await createAuditLog(c.env.DB, {
+        user_id: currentUser?.id || null,
+        action: 'ADMIN_ACTION',
+        entity_type: 'capaian_pembelajaran',
+        details: { action: 'RESET_ALL_CP_TO_BSKAP_DEFAULT', count }
+      });
+
+      return successResponse(c, { resetCount: count }, 'Semua Capaian Pembelajaran berhasil direset ke standar resmi BSKAP No. 046 Tahun 2025');
+    }
+
+    if (mata_pelajaran) {
+      const phases = fase ? [fase] : ['Fase A', 'Fase B', 'Fase C'];
+      let count = 0;
+
+      // Cari key mata pelajaran di static cpData
+      const matchedKey = Object.keys(cpData).find(k => k.toLowerCase() === mata_pelajaran.toLowerCase().trim()) || mata_pelajaran;
+
+      for (const f of phases) {
+        const defaultCp = cpData[matchedKey]?.[f];
+        if (!defaultCp) continue;
+
+        const defaultElements = cpElementsData[matchedKey]?.[f] || {};
+        const reg = (matchedKey === 'B.Sunda' || matchedKey === 'Tatanen di Bale Atikan' || matchedKey === 'AKPK')
+          ? 'Muatan Lokal Kurikulum Merdeka'
+          : 'BSKAP No. 046 Tahun 2025';
+
+        await c.env.DB.prepare(`
+          INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(mata_pelajaran, fase) DO UPDATE SET
+            teks_cp = excluded.teks_cp,
+            elemen_json = excluded.elemen_json,
+            regulasi = excluded.regulasi,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+        `).bind(
+          matchedKey,
+          f,
+          defaultCp,
+          JSON.stringify(defaultElements),
+          reg,
+          currentUser?.id || null
+        ).run();
+        count++;
+      }
+
+      await createAuditLog(c.env.DB, {
+        user_id: currentUser?.id || null,
+        action: 'ADMIN_ACTION',
+        entity_type: 'capaian_pembelajaran',
+        details: { action: 'RESET_SUBJECT_CP', mata_pelajaran: matchedKey, fase, count }
+      });
+
+      return successResponse(c, { resetCount: count }, `CP untuk ${matchedKey} berhasil direset ke standar resmi`);
+    }
+
+    return Errors.badRequest(c, 'Parameter reset tidak lengkap');
+  } catch (err: any) {
+    console.error('Error resetting CP:', err);
+    return Errors.internal(c, 'Gagal mereset Capaian Pembelajaran');
+  }
 });
 
 export default admin;

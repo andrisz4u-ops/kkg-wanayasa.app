@@ -20,6 +20,10 @@ const CSRF_IGNORE_PATHS = [
     '/api/files/upload', // File upload uses FormData
     '/api/rpp/generate', // AI generation (session-authenticated)
     '/api/rpp/docx', // DOCX generation (session-authenticated, JSON body)
+    '/api/analisis-cp/generate', // AI generation (session-authenticated)
+    '/api/analisis-cp/generate-stream', // AI streaming (session-authenticated)
+    '/api/analisis-cp/extract-structure', // Structure extraction (session-authenticated)
+    '/api/analisis-cp/docx', // DOCX generation (session-authenticated, JSON body)
     '/api/kisi/generate', // AI generation (session-authenticated)
     '/api/presentation/generate', // AI generation (session-authenticated)
     '/api/presentation/outline', // AI outline (session-authenticated)

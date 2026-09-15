@@ -7,7 +7,7 @@ export interface LogAIOptions {
     user_id?: number;
     user_nama?: string;
     sekolah?: string;
-    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE' | 'TTS';
+    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE' | 'TTS' | 'ANALISIS_CP';
     mata_pelajaran?: string;
     topik?: string;
     jenjang_kelas?: string;
@@ -21,6 +21,9 @@ export interface LogAIOptions {
  */
 export async function recordAIGeneration(db: D1Database, opts: LogAIOptions): Promise<void> {
     try {
+        const safeFeature = ['RPP', 'ASESMEN', 'SLIDE'].includes(opts.feature_type) ? opts.feature_type : 'RPP';
+        const safeTopic = opts.feature_type === 'ANALISIS_CP' ? `[Analisis CP] ${opts.topik || ''}` : (opts.topik || null);
+
         await db.prepare(`
             INSERT INTO ai_generation_logs (
                 user_id, user_nama, sekolah, feature_type,
@@ -30,9 +33,9 @@ export async function recordAIGeneration(db: D1Database, opts: LogAIOptions): Pr
             opts.user_id || 1,
             opts.user_nama || 'Guru',
             opts.sekolah || 'SDN 2 Nangerang',
-            opts.feature_type,
+            safeFeature,
             opts.mata_pelajaran || null,
-            opts.topik || null,
+            safeTopic,
             opts.jenjang_kelas || null,
             opts.ai_provider || null,
             opts.duration_ms || 0

@@ -307,6 +307,7 @@ const pages = {
   'reset-password': async () => (await loadPageModule('reset-password')).renderResetPassword(),
   laporan: async () => (await loadPageModule('laporan')).renderLaporan(),
   notifications: async () => (await loadPageModule('notifications')).renderNotifications(),
+  'analisis-cp': async () => (await loadPageModule('analisis-cp')).renderAnalisisCp(),
   rpp: async () => (await loadPageModule('rpp')).renderRpp(),
   kisi: async () => (await loadPageModule('kisi')).renderKisi(),
   slide: async () => (await loadPageModule('slide')).renderSlide(),
@@ -394,9 +395,10 @@ const navSections = [
     title: 'Asisten AI',
     icon: 'fa-wand-magic-sparkles',
     isAI: true,
-    badgeText: '4 Modul',
+    badgeText: '5 Modul',
     defaultOpen: true,
     items: [
+      { page: 'analisis-cp', label: 'Analisis CP (AI)', icon: 'fa-book-bookmark', public: true, ai: true },
       { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
       { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
       { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
@@ -524,7 +526,7 @@ function renderNavLinks(activePage) {
 // Mobile Bottom Navigation Bar (App Bar Bawah untuk HP)
 function renderMobileBottomNav(activePage) {
   const isLoggedIn = !!state.user;
-  const isAIActive = ['rpp', 'kisi', 'slide', 'tts', 'games'].includes(activePage);
+  const isAIActive = ['analisis-cp', 'rpp', 'kisi', 'slide', 'tts', 'games'].includes(activePage);
 
   return `
     <!-- Mobile Bottom Navigation Bar (Fixed Ergonomic Thumb Bar) -->
@@ -637,8 +639,24 @@ function renderMobileAiSheet(activePage) {
           </button>
         </div>
 
-        <!-- 4 AI Generator Cards Grid -->
+        <!-- AI Generator Cards Grid -->
         <div class="grid grid-cols-2 gap-2.5 mb-4">
+          <!-- 0. Analisis CP, TP, ATP -->
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('analisis-cp');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer col-span-2 ${activePage === 'analisis-cp' ? 'bg-indigo-50/90 border-indigo-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-indigo-50/40 hover:border-indigo-300'}"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-700 flex items-center justify-center text-sm shadow-2xs shrink-0">
+                <i class="fas fa-book-bookmark"></i>
+              </div>
+              <div>
+                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Analisis CP, TP & ATP</span>
+                <span class="block text-[10px] text-slate-500 font-normal leading-snug">Ekstrak Buku PDF ke CP/TP/ATP Resmi BSKAP</span>
+              </div>
+            </div>
+          </button>
+
           <!-- 1. RPP & Modul Ajar -->
           <button 
             onclick="window.closeMobileAiSheet(); navigate('rpp');" 
@@ -779,6 +797,10 @@ async function render() {
       const { initKalender } = await loadPageModule('kalender');
       if (initKalender) setTimeout(() => initKalender(), 100);
     }
+    if (page === 'analisis-cp') {
+      const { initAnalisisCp } = await loadPageModule('analisis-cp');
+      if (initAnalisisCp) setTimeout(() => initAnalisisCp(), 100);
+    }
     if (page === 'rpp') {
       const { initRpp } = await loadPageModule('rpp');
       setTimeout(() => initRpp(), 100);
@@ -836,6 +858,7 @@ async function render() {
 
   const pageMetadata = {
     home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : 'Beranda Utama', icon: 'fa-home', category: 'Dasbor' },
+    'analisis-cp': { title: 'Analisis CP, TP & ATP (BSKAP 046/2025)', icon: 'fa-book-bookmark', category: 'Asisten AI' },
     rpp: { title: 'AI RPP & Modul Ajar Generator', icon: 'fa-magic', category: 'Asisten AI' },
     kisi: { title: 'Asesmen & Kisi-Kisi HOTS/AKM', icon: 'fa-list-check', category: 'Asisten AI' },
     slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },

@@ -392,7 +392,7 @@ window.initAdminData = async function () {
 // ============================================
 
 window.switchAdminTab = function (tab) {
-  const tabs = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers'];
+  const tabs = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers', 'cp'];
   const restrictedInOperator = ['profil', 'templates', 'logs', 'ai-providers'];
 
   if (isOperatorMode() && restrictedInOperator.includes(tab)) {
@@ -452,6 +452,10 @@ window.switchAdminTab = function (tab) {
     if (window.loadAuditLogsActions) window.loadAuditLogsActions();
     if (window.loadAuditLogs) window.loadAuditLogs();
     if (window.loadAuditStats) window.loadAuditStats();
+  }
+
+  if (tab === 'cp') {
+    if (window.loadAdminCPData) window.loadAdminCPData();
   }
   else if (tab === 'sekolah') {
     if (window.loadSekolah) window.loadSekolah();

@@ -73,6 +73,21 @@ export const cpData: Record<string, Record<string, string>> = {
   },
   "Koding KA": {
     "Fase C": "[Berpikir Komputasional]: Memahami permasalahan sederhana dalam kehidupan sehari-hari, menerapkan pemecahan masalah secara sistematis, serta menuliskan instruksi logis dan terstruktur menggunakan sekumpulan kosakata atau simbol. [Literasi Digital]: Memahami konsep dasar, manfaat, dan dampak teknologi digital, memahami sistem komputer tingkat pradasar, menerapkan pengamanan informasi pribadi dalam komunikasi daring, memanfaatkan internet, dan memproduksi serta mendiseminasi konten digital dalam bentuk teks dan gambar. [Literasi dan Etika Kecerdasan Artifisial]: Memahami konsep KA sederhana, manfaat dan dampak KA pada kehidupan sehari- hari, prinsip bahwa KA dikembangkan untuk meningkatkan kesejahteraan manusia dan tidak boleh merugikan manusia, mengetahui perbedaan manusia dan komputer dalam melakukan penginderaan, dan mengetahui perbedaan antara mesin cerdas dan mesin non-cerdas. Memahami etika dasar penggunaan KA seperti empati dan tidak menyakiti orang lain. [Pemanfaatan dan Pengembangan Kecerdasan Artifisial]: Menyimulasikan secara sederhana kerja KA saat mengenali pola, mengklasifikasi benda konkret berdasarkan sifatnya, dan mengetahui bagaimana prediksi sistem KA dipengaruhi input benda konkret."
+  },
+  "B.Sunda": {
+    "Fase A": "[Ngaregepkeun]: Mampuh ngaregepkeun, mikaharti, jeung ngaréspons caritaan sederhana ngeunaan diri jeung kulawarga. [Maca jeung Miarsa]: Mampuh maca kecap jeung kalimah basajan ngeunaan kagiatan sapopoé kalayan lafal anu merenah. [Nyarita jeung Midangkeun]: Mampuh nepikeun kahayang, pangalaman, jeung pamikiran sacara lisan ngagunakeun basa Sunda anu sopan. [Nulis]: Mampuh nuliskeun aksara, kecap, jeung kalimah basajan kalayan bener.",
+    "Fase B": "[Ngaregepkeun]: Mampuh mikaharti jeung nyurahan eusi téks lisan, dongéng, jeung paguneman sapopoé dina basa Sunda. [Maca jeung Miarsa]: Mampuh maca kalayan lancar jeung mikaharti eusi téks narasi atawa dheskripsi basajan. [Nyarita jeung Midangkeun]: Mampuh cumarita ngagunakeun tatakrama basa Sunda (loma jeung lemes) dina interaksi sapopoé di sakola jeung kulawarga. [Nulis]: Mampuh nyusun paragraf dheskripsi atawa narasi pondok dumasar kana pangalaman pribadi.",
+    "Fase C": "[Ngaregepkeun]: Mampuh nganalisis gagasan utama jeung amanat tina téks aural basa Sunda (warta, carita pondok, guguritan/pupuh). [Maca jeung Miarsa]: Mampuh maca lancar tur nyangkem rupa-rupa téks sastra jeung nonsastra Sunda kalawan kritis. [Nyarita jeung Midangkeun]: Mampuh nepikeun gagasan, pamadegan, atawa biantara basajan kalawan tartib ngagunakeun undak-usuk basa Sunda anu merenah. [Nulis]: Mampuh nulis rupa-rupa karangan narasi, eksposisi, atawa laporan kagiatan ngagunakeun éjahan jeung tanda baca basa Sunda anu merenah."
+  },
+  "Tatanen di Bale Atikan": {
+    "Fase A": "[Niti Harti & Niti Surti]: Mengenal ragam tanaman di lingkungan sekolah, bagian tubuh tanaman (akar, batang, daun, bunga), serta menumbuhkan rasa sayang terhadap alam ciptaan Tuhan. [Niti Bukti & Niti Bakti]: Mempraktikkan kebiasaan menyiram tanaman sekolah, merawat kebun mini, dan membuang sampah pada tempatnya. [Niti Sajati]: Menumbuhkan rasa syukur dan cinta lingkungan sekolah yang asri dan bersih.",
+    "Fase B": "[Niti Harti]: Memahami hubungan antara kesuburan tanah, air, dan pertumbuhan tanaman pangan serta peran pengomposan dalam menjaga kesuburan tanah secara alami. [Niti Surti]: Menumbuhkan kepekaan terhadap dampak sampah plastik dan limbah organik bagi kelestarian lingkungan hidup. [Niti Bukti]: Mempraktikkan pemilahan sampah organik dan anorganik, pembuatan pupuk kompos sederhana, dan penyemaian bibit tanaman sayuran di sekolah. [Niti Bakti & Sajati]: Merawat kebun sekolah hingga panen dan membudayakan konsumsi pangan sehat alami.",
+    "Fase C": "[Niti Harti]: Memahami prinsip permakultur, sistem pertanian alami berkelanjutan, siklus hara, mikroorganisme tanah, serta peran konservasi air dan tanah dalam mitigasi krisis iklim. [Niti Surti]: Menganalisis ketahanan pangan lokal berbasis sumber daya organik dan bahaya pestisida kimia bagi kesehatan dan alam. [Niti Bukti]: Merancang dan mempraktikkan siklus tatanen lengkap: persiapan media tanam organik, pembuatan pupuk organik cair (POC) & eco-enzyme, budidaya tanaman pangan lokal, serta panen mandiri. [Niti Bakti & Sajati]: Mengolah hasil panen kebun sekolah menjadi pangan bergizi, menggelar bazaar kewirausahaan ekologis, serta membudayakan gaya hidup selaras dengan alam (Panca Niti)."
+  },
+  "AKPK": {
+    "Fase A": "[Ajeg Nusantara]: Menumbuhkan rasa bangga dan cinta tanah air Indonesia serta mengenal simbol-simbol kebangsaan. [Mapag Buana & Maneh]: Mengenal potensi dan kebiasaan baik diri sendiri serta rasa ingin tahu terhadap ilmu pengetahuan. [Nyanding Rasa & Nyucikeun Diri]: Mempraktikkan sikap saling menyayangi teman, santun kepada guru/orang tua, serta menjaga kebersihan diri dan ibadah harian. [Betah di Imah & Reureuh]: Membiasakan membantu orang tua di rumah dan memanfaatkan waktu istirahat secara teratur.",
+    "Fase B": "[Ajeg Nusantara]: Mengamalkan nilai-nilai luhur Pancasila dan kearifan budaya daerah dalam pergaulan di sekolah dan lingkungan tinggal. [Mapag Buana & Maneh]: Mengembangkan wawasan belajar aktif, literasi dasar, serta mengenali bakat dan minat pribadi secara percaya diri. [Nyanding Rasa]: Menunjukkan empati sosial, gotong royong, dan toleransi dalam keberagaman suku, agama, dan budaya. [Nyucikeun Diri]: Melaksanakan ajaran agama dengan disiplin, menjaga kesucian hati, ucapan, dan kebersihan lingkungan. [Betah di Imah & Reureuh]: Menjalin komunikasi harmonis di lingkungan keluarga dan memanfaatkan hari istirahat untuk kebugaran fisik dan ketenangan jiwa.",
+    "Fase C": "[Ajeg Nusantara]: Memperkokoh komitmen kebangsaan, wawasan nusantara, keteladanan pahlawan, dan kepedulian terhadap keutuhan NKRI. [Mapag Buana]: Mengembangkan kompetensi global, literasi digital bertanggung jawab, dan kesiapan beradaptasi di era kecerdasan artifisial. [Maneh]: Membangun kemandirian, regulasi emosi, pemecahan masalah kritis, dan kepemimpinan diri yang berintegritas. [Nyanding Rasa]: Mengimplementasikan kepedulian sosial, filantropi cilik, apresiasi seni budaya, dan harmoni keberagaman masyarakat. [Nyucikeun Diri]: Memperdalam dimensi spiritualitas, kejujuran (shiddiq), amanah, dan ketakwaan kepada Tuhan Yang Maha Esa. [Betah di Imah & Reureuh]: Memperkuat ketahanan keluarga melalui bakti kepada orang tua serta membudayakan hidup sehat, seimbang, dan bahagia (Tujuh Poe Atikan)."
   }
 };
 
@@ -327,36 +342,264 @@ export const cpElementsData: Record<string, Record<string, Record<string, string
       "Literasi dan Etika Kecerdasan Artifisial": "Memahami konsep KA sederhana, manfaat dan dampak KA pada kehidupan sehari- hari, prinsip bahwa KA dikembangkan untuk meningkatkan kesejahteraan manusia dan tidak boleh merugikan manusia, mengetahui perbedaan manusia dan komputer dalam melakukan penginderaan, dan mengetahui perbedaan antara mesin cerdas dan mesin non-cerdas. Memahami etika dasar penggunaan KA seperti empati dan tidak menyakiti orang lain.",
       "Pemanfaatan dan Pengembangan Kecerdasan Artifisial": "Menyimulasikan secara sederhana kerja KA saat mengenali pola, mengklasifikasi benda konkret berdasarkan sifatnya, dan mengetahui bagaimana prediksi sistem KA dipengaruhi input benda konkret."
     }
+  },
+  "B.Sunda": {
+    "Fase A": {
+      "Ngaregepkeun": "Mampuh ngaregepkeun, mikaharti, jeung ngaréspons caritaan sederhana ngeunaan diri jeung kulawarga.",
+      "Maca jeung Miarsa": "Mampuh maca kecap jeung kalimah basajan ngeunaan kagiatan sapopoé kalayan lafal anu merenah.",
+      "Nyarita jeung Midangkeun": "Mampuh nepikeun kahayang, pangalaman, jeung pamikiran sacara lisan ngagunakeun basa Sunda anu sopan.",
+      "Nulis": "Mampuh nuliskeun aksara, kecap, jeung kalimah basajan kalayan bener."
+    },
+    "Fase B": {
+      "Ngaregepkeun": "Mampuh mikaharti jeung nyurahan eusi téks lisan, dongéng, jeung paguneman sapopoé dina basa Sunda.",
+      "Maca jeung Miarsa": "Mampuh maca kalayan lancar jeung mikaharti eusi téks narasi atawa dheskripsi basajan.",
+      "Nyarita jeung Midangkeun": "Mampuh cumarita ngagunakeun tatakrama basa Sunda (loma jeung lemes) dina interaksi sapopoé di sakola jeung kulawarga.",
+      "Nulis": "Mampuh nyusun paragraf dheskripsi atawa narasi pondok dumasar kana pangalaman pribadi."
+    },
+    "Fase C": {
+      "Ngaregepkeun": "Mampuh nganalisis gagasan utama jeung amanat tina téks aural basa Sunda (warta, carita pondok, guguritan/pupuh).",
+      "Maca jeung Miarsa": "Mampuh maca lancar tur nyangkem rupa-rupa téks sastra jeung nonsastra Sunda kalawan kritis.",
+      "Nyarita jeung Midangkeun": "Mampuh nepikeun gagasan, pamadegan, atawa biantara basajan kalawan tartib ngagunakeun undak-usuk basa Sunda anu merenah.",
+      "Nulis": "Mampuh nulis rupa-rupa karangan narasi, eksposisi, atawa laporan kagiatan ngagunakeun éjahan jeung tanda baca basa Sunda anu merenah."
+    }
+  },
+  "Tatanen di Bale Atikan": {
+    "Fase A": {
+      "Niti Harti & Niti Surti": "Mengenal ragam tanaman di lingkungan sekolah, bagian tubuh tanaman, serta menumbuhkan rasa sayang terhadap alam ciptaan Tuhan.",
+      "Niti Bukti & Niti Bakti": "Mempraktikkan kebiasaan menyiram tanaman sekolah, merawat kebun mini, dan membuang sampah pada tempatnya.",
+      "Niti Sajati": "Menumbuhkan rasa syukur dan cinta lingkungan sekolah yang asri dan bersih."
+    },
+    "Fase B": {
+      "Niti Harti": "Memahami hubungan kesuburan tanah, air, dan tanaman pangan serta peran pengomposan alami.",
+      "Niti Surti": "Menumbuhkan kepekaan terhadap dampak sampah plastik dan limbah bagi lingkungan.",
+      "Niti Bukti": "Mempraktikkan pemilahan sampah organik, pembuatan kompos sederhana, dan penyemaian bibit tanaman sayuran.",
+      "Niti Bakti & Sajati": "Merawat kebun sekolah hingga panen dan membudayakan konsumsi pangan sehat alami."
+    },
+    "Fase C": {
+      "Niti Harti": "Memahami prinsip permakultur, pertanian alami berkelanjutan, siklus hara, mikroorganisme tanah, dan konservasi tanah-air.",
+      "Niti Surti": "Menganalisis ketahanan pangan lokal berbasis sumber daya organik dan bahaya residu kimia bagi kesehatan dan lingkungan.",
+      "Niti Bukti": "Merancang dan mempraktikkan siklus tatanen lengkap: media tanam organik, POC & eco-enzyme, budidaya tanaman pangan, hingga panen mandiri.",
+      "Niti Bakti & Sajati": "Mengolah hasil panen kebun sekolah menjadi pangan bergizi, bazaar kewirausahaan ekologis, dan membudayakan gaya hidup selaras alam (Panca Niti)."
+    }
+  },
+  "AKPK": {
+    "Fase A": {
+      "Ajeg Nusantara": "Menumbuhkan rasa bangga dan cinta tanah air Indonesia serta mengenal simbol-simbol kebangsaan.",
+      "Mapag Buana & Maneh": "Mengenal potensi dan kebiasaan baik diri sendiri serta rasa ingin tahu terhadap ilmu pengetahuan.",
+      "Nyanding Rasa & Nyucikeun Diri": "Mempraktikkan sikap saling menyayangi teman, santun kepada guru/orang tua, serta menjaga kebersihan diri dan ibadah harian.",
+      "Betah di Imah & Reureuh": "Membiasakan membantu orang tua di rumah dan memanfaatkan waktu istirahat secara teratur."
+    },
+    "Fase B": {
+      "Ajeg Nusantara": "Mengamalkan nilai-nilai luhur Pancasila dan kearifan budaya daerah dalam pergaulan di sekolah dan lingkungan tinggal.",
+      "Mapag Buana & Maneh": "Mengembangkan wawasan belajar aktif, literasi dasar, serta mengenali bakat dan minat pribadi secara percaya diri.",
+      "Nyanding Rasa": "Menunjukkan empati sosial, gotong royong, dan toleransi dalam keberagaman suku, agama, dan budaya.",
+      "Nyucikeun Diri": "Melaksanakan ajaran agama dengan disiplin, menjaga kesucian hati, ucapan, dan kebersihan lingkungan.",
+      "Betah di Imah & Reureuh": "Menjalin komunikasi harmonis di lingkungan keluarga dan memanfaatkan hari istirahat untuk kebugaran fisik dan ketenangan jiwa."
+    },
+    "Fase C": {
+      "Ajeg Nusantara": "Memperkokoh komitmen kebangsaan, wawasan nusantara, keteladanan pahlawan, dan kepedulian terhadap keutuhan NKRI.",
+      "Mapag Buana": "Mengembangkan kompetensi global, literasi digital bertanggung jawab, dan kesiapan beradaptasi di era kecerdasan artifisial.",
+      "Maneh": "Membangun kemandirian, regulasi emosi, pemecahan masalah kritis, dan kepemimpinan diri yang berintegritas.",
+      "Nyanding Rasa": "Mengimplementasikan kepedulian sosial, filantropi cilik, apresiasi seni budaya, dan harmoni keberagaman masyarakat.",
+      "Nyucikeun Diri": "Memperdalam dimensi spiritualitas, kejujuran (shiddiq), amanah, dan ketakwaan kepada Tuhan Yang Maha Esa.",
+      "Betah di Imah & Reureuh": "Memperkuat ketahanan keluarga melalui bakti kepada orang tua serta membudayakan hidup sehat, seimbang, dan bahagia (Tujuh Poe Atikan Purwakarta)."
+    }
   }
 };
 
 /**
- * Helper untuk mendapatkan teks Capaian Pembelajaran resmi BSKAP 046/2025
- * berdasarkan mata pelajaran dan kelas
+ * Helper untuk menentukan Fase dari Jenjang / Kelas
+ */
+export function getFaseFromKelas(jenjangKelas: string): 'Fase A' | 'Fase B' | 'Fase C' | null {
+  if (!jenjangKelas) return null;
+  const k = jenjangKelas.toLowerCase().trim();
+  if (k.includes('1') || k.includes('2') || k.includes('fase a')) return 'Fase A';
+  if (k.includes('3') || k.includes('4') || k.includes('fase b')) return 'Fase B';
+  if (k.includes('5') || k.includes('6') || k.includes('fase c')) return 'Fase C';
+  return null;
+}
+
+/**
+ * Helper untuk mencocokkan nama mata pelajaran secara cerdas & toleran
+ */
+export function matchSubjectKey(mataPelajaran: string, availableKeys: string[]): string | null {
+  if (!mataPelajaran || !availableKeys || availableKeys.length === 0) return null;
+  const normalizedSubject = mataPelajaran.toLowerCase().trim();
+
+  return availableKeys.find(key => {
+    const lowerKey = key.toLowerCase().trim();
+    if (normalizedSubject === lowerKey || normalizedSubject.includes(lowerKey) || lowerKey.includes(normalizedSubject)) {
+      return true;
+    }
+    if (lowerKey.includes('agama') && normalizedSubject.includes('agama')) return true;
+    if (lowerKey.includes('pancasila') && normalizedSubject.includes('pancasila')) return true;
+    if ((lowerKey.includes('ipas') || lowerKey.includes('ilmu pengetahuan alam')) && (normalizedSubject.includes('ipas') || normalizedSubject.includes('ilmu pengetahuan alam'))) return true;
+    if ((lowerKey.includes('jasmani') || lowerKey.includes('pjok')) && (normalizedSubject.includes('pjok') || normalizedSubject.includes('jasmani') || normalizedSubject.includes('olahraga'))) return true;
+    if (lowerKey.includes('koding') && (normalizedSubject.includes('koding') || normalizedSubject.includes('kecerdasan artifisial') || normalizedSubject.includes('ai'))) return true;
+    if (lowerKey.includes('seni rupa') && (normalizedSubject.includes('seni rupa') || normalizedSubject.includes('rupa'))) return true;
+    if (lowerKey.includes('sunda') && normalizedSubject.includes('sunda')) return true;
+    if ((lowerKey.includes('tatanen') || lowerKey.includes('tdba')) && (normalizedSubject.includes('tatanen') || normalizedSubject.includes('tdba') || normalizedSubject.includes('atikan'))) return true;
+    if (lowerKey.includes('akpk') && normalizedSubject.includes('akpk')) return true;
+    return false;
+  }) || null;
+}
+
+/**
+ * Helper statis untuk mendapatkan teks Capaian Pembelajaran resmi BSKAP 046/2025
+ * berdasarkan mata pelajaran dan kelas (Static in-memory fallback)
  */
 export function getOfficialCP(mataPelajaran: string, jenjangKelas: string): string | null {
   if (!mataPelajaran || !jenjangKelas) return null;
-  const k = jenjangKelas.toLowerCase();
-  const fase = (k.includes('1') || k.includes('2')) ? 'Fase A'
-             : (k.includes('3') || k.includes('4')) ? 'Fase B'
-             : (k.includes('5') || k.includes('6')) ? 'Fase C'
-             : null;
+  const fase = getFaseFromKelas(jenjangKelas);
   if (!fase) return null;
 
-  const normalizedSubject = mataPelajaran.toLowerCase();
-  const subjectKeys = Object.keys(cpData);
-  const matchedKey = subjectKeys.find(key => {
-    const lowerKey = key.toLowerCase();
-    return normalizedSubject.includes(lowerKey) || lowerKey.includes(normalizedSubject) ||
-           (lowerKey.includes('agama') && normalizedSubject.includes('agama')) ||
-           (lowerKey.includes('pancasila') && normalizedSubject.includes('pancasila')) ||
-           (lowerKey.includes('ipas') && normalizedSubject.includes('ipas')) ||
-           (lowerKey.includes('koding') && normalizedSubject.includes('koding')) ||
-           (lowerKey.includes('seni') && normalizedSubject.includes('seni'));
-  });
-
+  const matchedKey = matchSubjectKey(mataPelajaran, Object.keys(cpData));
   if (matchedKey && cpData[matchedKey]?.[fase]) {
     return cpData[matchedKey][fase];
   }
   return null;
 }
+
+/**
+ * Helper statis untuk mendapatkan elemen Capaian Pembelajaran
+ */
+export function getOfficialCPElements(mataPelajaran: string, jenjangKelas: string): Record<string, string> | null {
+  if (!mataPelajaran || !jenjangKelas) return null;
+  const fase = getFaseFromKelas(jenjangKelas);
+  if (!fase) return null;
+
+  const matchedKey = matchSubjectKey(mataPelajaran, Object.keys(cpElementsData));
+  if (matchedKey && cpElementsData[matchedKey]?.[fase]) {
+    return cpElementsData[matchedKey][fase];
+  }
+  return null;
+}
+
+/**
+ * Helper dinamis: mengambil CP dari database D1 terlebih dahulu,
+ * dengan fallback aman ke data statis jika tidak ditemukan di DB.
+ */
+export async function getDynamicCP(db: any, mataPelajaran: string, jenjangKelas: string): Promise<string | null> {
+  const fase = getFaseFromKelas(jenjangKelas);
+  if (!fase || !mataPelajaran) return null;
+
+  if (db) {
+    try {
+      // Cari data di tabel capaian_pembelajaran
+      const rows = await db.prepare(
+        'SELECT mata_pelajaran, fase, teks_cp FROM capaian_pembelajaran WHERE fase = ?'
+      ).bind(fase).all();
+
+      if (rows && rows.results && rows.results.length > 0) {
+        const availableMapels = rows.results.map((r: any) => r.mata_pelajaran);
+        const matchedMapel = matchSubjectKey(mataPelajaran, availableMapels);
+        if (matchedMapel) {
+          const found = rows.results.find((r: any) => r.mata_pelajaran === matchedMapel);
+          if (found && found.teks_cp && found.teks_cp.trim()) {
+            return found.teks_cp.trim();
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[getDynamicCP] Database query failed, falling back to static CP data:', err);
+    }
+  }
+
+  return getOfficialCP(mataPelajaran, jenjangKelas);
+}
+
+/**
+ * Helper dinamis: mengambil Elemen CP dari database D1 terlebih dahulu,
+ * dengan fallback aman ke data statis jika tidak ditemukan di DB.
+ */
+export async function getDynamicCPElements(db: any, mataPelajaran: string, jenjangKelas: string): Promise<Record<string, string> | null> {
+  const fase = getFaseFromKelas(jenjangKelas);
+  if (!fase || !mataPelajaran) return null;
+
+  if (db) {
+    try {
+      const rows = await db.prepare(
+        'SELECT mata_pelajaran, fase, elemen_json FROM capaian_pembelajaran WHERE fase = ?'
+      ).bind(fase).all();
+
+      if (rows && rows.results && rows.results.length > 0) {
+        const availableMapels = rows.results.map((r: any) => r.mata_pelajaran);
+        const matchedMapel = matchSubjectKey(mataPelajaran, availableMapels);
+        if (matchedMapel) {
+          const found = rows.results.find((r: any) => r.mata_pelajaran === matchedMapel);
+          if (found && found.elemen_json) {
+            try {
+              const parsed = JSON.parse(found.elemen_json);
+              if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+                return parsed;
+              }
+            } catch (jsonErr) {
+              console.warn('[getDynamicCPElements] JSON parse failed for elemen_json:', jsonErr);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[getDynamicCPElements] Database query failed, falling back to static CP elements:', err);
+    }
+  }
+
+  return getOfficialCPElements(mataPelajaran, jenjangKelas);
+}
+
+/**
+ * Seed data baku awal (BSKAP No. 046 Tahun 2025 & Mulok) ke database jika tabel kosong
+ */
+export async function seedDefaultCPToDatabase(db: any): Promise<number> {
+  if (!db) return 0;
+
+  try {
+    const countCheck = await db.prepare('SELECT COUNT(*) as count FROM capaian_pembelajaran').first();
+    if (countCheck && countCheck.count > 0) {
+      return countCheck.count; // Sudah ada data
+    }
+  } catch (e) {
+    console.warn('[seedDefaultCPToDatabase] Table might not exist yet:', e);
+    return 0;
+  }
+
+  const phases = ['Fase A', 'Fase B', 'Fase C'];
+  const subjects = Object.keys(cpData);
+  let inserted = 0;
+
+  for (const subject of subjects) {
+    for (const fase of phases) {
+      const teksCp = cpData[subject]?.[fase];
+      if (!teksCp) continue;
+
+      const elements = cpElementsData[subject]?.[fase] || {};
+      const regulasi = (subject === 'B.Sunda' || subject === 'Tatanen di Bale Atikan' || subject === 'AKPK')
+        ? 'Muatan Lokal Kurikulum Merdeka'
+        : 'BSKAP No. 046 Tahun 2025';
+
+      try {
+        await db.prepare(`
+          INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(mata_pelajaran, fase) DO UPDATE SET
+            teks_cp = excluded.teks_cp,
+            elemen_json = excluded.elemen_json,
+            regulasi = excluded.regulasi,
+            updated_at = CURRENT_TIMESTAMP
+        `).bind(
+          subject,
+          fase,
+          teksCp,
+          JSON.stringify(elements),
+          regulasi
+        ).run();
+        inserted++;
+      } catch (err) {
+        console.warn(`[seedDefaultCPToDatabase] Failed inserting ${subject} ${fase}:`, err);
+      }
+    }
+  }
+
+  return inserted;
+}
+

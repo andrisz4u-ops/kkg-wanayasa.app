@@ -548,20 +548,20 @@
     [role="dialog"], .modal,
     #tts-form-view, .asesmen-result-toolbar, #asesmen-form-view,
     .rpp-result-toolbar, #rpp-form-view, #rpp-bridge-card, #lampiran-btn-area,
+    #analisis-form-view, #analisis-result-view > div:first-child, #analisis-result-view > div:nth-child(2),
     .surat-header, #surat-form,
     .print-hidden, .print\:hidden {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* 3. Paper Configuration (Standard A4 Portrait) */
+    /* 3. Paper Configuration */
     @page {
-        size: A4 portrait;
         margin: 1cm 1.25cm 1cm 1.25cm;
     }
 
-    /* 4. Canvas Document Formats (RPP, Asesmen, TTS, Surat, Proker) */
-    .rpp-a4, .asesmen-a4, #tts-canvas, .surat-preview, .proker-paper, .print-sheet {
+    /* 4. Canvas Document Formats (RPP, Asesmen, TTS, Surat, Proker, Analisis CP) */
+    #analisis-canvas, .rpp-a4, .asesmen-a4, #tts-canvas, .surat-preview, .proker-paper, .print-sheet {
         width: 100% !important;
         max-width: 100% !important;
         box-shadow: none !important;

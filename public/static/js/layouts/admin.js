@@ -38,6 +38,7 @@ export function renderAdminLayout(content, activePage = 'dashboard') {
 
     { id: 'users', label: 'Manajemen User', icon: 'fa-users-cog', section: 'Data Master' },
     { id: 'sekolah', label: 'Data Sekolah', icon: 'fa-school', section: 'Data Master' },
+    { id: 'cp', label: 'Kelola CP', icon: 'fa-book-open', section: 'Data Master' },
 
     { id: 'ai-providers', label: 'AI Provider', icon: 'fa-robot', section: 'System' },
     { id: 'logs', label: 'Audit Logs', icon: 'fa-history', section: 'System' },

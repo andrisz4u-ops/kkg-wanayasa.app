@@ -900,7 +900,10 @@ export async function getActiveAiProviders(forceRefresh = false) {
 }
 
 export async function populateAiModelSelect(selector, preferredDefault) {
-  const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+  let el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+  if (!el && typeof selector === 'string') {
+    el = document.getElementById(selector);
+  }
   if (!el) return;
 
   try {

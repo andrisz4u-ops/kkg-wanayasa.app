@@ -6,7 +6,7 @@ import { UnsplashService } from '../services/unsplash';
 import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
-import { getOfficialCP, cpElementsData } from '../lib/cp-data';
+import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getFaseFromKelas } from '../lib/cp-data';
 import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
 import { validate, createAssessmentSchema } from '../lib/validation';
@@ -28,35 +28,13 @@ async function getAuthenticatedUser(c: any): Promise<any | null> {
     }
 }
 
-// Endpoint referensi Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025
+// Endpoint referensi Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025 (atau Database Admin)
 kisi.get('/cp-reference', async (c) => {
     const mapel = c.req.query('mataPelajaran') || c.req.query('mapel') || '';
     const kelas = c.req.query('jenjangKelas') || c.req.query('kelas') || '';
-    const officialCP = getOfficialCP(mapel, kelas);
-
-    const k = kelas.toLowerCase();
-    const fase = (k.includes('1') || k.includes('2')) ? 'Fase A'
-               : (k.includes('3') || k.includes('4')) ? 'Fase B'
-               : (k.includes('5') || k.includes('6')) ? 'Fase C'
-               : null;
-
-    let elements: Record<string, string> | null = null;
-    if (fase) {
-        const normalizedSubject = mapel.toLowerCase();
-        const subjectKeys = Object.keys(cpElementsData);
-        const matchedKey = subjectKeys.find(key => {
-            const lowerKey = key.toLowerCase();
-            return normalizedSubject.includes(lowerKey) || lowerKey.includes(normalizedSubject) ||
-                   (lowerKey.includes('agama') && normalizedSubject.includes('agama')) ||
-                   (lowerKey.includes('pancasila') && normalizedSubject.includes('pancasila')) ||
-                   (lowerKey.includes('ipas') && normalizedSubject.includes('ipas')) ||
-                   (lowerKey.includes('koding') && normalizedSubject.includes('koding')) ||
-                   (lowerKey.includes('seni') && normalizedSubject.includes('seni'));
-        });
-        if (matchedKey && cpElementsData[matchedKey]?.[fase]) {
-            elements = cpElementsData[matchedKey][fase];
-        }
-    }
+    const officialCP = await getDynamicCP(c.env.DB, mapel, kelas);
+    const fase = getFaseFromKelas(kelas);
+    const elements = await getDynamicCPElements(c.env.DB, mapel, kelas);
 
     return successResponse(c, {
         mataPelajaran: mapel,
@@ -1386,8 +1364,8 @@ kisi.post('/generate', async (c) => {
 
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
 
-        // Dapatkan rujukan resmi Capaian Pembelajaran BSKAP No. 046 Tahun 2025
-        const officialCP = getOfficialCP(mataPelajaran, jenjangKelas);
+        // Dapatkan rujukan resmi Capaian Pembelajaran BSKAP No. 046 Tahun 2025 (atau Database Admin)
+        const officialCP = await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
         const resolvedCP = (capaianPembelajaran && String(capaianPembelajaran).trim()) || officialCP || '';
 
         const ai = new AIService(c.env);
@@ -1499,7 +1477,7 @@ kisi.post('/generate-stream', async (c) => {
         }
 
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
-        const officialCP = getOfficialCP(mataPelajaran, jenjangKelas);
+        const officialCP = await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
         const resolvedCP = (capaianPembelajaran && String(capaianPembelajaran).trim()) || officialCP || '';
 
         const ai = new AIService(c.env);

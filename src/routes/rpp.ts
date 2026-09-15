@@ -3,7 +3,7 @@ import { streamSSE } from 'hono/streaming';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
-import { cpData, getOfficialCP } from '../lib/cp-data';
+import { cpData, getOfficialCP, getDynamicCP } from '../lib/cp-data';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { type AppBindings } from '../types/env';
@@ -205,12 +205,12 @@ rpp.post('/generate', async (c) => {
 
     const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
 
-    const getMatchedCP = () => {
+    const getMatchedCP = async () => {
       if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
-      return getOfficialCP(mataPelajaran, jenjangKelas);
+      return await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
     };
 
-    const baseCP = getMatchedCP();
+    const baseCP = await getMatchedCP();
     const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
 
     const slugMap: Record<string, string> = {
@@ -267,12 +267,12 @@ rpp.post('/generate-stream', async (c) => {
 
     const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
 
-    const getMatchedCP = () => {
+    const getMatchedCP = async () => {
       if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
-      return getOfficialCP(mataPelajaran, jenjangKelas);
+      return await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
     };
 
-    const baseCP = getMatchedCP();
+    const baseCP = await getMatchedCP();
     const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
 
     const slugMap: Record<string, string> = {

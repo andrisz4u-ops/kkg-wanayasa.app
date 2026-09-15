@@ -13,6 +13,7 @@ import './admin-modules/logs.js';
 import './admin-modules/templates.js';
 import './admin-modules/sekolah.js';
 import './admin-modules/ai-providers.js';
+import './admin-modules/cp.js';
 
 export async function renderAdmin() {
   const { renderAdminLayout } = await import('../layouts/admin.js');
@@ -664,6 +665,97 @@ export async function renderAdmin() {
       </div>
     </div>
     
+    <!-- ============================================
+    KELOLA CP (CAPAIAN PEMBELAJARAN) TAB
+    ============================================ -->
+    <div id="panel-cp" class="hidden animate-fade-in space-y-6" data-tab-content="cp">
+      <!-- Header banner & stats -->
+      <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-slate-200/70 shadow-sm shadow-slate-200/50">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800">
+                Data Master Kurikulum
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800">
+                BSKAP No. 046 Tahun 2025 & Mulok
+              </span>
+            </div>
+            <h2 class="font-display text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+              Kelola Capaian Pembelajaran (CP)
+            </h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
+              Atur dan mutakhirkan narasi resmi Capaian Pembelajaran serta rincian elemennya secara dinamis. Perubahan otomatis tersinkronisasi ke modul Analisis CP, Buat RPP, dan Bank Soal/Asesmen.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="confirmResetAllCP()" class="px-4 py-2.5 rounded-2xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-semibold transition-all flex items-center gap-2">
+              <i class="fas fa-rotate-left text-xs"></i>Reset Semua ke Standar BSKAP
+            </button>
+            <button onclick="openAddCPModal()" class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2">
+              <i class="fas fa-plus text-xs"></i>Tambah Mapel/CP
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <!-- Fase buttons -->
+          <div class="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/60 w-fit">
+            <button data-fase="all" onclick="onCPFaseFilterChange('all')" class="cp-fase-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition-all">
+              Semua Fase
+            </button>
+            <button data-fase="Fase A" onclick="onCPFaseFilterChange('Fase A')" class="cp-fase-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all">
+              Fase A (Kelas 1-2)
+            </button>
+            <button data-fase="Fase B" onclick="onCPFaseFilterChange('Fase B')" class="cp-fase-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all">
+              Fase B (Kelas 3-4)
+            </button>
+            <button data-fase="Fase C" onclick="onCPFaseFilterChange('Fase C')" class="cp-fase-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all">
+              Fase C (Kelas 5-6)
+            </button>
+          </div>
+
+          <!-- Mapel selector & Search box -->
+          <div class="flex flex-1 max-w-xl items-center gap-2.5">
+            <select id="cp-filter-mapel" onchange="onCPMapelFilterChange(this.value)" class="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500">
+              <option value="all">Semua Mata Pelajaran</option>
+              <option value="Pendidikan Agama dan Budi Pekerti">Pendidikan Agama</option>
+              <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
+              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+              <option value="Matematika">Matematika</option>
+              <option value="Ilmu Pengetahuan Alam dan Sosial (IPAS)">IPAS</option>
+              <option value="Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)">PJOK</option>
+              <option value="Bahasa Inggris">Bahasa Inggris</option>
+              <option value="Seni Rupa">Seni Rupa</option>
+              <option value="Seni Musik">Seni Musik</option>
+              <option value="Seni Tari">Seni Tari</option>
+              <option value="Koding dan Kecerdasan Artifisial">Koding & AI</option>
+              <option value="B.Sunda">Bahasa Sunda (Mulok)</option>
+              <option value="Tatanen di Bale Atikan">Tatanen di Bale Atikan (Mulok)</option>
+              <option value="AKPK">AKPK (Mulok Purwakarta)</option>
+            </select>
+
+            <div class="relative flex-1">
+              <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+              <input
+                id="cp-filter-search"
+                type="text"
+                placeholder="Cari kata kunci CP / elemen..."
+                oninput="onCPSearchInput(this.value)"
+                class="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CP Cards Grid Container -->
+      <div id="cp-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- populated dynamically by cp.js -->
+      </div>
+    </div>
+
      <!-- ============================================
     USERS TAB - HANYA MANAJEMEN USER
           TIDAK ADA: Identitas, Alamat, Struktur, Template, Logs, AI Config
@@ -1303,6 +1395,201 @@ export async function renderAdmin() {
             </button>
             <button type="button" onclick="closeAdminModal('ai-key-diagnostics-modal')" class="px-6 py-2.5 rounded-full text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
               Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit CP Modal -->
+    <div id="modal-edit-cp" role="dialog" aria-modal="true" aria-labelledby="modal-edit-cp-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAdminModal('modal-edit-cp')"></div>
+      <div class="bg-white w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative z-10 animate-slide-up border border-slate-200/80">
+        <!-- Header -->
+        <div class="px-8 py-6 border-b border-slate-200/70 bg-slate-50/90 backdrop-blur-md flex justify-between items-center sticky top-0 bg-white z-10">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">
+                <i class="fas fa-book-open"></i>
+              </span>
+              <div>
+                <h3 id="modal-edit-cp-title" class="font-display text-lg font-bold text-slate-900 tracking-tight">Edit Capaian Pembelajaran</h3>
+                <p class="text-xs text-slate-500">Ubah narasi CP utama dan rincian elemen pembelajaran</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="closeAdminModal('modal-edit-cp')" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all shadow-sm">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <div class="p-8 space-y-6">
+          <input type="hidden" id="edit-cp-id">
+
+          <!-- Meta readonly info -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Mata Pelajaran</label>
+              <input type="text" id="edit-cp-mapel" class="w-full text-xs font-bold px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800" readonly>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Fase / Tingkat</label>
+              <input type="text" id="edit-cp-fase" class="w-full text-xs font-bold px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800" readonly>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Regulasi Rujukan</label>
+              <input type="text" id="edit-cp-regulasi" class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500" placeholder="BSKAP No. 046 Tahun 2025">
+            </div>
+          </div>
+
+          <!-- Teks CP Utama -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fas fa-align-left text-indigo-500"></i> Narasi Capaian Pembelajaran (CP) Utama
+              </label>
+              <span class="text-[11px] text-slate-400">Digunakan untuk RPP, Soal & Analisis CP</span>
+            </div>
+            <textarea
+              id="edit-cp-teks"
+              rows="5"
+              class="w-full text-xs px-4 py-3 rounded-2xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 leading-relaxed font-sans"
+              placeholder="Masukkan narasi utuh Capaian Pembelajaran..."
+            ></textarea>
+          </div>
+
+          <!-- Elemen-Elemen Pembelajaran -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i class="fas fa-cubes text-indigo-500"></i> Rincian Elemen Pembelajaran
+                </h4>
+                <p class="text-[11px] text-slate-400">Sub-komponen materi spesifik per fase</p>
+              </div>
+              <button type="button" onclick="addModalElementRow()" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/60 text-xs font-semibold flex items-center gap-1.5">
+                <i class="fas fa-plus text-[10px]"></i> Tambah Elemen
+              </button>
+            </div>
+            <div id="edit-cp-elements-container" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+              <!-- Injected by cp.js -->
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/70">
+            <button type="button" onclick="closeAdminModal('modal-edit-cp')" class="px-5 py-2.5 rounded-2xl text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button id="btn-save-cp-edit" type="button" onclick="saveCPEdit()" class="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2">
+              <i class="fas fa-save text-xs"></i> Simpan Perubahan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Custom CP Modal -->
+    <div id="modal-add-cp" role="dialog" aria-modal="true" aria-labelledby="modal-add-cp-title" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAdminModal('modal-add-cp')"></div>
+      <div class="bg-white w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl relative z-10 animate-slide-up border border-slate-200/80">
+        <!-- Header -->
+        <div class="px-8 py-6 border-b border-slate-200/70 bg-slate-50/90 backdrop-blur-md flex justify-between items-center sticky top-0 bg-white z-10">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                <i class="fas fa-plus"></i>
+              </span>
+              <div>
+                <h3 id="modal-add-cp-title" class="font-display text-lg font-bold text-slate-900 tracking-tight">Tambah Capaian Pembelajaran Baru</h3>
+                <p class="text-xs text-slate-500">Tambahkan mata pelajaran atau fase baru ke dalam pangkalan data</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="closeAdminModal('modal-add-cp')" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-all shadow-sm">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Form Body -->
+        <div class="p-8 space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="text-xs font-bold text-slate-800 block mb-1">Mata Pelajaran <span class="text-rose-500">*</span></label>
+              <select id="add-cp-mapel" onchange="onAddMapelSelectChange(this.value)" class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500">
+                <option value="Pendidikan Agama dan Budi Pekerti">Pendidikan Agama</option>
+                <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
+                <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                <option value="Matematika">Matematika</option>
+                <option value="Ilmu Pengetahuan Alam dan Sosial (IPAS)">IPAS</option>
+                <option value="Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)">PJOK</option>
+                <option value="Bahasa Inggris">Bahasa Inggris</option>
+                <option value="Seni Rupa">Seni Rupa</option>
+                <option value="Seni Musik">Seni Musik</option>
+                <option value="Seni Tari">Seni Tari</option>
+                <option value="Koding dan Kecerdasan Artifisial">Koding & AI</option>
+                <option value="B.Sunda">Bahasa Sunda (Mulok)</option>
+                <option value="Tatanen di Bale Atikan">Tatanen di Bale Atikan (Mulok)</option>
+                <option value="AKPK">AKPK (Mulok Purwakarta)</option>
+                <option value="__custom__">+ Mata Pelajaran Kustom Lainnya...</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-800 block mb-1">Fase <span class="text-rose-500">*</span></label>
+              <select id="add-cp-fase" class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500">
+                <option value="Fase A">Fase A (Kelas 1 - 2)</option>
+                <option value="Fase B">Fase B (Kelas 3 - 4)</option>
+                <option value="Fase C">Fase C (Kelas 5 - 6)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-slate-800 block mb-1">Regulasi</label>
+              <input type="text" id="add-cp-regulasi" value="BSKAP No. 046 Tahun 2025" class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+
+          <div id="add-cp-custom-mapel-wrapper" class="hidden">
+            <label class="text-xs font-bold text-slate-800 block mb-1">Nama Mata Pelajaran Kustom</label>
+            <input type="text" id="add-cp-custom-mapel" placeholder="Contoh: Bahasa Arab / Prakarya" class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <!-- Teks CP -->
+          <div>
+            <label class="text-xs font-bold text-slate-800 block mb-1.5">
+              Narasi Capaian Pembelajaran (CP) Utama <span class="text-rose-500">*</span>
+            </label>
+            <textarea
+              id="add-cp-teks"
+              rows="5"
+              class="w-full text-xs px-4 py-3 rounded-2xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500 leading-relaxed font-sans"
+              placeholder="Masukkan narasi capaian pembelajaran resmi..."
+            ></textarea>
+          </div>
+
+          <!-- Elemen -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h4 class="text-xs font-bold text-slate-800">Rincian Elemen Pembelajaran</h4>
+                <p class="text-[11px] text-slate-400">Tambahkan elemen materi jika ada (opsional)</p>
+              </div>
+              <button type="button" onclick="addAddModalElementRow()" class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/60 text-xs font-semibold flex items-center gap-1.5">
+                <i class="fas fa-plus text-[10px]"></i> Tambah Elemen
+              </button>
+            </div>
+            <div id="add-cp-elements-container" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+              <!-- Injected by cp.js -->
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/70">
+            <button type="button" onclick="closeAdminModal('modal-add-cp')" class="px-5 py-2.5 rounded-2xl text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button id="btn-save-new-cp" type="button" onclick="saveNewCP()" class="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2">
+              <i class="fas fa-check text-xs"></i> Simpan Capaian Pembelajaran
             </button>
           </div>
         </div>

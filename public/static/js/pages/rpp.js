@@ -478,6 +478,52 @@ export function initRpp() {
 
   populateAiModelSelect('select[name="aiProvider"]');
 
+  // Prefill otomatis dari modul Analisis CP jika ada
+  try {
+    const rawPrefill = sessionStorage.getItem('kkg_rpp_prefill');
+    if (rawPrefill) {
+      sessionStorage.removeItem('kkg_rpp_prefill');
+      const prefill = JSON.parse(rawPrefill);
+      if (prefill.mataPelajaran) {
+        const mapelSelect = form.querySelector('select[name="mataPelajaran"]');
+        if (mapelSelect) {
+          for (let opt of mapelSelect.options) {
+            const optVal = opt.value.toLowerCase();
+            const prefVal = prefill.mataPelajaran.toLowerCase();
+            if (optVal.includes(prefVal) || prefVal.includes(optVal) ||
+                (optVal.includes('ipas') && prefVal.includes('ipas')) ||
+                (optVal.includes('pancasila') && prefVal.includes('pancasila')) ||
+                (optVal.includes('matematika') && prefVal.includes('matematika'))) {
+              mapelSelect.value = opt.value;
+              break;
+            }
+          }
+        }
+      }
+      if (prefill.jenjangKelas) {
+        const kelasSelect = form.querySelector('select[name="jenjangKelas"]');
+        if (kelasSelect) kelasSelect.value = prefill.jenjangKelas;
+      }
+      if (prefill.semester) {
+        const semSelect = form.querySelector('select[name="semester"]');
+        if (semSelect) {
+          semSelect.value = (prefill.semester === 1 || prefill.semester === '1' || prefill.semester === 'Ganjil') ? 'Ganjil' : 'Genap';
+        }
+      }
+      if (prefill.topik) {
+        const topikInput = form.querySelector('input[name="topik"]');
+        if (topikInput) topikInput.value = prefill.topik;
+      }
+      if (prefill.cp) {
+        const cpInput = document.getElementById('input-rpp-cp');
+        if (cpInput) cpInput.value = prefill.cp;
+      }
+      showToast(`Data materi "${prefill.topik || 'Topik'}" dari Analisis CP berhasil dimuat ke RPP!`, 'success');
+    }
+  } catch (err) {
+    console.warn('Failed to parse RPP prefill:', err);
+  }
+
   const selectedDimensions = new Set();
 
   // Profil dimension tags

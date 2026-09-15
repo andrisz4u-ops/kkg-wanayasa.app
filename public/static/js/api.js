@@ -58,7 +58,13 @@ export function getCsrfToken() {
  * Handles authentication, CSRF, and error responses
  */
 export async function api(path, options = {}) {
-    const url = path.startsWith('/') ? `${API_BASE}${path}` : `${API_BASE}/${path}`;
+    let cleanPath = path;
+    if (cleanPath.startsWith('/api/')) {
+        cleanPath = cleanPath.substring(4);
+    } else if (cleanPath.startsWith('api/')) {
+        cleanPath = cleanPath.substring(3);
+    }
+    const url = cleanPath.startsWith('/') ? `${API_BASE}${cleanPath}` : `${API_BASE}/${cleanPath}`;
 
     const defaultOptions = {
         headers: {
@@ -98,7 +104,9 @@ export async function api(path, options = {}) {
 
     try {
         const controller = new AbortController();
-        const timeoutMs = options.timeout || 30000; // Default 30s, overridable
+        const isAiOperation = path.includes('analisis-cp') || path.includes('generate') || path.includes('extract') || path.includes('lampiran') || path.includes('kisi');
+        const defaultTimeout = isAiOperation ? 120000 : 30000;
+        const timeoutMs = options.timeout || defaultTimeout;
         const id = setTimeout(() => controller.abort(), timeoutMs);
         mergedOptions.signal = controller.signal;
         // Remove non-fetch properties
@@ -196,6 +204,12 @@ export const apiPut = (path, body) => api(path, {
 });
 
 export const apiDelete = (path) => api(path, { method: 'DELETE' });
+
+// Convenience properties on api function directly (supports api.post(url, data))
+api.get = (path, options = {}) => api(path, { ...options, method: 'GET' });
+api.post = (path, body, options = {}) => api(path, { ...options, method: 'POST', body });
+api.put = (path, body, options = {}) => api(path, { ...options, method: 'PUT', body });
+api.delete = (path, options = {}) => api(path, { ...options, method: 'DELETE' });
 
 /**
  * Validation helpers for forms

@@ -126,6 +126,14 @@ async function renderEducatorDashboard() {
             <!-- Action Buttons -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button 
+                onclick="navigate('analisis-cp')" 
+                class="px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-400 hover:to-sky-400 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5 flex items-center gap-2.5 cursor-pointer"
+              >
+                <i class="fas fa-book-bookmark text-sm"></i>
+                <span>Analisis CP (AI)</span>
+              </button>
+
+              <button 
                 onclick="navigate('rpp')" 
                 class="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all hover:-translate-y-0.5 flex items-center gap-2.5 cursor-pointer"
               >

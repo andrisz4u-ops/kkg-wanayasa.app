@@ -9,6 +9,7 @@ import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../lib/d
 import { generateProtaDocxBuffer } from '../lib/docx/prota';
 import { generatePromesDocxBuffer } from '../lib/docx/promes';
 import { generateKktpDocxBuffer } from '../lib/docx/kktp';
+import { getAlokasiWaktuResmi, balanceSemesterJpItems } from '../lib/alokasi-waktu';
 import { type AppBindings } from '../types/env';
 
 const analisisCp = new Hono<{ Bindings: AppBindings }>();
@@ -363,10 +364,20 @@ export function buildAnalisisCpPrompt(params: {
     return true; // 'all'
   });
 
+  const quota = getAlokasiWaktuResmi(mataPelajaran, jenjangKelas);
+
   return `Anda adalah Pakar Analisis Kurikulum Merdeka Terverifikasi BSKAP Kemendikbudristek RI.
 Tugas Anda adalah menyusun dokumen resmi:
 \"ANALISIS CP, TP, DAN ATP\"
 Standar Dokumen Mutu Pendidikan Sekolah Dasar Berbasis Buku Ajar.
+
+STANDAR ALOKASI WAKTU RESMI (PERMENDIKDASMEN NO. 13 TAHUN 2025):
+- Dasar Regulasi: Permendikdasmen RI No. 13 Tahun 2025 (Perubahan atas Permendikbudristek No. 12/2024)
+- Mata Pelajaran: ${quota.namaResmi} (${jenjangKelas} / Fase ${quota.fase})
+- Beban Intrakurikuler per Minggu: ${quota.jpPerMinggu} JP/minggu (1 JP = 35 menit)
+- Target Intrakurikuler per Semester: ${quota.intrakurikulerPerSemester} JP (${quota.mingguPerSemester} pekan efektif)
+- Target Intrakurikuler per Tahun: ${quota.intrakurikulerPerTahun} JP (${quota.mingguPerTahun} pekan efektif)
+- Beban Kokurikuler (Lintas Disiplin / 7 Kebiasaan Anak Indonesia Hebat): ${quota.kokurikulerPerTahun} JP/tahun
 
 IDENTITAS DOKUMEN:
 - Satuan Pendidikan: ${namaSekolah || 'SDN'}
@@ -400,10 +411,10 @@ PETUNJUK ANALISIS KEDINASAN (SANGAT KETAT):
 6. [KOLOM ATP (ALUR TUJUAN PEMBELAJARAN)]:
    Rumuskan langkah kegiatan/alur konkret yang dijalani peserta didik di kelas untuk mencapai TP tersebut.
    Contoh: \"Peserta didik melakukan percobaan menggunakan cermin, gelas berisi air, dan karton lubang untuk membuktikan sifat cahaya (merambat lurus, menembus benda bening, dipantulkan, dibiaskan).\"
-7. [KOLOM ALOKASI WAKTU]:
-   Cantumkan alokasi waktu Jam Pelajaran (JP) yang realistis per item/materi (contoh: "2 JP", "3 JP", "4 JP", atau "5 JP"). Alokasi waktu ini dipakai secara terpadu untuk penyusunan Program Tahunan (Prota) dan Program Semester (Promes).
+7. [KOLOM ALOKASI WAKTU - PERMENDIKDASMEN 13/2025]:
+   Cantumkan alokasi waktu Jam Pelajaran (JP) yang realistis per item/materi (contoh: \"2 JP\", \"3 JP\", \"4 JP\", atau \"5 JP\"). Total penjumlahan seluruh alokasi_waktu materi pada semester harus proporsional mendekati atau pas dengan kuota resmi intrakurikuler (${quota.intrakurikulerPerSemester} JP per semester).
 8. [PENGELOMPOKKAN SEMESTER]:
-   Kelompokkan bab-bab ke dalam "SEMESTER 1" dan "SEMESTER 2" sesuai nilai 'semester' pada masing-masing bab.
+   Kelompokkan bab-bab ke dalam \"SEMESTER 1\" dan \"SEMESTER 2\" sesuai nilai 'semester' pada masing-masing bab.
 
 FORMAT OUTPUT:
 Keluarkan HANYA JSON valid dengan struktur berikut:
@@ -685,6 +696,23 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
         }
       }
     }
+  }
+
+  // 5. Terapkan Standar Alokasi Waktu & Auto-Balance Intrakurikuler (Permendikdasmen No. 13 Tahun 2025)
+  const quota = getAlokasiWaktuResmi(meta.mata_pelajaran || '', meta.kelas || kelasNum);
+  meta.alokasi_waktu_standar = {
+    dasar_hukum: quota.dasarHukum,
+    intrakurikuler_per_tahun: quota.intrakurikulerPerTahun,
+    kokurikuler_per_tahun: quota.kokurikulerPerTahun,
+    total_per_tahun: quota.totalPerTahun,
+    jp_per_minggu: quota.jpPerMinggu,
+    target_semester_jp: quota.intrakurikulerPerSemester,
+    minggu_per_semester: quota.mingguPerSemester,
+    minggu_per_tahun: quota.mingguPerTahun
+  };
+
+  for (const sem of result.semesters) {
+    balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
   }
 
   return result;

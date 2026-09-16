@@ -1,5 +1,6 @@
 // Client-side validation & auto-repair untuk hasil output Analisis CP
 // public/static/js/pages/analisis-cp/validator.js
+import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js';
 
 /**
  * Validasi dan perbaikan otomatis data Analisis CP sebelum rendering atau penyimpanan
@@ -132,6 +133,25 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
         }
       }
     }
+  }
+
+  // 5. Terapkan Standar Alokasi Waktu & Auto-Balance Intrakurikuler (Permendikdasmen No. 13 Tahun 2025)
+  const quota = getAlokasiWaktuResmi(data.metadata?.mata_pelajaran || '', data.metadata?.kelas || kelasNum);
+  if (data.metadata) {
+    data.metadata.alokasi_waktu_standar = {
+      dasar_hukum: quota.dasarHukum,
+      intrakurikuler_per_tahun: quota.intrakurikulerPerTahun,
+      kokurikuler_per_tahun: quota.kokurikulerPerTahun,
+      total_per_tahun: quota.totalPerTahun,
+      jp_per_minggu: quota.jpPerMinggu,
+      target_semester_jp: quota.intrakurikulerPerSemester,
+      minggu_per_semester: quota.mingguPerSemester,
+      minggu_per_tahun: quota.mingguPerTahun
+    };
+  }
+
+  for (const sem of data.semesters) {
+    balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
   }
 
   return data;

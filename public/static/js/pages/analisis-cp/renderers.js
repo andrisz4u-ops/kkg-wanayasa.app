@@ -1,8 +1,6 @@
-// Renderers untuk 4 Dokumen Analisis CP: Analisis CP/TP/ATP, Prota, Promes, KKTP
-// public/static/js/pages/analisis-cp/renderers.js
-
-import { escapeHtml } from '../../utils.js';
+import { escapeHtml, showToast } from '../../utils.js';
 import { getKopSuratHtml, getPengesahanHtml, getItemJpText, parseJpNum } from './helpers.js';
+import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js';
 
 /**
  * 1. RENDER TABEL UTAMA: ANALISIS CP, TP, DAN ATP (7 KOLOM)
@@ -686,6 +684,68 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
     else if (activeAnalysisTab === 'promes') downloadLabel.innerText = 'Unduh Word Promes';
     else if (activeAnalysisTab === 'kktp') downloadLabel.innerText = 'Unduh Word KKTP';
     else downloadLabel.innerText = 'Unduh Word Analisis CP';
+  }
+
+  // Update Permendikdasmen No. 13 Tahun 2025 Alokasi Waktu Compliance Banner
+  const banner = document.getElementById('analisis-alokasi-banner');
+  if (banner) {
+    const mapel = data.metadata?.mata_pelajaran || inputData?.mataPelajaran || '';
+    const kelas = data.metadata?.kelas || inputData?.jenjangKelas || '5';
+    const quota = getAlokasiWaktuResmi(mapel, kelas);
+
+    let totalJpAll = 0;
+    (data.semesters || []).forEach(sem => {
+      (sem.babs || []).forEach(b => {
+        (b.items || []).forEach(it => {
+          totalJpAll += parseJpNum(it.alokasi_waktu);
+        });
+      });
+    });
+
+    const isFullYear = (data.semesters?.length || 1) > 1;
+    const targetJp = isFullYear ? quota.intrakurikulerPerTahun : quota.intrakurikulerPerSemester;
+    const isBalanced = totalJpAll === targetJp;
+
+    banner.innerHTML = `
+      <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-indigo-950/40 border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center text-base shadow-sm shrink-0">
+            <i class="fas fa-scale-balanced"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">STANDAR ALOKASI WAKTU RESMI</span>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-extrabold text-[10px] tracking-wide">Permendikdasmen No. 13/2025</span>
+              <span class="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold text-[10px]">${escapeHtml(quota.namaResmi)} - Kelas ${quota.kelas}</span>
+            </div>
+            <p class="text-slate-600 dark:text-slate-300 mt-1 leading-normal">
+              Intrakurikuler: <strong class="text-slate-900 dark:text-white">${quota.jpPerMinggu} JP/minggu</strong> (${quota.intrakurikulerPerSemester} JP/semester • ${quota.intrakurikulerPerTahun} JP/tahun) • Kokurikuler: <strong class="text-slate-900 dark:text-white">${quota.kokurikulerPerTahun} JP/tahun</strong> (7 Kebiasaan Anak Indonesia Hebat)
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 self-end md:self-auto shrink-0">
+          <div class="px-3.5 py-1.5 rounded-xl ${isBalanced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700' : 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700'} font-bold flex items-center gap-2 text-xs">
+            <i class="fas ${isBalanced ? 'fa-circle-check text-emerald-600 dark:text-emerald-400' : 'fa-triangle-exclamation text-amber-600 dark:text-amber-400'}"></i>
+            <span>Total: <strong>${totalJpAll} JP</strong> ${isBalanced ? '✅ Klop 100%' : `(Target: ${targetJp} JP)`}</span>
+          </div>
+          <button type="button" id="btn-auto-balance-jp" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer" title="Seimbangkan ulang jam pelajaran secara otomatis agar tepat sesuai kuota resmi pemerintah">
+            <i class="fas fa-wand-magic-sparkles text-amber-300"></i> Seimbangkan JP
+          </button>
+        </div>
+      </div>
+    `;
+
+    const autoBtn = document.getElementById('btn-auto-balance-jp');
+    if (autoBtn) {
+      autoBtn.addEventListener('click', () => {
+        (data.semesters || []).forEach(sem => {
+          balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
+        });
+        showToast('Alokasi waktu berhasil diseimbangkan sesuai Permendikdasmen No. 13 Tahun 2025!', 'success');
+        renderAnalysisCanvas(data, inputData, activeAnalysisTab, activePromesSemester, onSemesterFilterChange);
+      });
+    }
   }
 
   let contentHtml = '';

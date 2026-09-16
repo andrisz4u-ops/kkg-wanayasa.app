@@ -16,6 +16,7 @@ import {
 } from 'docx';
 import { sanitizeText } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
+import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 
 export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
   const { metadata, semesters } = data;
@@ -374,6 +375,28 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       ]
     });
 
+    const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
+    const notesParagraphs = [
+      new Paragraph({
+        spacing: { before: 80, after: 20 },
+        children: [
+          new TextRun({ text: `Keterangan Alokasi Waktu (Permendikdasmen No. 13 Tahun 2025):`, bold: true, size: 17, font: 'Times New Roman' }),
+        ]
+      }),
+      new Paragraph({
+        spacing: { before: 10, after: 10 },
+        children: [
+          new TextRun({ text: `• Intrakurikuler Semester ${sem.semester}: ${quota.intrakurikulerPerSemester} JP (${quota.jpPerMinggu} JP/minggu, ${quota.mingguPerSemester} pekan efektif)`, size: 17, font: 'Times New Roman' }),
+        ]
+      }),
+      new Paragraph({
+        spacing: { before: 10, after: 60 },
+        children: [
+          new TextRun({ text: `• Alokasi Kokurikuler: ${quota.kokurikulerPerTahun} JP/tahun (Pembelajaran Kolaboratif Lintas Disiplin / 7 Kebiasaan Anak Indonesia Hebat)`, size: 17, font: 'Times New Roman' }),
+        ]
+      }),
+    ];
+
     docSections.push({
       properties: {
         page: {
@@ -393,7 +416,8 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
         ...cpSection,
         new Paragraph({ spacing: { after: 120 } }),
         mainTable,
-        new Paragraph({ spacing: { after: 160 } }),
+        ...notesParagraphs,
+        new Paragraph({ spacing: { after: 140 } }),
         sigTable,
       ]
     });

@@ -353,6 +353,9 @@ export async function renderAnalisisCp() {
           </div>
         </div>
 
+        <!-- Permendikdasmen No. 13 Tahun 2025 Alokasi Waktu Compliance Banner -->
+        <div id="analisis-alokasi-banner"></div>
+
         <!-- Notification Bar Inline Editing -->
         <div class="mb-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 shadow-xs">
           <span class="flex items-center gap-2">

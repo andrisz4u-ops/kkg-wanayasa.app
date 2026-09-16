@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest';
+import JSZip from 'jszip';
 import { generateProtaDocxBuffer } from '../src/lib/docx/prota';
 import { generatePromesDocxBuffer } from '../src/lib/docx/promes';
 import { generateKktpDocxBuffer } from '../src/lib/docx/kktp';
+import { generateAnalisisCpDocxBuffer } from '../src/lib/docx/analisis-cp';
+import { generateRpeDocxBuffer } from '../src/lib/docx/rpe';
 import type { AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import analisisCp from '../src/routes/analisis-cp';
+
+async function getDocumentXml(buffer: Uint8Array): Promise<string> {
+  const zip = await JSZip.loadAsync(buffer);
+  const docXmlFile = zip.file('word/document.xml');
+  if (!docXmlFile) throw new Error('word/document.xml not found in docx');
+  return await docXmlFile.async('string');
+}
 
 const sampleInput: AnalisisCpDocxInput = {
   metadata: {
@@ -113,6 +123,88 @@ describe('4-in-1 Engine DOCX Generators (Prota, Promes, KKTP)', () => {
     const buffer = await generateKktpDocxBuffer(sampleInput, 1);
     expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(1000);
+  });
+
+  it('should generate PROMES with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
+    const buffer = await generatePromesDocxBuffer(sampleInput, 1);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:w="16838"');
+    expect(xml).toContain('w:h="11906"');
+  });
+
+  it('should generate PROTA with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
+    const buffer = await generateProtaDocxBuffer(sampleInput);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:w="16838"');
+    expect(xml).toContain('w:h="11906"');
+  });
+
+  it('should generate KKTP with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
+    const buffer = await generateKktpDocxBuffer(sampleInput);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:w="16838"');
+    expect(xml).toContain('w:h="11906"');
+  });
+
+  it('should generate Analisis CP with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
+    const buffer = await generateAnalisisCpDocxBuffer(sampleInput);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:w="16838"');
+    expect(xml).toContain('w:h="11906"');
+  });
+
+  it('should generate RPE with true A4 Portrait orientation (width: 11906, height: 16838)', async () => {
+    const buffer = await generateRpeDocxBuffer(sampleInput, 1);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="portrait"');
+    expect(xml).toContain('w:w="11906"');
+    expect(xml).toContain('w:h="16838"');
+  });
+
+  it('should scale Kop Surat image proportionally without cutting off in landscape and portrait', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const kopBuf = fs.readFileSync(path.resolve(__dirname, '../public/static/kop_surat.png'));
+
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: any) => {
+      if (String(url).includes('kop_surat')) {
+        return new Response(kopBuf, {
+          headers: { 'Content-Type': 'image/png' }
+        });
+      }
+      return origFetch(url);
+    }) as any;
+
+    try {
+      const inputWithKop: AnalisisCpDocxInput = {
+        ...sampleInput,
+        metadata: {
+          ...sampleInput.metadata,
+          kop_surat_url: 'http://localhost/static/kop_surat.png'
+        }
+      };
+
+      // Test in Promes (Landscape)
+      const promesBuf = await generatePromesDocxBuffer(inputWithKop, 1);
+      const promesXml = await getDocumentXml(promesBuf);
+      expect(promesXml).toContain('w:drawing');
+      // 720 px * 9525 = 6858000 EMUs
+      expect(promesXml).toContain('cx="6858000"');
+
+      // Test in RPE (Portrait)
+      const rpeBuf = await generateRpeDocxBuffer(inputWithKop, 1);
+      const rpeXml = await getDocumentXml(rpeBuf);
+      expect(rpeXml).toContain('w:drawing');
+      // 620 px * 9525 = 5905500 EMUs
+      expect(rpeXml).toContain('cx="5905500"');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });
 

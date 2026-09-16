@@ -14,46 +14,16 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText } from './helpers';
+import { sanitizeText, generateKopSuratDocx } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 import { calculateRpe } from '../kaldik-purwakarta';
 
 export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
   const { metadata, semesters } = data;
-  const kopSuratContent: (Paragraph | Table)[] = [];
+  const kopSuratContent = await generateKopSuratDocx(metadata.kop_surat_url, true);
 
-  if (metadata.kop_surat_url) {
-    try {
-      const resp = await fetch(metadata.kop_surat_url);
-      if (resp.ok) {
-        const contentType = resp.headers.get('content-type') || '';
-        const arrBuf = await resp.arrayBuffer();
-        if (arrBuf.byteLength > 100) {
-          const isJpg = contentType.includes('jpeg') || contentType.includes('jpg') || metadata.kop_surat_url.includes('jpg');
-          kopSuratContent.push(new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 120 },
-            children: [
-              new ImageRun({
-                data: arrBuf,
-                transformation: { width: 850, height: 130 },
-                type: isJpg ? 'jpg' : 'png',
-              })
-            ]
-          }));
-          kopSuratContent.push(new Paragraph({
-            spacing: { after: 140 },
-            border: {
-              bottom: { style: BorderStyle.DOUBLE, size: 6, color: '000000', space: 2 }
-            }
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('Could not load KOP image in Promes DOCX:', e);
-    }
-  }
+
 
   // Filter semester if requested, or process all semesters
   const activeSemesters = targetSemesterNum
@@ -513,8 +483,8 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
         page: {
           size: {
             orientation: PageOrientation.LANDSCAPE,
-            width: 16838,
-            height: 11906,
+            width: 11906, // Note: docx library swaps width & height when orientation is LANDSCAPE so w:w="16838" and w:h="11906"
+            height: 16838,
           },
           margin: { top: 720, bottom: 720, left: 720, right: 720 }
         }

@@ -1136,3 +1136,86 @@ export function base64ToBytes(base64: string): Uint8Array {
     return bytes;
 }
 
+/**
+ * Helper untuk menyisipkan Kop Surat pada berkas DOCX dengan proporsi aman dan tidak terpotong
+ * @param kopSuratUrl URL gambar kop surat
+ * @param isLandscape Apakah halaman berorientasi mendatar (Landscape)
+ */
+export async function generateKopSuratDocx(kopSuratUrl?: string | null, isLandscape: boolean = false): Promise<(Paragraph | Table)[]> {
+    const content: (Paragraph | Table)[] = [];
+    if (!kopSuratUrl) return content;
+
+    try {
+        const resp = await fetch(kopSuratUrl);
+        if (resp.ok) {
+            const contentType = resp.headers.get('content-type') || '';
+            const arrBuf = await resp.arrayBuffer();
+            if (arrBuf.byteLength > 100) {
+                const isJpg = contentType.includes('jpeg') || contentType.includes('jpg') || kopSuratUrl.includes('jpg');
+                const uint8 = new Uint8Array(arrBuf);
+
+                // Deteksi rasio aspek asli gambar secara dinamis
+                let imgWidth = 927;
+                let imgHeight = 224;
+
+                if (uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47 && uint8.length >= 24) {
+                    const view = new DataView(uint8.buffer, uint8.byteOffset, uint8.byteLength);
+                    const w = view.getUint32(16, false);
+                    const h = view.getUint32(20, false);
+                    if (w > 0 && h > 0) { imgWidth = w; imgHeight = h; }
+                } else if (uint8[0] === 0xFF && uint8[1] === 0xD8) {
+                    let offset = 2;
+                    const view = new DataView(uint8.buffer, uint8.byteOffset, uint8.byteLength);
+                    while (offset < uint8.length - 8) {
+                        if (uint8[offset] !== 0xFF) break;
+                        const marker = uint8[offset + 1];
+                        if (marker === 0xC0 || marker === 0xC2) {
+                            const h = view.getUint16(offset + 5, false);
+                            const w = view.getUint16(offset + 7, false);
+                            if (w > 0 && h > 0) { imgWidth = w; imgHeight = h; }
+                            break;
+                        } else if (marker === 0xD9 || marker === 0xDA) {
+                            break;
+                        } else {
+                            const len = view.getUint16(offset + 2, false);
+                            offset += 2 + len;
+                        }
+                    }
+                }
+
+                const aspectRatio = imgWidth / imgHeight;
+
+                // Target lebar aman agar logo kiri dan kanan kop surat tidak terpotong margin printer/Word:
+                // Portrait printable area: ~660px - 697px -> gunakan 620px
+                // Landscape printable area: ~990px - 1026px -> gunakan 720px
+                const targetWidth = isLandscape ? 720 : 620;
+                const targetHeight = Math.round(targetWidth / (aspectRatio > 0 ? aspectRatio : 4.14));
+
+                content.push(new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 60 },
+                    children: [
+                        new ImageRun({
+                            data: arrBuf,
+                            transformation: { width: targetWidth, height: targetHeight },
+                            type: isJpg ? 'jpg' : 'png',
+                        })
+                    ]
+                }));
+
+                content.push(new Paragraph({
+                    spacing: { after: 120 },
+                    border: {
+                        bottom: { style: BorderStyle.DOUBLE, size: 6, color: '000000', space: 2 }
+                    }
+                }));
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load KOP image in DOCX:', e);
+    }
+
+    return content;
+}
+
+

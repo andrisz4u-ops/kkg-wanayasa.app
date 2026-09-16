@@ -14,46 +14,16 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText } from './helpers';
+import { sanitizeText, generateKopSuratDocx } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from '../kaldik-purwakarta';
 
 export async function generateRpeDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
   const { metadata } = data;
-  const kopSuratContent: (Paragraph | Table)[] = [];
+  const kopSuratContent = await generateKopSuratDocx(metadata.kop_surat_url, false);
 
-  if (metadata.kop_surat_url) {
-    try {
-      const resp = await fetch(metadata.kop_surat_url);
-      if (resp.ok) {
-        const contentType = resp.headers.get('content-type') || '';
-        const arrBuf = await resp.arrayBuffer();
-        if (arrBuf.byteLength > 100) {
-          const isJpg = contentType.includes('jpeg') || contentType.includes('jpg') || metadata.kop_surat_url.includes('jpg');
-          kopSuratContent.push(new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 120 },
-            children: [
-              new ImageRun({
-                data: arrBuf,
-                transformation: { width: 600, height: 90 },
-                type: isJpg ? 'jpg' : 'png',
-              })
-            ]
-          }));
-          kopSuratContent.push(new Paragraph({
-            spacing: { after: 140 },
-            border: {
-              bottom: { style: BorderStyle.DOUBLE, size: 6, color: '000000', space: 2 }
-            }
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('Could not load KOP image in RPE DOCX:', e);
-    }
-  }
+
 
   const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
   const jpPerMinggu = quota.jpPerMinggu || 2;
@@ -473,10 +443,10 @@ export async function generateRpeDocxBuffer(data: AnalisisCpDocxInput, targetSem
             height: 16838, // A4 Portrait height
           },
           margin: {
-            top: 1000,
-            bottom: 1000,
-            left: 1000,
-            right: 1000,
+            top: 720,
+            bottom: 720,
+            left: 720,
+            right: 720,
           }
         }
       },

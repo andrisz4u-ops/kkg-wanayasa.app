@@ -229,7 +229,57 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       new TableRow({ tableHeader: true, children: headerRow2Cells }),
     ];
 
-    let currentWeekIndex = 0; // Tracks which week to put the checkmark/JP (out of 30 weeks)
+    const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
+    const jpPerMinggu = quota.jpPerMinggu || 2;
+
+    // Minggu Efektif KBM (18-20 pekan):
+    // Masuk sekolah pertama 13 Juli 2026 (Minggu ke-3 Juli):
+    const activeKbmWeeks = isSem1
+      ? [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+
+    // Kumpulkan seluruh item semester untuk alokasi waterfall presisi
+    const allSemesterItems: { item: any; bab: any }[] = [];
+    for (const b of sem.babs) {
+      const items = b.items && b.items.length > 0 ? b.items : [
+        { kode_tp: '', materi_pokok: '', tp: '', atp: b.bab, alokasi_waktu: `${jpPerMinggu} JP` }
+      ];
+      for (const it of items) {
+        allSemesterItems.push({ item: it, bab: b });
+      }
+    }
+
+    const itemWeekAllocations = new Map<number, Record<number, number>>();
+    let kbmIdx = 0;
+    let weekRemainingJp = jpPerMinggu;
+
+    allSemesterItems.forEach((si, rowIdx) => {
+      const rawJp = si.item.alokasi_waktu || si.item.jp || `${jpPerMinggu} JP`;
+      let neededJp = parseInt(String(rawJp).replace(/\D/g, '')) || jpPerMinggu;
+
+      while (neededJp > 0 && kbmIdx < activeKbmWeeks.length) {
+        const currentWeek = activeKbmWeeks[kbmIdx];
+        const canTake = Math.min(neededJp, weekRemainingJp);
+
+        if (canTake > 0) {
+          if (!itemWeekAllocations.has(rowIdx)) {
+            itemWeekAllocations.set(rowIdx, {});
+          }
+          const rowAlloc = itemWeekAllocations.get(rowIdx)!;
+          rowAlloc[currentWeek] = (rowAlloc[currentWeek] || 0) + canTake;
+
+          neededJp -= canTake;
+          weekRemainingJp -= canTake;
+        }
+
+        if (weekRemainingJp === 0) {
+          kbmIdx++;
+          weekRemainingJp = jpPerMinggu;
+        }
+      }
+    });
+
+    let globalItemIdx = 0;
 
     for (const b of sem.babs) {
       // Bab header spanning all 32 columns
@@ -251,12 +301,11 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       );
 
       const items = b.items && b.items.length > 0 ? b.items : [
-        { kode_tp: '', materi_pokok: '', tp: '', atp: b.bab, alokasi_waktu: '2 JP' }
+        { kode_tp: '', materi_pokok: '', tp: '', atp: b.bab, alokasi_waktu: `${jpPerMinggu} JP` }
       ];
 
       items.forEach((item: any) => {
-        const rawJp = item.alokasi_waktu || item.jp || '2 JP';
-        const jpNum = parseInt(String(rawJp).replace(/\D/g, '')) || 2;
+        const rawJp = item.alokasi_waktu || item.jp || `${jpPerMinggu} JP`;
         const rowCells: TableCell[] = [
           new TableCell({
             width: { size: WIDTH_ATP, type: WidthType.DXA },
@@ -279,24 +328,22 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
           }),
         ];
 
-        // Fill 30 weeks
-        // In schools, weeks 1-2 in July might be MPLS, last weeks in Dec/Jun might be exams/remedial.
-        // We systematically distribute teaching weeks across weeks 2 through 27.
-        const targetWeek = Math.min(27, Math.max(1, currentWeekIndex + 2));
+        const rowAlloc = itemWeekAllocations.get(globalItemIdx) || {};
+        globalItemIdx++;
 
-        for (let w = 0; w < 30; w++) {
-          const isMarked = w === targetWeek;
+        for (let w = 1; w <= 30; w++) {
+          const allocJp = rowAlloc[w];
           rowCells.push(
             new TableCell({
               width: { size: WIDTH_WEEK, type: WidthType.DXA },
               verticalAlign: VerticalAlign.CENTER,
-              shading: isMarked ? { type: ShadingType.CLEAR, fill: 'E0E7FF' } : undefined,
+              shading: allocJp ? { type: ShadingType.CLEAR, fill: 'E0E7FF' } : undefined,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
-                      text: isMarked ? String(jpNum) : '',
+                      text: allocJp ? String(allocJp) : '',
                       bold: true,
                       size: 17,
                       font: 'Times New Roman'
@@ -308,10 +355,57 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
           );
         }
 
-        currentWeekIndex++;
         tableRows.push(new TableRow({ children: rowCells }));
       });
     }
+
+    // Agenda Rows
+    const createAgendaRow = (title: string, checkFn: (w: number) => string | null, fillHex: string) => {
+      const cells: TableCell[] = [
+        new TableCell({
+          columnSpan: 2,
+          shading: { type: ShadingType.CLEAR, fill: 'F8FAFC' },
+          children: [
+            new Paragraph({
+              spacing: { before: 30, after: 30 },
+              children: [new TextRun({ text: title, bold: true, size: 17, font: 'Times New Roman' })]
+            })
+          ]
+        })
+      ];
+      for (let w = 1; w <= 30; w++) {
+        const textVal = checkFn(w);
+        cells.push(
+          new TableCell({
+            width: { size: WIDTH_WEEK, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
+            shading: textVal ? { type: ShadingType.CLEAR, fill: fillHex } : undefined,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({
+                    text: textVal || '',
+                    bold: true,
+                    size: 15,
+                    font: 'Times New Roman'
+                  })
+                ]
+              })
+            ]
+          })
+        );
+      }
+      return new TableRow({ children: cells });
+    };
+
+    if (isSem1) {
+      tableRows.push(createAgendaRow('Masa Pengenalan Lingkungan Sekolah (MPLS)', (w) => w === 3 ? 'MPLS' : null, 'BAE6FD'));
+    }
+    tableRows.push(createAgendaRow('Sumatif Tengah Semester (STS)', (w) => (w === 13 || w === 14) ? 'STS' : null, 'FEF08A'));
+    tableRows.push(createAgendaRow('Sumatif Akhir Semester (SAS / ASAT)', (w) => (w === 26 || w === 27) ? 'SAS' : null, 'E9D5FF'));
+    tableRows.push(createAgendaRow('Pengolahan Nilai & Pembagian Rapor', (w) => w === 28 ? 'RPT' : null, 'CCFBF1'));
+    tableRows.push(createAgendaRow('Libur Akhir Semester', (w) => ((isSem1 && (w === 1 || w === 2)) || w >= 29) ? 'LBR' : null, 'CBD5E1'));
 
     const mainTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -375,7 +469,6 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       ]
     });
 
-    const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
     const notesParagraphs = [
       new Paragraph({
         spacing: { before: 80, after: 20 },

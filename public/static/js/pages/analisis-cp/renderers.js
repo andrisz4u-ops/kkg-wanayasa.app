@@ -404,11 +404,53 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       });
     });
 
-    const activeKbmWeeks = [2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+    const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || inputData?.mataPelajaran || '', metadata.kelas || inputData?.jenjangKelas || '5');
+    const jpPerMinggu = quota.jpPerMinggu || 2;
+
+    // Minggu Efektif KBM (18-20 pekan):
+    // Masuk sekolah pertama 13 Juli 2026 (Minggu ke-3 Juli):
+    // Juli: w=3, 4, 5 (w=1,2 Libur TP Lalu, w=3 MPLS/Awal KBM)
+    // Agustus: w=6, 7, 8, 9, 10
+    // September: w=11, 12 (KBM), w=13, 14 (STS), w=15 (KBM)
+    // Oktober: w=16, 17, 18, 19, 20
+    // November: w=21, 22, 23, 24 (KBM / Kokurikuler)
+    // Desember: w=26, 27 (SAS), w=28 (RPT), w=29, 30 (LBR)
+    const activeKbmWeeks = isSem1
+      ? [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+
+    // Distribusi Waterfall (Mengalir teratur sesuai jpPerMinggu tanpa tumpang tindih)
+    const itemWeekAllocations = new Map();
+    let kbmIdx = 0;
+    let weekRemainingJp = jpPerMinggu;
 
     semItems.forEach((si, rowIdx) => {
-      const jp = parseJpNum(getItemJpText(si.item));
-      const targetWeekIndex = activeKbmWeeks[rowIdx % activeKbmWeeks.length] || 2;
+      let neededJp = parseJpNum(getItemJpText(si.item)) || jpPerMinggu;
+
+      while (neededJp > 0 && kbmIdx < activeKbmWeeks.length) {
+        const currentWeek = activeKbmWeeks[kbmIdx];
+        const canTake = Math.min(neededJp, weekRemainingJp);
+
+        if (canTake > 0) {
+          if (!itemWeekAllocations.has(rowIdx)) {
+            itemWeekAllocations.set(rowIdx, {});
+          }
+          const rowAlloc = itemWeekAllocations.get(rowIdx);
+          rowAlloc[currentWeek] = (rowAlloc[currentWeek] || 0) + canTake;
+
+          neededJp -= canTake;
+          weekRemainingJp -= canTake;
+        }
+
+        if (weekRemainingJp === 0) {
+          kbmIdx++;
+          weekRemainingJp = jpPerMinggu;
+        }
+      }
+    });
+
+    semItems.forEach((si, rowIdx) => {
+      const rowAlloc = itemWeekAllocations.get(rowIdx) || {};
 
       html += `<tr class="hover:bg-slate-50/50">`;
 
@@ -433,14 +475,19 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       `;
 
       for (let w = 1; w <= 30; w++) {
-        const isMatched = (w === targetWeekIndex);
-        if (isMatched) {
-          html += `<td class="border border-slate-900 p-0.5 text-center font-black bg-indigo-100/70 text-indigo-950">${jp}</td>`;
-        } else if (w === 10 || w === 11) {
+        const allocJp = rowAlloc[w];
+
+        if (allocJp) {
+          html += `<td class="border border-slate-900 p-0.5 text-center font-black bg-indigo-100/70 text-indigo-950">${allocJp}</td>`;
+        } else if (isSem1 && (w === 1 || w === 2)) {
+          html += `<td class="border border-slate-900 p-0.5 text-center bg-slate-100/80 text-[8px] text-slate-400"></td>`;
+        } else if (w === 13 || w === 14) {
           html += `<td class="border border-slate-900 p-0.5 text-center bg-amber-50/40 text-[8px] text-amber-800"></td>`;
-        } else if (w === 21 || w === 22) {
+        } else if (w === 26 || w === 27) {
           html += `<td class="border border-slate-900 p-0.5 text-center bg-purple-50/40 text-[8px] text-purple-800"></td>`;
-        } else if (w >= 24) {
+        } else if (w === 28) {
+          html += `<td class="border border-slate-900 p-0.5 text-center bg-teal-50/40 text-[8px] text-teal-800"></td>`;
+        } else if (w >= 29) {
           html += `<td class="border border-slate-900 p-0.5 text-center bg-slate-100 text-[8px] text-slate-400"></td>`;
         } else {
           html += `<td class="border border-slate-900 p-0.5 text-center"></td>`;
@@ -450,12 +497,25 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       html += `</tr>`;
     });
 
+    if (isSem1) {
+      html += `
+        <tr class="bg-sky-50 font-bold text-sky-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Masa Pengenalan Lingkungan Sekolah (MPLS)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 3) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-sky-200 text-sky-900">MPLS</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+      `;
+    }
+
     html += `
       <tr class="bg-amber-50 font-bold text-amber-950">
         <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Sumatif Tengah Semester (STS)</td>
         ${Array.from({ length: 30 }, (_, i) => {
           const w = i + 1;
-          if (w === 10 || w === 11) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-amber-200 text-amber-900">STS</td>`;
+          if (w === 13 || w === 14) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-amber-200 text-amber-900">STS</td>`;
           return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
         }).join('')}
       </tr>
@@ -463,7 +523,7 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
         <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Sumatif Akhir Semester (SAS / ASAT)</td>
         ${Array.from({ length: 30 }, (_, i) => {
           const w = i + 1;
-          if (w === 21 || w === 22) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-purple-200 text-purple-900">SAS</td>`;
+          if (w === 26 || w === 27) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-purple-200 text-purple-900">SAS</td>`;
           return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
         }).join('')}
       </tr>
@@ -471,7 +531,7 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
         <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Pengolahan Nilai & Pembagian Rapor</td>
         ${Array.from({ length: 30 }, (_, i) => {
           const w = i + 1;
-          if (w === 23) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-teal-200 text-teal-900">RPT</td>`;
+          if (w === 28) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-teal-200 text-teal-900">RPT</td>`;
           return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
         }).join('')}
       </tr>
@@ -479,7 +539,7 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
         <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Libur Akhir Semester</td>
         ${Array.from({ length: 30 }, (_, i) => {
           const w = i + 1;
-          if (w >= 24 && w <= 26) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+          if ((isSem1 && (w === 1 || w === 2)) || w >= 29) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
           return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
         }).join('')}
       </tr>

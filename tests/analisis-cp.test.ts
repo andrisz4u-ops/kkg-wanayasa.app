@@ -32,6 +32,45 @@ describe('Analisis CP - Standard Official Curriculum Presets', () => {
     expect(data?.chapters[0].bab).toContain('Cahaya');
   });
 
+  it('retrieves accurate official chapters for Bahasa Indonesia Kelas 3 (Kawan Seiring) without fallback to Kelas 5', () => {
+    const data = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 3');
+    expect(data).toBeDefined();
+    expect(data?.judul).toContain('Kawan Seiring');
+    expect(data?.chapters).toHaveLength(8);
+    expect(data?.chapters[0].bab).toBe('Bab 1: Ayo, Main!');
+    expect(data?.chapters[0].bab).not.toContain('Aku yang Unik'); // Ensure not returning Kelas 5!
+    expect(data?.chapters[7].bab).toBe('Bab 8: Sahabat dari Seberang');
+  });
+
+  it('retrieves distinct official books for Bahasa Indonesia across Kelas 1 to 6', () => {
+    const k1 = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 1');
+    const k2 = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 2');
+    const k4 = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 4');
+    const k6 = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 6');
+
+    expect(k1?.judul).toContain('Aku Bisa!');
+    expect(k2?.judul).toContain('Keluargaku Unik');
+    expect(k4?.judul).toContain('Lihat Sekitar');
+    expect(k6?.judul).toContain('Anak Indonesia Hebat');
+
+    expect(k1?.chapters[0].bab).toContain('Bunyi Apa?');
+    expect(k4?.chapters[0].bab).toContain('Sudah Besar');
+  });
+
+  it('retrieves official chapters for IPAS Kelas 3 (Kemendikbudristek)', () => {
+    const data = getStandardCurriculumChapters('IPAS', 'Kelas 3');
+    expect(data).toBeDefined();
+    expect(data?.judul).toContain('IPAS');
+    expect(data?.judul).toContain('Kelas III');
+    expect(data?.chapters).toHaveLength(8);
+    expect(data?.chapters[0].bab).toBe('Bab 1: Mari Kenali Hewan di Sekitar Kita');
+  });
+
+  it('does NOT fallback to Kelas 5 when an unsupported grade is requested', () => {
+    const data = getStandardCurriculumChapters('Bahasa Indonesia', 'Kelas 99');
+    expect(data).toBeNull();
+  });
+
   it('retrieves complete chapters for local & new subjects (B.Sunda, Tatanen di Bale Atikan, AKPK, Koding)', () => {
     const sunda = getStandardCurriculumChapters('B.Sunda', 'Kelas 5');
     expect(sunda).toBeDefined();

@@ -533,6 +533,7 @@ export function initAnalisisCp() {
     if (e.target?.files?.length) {
       handlePdfFile(e.target.files[0]);
     }
+    e.target.value = '';
   });
 
   // 4. Manual Text Extraction Button
@@ -703,18 +704,17 @@ export function initAnalisisCp() {
   document.getElementById('select-mata-pelajaran')?.addEventListener('change', async (e) => {
     const mapel = e.target.value;
     const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
-    if (!isCustomPdfUploaded || detectedChapters.length <= 2) {
-      await seedDefaultChaptersForClass(kelas, mapel);
-      showToast(`Struktur materi disesuaikan dengan ${mapel} (${kelas})`, 'info');
-    }
+    isCustomPdfUploaded = false;
+    await seedDefaultChaptersForClass(kelas, mapel);
+    showToast(`Struktur materi disesuaikan dengan ${mapel} (${kelas})`, 'info');
   });
 
   document.getElementById('select-jenjang-kelas')?.addEventListener('change', async (e) => {
     const kelas = e.target.value;
     const mapel = document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
-    if (!isCustomPdfUploaded || detectedChapters.length <= 2) {
-      await seedDefaultChaptersForClass(kelas, mapel);
-    }
+    isCustomPdfUploaded = false;
+    await seedDefaultChaptersForClass(kelas, mapel);
+    showToast(`Struktur materi disesuaikan untuk ${kelas} (${mapel})`, 'info');
   });
 
   // Global click handler for loading official presets button in Card 3
@@ -756,7 +756,7 @@ async function seedDefaultChaptersForClass(kelas, mapelName) {
     }
     detectedChapters = chs;
     const titleInput = document.getElementById('input-sumber-buku');
-    if (titleInput && (!titleInput.value || titleInput.value.includes('Buku Siswa') || titleInput.value.includes('IPAS') || titleInput.value.includes('Bahasa Indonesia'))) {
+    if (titleInput) {
       const suffix = cov === '1' ? ' (Semester 1)' : cov === '2' ? ' (Semester 2)' : '';
       titleInput.value = (preset.buku_judul || `Buku Siswa ${normMapel} Kelas ${k}`) + suffix;
     }
@@ -901,7 +901,7 @@ async function handlePdfFile(file) {
     if (statusText) statusText.innerHTML = '<i class="fas fa-wand-magic-sparkles text-indigo-500"></i> AI sedang mengekstrak seluruh BAB buku...';
 
     const sumberBukuInput = document.getElementById('input-sumber-buku');
-    if (sumberBukuInput && (!sumberBukuInput.value || sumberBukuInput.value.includes('Buku Siswa IPAS'))) {
+    if (sumberBukuInput) {
       sumberBukuInput.value = file.name.replace(/\.pdf$/i, '').replace(/[_-]/g, ' ');
     }
 
@@ -958,7 +958,7 @@ async function extractStructureFromText(rawText) {
 
       if (res.data.buku_judul) {
         const titleInput = document.getElementById('input-sumber-buku');
-        if (titleInput && (!titleInput.value || titleInput.value.length < 5 || titleInput.value.includes('Buku Siswa IPAS'))) {
+        if (titleInput) {
           titleInput.value = res.data.buku_judul;
         }
       }

@@ -69,6 +69,19 @@ export function distributeChaptersToSemesters(
 // Database Struktur BAB Standar Buku Teks Resmi Kurikulum Merdeka (Kemendikbudristek)
 export const standardCurriculumDatabase: Record<string, Record<string, { judul: string; chapters: any[] }>> = {
   'bahasa indonesia': {
+    '6': {
+      judul: 'Buku Siswa Bahasa Indonesia: Anak Indonesia Hebat Kelas VI (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Bangga Menjadi Anak Indonesia', materi_pokok: ['Surat resmi & dinas', 'Formulir pendaftaran', 'Teks formulir'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Musisi Indonesia di Pentas Dunia', materi_pokok: ['Wawancara mendalam', 'Kalimat efektif', 'Teks biografi'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Taman Nasional dan Situs Warisan Dunia', materi_pokok: ['Laporan hasil pengamatan', 'Grafik & infografik', 'Teks Eksplanasi'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Jeda untuk Iklim', materi_pokok: ['Teks argumentasi isu global', 'Debat & diskusi terarah', 'Kosakata iklim'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Anak-Anak yang Mengubah Dunia', materi_pokok: ['Pidato persuasif', 'Gagasan utama', 'Teks eksposisi'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Liburan Perpisahan Kelas Akhir', materi_pokok: ['Proposal kegiatan kelas', 'Surat undangan', 'Rincian anggaran'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Aku Bisa Berempati', materi_pokok: ['Cerita pendek (Cerpen)', 'Sudut pandang tokoh', 'Amanat cerita'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Aman Berinternet', materi_pokok: ['Literasi digital & privasi', 'Etika berkomunikasi daring', 'Esai singkat'], semester: 2 }
+      ]
+    },
     '5': {
       judul: 'Buku Siswa Bahasa Indonesia: Bergerak Bersama Kelas V (Kemendikbudristek)',
       chapters: [
@@ -95,21 +108,60 @@ export const standardCurriculumDatabase: Record<string, Record<string, { judul: 
         { no: 8, bab: 'Bab 8: Sehatlah Ragaku', materi_pokok: ['Teks informasi kesehatan', 'Fakta dan opini', 'Menulis paragraf rangkuman'], semester: 2 }
       ]
     },
-    '6': {
-      judul: 'Buku Siswa Bahasa Indonesia: Anak Indonesia Hebat Kelas VI (Kemendikbudristek)',
+    '3': {
+      judul: 'Buku Siswa Bahasa Indonesia: Kawan Seiring Kelas III (Kemendikbudristek)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Bangga Menjadi Anak Indonesia', materi_pokok: ['Surat resmi & dinas', 'Formulir pendaftaran', 'Teks formulir'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Musisi Indonesia di Pentas Dunia', materi_pokok: ['Wawancara mendalam', 'Kalimat efektif', 'Teks biografi'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Taman Nasional dan Situs Warisan Dunia', materi_pokok: ['Laporan hasil pengamatan', 'Grafik & infografik', 'Teks Eksplanasi'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Jeda untuk Iklim', materi_pokok: ['Teks argumentasi isu global', 'Debat & diskusi terarah', 'Kosakata iklim'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Anak-Anak yang Mengubah Dunia', materi_pokok: ['Pidato persuasif', 'Gagasan utama', 'Teks eksposisi'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Liburan Perpisahan Kelas Akhir', materi_pokok: ['Proposal kegiatan kelas', 'Surat undangan', 'Rincian anggaran'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Aku Bisa Berempati', materi_pokok: ['Cerita pendek (Cerpen)', 'Sudut pandang tokoh', 'Amanat cerita'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Aman Berinternet', materi_pokok: ['Literasi digital & privasi', 'Etika berkomunikasi daring', 'Esai singkat'], semester: 2 }
+        { no: 1, bab: 'Bab 1: Ayo, Main!', materi_pokok: ['Permainan tradisional', 'Kalimat ajakan dan larangan', 'Kosakata gerak'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Kawan Seiring', materi_pokok: ['Kerja sama dan persahabatan', 'Kalimat majemuk setara', 'Teks narasi sederhana'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Pengobar Semangat', materi_pokok: ['Teks biografi inspiratif', 'Ide pokok paragraf', 'Kosakata profesi'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Senyum di Sekitarku', materi_pokok: ['Denah dan mata angin', 'Teks deskripsi tempat', 'Menulis paragraf runtut'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Bola-Bola Cokelat', materi_pokok: ['Teks prosedur membuat makanan', 'Kosakata resep', 'Langkah-langkah kegiatan'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Tersesat!', materi_pokok: ['Rambu petunjuk dan keselamatan', 'Cerita pengalaman pribadi', 'Kalimat tanya'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Aku dan Si Merah', materi_pokok: ['Mengamati alam sekitar', 'Puisi anak', 'Kata sifat dan perbandingan'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Sahabat dari Seberang', materi_pokok: ['Surat pribadi dan pesan singkat', 'Etika berkomunikasi', 'Teks cerita persahabatan'], semester: 2 }
+      ]
+    },
+    '2': {
+      judul: 'Buku Siswa Bahasa Indonesia: Keluargaku Unik Kelas II (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Mengenal Perasaan', materi_pokok: ['Mengenali berbagai emosi', 'Teks puisi sederhana', 'Menyampaikan ungkapan perasaan'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Menjaga Kesehatan', materi_pokok: ['Makanan sehat dan bergizi', 'Kalimat tanya', 'Kebiasaan hidup bersih'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Berhati-hati di Mana Saja', materi_pokok: ['Keselamatan di jalan dan rumah', 'Tanda seru dan larangan', 'Kata depan'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Keluargaku Unik', materi_pokok: ['Silsilah keluarga', 'Kata sifat', 'Menulis cerita keluarga'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Berteman dalam Keragaman', materi_pokok: ['Sikap toleransi', 'Fabel dan cerita binatang', 'Menirukan intonasi tokoh'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Bijak Memakai Uang', materi_pokok: ['Literasi menabung', 'Teks prosedur sederhana', 'Nilai kebutuhan vs keinginan'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Sayang Lingkungan', materi_pokok: ['Sampah dan kebersihan', 'Sebab akibat sederhana', 'Memilah sampah'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Hobi yang Jadi Prestasi', materi_pokok: ['Menceritakan hobi', 'Kosa kata aktivitas', 'Teks narasi inspirasi'], semester: 2 }
+      ]
+    },
+    '1': {
+      judul: 'Buku Siswa Bahasa Indonesia: Aku Bisa! Kelas I (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Bunyi Apa?', materi_pokok: ['Mengenal aneka bunyi', 'Pengenalan huruf B dan b', 'Suku kata awal'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Ayo Bermain!', materi_pokok: ['Gerakan tubuh saat bermain', 'Pengenalan huruf C dan c', 'Kata tanya apa dan siapa'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Awas Kuman!', materi_pokok: ['Menjaga kebersihan diri', 'Pengenalan huruf K dan k', 'Mencuci tangan yang benar'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Aku Bisa!', materi_pokok: ['Menirukan gerak hewan', 'Pengenalan huruf L dan l', 'Kalimat sederhana'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Teman Baru', materi_pokok: ['Berkenalan dengan teman', 'Pengenalan huruf M dan m', 'Sikap santun'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Berbeda Itu Tak Apa', materi_pokok: ['Menghargai perbedaan fisik', 'Pengenalan huruf G dan g', 'Keberagaman'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Aku Ingin', materi_pokok: ['Membedakan kebutuhan dan keinginan', 'Pengenalan huruf P dan p', 'Menyusun kata'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Di Sekitar Rumah', materi_pokok: ['Mengenali ruangan dan alamat rumah', 'Pengenalan huruf D dan d', 'Denah sederhana'], semester: 2 }
       ]
     }
   },
   'ipas': {
+    '6': {
+      judul: 'Buku Siswa Ilmu Pengetahuan Alam dan Sosial (IPAS) Kelas VI (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Bagaimana Tubuh Kita Bergerak?', materi_pokok: ['Rangka, sendi, dan otot', 'Sistem saraf', 'Kelainan organ gerak'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Cerita tentang Indonesia Kita', materi_pokok: ['Sejarah perjuangan bangsa', 'Tokoh kemerdekaan', 'Makna proklamasi'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Pelesir Keliling Dunia', materi_pokok: ['Benua-benua di dunia', 'Geografi internasional', 'Karakteristik negara sahabat'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Indonesia dan Masyarakat Dunia', materi_pokok: ['Kerja sama internasional (ASEAN, PBB)', 'Globalisasi', 'Ekspor impor'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Menjelajahi Bumi dan Antariksa', materi_pokok: ['Sistem tata surya', 'Rotasi dan revolusi bumi', 'Gerhana matahari & bulan'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Gawat! Benarkah Energi di Bumi Akan Habis?', materi_pokok: ['Krisis energi', 'Energi terbarukan (surya, angin, air)', 'Hemat energi'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Bumi Kita Terancam Bahaya', materi_pokok: ['Pemanasan global (global warming)', 'Efek rumah kaca', 'Aksi pelestarian bumi'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Proyek Akhir IPAS', materi_pokok: ['Rancangan penelitian sederhana', 'Eksperimen sains', 'Pameran karya ilmiah kelas'], semester: 2 }
+      ]
+    },
     '5': {
       judul: 'Buku Siswa Ilmu Pengetahuan Alam dan Sosial (IPAS) Kelas V (Kemendikbudristek)',
       chapters: [
@@ -135,6 +187,19 @@ export const standardCurriculumDatabase: Record<string, Record<string, { judul: 
         { no: 7, bab: 'Bab 7: Bagaimana Mendapatkan Semua Keperluan Kita?', materi_pokok: ['Kebutuhan vs Keinginan', 'Jual Beli & Pasar', 'Nilai Uang'], semester: 2 },
         { no: 8, bab: 'Bab 8: Membangun Masyarakat yang Beradab', materi_pokok: ['Norma dan Adat Istiadat', 'Peraturan Tertulis & Tidak Tertulis', 'Tanggung Jawab Warga'], semester: 2 }
       ]
+    },
+    '3': {
+      judul: 'Buku Siswa Ilmu Pengetahuan Alam dan Sosial (IPAS) Kelas III (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Mari Kenali Hewan di Sekitar Kita', materi_pokok: ['Bentuk tubuh hewan', 'Fungsi anggota tubuh hewan', 'Hewan darat dan air'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Ayo, Mengenal Siklus pada Makhluk Hidup', materi_pokok: ['Metamorfosis serangga dan amfibi', 'Siklus hidup hewan peliharaan', 'Pertumbuhan makhluk hidup'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Hidup Bersama Alam', materi_pokok: ['Komponen biotik dan abiotik', 'Hubungan saling membutuhkan', 'Menjaga keseimbangan alam'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Berkenalan dengan Energi', materi_pokok: ['Sumber energi di sekitar kita', 'Bentuk-bentuk energi', 'Pemanfaatan energi sehari-hari'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Denah Rumah dan Lingkungan Sekitar', materi_pokok: ['Membaca simbol denah', 'Arah mata angin', 'Tata letak lingkungan'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Tradisi Keluarga dan Masyarakat', materi_pokok: ['Norma dan adat kebiasaan', 'Perayaan tradisi lokal', 'Kearifan budaya'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Cerita dari Kampung Halaman', materi_pokok: ['Asal usul nama daerah', 'Tokoh kebanggaan daerah', 'Perubahan lingkungan dari masa ke masa'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Bentuk Negaraku Indonesia', materi_pokok: ['Pulau-pulau di Indonesia', 'Wilayah daratan dan perairan', 'Keberagaman suku nusantara'], semester: 2 }
+      ]
     }
   },
   'matematika': {
@@ -149,6 +214,19 @@ export const standardCurriculumDatabase: Record<string, Record<string, { judul: 
         { no: 6, bab: 'Bab 6: Sudut dan Pengukurannya', materi_pokok: ['Jenis-jenis sudut', 'Mengukur sudut dengan busur', 'Sudut pada bangun datar'], semester: 2 },
         { no: 7, bab: 'Bab 7: Membandingkan Ciri-Ciri Bangun Datar', materi_pokok: ['Sisi, rusuk, sudut', 'Simetri lipat & simetri putar'], semester: 2 },
         { no: 8, bab: 'Bab 8: Data dan Diagram', materi_pokok: ['Pengumpulan data', 'Tabel frekuensi', 'Diagram batang'], semester: 2 }
+      ]
+    },
+    '3': {
+      judul: 'Buku Siswa Matematika Kelas III (Kemendikbudristek)',
+      chapters: [
+        { no: 1, bab: 'Bab 1: Bilangan Cacah sampai 1.000', materi_pokok: ['Membaca & menulis bilangan ribuan', 'Nilai tempat ratusan & ribuan', 'Membandingkan bilangan'], semester: 1 },
+        { no: 2, bab: 'Bab 2: Operasi Penjumlahan dan Pengurangan', materi_pokok: ['Penjumlahan bersusun dengan teknik menyimpan', 'Pengurangan bersusun dengan teknik meminjam', 'Soal cerita'], semester: 1 },
+        { no: 3, bab: 'Bab 3: Perkalian dan Pembagian Bilangan', materi_pokok: ['Konsep perkalian penjumlahan berulang', 'Konsep pembagian pengurangan berulang', 'Tabel perkalian'], semester: 1 },
+        { no: 4, bab: 'Bab 4: Pengukuran Panjang dan Berat', materi_pokok: ['Satuan baku meter dan sentimeter', 'Satuan baku kilogram dan gram', 'Alat ukur timbangan'], semester: 1 },
+        { no: 5, bab: 'Bab 5: Pecahan Sederhana', materi_pokok: ['Mengenal pecahan 1/2, 1/3, 1/4', 'Pecahan pada garis bilangan', 'Membandingkan pecahan'], semester: 2 },
+        { no: 6, bab: 'Bab 6: Keliling dan Luas Bangun Datar', materi_pokok: ['Keliling bangun datar dengan satuan tidak baku', 'Luas bangun datar petak satuan', 'Persegi & persegi panjang'], semester: 2 },
+        { no: 7, bab: 'Bab 7: Sudut dan Garis', materi_pokok: ['Jenis sudut (siku-siku, lancip, tumpul)', 'Garis sejajar dan berpotongan'], semester: 2 },
+        { no: 8, bab: 'Bab 8: Penyajian Data Sederhana', materi_pokok: ['Tabel turus / tally', 'Piktogram dan diagram gambar', 'Membaca data diagram'], semester: 2 }
       ]
     }
   },
@@ -311,11 +389,6 @@ export function getStandardCurriculumChapters(mataPelajaran: string, jenjangKela
     return standardCurriculumDatabase[subjectKey][kelasKey];
   }
 
-  // Fallback ke kelas 5 dari mapel tersebut jika ada
-  if (subjectKey && standardCurriculumDatabase[subjectKey]?.['5']) {
-    return standardCurriculumDatabase[subjectKey]['5'];
-  }
-
   return null;
 }
 
@@ -354,7 +427,7 @@ ATURAN WAJIB & KRITIS (SANGAT PENTING):
    - Periksa seluruh teks dari awal hingga akhir, dan temukan Bab 1, Bab 2, Bab 3, Bab 4, Bab 5, Bab 6, Bab 7, Bab 8, dst.
    - DILARANG KERAS HANYA MENGELUARKAN 1 BAB!
 2. FORMAT JUDUL BAB:
-   - Tuliskan nomor bab dan judul lengkapnya secara jelas, contoh: "Bab 1: Aku yang Unik", "Bab 2: Buku Jendela Dunia".
+   - Tuliskan nomor bab dan judul lengkapnya secara jelas sesuai teks daftar isi, contoh: "Bab 1: [Judul Bab Pertama]", "Bab 2: [Judul Bab Kedua]".
 3. MATERI POKOK:
    - Tuliskan 2 sampai 4 submateri/topik pokok penting dalam setiap bab secara padat dan ringkas (contoh: ["Kata sifat", "Sinonim dan Antonim", "Makna awalan pe-", "Teks Deskripsi"]).
    - JANGAN membuat uraian penjelasan panjang agar respons tidak terpotong oleh limit token AI.
@@ -500,8 +573,9 @@ Keluarkan HANYA JSON valid dengan struktur berikut:
 
 // 1. Ekstraksi Struktur Bab dari Teks Buku
 analisisCp.post('/extract-structure', async (c) => {
+  let body: any = {};
   try {
-    const body = await c.req.json();
+    body = await c.req.json();
     const { text, mataPelajaran, jenjangKelas, aiProvider, targetSemester, bookCoverage } = body;
     const effectiveTarget = bookCoverage || targetSemester || 'all';
 
@@ -526,17 +600,16 @@ analisisCp.post('/extract-structure', async (c) => {
     const standardData = getStandardCurriculumChapters(mataPelajaran, jenjangKelas);
 
     if (result && Array.isArray(result.chapters)) {
-      // Jika AI hanya mengembalikan 1 atau 2 bab saat target setahun penuh
+      // Jika AI hanya mengembalikan 1 atau 2 bab saat target setahun penuh, verifikasi kecocokan dengan kurikulum resmi kelas yang sedang aktif
       if (effectiveTarget === 'all' && result.chapters.length <= 2 && standardData && Array.isArray(standardData.chapters)) {
-        const firstExtracted = result.chapters[0]?.bab?.toLowerCase() || '';
-        const stdFirst = standardData.chapters[0]?.bab?.toLowerCase() || '';
+        const firstExtracted = (result.chapters[0]?.bab || '').toLowerCase();
+        const stdFirst = (standardData.chapters[0]?.bab || '').toLowerCase();
+        const cleanStdFirst = stdFirst.replace(/^bab\s*\d+\s*[:.-]?\s*/i, '').trim();
         
-        // Jika bab pertama yang diekstrak cocok dengan bab pertama standar resmi (cth: "Aku yang Unik")
-        // atau jika judul buku mengandung kata kunci mapel yang sesuai:
-        const isMatchFirst = firstExtracted.includes('aku yang unik') || firstExtracted.includes('cahaya') || firstExtracted.includes('cacah') || firstExtracted.includes('pancasila');
+        // Hanya sinkronkan dengan standar resmi jika judul bab pertama yang diekstrak terbukti cocok dengan kurikulum resmi kelas ini
+        const isMatchFirst = cleanStdFirst.length >= 4 && firstExtracted.includes(cleanStdFirst.slice(0, 10));
         
-        if (isMatchFirst || result.chapters.length === 1) {
-          // Lengkapi dengan bab-bab standar resmi sehingga guru memperoleh struktur 8 Bab yang utuh
+        if (isMatchFirst) {
           result.chapters = standardData.chapters;
           result.is_enriched = true;
           if (!result.buku_judul) result.buku_judul = standardData.judul;
@@ -554,8 +627,8 @@ analisisCp.post('/extract-structure', async (c) => {
     return successResponse(c, result);
   } catch (e: any) {
     console.error('Extract Structure Error:', e);
-    // Jika AI gagal total atau timeout, kembalikan bab standar resmi kurikulum
-    const standardData = getStandardCurriculumChapters(c.req.query('mataPelajaran') || '', c.req.query('jenjangKelas') || '');
+    // Jika AI gagal total atau timeout, kembalikan bab standar resmi kurikulum kelas yang bersangkutan
+    const standardData = getStandardCurriculumChapters(body?.mataPelajaran || c.req.query('mataPelajaran') || '', body?.jenjangKelas || c.req.query('jenjangKelas') || '');
     if (standardData) {
       return successResponse(c, {
         buku_judul: standardData.judul,

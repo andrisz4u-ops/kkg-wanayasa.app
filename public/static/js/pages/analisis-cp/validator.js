@@ -47,6 +47,27 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     }
   }
 
+  // Jika pengguna menargetkan 1 semester saja (Semester 1 atau 2), satukan bab ke semester tersebut
+  const targetSemParam = String(formMeta.targetSemester || formMeta.bookCoverage || '');
+  if (targetSemParam === '1' || targetSemParam === '2') {
+    const keepSem = Number(targetSemParam);
+    let activeSem = data.semesters.find(s => s.semester === keepSem);
+    if (!activeSem) {
+      activeSem = { semester: keepSem, semester_label: `SEMESTER ${keepSem}`, babs: [] };
+    }
+    for (const s of data.semesters) {
+      if (s.semester !== keepSem && Array.isArray(s.babs)) {
+        for (const b of s.babs) {
+          b.semester = keepSem;
+          if (!activeSem.babs.some(existing => existing.no === b.no)) {
+            activeSem.babs.push(b);
+          }
+        }
+      }
+    }
+    data.semesters = [activeSem];
+  }
+
   // 3. Verifikasi Kelengkapan Bab Sesuai Input
   if (Array.isArray(inputChapters) && inputChapters.length > 0) {
     const existingBabNos = new Set();
@@ -61,7 +82,9 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     // Jika ada bab dari input yang terlewat oleh AI, sisipkan otomatis
     for (const ch of inputChapters) {
       if (!existingBabNos.has(ch.no)) {
-        const targetSem = ch.semester === 2 ? 2 : 1;
+        const targetSem = (targetSemParam === '1' || targetSemParam === '2')
+          ? Number(targetSemParam)
+          : (ch.semester === 2 ? 2 : 1);
         let semObj = data.semesters.find(s => s.semester === targetSem);
         if (!semObj) {
           semObj = { semester: targetSem, semester_label: `SEMESTER ${targetSem}`, babs: [] };

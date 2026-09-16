@@ -15,11 +15,47 @@ import { type AppBindings } from '../types/env';
 
 const analisisCp = new Hono<{ Bindings: AppBindings }>();
 
-// Helper kalkulasi pembagian bab antar semester sesuai aturan pengguna:
-// Jika genap (misal 10): 5 di Semester 1, 5 di Semester 2.
-// Jika ganjil (misal 9): 5 di Semester 1, 4 di Semester 2 (karena Semester 2 lebih singkat).
-export function distributeChaptersToSemesters(chapters: any[]): any[] {
+// Helper kalkulasi pembagian bab antar semester:
+// - Jika targetSemester/bookCoverage === '1' (Semester 1 Saja): Semua bab 100% masuk Semester 1 (TIDAK dibagi 2).
+// - Jika targetSemester/bookCoverage === '2' (Semester 2 Saja): Semua bab 100% masuk Semester 2 (TIDAK dibagi 2).
+// - Jika setahun penuh: genap dibagi 2 sama rata, ganjil semester 1 lebih banyak 1 bab.
+export function distributeChaptersToSemesters(
+  chapters: any[],
+  targetSemester?: string | number,
+  bookCoverage?: string
+): any[] {
   if (!Array.isArray(chapters) || chapters.length === 0) return [];
+  const targetStr = String(bookCoverage || targetSemester || 'all').toLowerCase();
+
+  // Jika semester 1 saja: semua bab 100% masuk Semester 1 (tidak dibagi 2)
+  if (targetStr === '1' || targetStr === 'sem1' || targetStr === 'semester 1') {
+    return chapters.map((ch, idx) => ({
+      ...ch,
+      no: ch.no || idx + 1,
+      semester: 1
+    }));
+  }
+
+  // Jika semester 2 saja: semua bab 100% masuk Semester 2 (tidak dibagi 2)
+  if (targetStr === '2' || targetStr === 'sem2' || targetStr === 'semester 2') {
+    return chapters.map((ch, idx) => ({
+      ...ch,
+      no: ch.no || idx + 1,
+      semester: 2
+    }));
+  }
+
+  // Jika tiap bab sudah punya nilai semester eksplisit (misal diset manual dari UI): pertahankan!
+  const hasExplicitSemesters = chapters.some(ch => ch.semester === 1 || ch.semester === 2);
+  if (hasExplicitSemesters) {
+    return chapters.map((ch, idx) => ({
+      ...ch,
+      no: ch.no || idx + 1,
+      semester: ch.semester ? Number(ch.semester) : (idx < Math.ceil(chapters.length / 2) ? 1 : 2)
+    }));
+  }
+
+  // Default: bagi 2 secara proporsional (genap dibagi 2, ganjil semester 1 lebih banyak 1)
   const total = chapters.length;
   const sem1Count = Math.ceil(total / 2);
 
@@ -284,7 +320,7 @@ export function getStandardCurriculumChapters(mataPelajaran: string, jenjangKela
 }
 
 // Helper ekstraksi struktur Bab & Materi Pokok dari teks buku/daftar isi
-export function buildStructurePrompt(rawText: string, mataPelajaran: string, jenjangKelas: string) {
+export function buildStructurePrompt(rawText: string, mataPelajaran: string, jenjangKelas: string, targetSemester: string = 'all') {
   // Bersihkan teks: hilangkan deretan titik daftar isi (...), spasi berlebih, dan baris kosong beruntun
   const cleanedText = (rawText || '')
     .replace(/\.{3,}/g, ' ')
@@ -292,11 +328,21 @@ export function buildStructurePrompt(rawText: string, mataPelajaran: string, jen
     .replace(/(\r?\n\s*){3,}/g, '\n\n')
     .slice(0, 16000);
 
+  const isSem1 = String(targetSemester) === '1' || String(targetSemester).toLowerCase().includes('sem1');
+  const isSem2 = String(targetSemester) === '2' || String(targetSemester).toLowerCase().includes('sem2');
+
+  const semesterRule = isSem1
+    ? '- BUKU KHUSUS SEMESTER 1: Seluruh bab yang ada di buku ini adalah materi SEMESTER 1. Wajib tetapkan SEMUA bab ke "semester": 1 (DILARANG KERAS membagi bab ke Semester 2!).'
+    : isSem2
+    ? '- BUKU KHUSUS SEMESTER 2: Seluruh bab yang ada di buku ini adalah materi SEMESTER 2. Wajib tetapkan SEMUA bab ke "semester": 2 (DILARANG KERAS membagi bab ke Semester 1!).'
+    : '- BUKU 1 TAHUN PENUH: Jika jumlah bab total genap (misal 8 bab): Bagi rata (Bab 1-4 = Semester 1, Bab 5-8 = Semester 2). Jika ganjil (misal 9 bab): Semester 1 lebih banyak (Bab 1-5 = Semester 1, Bab 6-9 = Semester 2).';
+
   return `Anda adalah Asisten Pakar Kurikulum Merdeka Sekolah Dasar Kemendikbudristek RI.
 Tugas Anda adalah membaca teks Daftar Isi buku teks pelajaran berikut, lalu mengekstrak SELURUH BAB dan Materi Pokok/sub-bab secara akurat, lengkap, dan tanpa ada bab yang tertinggal.
 
 Mata Pelajaran: ${mataPelajaran || 'Umum'}
 Jenjang/Kelas: ${jenjangKelas || 'SD'}
+Target Semester: ${isSem1 ? 'Khusus Semester 1' : isSem2 ? 'Khusus Semester 2' : 'Setahun Penuh'}
 
 TEKS DAFTAR ISI BUKU:
 """
@@ -305,17 +351,15 @@ ${cleanedText}
 
 ATURAN WAJIB & KRITIS (SANGAT PENTING):
 1. WAJIB EKSTRAK SEMUA BAB:
-   - Buku teks pelajaran SD untuk setahun penuh umumnya memiliki 6 sampai 10 BAB (Semester 1 dan Semester 2).
-   - DILARANG KERAS HANYA MENGELUARKAN 1 BAB!
    - Periksa seluruh teks dari awal hingga akhir, dan temukan Bab 1, Bab 2, Bab 3, Bab 4, Bab 5, Bab 6, Bab 7, Bab 8, dst.
+   - DILARANG KERAS HANYA MENGELUARKAN 1 BAB!
 2. FORMAT JUDUL BAB:
    - Tuliskan nomor bab dan judul lengkapnya secara jelas, contoh: "Bab 1: Aku yang Unik", "Bab 2: Buku Jendela Dunia".
 3. MATERI POKOK:
    - Tuliskan 2 sampai 4 submateri/topik pokok penting dalam setiap bab secara padat dan ringkas (contoh: ["Kata sifat", "Sinonim dan Antonim", "Makna awalan pe-", "Teks Deskripsi"]).
    - JANGAN membuat uraian penjelasan panjang agar respons tidak terpotong oleh limit token AI.
-4. PEMBAGIAN SEMESTER OTOMATIS:
-   - Jika jumlah bab total genap (misal 8 bab): Bagi rata (Bab 1-4 = Semester 1, Bab 5-8 = Semester 2).
-   - Jika jumlah bab total ganjil (misal 9 bab): Semester 1 lebih banyak (Bab 1-5 = Semester 1, Bab 6-9 = Semester 2) karena waktu efektif semester 2 relatif singkat.
+4. PEMBAGIAN SEMESTER:
+   ${semesterRule}
 5. FORMAT OUTPUT JSON:
    Keluarkan HANYA JSON valid tanpa teks pembuka/penutup dan tanpa penalaran bertele-tele:
 {
@@ -458,7 +502,8 @@ Keluarkan HANYA JSON valid dengan struktur berikut:
 analisisCp.post('/extract-structure', async (c) => {
   try {
     const body = await c.req.json();
-    const { text, mataPelajaran, jenjangKelas, aiProvider } = body;
+    const { text, mataPelajaran, jenjangKelas, aiProvider, targetSemester, bookCoverage } = body;
+    const effectiveTarget = bookCoverage || targetSemester || 'all';
 
     if (!text || !String(text).trim()) {
       return Errors.badRequest(c, 'Teks daftar isi atau materi buku tidak boleh kosong');
@@ -467,7 +512,7 @@ analisisCp.post('/extract-structure', async (c) => {
     const ai = new AIService(c.env);
     await ai.loadProviders(c.env.DB);
 
-    const prompt = buildStructurePrompt(text, mataPelajaran, jenjangKelas);
+    const prompt = buildStructurePrompt(text, mataPelajaran, jenjangKelas, effectiveTarget);
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
       gemini: 'gemini-flash',
@@ -481,8 +526,8 @@ analisisCp.post('/extract-structure', async (c) => {
     const standardData = getStandardCurriculumChapters(mataPelajaran, jenjangKelas);
 
     if (result && Array.isArray(result.chapters)) {
-      // Jika AI hanya mengembalikan 1 atau 2 bab (misalnya karena terpotong limit token atau hanya membaca bab pertama)
-      if (result.chapters.length <= 2 && standardData && Array.isArray(standardData.chapters)) {
+      // Jika AI hanya mengembalikan 1 atau 2 bab saat target setahun penuh
+      if (effectiveTarget === 'all' && result.chapters.length <= 2 && standardData && Array.isArray(standardData.chapters)) {
         const firstExtracted = result.chapters[0]?.bab?.toLowerCase() || '';
         const stdFirst = standardData.chapters[0]?.bab?.toLowerCase() || '';
         
@@ -498,7 +543,7 @@ analisisCp.post('/extract-structure', async (c) => {
         }
       }
 
-      result.chapters = distributeChaptersToSemesters(result.chapters);
+      result.chapters = distributeChaptersToSemesters(result.chapters, effectiveTarget);
     }
 
     // Selalu sertakan saran bab standar kurikulum jika tersedia
@@ -589,25 +634,69 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
   result.metadata.tahun_pembelajaran = result.metadata.tahun_pembelajaran || meta.tahunAjaran || '2025/2026';
 
   // 2. Semesters Structure Normalization
+  const isTargetSem1 = String(meta.targetSemester || meta.bookCoverage) === '1' || String(meta.targetSemester || meta.bookCoverage).toLowerCase().includes('sem1');
+  const isTargetSem2 = String(meta.targetSemester || meta.bookCoverage) === '2' || String(meta.targetSemester || meta.bookCoverage).toLowerCase().includes('sem2');
+
   if (!Array.isArray(result.semesters) || result.semesters.length === 0) {
     if (Array.isArray(result.babs) && result.babs.length > 0) {
-      result.semesters = [
-        {
-          semester: 1,
-          semester_label: 'SEMESTER 1',
-          babs: result.babs.filter((b: any) => b.semester !== 2)
-        },
-        {
-          semester: 2,
-          semester_label: 'SEMESTER 2',
-          babs: result.babs.filter((b: any) => b.semester === 2)
-        }
-      ];
+      if (isTargetSem1) {
+        result.semesters = [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: result.babs.map((b: any) => ({ ...b, semester: 1 }))
+          }
+        ];
+      } else if (isTargetSem2) {
+        result.semesters = [
+          {
+            semester: 2,
+            semester_label: 'SEMESTER 2',
+            babs: result.babs.map((b: any) => ({ ...b, semester: 2 }))
+          }
+        ];
+      } else {
+        result.semesters = [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: result.babs.filter((b: any) => b.semester !== 2)
+          },
+          {
+            semester: 2,
+            semester_label: 'SEMESTER 2',
+            babs: result.babs.filter((b: any) => b.semester === 2)
+          }
+        ];
+      }
     } else {
-      result.semesters = [
-        { semester: 1, semester_label: 'SEMESTER 1', babs: [] },
-        { semester: 2, semester_label: 'SEMESTER 2', babs: [] }
-      ];
+      if (isTargetSem1) {
+        result.semesters = [{ semester: 1, semester_label: 'SEMESTER 1', babs: [] }];
+      } else if (isTargetSem2) {
+        result.semesters = [{ semester: 2, semester_label: 'SEMESTER 2', babs: [] }];
+      } else {
+        result.semesters = [
+          { semester: 1, semester_label: 'SEMESTER 1', babs: [] },
+          { semester: 2, semester_label: 'SEMESTER 2', babs: [] }
+        ];
+      }
+    }
+  } else {
+    // Jika AI mengeluarkan semesters array, pastikan targetSemester spesifik dipatuhi
+    if (isTargetSem1) {
+      const sem1 = result.semesters.find((s: any) => s.semester === 1) || { semester: 1, semester_label: 'SEMESTER 1', babs: [] };
+      const sem2 = result.semesters.find((s: any) => s.semester === 2);
+      if (sem2 && Array.isArray(sem2.babs) && sem2.babs.length > 0) {
+        sem1.babs = [...(sem1.babs || []), ...sem2.babs.map((b: any) => ({ ...b, semester: 1 }))];
+      }
+      result.semesters = [sem1];
+    } else if (isTargetSem2) {
+      const sem2 = result.semesters.find((s: any) => s.semester === 2) || { semester: 2, semester_label: 'SEMESTER 2', babs: [] };
+      const sem1 = result.semesters.find((s: any) => s.semester === 1);
+      if (sem1 && Array.isArray(sem1.babs) && sem1.babs.length > 0) {
+        sem2.babs = [...(sem2.babs || []), ...sem1.babs.map((b: any) => ({ ...b, semester: 2 }))];
+      }
+      result.semesters = [sem2];
     }
   }
 
@@ -625,7 +714,7 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
     // Jika ada bab dari input yang terlewat oleh AI, sisipkan otomatis agar tidak terpotong
     for (const ch of inputChapters) {
       if (!existingBabNos.has(ch.no)) {
-        const targetSemNum = ch.semester === 2 ? 2 : 1;
+        const targetSemNum = isTargetSem2 ? 2 : isTargetSem1 ? 1 : (ch.semester === 2 ? 2 : 1);
         let semObj = result.semesters.find((s: any) => s.semester === targetSemNum);
         if (!semObj) {
           semObj = { semester: targetSemNum, semester_label: `SEMESTER ${targetSemNum}`, babs: [] };
@@ -729,7 +818,7 @@ analisisCp.post('/generate', async (c) => {
     const body = await c.req.json();
     const {
       namaSekolah, namaGuru, mataPelajaran, jenjangKelas,
-      tahunAjaran, chapters, targetSemester, aiProvider
+      tahunAjaran, chapters, targetSemester, bookCoverage, aiProvider
     } = body;
 
     if (!Array.isArray(chapters) || chapters.length === 0) {
@@ -740,7 +829,7 @@ analisisCp.post('/generate', async (c) => {
     await ai.loadProviders(c.env.DB);
 
     const { officialCP, elementsCP, faseCode, fase } = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
-    const distributedChapters = distributeChaptersToSemesters(chapters);
+    const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
 
     const prompt = buildAnalisisCpPrompt({
       namaSekolah,
@@ -770,6 +859,8 @@ analisisCp.post('/generate', async (c) => {
       jenjangKelas,
       fase: faseCode,
       tahunAjaran,
+      targetSemester,
+      bookCoverage,
       baseCP: officialCP
     });
 
@@ -802,7 +893,7 @@ analisisCp.post('/generate-stream', async (c) => {
     const body = await c.req.json();
     const {
       namaSekolah, namaGuru, mataPelajaran, jenjangKelas,
-      tahunAjaran, chapters, targetSemester, aiProvider
+      tahunAjaran, chapters, targetSemester, bookCoverage, aiProvider
     } = body;
 
     if (!Array.isArray(chapters) || chapters.length === 0) {
@@ -813,7 +904,7 @@ analisisCp.post('/generate-stream', async (c) => {
     await ai.loadProviders(c.env.DB);
 
     const { officialCP, elementsCP, faseCode, fase } = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
-    const distributedChapters = distributeChaptersToSemesters(chapters);
+    const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
 
     const prompt = buildAnalisisCpPrompt({
       namaSekolah,
@@ -844,8 +935,8 @@ analisisCp.post('/generate-stream', async (c) => {
           data: JSON.stringify({
             step: 1,
             totalSteps: 4,
-            title: 'Sinkronisasi CP BSKAP No. 046/2025',
-            message: `Mengambil regulasi CP resmi untuk ${mataPelajaran} ${fase} (${jenjangKelas})...`,
+            title: 'Sinkronisasi CP BSKAP 046/2025',
+            message: `Memvalidasi capaian pembelajaran resmi untuk ${mataPelajaran} (${jenjangKelas})...`,
             percent: 25
           })
         });
@@ -856,7 +947,7 @@ analisisCp.post('/generate-stream', async (c) => {
             step: 2,
             totalSteps: 4,
             title: 'Pemetaan Bab & Materi Pokok',
-            message: `Menghubungkan ${distributedChapters.length} BAB buku teks dengan elemen CP...`,
+            message: `Memetakan ${distributedChapters.length} BAB ke CP dan Elemen Kurikulum...`,
             percent: 50
           })
         });
@@ -889,6 +980,8 @@ analisisCp.post('/generate-stream', async (c) => {
           jenjangKelas,
           fase: faseCode,
           tahunAjaran,
+          targetSemester,
+          bookCoverage,
           baseCP: officialCP
         });
 

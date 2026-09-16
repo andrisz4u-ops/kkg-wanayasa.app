@@ -5281,6 +5281,10 @@ h1,
   background-color: rgb(234 179 8 / var(--tw-bg-opacity, 1));
 }
 
+.bg-indigo-200\/60 {
+  background-color: rgb(199 210 254 / 0.6);
+}
+
 .bg-\[radial-gradient\(circle_at_1px_1px\2c rgba\(148\2c 163\2c 184\2c 0\.15\)_1px\2c transparent_0\)\] {
   background-image: radial-gradient(circle at 1px 1px,rgba(148,163,184,0.15) 1px,transparent 0);
 }
@@ -9489,6 +9493,16 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   background-color: rgb(202 138 4 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-indigo-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(199 210 254 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-sky-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(186 230 253 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:from-amber-300:hover {
   --tw-gradient-from: #fcd34d var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(252 211 77 / 0) var(--tw-gradient-to-position);
@@ -10758,6 +10772,10 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   border-color: rgb(133 77 14 / var(--tw-border-opacity, 1));
 }
 
+.dark\:border-indigo-900\/40:is(.dark *) {
+  border-color: rgb(49 46 129 / 0.4);
+}
+
 .dark\:border-t-indigo-400:is(.dark *) {
   --tw-border-opacity: 1;
   border-top-color: rgb(129 140 248 / var(--tw-border-opacity, 1));
@@ -11214,6 +11232,10 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   background-color: rgb(66 32 6 / 0.6);
 }
 
+.dark\:bg-indigo-800\/60:is(.dark *) {
+  background-color: rgb(55 48 163 / 0.6);
+}
+
 .dark\:from-emerald-950\/40:is(.dark *) {
   --tw-gradient-from: rgb(2 44 34 / 0.4) var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(2 44 34 / 0) var(--tw-gradient-to-position);
@@ -11533,6 +11555,11 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 .dark\:text-yellow-400:is(.dark *) {
   --tw-text-opacity: 1;
   color: rgb(250 204 21 / var(--tw-text-opacity, 1));
+}
+
+.dark\:text-indigo-100:is(.dark *) {
+  --tw-text-opacity: 1;
+  color: rgb(224 231 255 / var(--tw-text-opacity, 1));
 }
 
 .dark\:placeholder-gray-500:is(.dark *)::-moz-placeholder {

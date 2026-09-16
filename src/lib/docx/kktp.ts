@@ -25,7 +25,7 @@ export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSe
 
   const activeSemesters = targetSemesterNum
     ? semesters.filter(s => s.semester === targetSemesterNum)
-    : semesters;
+    : semesters.filter(s => (s.babs || []).length > 0);
 
   const docSections: any[] = [];
 

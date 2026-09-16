@@ -25,10 +25,10 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
 
 
 
-  // Filter semester if requested, or process all semesters
+  // Filter semester if requested, or process all semesters with content
   const activeSemesters = targetSemesterNum
     ? semesters.filter(s => s.semester === targetSemesterNum)
-    : semesters;
+    : semesters.filter(s => (s.babs || []).length > 0);
 
   const docSections: any[] = [];
 

@@ -619,7 +619,6 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       `;
     }
 
-    const isSem1 = sem.semester === 1 || String(sem.semester).includes('1') || sem.semester_label?.includes('1');
     const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
     const titimangsa = getKaldikTitimangsa(tahunAjaran, isSem1 ? 1 : 2);
 
@@ -1049,7 +1048,8 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
       });
     });
 
-    const isFullYear = (data.semesters?.length || 1) > 1;
+    const activeSemestersWithBabs = (data.semesters || []).filter(s => (s.babs || []).length > 0);
+    const isFullYear = activeSemestersWithBabs.length > 1;
     const targetJp = isFullYear ? quota.intrakurikulerPerTahun : quota.intrakurikulerPerSemester;
     const isBalanced = totalJpAll === targetJp;
 

@@ -142,10 +142,10 @@ export async function renderAnalisisCp() {
                   </div>
                   <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">TARGET SEMESTER</label>
-                    <select name="targetSemester" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <select name="targetSemester" id="select-target-semester" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                       <option value="all" selected>Setahun Penuh (Smt 1 & 2)</option>
-                      <option value="1">Semester 1 Saja</option>
-                      <option value="2">Semester 2 Saja</option>
+                      <option value="1">Semester 1 Saja (Ganjil)</option>
+                      <option value="2">Semester 2 Saja (Genap)</option>
                     </select>
                   </div>
                 </div>
@@ -203,6 +203,28 @@ export async function renderAnalisisCp() {
                     <i class="fas fa-align-left mr-1 text-sky-500"></i> Teks
                   </button>
                 </div>
+              </div>
+
+              <!-- Opsi Cakupan Buku Ajar: 1 Tahun vs Semester 1 vs Semester 2 -->
+              <div class="mb-3 p-2.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-[11px] font-extrabold text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-book-bookmark text-indigo-600"></i> Cakupan Buku Ajar:
+                  </label>
+                  <span id="badge-detected-coverage" class="text-[9.5px] font-bold px-2 py-0.5 rounded-md bg-indigo-200/60 dark:bg-indigo-800/60 text-indigo-900 dark:text-indigo-100 hidden">Auto</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 text-xs font-bold" id="coverage-selector">
+                  <button type="button" data-coverage="all" class="coverage-btn active py-1.5 px-1 rounded-xl text-center transition-all bg-indigo-600 text-white shadow-xs text-[10.5px] font-extrabold cursor-pointer">
+                    1 Tahun Penuh
+                  </button>
+                  <button type="button" data-coverage="1" class="coverage-btn py-1.5 px-1 rounded-xl text-center transition-all bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[10.5px] font-bold cursor-pointer">
+                    Semester 1 Saja
+                  </button>
+                  <button type="button" data-coverage="2" class="coverage-btn py-1.5 px-1 rounded-xl text-center transition-all bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[10.5px] font-bold cursor-pointer">
+                    Semester 2 Saja
+                  </button>
+                </div>
+                <input type="hidden" name="bookCoverage" id="input-book-coverage" value="all">
               </div>
 
               <div class="mb-3.5">
@@ -270,6 +292,22 @@ export async function renderAnalisisCp() {
                 <span id="badge-total-bab" class="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-extrabold">
                   0 Bab
                 </span>
+              </div>
+
+              <!-- Quick Action Bar: Atur Semester Cepat 1-Klik -->
+              <div class="flex items-center justify-between gap-1.5 pb-2 mb-2 border-b border-slate-100 dark:border-slate-800 text-[10.5px]">
+                <span class="text-slate-500 dark:text-slate-400 font-semibold">Atur Cepat:</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" id="btn-quick-all-sem1" class="px-2 py-0.5 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 hover:bg-sky-200 font-extrabold transition-all cursor-pointer text-[10px]" title="Jadikan semua bab sebagai Semester 1">
+                    Semua Smt 1
+                  </button>
+                  <button type="button" id="btn-quick-all-sem2" class="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-200 font-extrabold transition-all cursor-pointer text-[10px]" title="Jadikan semua bab sebagai Semester 2">
+                    Semua Smt 2
+                  </button>
+                  <button type="button" id="btn-quick-split-auto" class="px-2 py-0.5 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 font-extrabold transition-all cursor-pointer text-[10px]" title="Bagi proporsional Bab 1..N menjadi Semester 1 & 2">
+                    Bagi 2 (Auto)
+                  </button>
+                </div>
               </div>
 
               <!-- List Bab Dinamis yang Siap Dianalisis -->
@@ -512,17 +550,51 @@ export function initAnalisisCp() {
   const btnAddBab = document.getElementById('btn-add-bab');
   btnAddBab?.addEventListener('click', () => {
     const nextNo = detectedChapters.length + 1;
+    const cov = document.getElementById('input-book-coverage')?.value || 'all';
     const sem1Count = Math.ceil((detectedChapters.length + 1) / 2);
+    const newSem = cov === '1' ? 1 : cov === '2' ? 2 : (nextNo <= sem1Count ? 1 : 2);
     const newChapter = {
       no: nextNo,
       bab: `Bab ${nextNo}: Topik Baru`,
       materi_pokok: ['Materi Pokok 1', 'Materi Pokok 2'],
-      semester: nextNo <= sem1Count ? 1 : 2
+      semester: newSem
     };
     detectedChapters.push(newChapter);
     redistributeSemesters();
     renderChaptersList();
-    showToast(`Bab ${nextNo} berhasil ditambahkan`, 'info');
+    showToast(`Bab ${nextNo} berhasil ditambahkan (Semester ${newSem})`, 'info');
+  });
+
+  // 5b. Selector Cakupan Buku Ajar (1 Tahun vs Smt 1 vs Smt 2)
+  document.querySelectorAll('#coverage-selector .coverage-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cov = btn.dataset.coverage;
+      setBookCoverage(cov);
+      const label = cov === '1' ? 'Semester 1 Saja' : cov === '2' ? 'Semester 2 Saja' : '1 Tahun Penuh';
+      showToast(`Cakupan buku diatur: ${label}`, 'info');
+    });
+  });
+
+  // Sinkronisasi Target Semester Dropdown
+  document.getElementById('select-target-semester')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    setBookCoverage(val);
+  });
+
+  // Tombol Atur Cepat Semester di Kartu 3
+  document.getElementById('btn-quick-all-sem1')?.addEventListener('click', () => {
+    setBookCoverage('1');
+    showToast('Semua bab diatur ke Semester 1 (tidak dibagi 2)', 'info');
+  });
+
+  document.getElementById('btn-quick-all-sem2')?.addEventListener('click', () => {
+    setBookCoverage('2');
+    showToast('Semua bab diatur ke Semester 2 (tidak dibagi 2)', 'info');
+  });
+
+  document.getElementById('btn-quick-split-auto')?.addEventListener('click', () => {
+    setBookCoverage('all');
+    showToast('Bab dibagi proporsional ke Semester 1 & 2', 'info');
   });
 
   // 6. Form Submission (Generate Analisis CP)
@@ -670,17 +742,27 @@ export function initAnalisisCp() {
 async function seedDefaultChaptersForClass(kelas, mapelName) {
   const k = String(kelas || '5').replace(/\D/g, '') || '5';
   const normMapel = mapelName || document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
+  const cov = document.getElementById('input-book-coverage')?.value || document.getElementById('select-target-semester')?.value || 'all';
 
   const preset = await fetchStandardChapters(normMapel, `Kelas ${k}`);
   if (preset && Array.isArray(preset.chapters) && preset.chapters.length > 0) {
-    detectedChapters = JSON.parse(JSON.stringify(preset.chapters));
+    let chs = JSON.parse(JSON.stringify(preset.chapters));
+    if (cov === '1') {
+      const sem1Only = chs.filter(c => c.semester === 1);
+      chs = sem1Only.length > 0 ? sem1Only : chs.map(c => ({ ...c, semester: 1 }));
+    } else if (cov === '2') {
+      const sem2Only = chs.filter(c => c.semester === 2);
+      chs = sem2Only.length > 0 ? sem2Only : chs.map(c => ({ ...c, semester: 2 }));
+    }
+    detectedChapters = chs;
     const titleInput = document.getElementById('input-sumber-buku');
     if (titleInput && (!titleInput.value || titleInput.value.includes('Buku Siswa') || titleInput.value.includes('IPAS') || titleInput.value.includes('Bahasa Indonesia'))) {
-      titleInput.value = preset.buku_judul || `Buku Siswa ${normMapel} Kelas ${k}`;
+      const suffix = cov === '1' ? ' (Semester 1)' : cov === '2' ? ' (Semester 2)' : '';
+      titleInput.value = (preset.buku_judul || `Buku Siswa ${normMapel} Kelas ${k}`) + suffix;
     }
   }
 
-  redistributeSemesters();
+  redistributeSemesters(cov);
   renderChaptersList();
 }
 
@@ -693,6 +775,24 @@ async function handlePdfFile(file) {
     return;
   }
   isCustomPdfUploaded = true;
+
+  // 1. Smart Auto-Detection dari Nama File
+  const lowerName = file.name.toLowerCase();
+  let detectedSemester = null;
+  if (/\b(semester\s*1|smt\s*1|sem\s*1|ganjil|jilid\s*a|volume\s*1|vol\s*1|buku\s*1)\b/i.test(lowerName)) {
+    detectedSemester = '1';
+  } else if (/\b(semester\s*2|smt\s*2|sem\s*2|genap|jilid\s*b|volume\s*2|vol\s*2|buku\s*2)\b/i.test(lowerName)) {
+    detectedSemester = '2';
+  }
+
+  if (detectedSemester) {
+    setBookCoverage(detectedSemester);
+    const badge = document.getElementById('badge-detected-coverage');
+    if (badge) {
+      badge.innerText = `Terdeteksi: Smt ${detectedSemester}`;
+      badge.classList.remove('hidden');
+    }
+  }
 
   const progressBar = document.getElementById('pdf-progress-bar');
   const statusText = document.getElementById('pdf-status-text');
@@ -746,6 +846,28 @@ async function handlePdfFile(file) {
       pageRecords.push({ pageNum: i, text: pageText });
 
       const lower = pageText.toLowerCase();
+
+      // 2. Smart Auto-Detection dari teks halaman awal jika belum terdeteksi dari nama file
+      if (!detectedSemester && i <= 10) {
+        if (/\b(semester\s*1|semester\s*ganjil|smt\s*1)\b/i.test(lower)) {
+          detectedSemester = '1';
+          setBookCoverage('1');
+          const badge = document.getElementById('badge-detected-coverage');
+          if (badge) {
+            badge.innerText = 'Terdeteksi: Smt 1';
+            badge.classList.remove('hidden');
+          }
+        } else if (/\b(semester\s*2|semester\s*genap|smt\s*2)\b/i.test(lower)) {
+          detectedSemester = '2';
+          setBookCoverage('2');
+          const badge = document.getElementById('badge-detected-coverage');
+          if (badge) {
+            badge.innerText = 'Terdeteksi: Smt 2';
+            badge.classList.remove('hidden');
+          }
+        }
+      }
+
       if (lower.includes('daftar isi') || lower.includes('table of contents') || lower.includes('isi buku') || lower.includes('peta materi')) {
         if (tocStartPage === -1) tocStartPage = i;
         tocEndPage = Math.min(totalPages, i + 3);
@@ -806,6 +928,7 @@ async function extractStructureFromText(rawText) {
   const mapel = document.getElementById('select-mata-pelajaran')?.value || 'IPAS';
   const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
   const aiProvider = document.getElementById('analisis-ai-model-select')?.value || '';
+  const coverage = document.getElementById('input-book-coverage')?.value || document.getElementById('select-target-semester')?.value || 'all';
 
   const heuristicChapters = parseChaptersHeuristically(rawText);
 
@@ -816,6 +939,8 @@ async function extractStructureFromText(rawText) {
         text: rawText,
         mataPelajaran: mapel,
         jenjangKelas: kelas,
+        targetSemester: coverage,
+        bookCoverage: coverage,
         aiProvider
       },
       timeout: 120000
@@ -838,7 +963,7 @@ async function extractStructureFromText(rawText) {
         }
       }
 
-      redistributeSemesters();
+      redistributeSemesters(coverage);
       renderChaptersList();
 
       if (res.data.is_enriched) {
@@ -856,27 +981,63 @@ async function extractStructureFromText(rawText) {
 
     if (heuristicChapters && heuristicChapters.length > 0) {
       detectedChapters = heuristicChapters;
-      redistributeSemesters();
+      redistributeSemesters(coverage);
       renderChaptersList();
       showToast(`Berhasil memuat ${detectedChapters.length} BAB langsung dari Daftar Isi file PDF!`, 'success');
     } else {
       await seedDefaultChaptersForClass(kelas, mapel);
-      showToast(`Koneksi AI sibuk. Struktur 8 BAB standar resmi Kemendikbudristek untuk ${mapel} telah dimuat otomatis.`, 'info');
+      showToast(`Koneksi AI sibuk. Struktur BAB standar resmi Kemendikbudristek untuk ${mapel} telah dimuat otomatis.`, 'info');
     }
   }
 }
 
 /**
- * Aturan pembagian semester: genap dibagi 2 sama rata, ganjil semester 1 lebih banyak 1 bab
+ * Mengatur mode cakupan buku ajar: 'all' (1 tahun), '1' (Semester 1 saja), '2' (Semester 2 saja)
  */
-function redistributeSemesters() {
+function setBookCoverage(coverage) {
+  const cov = coverage || 'all';
+  const hiddenInput = document.getElementById('input-book-coverage');
+  if (hiddenInput) hiddenInput.value = cov;
+
+  const targetSelect = document.getElementById('select-target-semester');
+  if (targetSelect && targetSelect.value !== cov) {
+    targetSelect.value = cov;
+  }
+
+  document.querySelectorAll('#coverage-selector .coverage-btn').forEach(btn => {
+    if (btn.dataset.coverage === cov) {
+      btn.className = 'coverage-btn active py-1.5 px-1 rounded-xl text-center transition-all bg-indigo-600 text-white shadow-xs text-[10.5px] font-extrabold cursor-pointer';
+    } else {
+      btn.className = 'coverage-btn py-1.5 px-1 rounded-xl text-center transition-all bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-[10.5px] font-bold cursor-pointer';
+    }
+  });
+
+  redistributeSemesters(cov);
+  renderChaptersList();
+}
+
+/**
+ * Aturan alokasi semester bab:
+ * - Jika cakupan buku '1': seluruh bab menjadi Semester 1 (TIDAK DIBAGI 2)
+ * - Jika cakupan buku '2': seluruh bab menjadi Semester 2 (TIDAK DIBAGI 2)
+ * - Jika cakupan buku 'all': genap dibagi 2 sama rata, ganjil semester 1 lebih banyak 1 bab
+ */
+function redistributeSemesters(forceCoverage) {
+  const cov = forceCoverage || document.getElementById('input-book-coverage')?.value || document.getElementById('select-target-semester')?.value || 'all';
   const total = detectedChapters.length;
   const sem1Count = Math.ceil(total / 2);
 
   detectedChapters.forEach((ch, idx) => {
     ch.no = idx + 1;
-    if (typeof ch.semester !== 'number') {
-      ch.semester = idx < sem1Count ? 1 : 2;
+    if (cov === '1') {
+      ch.semester = 1;
+    } else if (cov === '2') {
+      ch.semester = 2;
+    } else {
+      // 1 Tahun Penuh ('all')
+      if (typeof ch.semester !== 'number' || forceCoverage === 'all') {
+        ch.semester = idx < sem1Count ? 1 : 2;
+      }
     }
   });
 }
@@ -1010,6 +1171,7 @@ async function generateAnalisisCpFromForm() {
     tahunAjaran: formData.get('tahunAjaran'),
     sumberBuku: document.getElementById('input-sumber-buku')?.value || 'Buku Teks Kurikulum Merdeka',
     targetSemester: formData.get('targetSemester') || 'all',
+    bookCoverage: formData.get('bookCoverage') || 'all',
     aiProvider: formData.get('aiProvider'),
     chapters: detectedChapters
   };

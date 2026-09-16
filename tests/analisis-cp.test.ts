@@ -3,7 +3,8 @@ import {
   distributeChaptersToSemesters, 
   buildStructurePrompt, 
   buildAnalisisCpPrompt, 
-  getStandardCurriculumChapters 
+  getStandardCurriculumChapters,
+  validateAndRepairAnalysisResult
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import { getOfficialCP, cpElementsData } from '../src/lib/cp-data';
@@ -130,6 +131,42 @@ describe('Analisis CP - Semester Distribution Rules', () => {
     expect(sem1).toHaveLength(4);
     expect(sem2).toHaveLength(3);
   });
+
+  it('keeps ALL 4 chapters in Semester 1 when target is Semester 1 (does NOT split in two)', () => {
+    const chapters = Array.from({ length: 4 }, (_, i) => ({
+      no: i + 1,
+      bab: `Bab ${i + 1}`,
+      materi_pokok: [`Materi ${i + 1}.1`]
+    }));
+
+    const distributed = distributeChaptersToSemesters(chapters, '1', '1');
+    expect(distributed).toHaveLength(4);
+
+    const sem1 = distributed.filter(ch => ch.semester === 1);
+    const sem2 = distributed.filter(ch => ch.semester === 2);
+
+    expect(sem1).toHaveLength(4);
+    expect(sem2).toHaveLength(0);
+    expect(distributed.every(ch => ch.semester === 1)).toBe(true);
+  });
+
+  it('keeps ALL 5 chapters in Semester 2 when target is Semester 2 (does NOT split in two)', () => {
+    const chapters = Array.from({ length: 5 }, (_, i) => ({
+      no: i + 1,
+      bab: `Bab ${i + 1}`,
+      materi_pokok: [`Materi ${i + 1}.1`]
+    }));
+
+    const distributed = distributeChaptersToSemesters(chapters, '2', '2');
+    expect(distributed).toHaveLength(5);
+
+    const sem1 = distributed.filter(ch => ch.semester === 1);
+    const sem2 = distributed.filter(ch => ch.semester === 2);
+
+    expect(sem1).toHaveLength(0);
+    expect(sem2).toHaveLength(5);
+    expect(distributed.every(ch => ch.semester === 2)).toBe(true);
+  });
 });
 
 describe('Analisis CP - Official CP Integration & Prompt Building', () => {
@@ -172,6 +209,56 @@ describe('Analisis CP - Official CP Integration & Prompt Building', () => {
     expect(prompt).toContain('ANALISIS CP, TP, DAN ATP');
     expect(prompt).toContain('5.1');
     expect(prompt).toContain('BSKAP No. 046 Tahun 2025');
+  });
+
+  it('builds structure extraction prompt explicitly forbidding splitting when Semester 1 is targeted', () => {
+    const rawText = 'Bab 1 Sifat Cahaya\nBab 2 Ekosistem\nBab 3 Harmoni';
+    const prompt = buildStructurePrompt(rawText, 'IPAS', 'Kelas 5', '1');
+    expect(prompt).toContain('Target Semester: Khusus Semester 1');
+    expect(prompt).toContain('BUKU KHUSUS SEMESTER 1');
+    expect(prompt).toContain('Wajib tetapkan SEMUA bab ke "semester": 1');
+    expect(prompt).toContain('DILARANG KERAS membagi bab ke Semester 2!');
+  });
+
+  it('validates and repairs analysis result by merging all chapters into target semester when single semester is selected', () => {
+    const rawAiResult = {
+      metadata: {
+        satuan_pendidikan: 'SDN 1 Wanayasa',
+        mata_pelajaran: 'IPAS',
+        kelas: '5'
+      },
+      semesters: [
+        {
+          semester: 1,
+          semester_label: 'SEMESTER 1',
+          babs: [
+            { no: 1, bab: 'Bab 1 Sifat Cahaya', items: [{ kode_tp: '5.1', materi_pokok: 'Cahaya', tp: 'TP 1', atp: 'ATP 1', alokasi_waktu: '4 JP' }] }
+          ]
+        },
+        {
+          semester: 2,
+          semester_label: 'SEMESTER 2',
+          babs: [
+            { no: 2, bab: 'Bab 2 Magnet', items: [{ kode_tp: '5.2', materi_pokok: 'Magnet', tp: 'TP 2', atp: 'ATP 2', alokasi_waktu: '4 JP' }] }
+          ]
+        }
+      ]
+    };
+
+    const repaired = validateAndRepairAnalysisResult(rawAiResult, [], {
+      namaSekolah: 'SDN 1 Wanayasa',
+      mataPelajaran: 'IPAS',
+      jenjangKelas: 'Kelas 5',
+      targetSemester: '1'
+    });
+
+    // Semesters array must contain ONLY Semester 1
+    expect(repaired.semesters).toHaveLength(1);
+    expect(repaired.semesters[0].semester).toBe(1);
+    // Both Bab 1 and Bab 2 must be merged into Semester 1
+    expect(repaired.semesters[0].babs).toHaveLength(2);
+    expect(repaired.semesters[0].babs[0].bab).toContain('Sifat Cahaya');
+    expect(repaired.semesters[0].babs[1].bab).toContain('Magnet');
   });
 });
 

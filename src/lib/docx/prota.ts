@@ -120,6 +120,7 @@ export async function generateProtaDocxBuffer(data: AnalisisCpDocxInput): Promis
   let grandTotalJp = 0;
 
   for (const sem of semesters) {
+    if (!sem.babs || sem.babs.length === 0) continue;
     let semesterJp = 0;
 
     // Semester Section Divider

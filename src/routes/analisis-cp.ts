@@ -1309,52 +1309,257 @@ analisisCp.post('/docx/rpe', async (c) => {
   }
 });
 
-// 5. Simpan Hasil Analisis ke Database
+// ============================================
+// Self-healing: Ensure analisis_cp_history Table Exists
+// ============================================
+export async function ensureAnalisisCpTables(db: D1Database): Promise<void> {
+  try {
+    await db.prepare('SELECT 1 FROM analisis_cp_history LIMIT 1').first();
+  } catch {
+    await db.batch([
+      db.prepare(`CREATE TABLE IF NOT EXISTS analisis_cp_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        user_nama TEXT,
+        nama_sekolah TEXT NOT NULL,
+        mata_pelajaran TEXT NOT NULL,
+        jenjang_kelas TEXT NOT NULL,
+        fase TEXT NOT NULL,
+        tahun_ajaran TEXT NOT NULL,
+        sumber_buku TEXT,
+        total_bab INTEGER DEFAULT 0,
+        is_public INTEGER DEFAULT 1,
+        use_count INTEGER DEFAULT 0,
+        content_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_analisis_cp_user ON analisis_cp_history(user_id)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_analisis_cp_created ON analisis_cp_history(created_at DESC)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_analisis_cp_mapel ON analisis_cp_history(mata_pelajaran)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_analisis_cp_kelas ON analisis_cp_history(jenjang_kelas)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_analisis_cp_public ON analisis_cp_history(is_public)')
+    ]);
+  }
+
+  // Gracefully ensure columns exist if created by earlier minimal migrations
+  try {
+    await db.prepare('SELECT user_nama FROM analisis_cp_history LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE analisis_cp_history ADD COLUMN user_nama TEXT').run(); } catch (_) {}
+  }
+  try {
+    await db.prepare('SELECT is_public FROM analisis_cp_history LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE analisis_cp_history ADD COLUMN is_public INTEGER DEFAULT 1').run(); } catch (_) {}
+  }
+  try {
+    await db.prepare('SELECT use_count FROM analisis_cp_history LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE analisis_cp_history ADD COLUMN use_count INTEGER DEFAULT 0').run(); } catch (_) {}
+  }
+  try {
+    await db.prepare('SELECT total_bab FROM analisis_cp_history LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE analisis_cp_history ADD COLUMN total_bab INTEGER DEFAULT 0').run(); } catch (_) {}
+  }
+}
+
+// 5. Simpan Hasil Analisis ke Database & CP Kolaboratif
 analisisCp.post('/save', async (c) => {
   try {
-    const sessionId = getCookie(c.req.header('Cookie'), 'session');
+    const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie');
+    const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
     const user = await getCurrentUser(c.env.DB, sessionId);
     if (!user) return Errors.unauthorized(c, 'Silakan login terlebih dahulu');
+
+    await ensureAnalisisCpTables(c.env.DB);
 
     const body = await c.req.json();
     const {
       namaSekolah, mataPelajaran, jenjangKelas, fase,
-      tahunAjaran, sumberBuku, contentJson
+      tahunAjaran, sumberBuku, contentJson, isPublic
     } = body;
+
+    let parsedContent: any = null;
+    let calculatedTotalBab = 0;
+    try {
+      parsedContent = typeof contentJson === 'string' ? JSON.parse(contentJson) : contentJson;
+      if (parsedContent && Array.isArray(parsedContent.semesters)) {
+        for (const s of parsedContent.semesters) {
+          if (Array.isArray(s.babs)) calculatedTotalBab += s.babs.length;
+        }
+      }
+    } catch (_) {}
+
+    const isPub = isPublic !== undefined ? (isPublic ? 1 : 0) : 1;
 
     const result = await c.env.DB.prepare(`
       INSERT INTO analisis_cp_history (
-        user_id, nama_sekolah, mata_pelajaran, jenjang_kelas,
-        fase, tahun_ajaran, sumber_buku, content_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        user_id, user_nama, nama_sekolah, mata_pelajaran, jenjang_kelas,
+        fase, tahun_ajaran, sumber_buku, total_bab, is_public, content_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING id
     `).bind(
       user.id,
+      user.nama || 'Guru',
       namaSekolah || user.sekolah || 'SDN',
       mataPelajaran || '-',
       jenjangKelas || '-',
       fase || 'C',
       tahunAjaran || '2025/2026',
       sumberBuku || 'Buku Teks Guru/Siswa',
+      calculatedTotalBab,
+      isPub,
       typeof contentJson === 'string' ? contentJson : JSON.stringify(contentJson)
     ).run();
 
-    return successResponse(c, { id: result.results[0]?.id }, 'Analisis CP berhasil disimpan');
+    return successResponse(c, { id: result.results[0]?.id }, 'Analisis CP berhasil disimpan ke CP Kolaboratif!');
   } catch (e: any) {
     console.error('Save Analisis CP Error:', e);
     return Errors.internal(c, e.message);
   }
 });
 
-// 6. Riwayat Tersimpan Pengguna
+// 6. CP Kolaboratif — Browse & Filter Dokumen Analisis CP Rekan Guru
+analisisCp.get('/kolaboratif', async (c) => {
+  try {
+    const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie');
+    const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+    const user = await getCurrentUser(c.env.DB, sessionId);
+    if (!user) return Errors.unauthorized(c);
+
+    await ensureAnalisisCpTables(c.env.DB);
+
+    const mapel = c.req.query('mapel') || '';
+    const kelas = c.req.query('kelas') || '';
+    const search = c.req.query('search') || c.req.query('topik') || '';
+    const sort = c.req.query('sort') || 'newest';
+    const mine = c.req.query('mine') || '';
+    const page = Math.max(1, parseInt(c.req.query('page') || '1'));
+    const limit = Math.min(50, Math.max(6, parseInt(c.req.query('limit') || '10')));
+    const offset = (page - 1) * limit;
+
+    let where = 'WHERE (is_public = 1 OR user_id = ?)';
+    const params: any[] = [user.id];
+
+    if (mine === '1') {
+      where = 'WHERE user_id = ?';
+    }
+
+    if (mapel) {
+      where += ' AND mata_pelajaran LIKE ?';
+      params.push(`%${mapel}%`);
+    }
+
+    if (kelas) {
+      where += ' AND jenjang_kelas = ?';
+      params.push(kelas);
+    }
+
+    if (search) {
+      where += ' AND (mata_pelajaran LIKE ? OR sumber_buku LIKE ? OR nama_sekolah LIKE ? OR user_nama LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    // Count
+    const countQuery = `SELECT COUNT(*) as total FROM analisis_cp_history ${where}`;
+    const countResult: any = await c.env.DB.prepare(countQuery).bind(...params).first();
+    const total = countResult?.total || 0;
+
+    // Sort order
+    let orderBy = 'ORDER BY created_at DESC';
+    if (sort === 'popular') {
+      orderBy = 'ORDER BY use_count DESC, created_at DESC';
+    }
+
+    const dataQuery = `
+      SELECT id, user_id, user_nama, nama_sekolah, mata_pelajaran, jenjang_kelas, fase, tahun_ajaran, sumber_buku, total_bab, is_public, use_count, created_at
+      FROM analisis_cp_history
+      ${where}
+      ${orderBy}
+      LIMIT ? OFFSET ?
+    `;
+    const listParams = [...params, limit, offset];
+    const results = await c.env.DB.prepare(dataQuery).bind(...listParams).all();
+
+    return successResponse(c, {
+      items: results.results || [],
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    });
+  } catch (e: any) {
+    console.error('List CP Kolaboratif Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// 7. CP Kolaboratif Stats & Badge Counter
+analisisCp.get('/kolaboratif/stats', async (c) => {
+  try {
+    const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie');
+    const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+    const user = await getCurrentUser(c.env.DB, sessionId);
+    if (!user) return Errors.unauthorized(c);
+
+    await ensureAnalisisCpTables(c.env.DB);
+
+    const totalRes: any = await c.env.DB.prepare(`SELECT COUNT(*) as total FROM analisis_cp_history WHERE is_public = 1 OR user_id = ?`).bind(user.id).first();
+    const myRes: any = await c.env.DB.prepare(`SELECT COUNT(*) as total FROM analisis_cp_history WHERE user_id = ?`).bind(user.id).first();
+
+    const mapelGroup = await c.env.DB.prepare(`
+      SELECT mata_pelajaran, COUNT(*) as count 
+      FROM analisis_cp_history 
+      WHERE is_public = 1 OR user_id = ?
+      GROUP BY mata_pelajaran 
+      ORDER BY count DESC
+    `).bind(user.id).all();
+
+    return successResponse(c, {
+      total_cp: totalRes?.total || 0,
+      my_cp: myRes?.total || 0,
+      per_mapel: mapelGroup.results || []
+    });
+  } catch (e: any) {
+    console.error('Stats CP Kolaboratif Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// 8. Catat Penggunaan CP Kolaboratif
+analisisCp.post('/:id/use', async (c) => {
+  try {
+    await ensureAnalisisCpTables(c.env.DB);
+    const id = c.req.param('id');
+    await c.env.DB.prepare(`UPDATE analisis_cp_history SET use_count = use_count + 1 WHERE id = ?`).bind(id).run();
+    return successResponse(c, null, 'Status penggunaan berhasil dicatat');
+  } catch (e: any) {
+    return Errors.internal(c, e.message);
+  }
+});
+
+// 9. Riwayat Pribadi Pengguna
 analisisCp.get('/history', async (c) => {
   try {
     const sessionId = getCookie(c.req.header('Cookie'), 'session');
     const user = await getCurrentUser(c.env.DB, sessionId);
     if (!user) return Errors.unauthorized(c);
 
+    await ensureAnalisisCpTables(c.env.DB);
+
     const results = await c.env.DB.prepare(`
-      SELECT id, nama_sekolah, mata_pelajaran, jenjang_kelas, fase, tahun_ajaran, sumber_buku, created_at
+      SELECT id, user_id, user_nama, nama_sekolah, mata_pelajaran, jenjang_kelas, fase, tahun_ajaran, sumber_buku, total_bab, is_public, use_count, created_at
       FROM analisis_cp_history
       WHERE user_id = ?
       ORDER BY created_at DESC
@@ -1364,13 +1569,14 @@ analisisCp.get('/history', async (c) => {
     return successResponse(c, results.results || []);
   } catch (e: any) {
     console.error('List History Analisis CP Error:', e);
-    return Errors.internal(c);
+    return Errors.internal(c, e.message);
   }
 });
 
-// 7. Ambil Detail Dokumen Tersimpan
+// 10. Ambil Detail Dokumen Tersimpan / CP Kolaboratif
 analisisCp.get('/:id', async (c) => {
   try {
+    await ensureAnalisisCpTables(c.env.DB);
     const id = c.req.param('id');
     const result: any = await c.env.DB.prepare(`SELECT * FROM analisis_cp_history WHERE id = ?`).bind(id).first();
     if (!result) return Errors.notFound(c, 'Analisis CP tidak ditemukan');
@@ -1384,23 +1590,32 @@ analisisCp.get('/:id', async (c) => {
     return successResponse(c, result);
   } catch (e: any) {
     console.error('Get Analisis CP Error:', e);
-    return Errors.internal(c);
+    return Errors.internal(c, e.message);
   }
 });
 
-// 8. Hapus Riwayat
+// 11. Hapus Riwayat / CP Kolaboratif (Pemilik / Admin Saja)
 analisisCp.delete('/:id', async (c) => {
   try {
     const sessionId = getCookie(c.req.header('Cookie'), 'session');
     const user = await getCurrentUser(c.env.DB, sessionId);
     if (!user) return Errors.unauthorized(c);
 
+    await ensureAnalisisCpTables(c.env.DB);
+
     const id = c.req.param('id');
-    await c.env.DB.prepare(`DELETE FROM analisis_cp_history WHERE id = ? AND user_id = ?`).bind(id, user.id).run();
-    return successResponse(c, null, 'Riwayat Analisis CP berhasil dihapus');
+    const item: any = await c.env.DB.prepare(`SELECT user_id FROM analisis_cp_history WHERE id = ?`).bind(id).first();
+    if (!item) return Errors.notFound(c, 'Dokumen Analisis CP tidak ditemukan');
+
+    if (item.user_id !== user.id && user.role !== 'admin') {
+      return Errors.forbidden(c, 'Hanya pembuat dokumen atau admin yang dapat menghapus dokumen ini');
+    }
+
+    await c.env.DB.prepare(`DELETE FROM analisis_cp_history WHERE id = ?`).bind(id).run();
+    return successResponse(c, null, 'Dokumen Analisis CP berhasil dihapus');
   } catch (e: any) {
     console.error('Delete Analisis CP Error:', e);
-    return Errors.internal(c);
+    return Errors.internal(c, e.message);
   }
 });
 

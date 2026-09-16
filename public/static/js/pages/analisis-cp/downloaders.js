@@ -114,8 +114,10 @@ export async function downloadAllDocs(currentAnalysisData, currentInputData) {
   showToast('Seluruh 5 paket dokumen berhasil diunduh!', 'success');
 }
 
+import { loadCpKolaboratifCountBadge } from './kolaboratif.js';
+
 /**
- * Simpan Data Analisis CP ke Database D1
+ * Simpan Data Analisis CP ke Database D1 & CP Kolaboratif
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
  */
@@ -127,7 +129,7 @@ export async function saveToDatabase(currentAnalysisData, currentInputData) {
 
   syncCanvasToAnalysisData(currentAnalysisData);
 
-  showToast('Menyimpan ke database...', 'info');
+  showToast('Menyimpan ke CP Kolaboratif...', 'info');
 
   try {
     const res = await api('/analisis-cp/save', {
@@ -139,12 +141,14 @@ export async function saveToDatabase(currentAnalysisData, currentInputData) {
         fase: currentInputData.fase || 'C',
         tahunAjaran: currentInputData.tahunAjaran,
         sumberBuku: currentInputData.sumberBuku,
-        contentJson: currentAnalysisData
+        contentJson: currentAnalysisData,
+        isPublic: 1
       }
     });
 
     if (res && res.success) {
-      showToast('Analisis CP berhasil disimpan ke arsip sekolah!', 'success');
+      showToast('Analisis CP berhasil disimpan ke CP Kolaboratif!', 'success');
+      loadCpKolaboratifCountBadge();
     } else {
       throw new Error(res?.error || 'Gagal menyimpan');
     }

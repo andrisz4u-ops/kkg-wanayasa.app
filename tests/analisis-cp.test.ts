@@ -4,7 +4,9 @@ import {
   buildStructurePrompt, 
   buildAnalisisCpPrompt, 
   getStandardCurriculumChapters,
-  validateAndRepairAnalysisResult
+  validateAndRepairAnalysisResult,
+  ensureAnalisisCpTables,
+  default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import { getOfficialCP, cpElementsData } from '../src/lib/cp-data';
@@ -371,5 +373,98 @@ describe('Analisis CP - DOCX Document Generation', () => {
     expect(buffer).toBeDefined();
     expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(1000);
+  });
+});
+
+describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
+  it('ensures tables exist without error (self-healing D1)', async () => {
+    const mockDb: any = {
+      prepare: () => ({
+        first: async () => { throw new Error('no such table: analisis_cp_history'); },
+        run: async () => ({ success: true }),
+        all: async () => ({ results: [] })
+      }),
+      batch: async () => []
+    };
+
+    await expect(ensureAnalisisCpTables(mockDb)).resolves.not.toThrow();
+  });
+
+  it('saves analysis to CP Kolaboratif and returns assigned ID', async () => {
+    const user = { id: 1, nama: 'Guru Kolaboratif', sekolah: 'SDN 2 Nangerang' };
+    const mockDb: any = {
+      prepare: (query: string) => {
+        const runner: any = {
+          first: async () => {
+            if (query.toLowerCase().includes('sessions')) return user;
+            if (query.includes('SELECT 1 FROM analisis_cp_history')) return { 1: 1 };
+            return { id: 1 };
+          },
+          run: async () => ({ results: [{ id: 42 }], success: true }),
+          all: async () => ({ results: [] })
+        };
+        runner.bind = () => runner;
+        return runner;
+      },
+      batch: async () => []
+    };
+
+    const res = await analisisCpRoutes.request('/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test-session-token'
+      },
+      body: JSON.stringify({
+        namaSekolah: 'SDN 2 Nangerang',
+        mataPelajaran: 'Bahasa Indonesia',
+        jenjangKelas: 'Kelas 3',
+        fase: 'B',
+        tahunAjaran: '2025/2026',
+        sumberBuku: 'Buku Siswa Bahasa Indonesia Kelas 3',
+        contentJson: { semesters: [{ semester: 1, babs: [{ no: 1 }] }] },
+        isPublic: 1
+      })
+    }, { DB: mockDb });
+
+    expect(res.status).toBe(200);
+    const json: any = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.id).toBe(42);
+    expect(json.message).toContain('CP Kolaboratif');
+  });
+
+  it('retrieves CP Kolaboratif statistics for badge count', async () => {
+    const user = { id: 1, nama: 'Guru Kolaboratif', sekolah: 'SDN 2 Nangerang' };
+    const mockDb: any = {
+      prepare: (query: string) => {
+        const runner: any = {
+          first: async () => {
+            if (query.toLowerCase().includes('sessions')) return user;
+            if (query.includes('WHERE is_public = 1')) return { total: 12 };
+            if (query.includes('WHERE user_id = ?')) return { total: 3 };
+            return { total: 12 };
+          },
+          all: async () => ({ results: [{ mata_pelajaran: 'Bahasa Indonesia', count: 5 }] }),
+          run: async () => ({ success: true })
+        };
+        runner.bind = () => runner;
+        return runner;
+      },
+      batch: async () => []
+    };
+
+    const res = await analisisCpRoutes.request('/kolaboratif/stats', {
+      headers: {
+        'Authorization': 'Bearer test-session-token'
+      }
+    }, { DB: mockDb });
+
+    expect(res.status).toBe(200);
+    const json: any = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.total_cp).toBe(12);
+    expect(json.data.my_cp).toBe(3);
+    expect(json.data.per_mapel).toHaveLength(1);
   });
 });

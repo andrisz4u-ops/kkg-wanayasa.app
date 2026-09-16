@@ -10,6 +10,7 @@ import { fetchStandardChapters, loadPdfJsScript, parseChaptersHeuristically } fr
 import { validateAndRepairAnalysisData } from './analisis-cp/validator.js';
 import { renderAnalysisCanvas, syncCanvasToAnalysisData, applyPrintOrientation } from './analisis-cp/renderers.js';
 import { downloadDocx, downloadAllDocs, saveToDatabase, openAnalisisArchiveDrawer } from './analisis-cp/downloaders.js';
+import { loadCpKolaboratifCountBadge, openCpKolaboratifDrawer } from './analisis-cp/kolaboratif.js';
 
 // State lokal untuk sesi Analisis CP
 let currentAnalysisData = null;
@@ -72,9 +73,16 @@ export async function renderAnalisisCp() {
               <p class="text-xs sm:text-sm text-slate-300">Ekstraksi materi buku ajar guru/siswa menjadi pemetaan CP, TP, dan ATP resmi siap cetak</p>
             </div>
           </div>
-          <button type="button" id="btn-analisis-archive" class="px-5 py-2.5 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
-            <i class="fas fa-folder-open text-amber-400"></i> Riwayat Tersimpan
-          </button>
+          <div class="flex items-center gap-2.5">
+            <button type="button" id="btn-cp-kolaboratif" class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white border border-purple-400/30 text-xs font-black tracking-wide transition-all flex items-center gap-2 shadow-lg shadow-purple-600/25 cursor-pointer">
+              <i class="fas fa-users text-amber-300"></i>
+              <span>CP Kolaboratif</span>
+              <span id="cp-kolaboratif-count-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-amber-400 text-slate-900 font-black ml-0.5"></span>
+            </button>
+            <button type="button" id="btn-analisis-archive" class="px-4 py-2.5 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <i class="fas fa-folder-open text-amber-400"></i> <span class="hidden sm:inline">Riwayat Saya</span>
+            </button>
+          </div>
         </div>
 
         <!-- Form Utama 3 Kartu (Grid 3 Kolom Responsif) -->
@@ -377,9 +385,12 @@ export async function renderAnalisisCp() {
               <i class="fas fa-print"></i> <span class="hidden sm:inline">Cetak / PDF</span>
             </button>
 
-            <!-- Save DB Button -->
-            <button type="button" id="btn-save-analisis" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Simpan ke Arsip Sekolah">
-              <i class="fas fa-floppy-disk text-amber-400"></i> <span class="hidden sm:inline">Simpan</span>
+            <!-- Save DB & CP Kolaboratif Button -->
+            <button type="button" id="btn-save-analisis" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border border-purple-400/40 text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md shadow-purple-600/20 cursor-pointer" title="Simpan ke CP Kolaboratif & Arsip">
+              <i class="fas fa-cloud-arrow-up text-amber-300"></i> <span class="hidden sm:inline">Simpan ke CP Kolaboratif</span>
+            </button>
+            <button type="button" id="btn-result-cp-kolaboratif" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Buka Dokumen CP Kolaboratif Rekan Guru">
+              <i class="fas fa-users text-purple-400"></i> <span class="hidden md:inline">CP Kolaboratif</span>
             </button>
 
             <!-- Download Single Docx Button -->
@@ -682,6 +693,60 @@ export function initAnalisisCp() {
       }
     );
   });
+
+  // 8b. CP Kolaboratif Drawer Handler
+  const handleOpenCpKolaboratif = () => {
+    openCpKolaboratifDrawer({
+      onApply: (item) => {
+        currentInputData = {
+          namaSekolah: item.nama_sekolah,
+          mataPelajaran: item.mata_pelajaran,
+          jenjangKelas: item.jenjang_kelas,
+          fase: item.fase,
+          tahunAjaran: item.tahun_ajaran,
+          sumberBuku: item.sumber_buku,
+          namaGuru: state.user?.nama || item.user_nama,
+          nipGuru: state.user?.nip || '',
+          namaKepalaSekolah: state.user?.kepala_sekolah || '',
+          nipKepalaSekolah: state.user?.nip_kepala_sekolah || ''
+        };
+        currentAnalysisData = validateAndRepairAnalysisData(item.content, [], currentInputData);
+
+        // Sinkronkan input form
+        const sekolahInput = document.getElementById('input-nama-sekolah'); if (sekolahInput) sekolahInput.value = item.nama_sekolah || '';
+        const mapelSelect = document.getElementById('select-mata-pelajaran'); if (mapelSelect) mapelSelect.value = item.mata_pelajaran || '';
+        const kelasSelect = document.getElementById('select-jenjang-kelas'); if (kelasSelect) kelasSelect.value = item.jenjang_kelas || '';
+        const bukuInput = document.getElementById('input-sumber-buku'); if (bukuInput) bukuInput.value = item.sumber_buku || '';
+
+        document.getElementById('analisis-form-view')?.classList.add('hidden');
+        document.getElementById('analisis-result-view')?.classList.remove('hidden');
+        renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        showToast(`Dokumen CP "${item.mata_pelajaran} (${item.jenjang_kelas})" dari ${item.nama_sekolah} berhasil dimuat!`, 'success');
+      },
+      onDownload: async (item) => {
+        const docInput = {
+          namaSekolah: item.nama_sekolah,
+          mataPelajaran: item.mata_pelajaran,
+          jenjangKelas: item.jenjang_kelas,
+          fase: item.fase,
+          tahunAjaran: item.tahun_ajaran,
+          sumberBuku: item.sumber_buku,
+          namaGuru: state.user?.nama || item.user_nama,
+          nipGuru: state.user?.nip || '',
+          namaKepalaSekolah: state.user?.kepala_sekolah || '',
+          nipKepalaSekolah: state.user?.nip_kepala_sekolah || ''
+        };
+        const validated = validateAndRepairAnalysisData(item.content, [], docInput);
+        await downloadDocx('analisis', validated, docInput, 'all');
+      }
+    });
+  };
+
+  document.getElementById('btn-cp-kolaboratif')?.addEventListener('click', handleOpenCpKolaboratif);
+  document.getElementById('btn-result-cp-kolaboratif')?.addEventListener('click', handleOpenCpKolaboratif);
+
+  // Load badge count CP Kolaboratif
+  loadCpKolaboratifCountBadge();
 
   // Bridge to RPP generator global handler
   window.bridgeToRpp = function(babTitle, cpText, semester) {

@@ -2239,6 +2239,10 @@ h1,
   min-width: 980px;
 }
 
+.min-w-\[1100px\] {
+  min-width: 1100px;
+}
+
 .max-w-2xl {
   max-width: 42rem;
 }
@@ -2333,6 +2337,10 @@ h1,
 
 .max-w-xs {
   max-width: 20rem;
+}
+
+.max-w-\[1440px\] {
+  max-width: 1440px;
 }
 
 .flex-1 {
@@ -8331,6 +8339,37 @@ h1,
 
   @page {
     margin: 1cm 1.25cm 1cm 1.25cm;
+  }
+
+  /* Print Landscape Support for Promes & Prota */
+
+  body.print-landscape {
+    width: 100% !important;
+  }
+
+  body.print-landscape .promes-semester-block,
+    body.print-landscape .prota-paper-block {
+    width: 100% !important;
+    max-width: 100% !important;
+    page-break-after: always !important;
+    -moz-column-break-after: page !important;
+         break-after: page !important;
+  }
+
+  body.print-landscape .promes-semester-block:last-child,
+    body.print-landscape .prota-paper-block:last-child {
+    page-break-after: auto !important;
+    -moz-column-break-after: auto !important;
+         break-after: auto !important;
+  }
+
+  body.print-landscape .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  body.print-landscape table {
+    width: 100% !important;
+    table-layout: auto !important;
   }
 
   /* 4. Canvas Document Formats (RPP, Asesmen, TTS, Surat, Proker, Analisis CP) */

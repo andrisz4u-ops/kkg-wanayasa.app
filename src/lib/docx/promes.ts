@@ -226,8 +226,8 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
     }
 
     const tableRows: TableRow[] = [
-      new TableRow({ tableHeader: true, children: headerRow1Cells }),
-      new TableRow({ tableHeader: true, children: headerRow2Cells }),
+      new TableRow({ tableHeader: true, cantSplit: true, children: headerRow1Cells }),
+      new TableRow({ tableHeader: true, cantSplit: true, children: headerRow2Cells }),
     ];
 
     const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
@@ -285,6 +285,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       // Bab header spanning all 32 columns
       tableRows.push(
         new TableRow({
+          cantSplit: true,
           children: [
             new TableCell({
               columnSpan: 32,
@@ -360,7 +361,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
           );
         }
 
-        tableRows.push(new TableRow({ children: rowCells }));
+        tableRows.push(new TableRow({ cantSplit: true, children: rowCells }));
       });
     }
 
@@ -401,7 +402,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
           })
         );
       }
-      return new TableRow({ children: cells });
+      return new TableRow({ cantSplit: true, children: cells });
     };
 
     if (isSem1) {
@@ -515,7 +516,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
             width: 16838,
             height: 11906,
           },
-          margin: { top: 900, bottom: 900, left: 900, right: 900 }
+          margin: { top: 720, bottom: 720, left: 720, right: 720 }
         }
       },
       children: [

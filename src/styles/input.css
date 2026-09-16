@@ -560,6 +560,34 @@
         margin: 1cm 1.25cm 1cm 1.25cm;
     }
 
+    /* Print Landscape Support for Promes & Prota */
+    body.print-landscape {
+        width: 100% !important;
+    }
+
+    body.print-landscape .promes-semester-block,
+    body.print-landscape .prota-paper-block {
+        width: 100% !important;
+        max-width: 100% !important;
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    body.print-landscape .promes-semester-block:last-child,
+    body.print-landscape .prota-paper-block:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+
+    body.print-landscape .overflow-x-auto {
+        overflow: visible !important;
+    }
+
+    body.print-landscape table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
     /* 4. Canvas Document Formats (RPP, Asesmen, TTS, Surat, Proker, Analisis CP) */
     #analisis-canvas, .rpp-a4, .asesmen-a4, #tts-canvas, .surat-preview, .proker-paper, .print-sheet {
         width: 100% !important;

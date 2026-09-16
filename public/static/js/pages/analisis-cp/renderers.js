@@ -295,14 +295,19 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
 
   let html = `
     <!-- Filter Bar Semester Promes -->
-    <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 print:hidden font-sans">
-      <div class="flex items-center gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-200 print:hidden font-sans">
+      <div class="flex items-center gap-2 flex-wrap">
         <span class="text-xs font-bold text-slate-700">Tampilkan Semester:</span>
         <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activePromesSemester === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="all">Semua Semester</button>
         <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activePromesSemester === 1 ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="1">Semester 1 (Ganjil)</button>
         <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activePromesSemester === 2 ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="2">Semester 2 (Genap)</button>
       </div>
-      <span class="text-[11px] text-slate-400 font-medium">Matriks 6 Bulan x 5 Minggu (30 Kolom Efektif)</span>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-1 rounded-md bg-amber-100 text-amber-900 font-bold text-[10.5px] border border-amber-300 flex items-center gap-1.5 shadow-xs" title="Format cetak otomatis diset ke A4 Landscape untuk efisiensi kertas dan kerapian matriks minggu">
+          <i class="fas fa-file-lines fa-rotate-90 text-amber-700"></i> Kertas: A4 Landscape (Cetak Otomatis)
+        </span>
+        <span class="text-[11px] text-slate-400 font-medium">Matriks 6 Bulan x 5 Minggu (30 Kolom Efektif)</span>
+      </div>
     </div>
   `;
 
@@ -1082,6 +1087,17 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
     contentHtml = renderAnalisisTable(data, inputData);
   }
 
+  // Terapkan orientasi cetak dan penyesuaian lebar canvas untuk Promes
+  applyPrintOrientation(activeAnalysisTab);
+
+  if (activeAnalysisTab === 'promes') {
+    canvas.classList.remove('max-w-[1240px]');
+    canvas.classList.add('max-w-[1440px]', 'min-w-[1100px]');
+  } else {
+    canvas.classList.remove('max-w-[1440px]', 'min-w-[1100px]');
+    canvas.classList.add('max-w-[1240px]');
+  }
+
   canvas.innerHTML = contentHtml;
 
   // Attach Semester Filter Listener (Promes & KKTP)
@@ -1153,4 +1169,40 @@ export function syncCanvasToAnalysisData(analysisData) {
       else if (field === 'alokasi_waktu') targetBab.items[itemIdx].alokasi_waktu = val;
     }
   });
+}
+
+/**
+ * 7. TERAPKAN ORIENTASI CETAK OTOMATIS (@media print @page)
+ * Khusus Promes (dan Prota) menggunakan A4 Landscape agar efisien dan matriks 30 minggu tidak terpotong
+ */
+export function applyPrintOrientation(tab) {
+  let styleEl = document.getElementById('analisis-print-page-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'analisis-print-page-style';
+    document.head.appendChild(styleEl);
+  }
+
+  const isLandscape = (tab === 'promes' || tab === 'prota');
+  if (isLandscape) {
+    document.body.classList.add('print-landscape');
+    styleEl.textContent = `
+      @media print {
+        @page {
+          size: A4 landscape !important;
+          margin: 0.8cm 1cm !important;
+        }
+      }
+    `;
+  } else {
+    document.body.classList.remove('print-landscape');
+    styleEl.textContent = `
+      @media print {
+        @page {
+          size: A4 portrait !important;
+          margin: 1cm 1.25cm 1cm 1.25cm !important;
+        }
+      }
+    `;
+  }
 }

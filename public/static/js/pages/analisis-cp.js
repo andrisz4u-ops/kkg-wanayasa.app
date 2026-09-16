@@ -8,7 +8,7 @@ import { saveDocArchive } from '../storage-archive.js';
 // Modul Terpisah Analisis CP
 import { fetchStandardChapters, loadPdfJsScript, parseChaptersHeuristically } from './analisis-cp/helpers.js';
 import { validateAndRepairAnalysisData } from './analisis-cp/validator.js';
-import { renderAnalysisCanvas, syncCanvasToAnalysisData } from './analisis-cp/renderers.js';
+import { renderAnalysisCanvas, syncCanvasToAnalysisData, applyPrintOrientation } from './analisis-cp/renderers.js';
 import { downloadDocx, downloadAllDocs, saveToDatabase, openAnalisisArchiveDrawer } from './analisis-cp/downloaders.js';
 
 // State lokal untuk sesi Analisis CP
@@ -384,6 +384,9 @@ export function initAnalisisCp() {
   const form = document.getElementById('analisis-cp-form');
   if (!form) return;
 
+  // Inisialisasi orientasi cetak default
+  applyPrintOrientation(activeAnalysisTab);
+
   // Auto-fill kepala sekolah jika belum terisi dari state.user atau lookup data sekolah
   const sekolahInput = form.querySelector('input[name="namaSekolah"]');
   const ksInput = form.querySelector('input[name="namaKepalaSekolah"]');
@@ -547,6 +550,7 @@ export function initAnalisisCp() {
       if (tab === activeAnalysisTab) return;
       syncCanvasToAnalysisData(currentAnalysisData);
       activeAnalysisTab = tab;
+      applyPrintOrientation(activeAnalysisTab);
 
       if (currentAnalysisData) {
         renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
@@ -564,7 +568,10 @@ export function initAnalisisCp() {
     downloadAllDocs(currentAnalysisData, currentInputData);
   });
 
-  document.getElementById('btn-print-analisis')?.addEventListener('click', () => window.print());
+  document.getElementById('btn-print-analisis')?.addEventListener('click', () => {
+    applyPrintOrientation(activeAnalysisTab);
+    window.print();
+  });
   document.getElementById('btn-save-analisis')?.addEventListener('click', () => {
     saveToDatabase(currentAnalysisData, currentInputData);
   });

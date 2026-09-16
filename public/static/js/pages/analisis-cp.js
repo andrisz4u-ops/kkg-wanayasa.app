@@ -35,6 +35,8 @@ export async function renderAnalisisCp() {
 
   const defaultK = detectUserDefaultKelas(state.user);
   const defaultFase = (defaultK <= 2) ? 'A' : (defaultK <= 4) ? 'B' : 'C';
+  const defaultKsNama = (state.user?.kepala_sekolah && state.user.kepala_sekolah !== 'null') ? state.user.kepala_sekolah : '';
+  const defaultKsNip = (state.user?.nip_kepala_sekolah && state.user.nip_kepala_sekolah !== 'null') ? state.user.nip_kepala_sekolah : '';
 
   let activeProviders = [];
   try {
@@ -95,7 +97,8 @@ export async function renderAnalisisCp() {
               <div class="space-y-3.5">
                 <div>
                   <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">SATUAN PENDIDIKAN</label>
-                  <input type="text" name="namaSekolah" value="${escapeHtml(state.user?.sekolah_nama || state.user?.sekolah || '')}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <input type="text" id="input-nama-sekolah" name="namaSekolah" list="daftar-sekolah-list" value="${escapeHtml(state.user?.sekolah_nama || state.user?.sekolah || '')}" required placeholder="Pilih / ketik nama sekolah..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <datalist id="daftar-sekolah-list"></datalist>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -151,11 +154,11 @@ export async function renderAnalisisCp() {
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">Nama Kepala Sekolah</label>
-                      <input type="text" name="namaKepalaSekolah" placeholder="Nama Kepala Sekolah" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs focus:ring-1 focus:ring-indigo-400">
+                      <input type="text" id="input-nama-kepala-sekolah" name="namaKepalaSekolah" value="${escapeHtml(defaultKsNama)}" placeholder="Nama Kepala Sekolah" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs focus:ring-1 focus:ring-indigo-400">
                     </div>
                     <div>
                       <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">NIP Kepala Sekolah</label>
-                      <input type="text" name="nipKepalaSekolah" placeholder="19xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs focus:ring-1 focus:ring-indigo-400">
+                      <input type="text" id="input-nip-kepala-sekolah" name="nipKepalaSekolah" value="${escapeHtml(defaultKsNip)}" placeholder="19xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs focus:ring-1 focus:ring-indigo-400">
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3 mt-2.5">
@@ -374,6 +377,63 @@ export async function renderAnalisisCp() {
 export function initAnalisisCp() {
   const form = document.getElementById('analisis-cp-form');
   if (!form) return;
+
+  // Auto-fill kepala sekolah jika belum terisi dari state.user atau lookup data sekolah
+  const sekolahInput = form.querySelector('input[name="namaSekolah"]');
+  const ksInput = form.querySelector('input[name="namaKepalaSekolah"]');
+  const ksNipInput = form.querySelector('input[name="nipKepalaSekolah"]');
+  const sekolahDataList = document.getElementById('daftar-sekolah-list');
+
+  const defaultKsNama = (state.user?.kepala_sekolah && state.user.kepala_sekolah !== 'null') ? state.user.kepala_sekolah : '';
+  const defaultKsNip = (state.user?.nip_kepala_sekolah && state.user.nip_kepala_sekolah !== 'null') ? state.user.nip_kepala_sekolah : '';
+
+  if (ksInput && !ksInput.value && defaultKsNama) {
+    ksInput.value = defaultKsNama;
+  }
+  if (ksNipInput && !ksNipInput.value && defaultKsNip) {
+    ksNipInput.value = defaultKsNip;
+  }
+
+  async function lookupSchoolHeadmaster(schoolName, forceUpdate = false) {
+    if (!schoolName) return;
+    try {
+      if (!window.__sekolahCache) {
+        const res = await api('/sekolah');
+        if (res && res.success && Array.isArray(res.data)) {
+          window.__sekolahCache = res.data;
+        }
+      }
+      if (window.__sekolahCache) {
+        if (sekolahDataList && !sekolahDataList.children.length) {
+          sekolahDataList.innerHTML = window.__sekolahCache.map(s => `<option value="${escapeHtml(s.nama)}"></option>`).join('');
+        }
+        const cleanTarget = schoolName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matched = window.__sekolahCache.find(s => {
+          const sName = (s.nama || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return sName === cleanTarget || sName.includes(cleanTarget) || cleanTarget.includes(sName);
+        });
+        if (matched) {
+          if (ksInput && (forceUpdate || !ksInput.value || ksInput.value === '...........................................')) {
+            if (matched.kepala_sekolah && matched.kepala_sekolah !== 'null') ksInput.value = matched.kepala_sekolah;
+          }
+          if (ksNipInput && (forceUpdate || !ksNipInput.value || ksNipInput.value.includes('...'))) {
+            if (matched.nip_kepala_sekolah && matched.nip_kepala_sekolah !== 'null') ksNipInput.value = matched.nip_kepala_sekolah;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (sekolahInput?.value) {
+    lookupSchoolHeadmaster(sekolahInput.value.trim(), false);
+  }
+
+  sekolahInput?.addEventListener('change', (e) => {
+    lookupSchoolHeadmaster(e.target.value.trim(), true);
+  });
+  sekolahInput?.addEventListener('blur', (e) => {
+    lookupSchoolHeadmaster(e.target.value.trim(), false);
+  });
 
   // 1. Populate AI Models
   populateAiModelSelect('#analisis-ai-model-select');

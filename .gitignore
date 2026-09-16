@@ -59,3 +59,7 @@ CHECKPOINT_*.md
 .agent/
 .opencode/
 graphify-out/
+
+# Folder Contoh / Referensi Lokal (jangan dipush ke git)
+Contoh hasil Analisis CP/
+Prota Promes KKTP/

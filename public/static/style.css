@@ -1366,6 +1366,11 @@ h1,
   margin-bottom: auto;
 }
 
+.my-6 {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
 .-mt-14 {
   margin-top: -3.5rem;
 }
@@ -11236,6 +11241,10 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   background-color: rgb(55 48 163 / 0.6);
 }
 
+.dark\:bg-rose-950\/40:is(.dark *) {
+  background-color: rgb(76 5 25 / 0.4);
+}
+
 .dark\:from-emerald-950\/40:is(.dark *) {
   --tw-gradient-from: rgb(2 44 34 / 0.4) var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(2 44 34 / 0) var(--tw-gradient-to-position);
@@ -11560,6 +11569,11 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 .dark\:text-indigo-100:is(.dark *) {
   --tw-text-opacity: 1;
   color: rgb(224 231 255 / var(--tw-text-opacity, 1));
+}
+
+.dark\:text-rose-200:is(.dark *) {
+  --tw-text-opacity: 1;
+  color: rgb(254 205 211 / var(--tw-text-opacity, 1));
 }
 
 .dark\:placeholder-gray-500:is(.dark *)::-moz-placeholder {

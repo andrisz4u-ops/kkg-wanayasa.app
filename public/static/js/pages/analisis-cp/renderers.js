@@ -825,7 +825,6 @@ export function renderRpeTable(data, inputData = {}, activeRpeSemester = 'all') 
         </div>
 
         ${(() => {
-          const isSem1 = semNum === 1;
           const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || rpe.tahunAjaran || '2026/2027';
           const titimangsa = getKaldikTitimangsa(tahunAjaran, isSem1 ? 1 : 2);
           return getPengesahanHtml(inputData, titimangsa);
@@ -1096,16 +1095,27 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
   }
 
   let contentHtml = '';
-  if (activeAnalysisTab === 'prota') {
-    contentHtml = renderProtaTable(data, inputData);
-  } else if (activeAnalysisTab === 'promes') {
-    contentHtml = renderPromesTable(data, inputData, activePromesSemester);
-  } else if (activeAnalysisTab === 'rpe') {
-    contentHtml = renderRpeTable(data, inputData, activePromesSemester);
-  } else if (activeAnalysisTab === 'kktp') {
-    contentHtml = renderKktpTable(data, inputData, activePromesSemester);
-  } else {
-    contentHtml = renderAnalisisTable(data, inputData);
+  try {
+    if (activeAnalysisTab === 'prota') {
+      contentHtml = renderProtaTable(data, inputData);
+    } else if (activeAnalysisTab === 'promes') {
+      contentHtml = renderPromesTable(data, inputData, activePromesSemester);
+    } else if (activeAnalysisTab === 'rpe') {
+      contentHtml = renderRpeTable(data, inputData, activePromesSemester);
+    } else if (activeAnalysisTab === 'kktp') {
+      contentHtml = renderKktpTable(data, inputData, activePromesSemester);
+    } else {
+      contentHtml = renderAnalisisTable(data, inputData);
+    }
+  } catch (renderErr) {
+    console.error(`[Canvas Render Error] Tab: ${activeAnalysisTab}`, renderErr);
+    contentHtml = `
+      <div class="p-8 text-center bg-rose-50 dark:bg-rose-950/40 border border-rose-200 rounded-3xl text-rose-800 dark:text-rose-200 my-6">
+        <i class="fas fa-triangle-exclamation text-3xl mb-3 text-rose-500"></i>
+        <h3 class="font-black text-base mb-1">Gagal Menampilkan Tab ${escapeHtml(activeAnalysisTab.toUpperCase())}</h3>
+        <p class="text-xs text-rose-600 dark:text-rose-300 mb-4">${escapeHtml(renderErr.message || 'Terjadi kesalahan perenderan')}</p>
+      </div>
+    `;
   }
 
   // Terapkan orientasi cetak dan penyesuaian lebar canvas untuk Promes

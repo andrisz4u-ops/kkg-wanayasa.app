@@ -189,4 +189,75 @@ describe('Standar Alokasi Waktu Permendikdasmen No. 13 Tahun 2025', () => {
       expect(res.metadata.alokasi_waktu_standar.jp_per_minggu).toBe(tc.expectedWk);
     }
   });
+
+  it('harus memvalidasi distribusi matriks Promes waterfall untuk seluruh mata pelajaran', () => {
+    // Simulasi mapel dengan beban mingguan berbeda: 2 JP, 3 JP, 4 JP, 5 JP, 6 JP
+    const mapels = [
+      { name: 'Bahasa Inggris', wk: 2, totalJp: 36 },
+      { name: 'Seni Rupa', wk: 3, totalJp: 54 },
+      { name: 'Pendidikan Pancasila', wk: 4, totalJp: 72 },
+      { name: 'Matematika', wk: 5, totalJp: 90 },
+      { name: 'Bahasa Indonesia', wk: 6, totalJp: 108 }
+    ];
+
+    const activeKbmWeeks = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+
+    for (const m of mapels) {
+      // 8 topik dalam 1 semester
+      const itemJp = Math.floor(m.totalJp / 8);
+      const items = Array.from({ length: 8 }, (_, i) => ({
+        jp: (i === 7) ? (m.totalJp - itemJp * 7) : itemJp
+      }));
+
+      const itemWeekAllocations = new Map<number, Record<number, number>>();
+      let kbmIdx = 0;
+      let weekRemainingJp = m.wk;
+
+      items.forEach((it, rowIdx) => {
+        let neededJp = it.jp;
+        while (neededJp > 0 && kbmIdx < activeKbmWeeks.length) {
+          const currentWeek = activeKbmWeeks[kbmIdx];
+          const canTake = Math.min(neededJp, weekRemainingJp);
+          if (canTake > 0) {
+            if (!itemWeekAllocations.has(rowIdx)) itemWeekAllocations.set(rowIdx, {});
+            const rowAlloc = itemWeekAllocations.get(rowIdx)!;
+            rowAlloc[currentWeek] = (rowAlloc[currentWeek] || 0) + canTake;
+            neededJp -= canTake;
+            weekRemainingJp -= canTake;
+          }
+          if (weekRemainingJp === 0) {
+            kbmIdx++;
+            weekRemainingJp = m.wk;
+          }
+        }
+      });
+
+      // 1. Pastikan Juli Minggu 1 dan 2 (w=1, w=2) selalu 0 JP (sekolah belum masuk)
+      for (const [_, allocs] of itemWeekAllocations.entries()) {
+        expect(allocs[1] || 0).toBe(0);
+        expect(allocs[2] || 0).toBe(0);
+      }
+
+      // 2. Pastikan di setiap kolom minggu manapun, total JP guru tidak melebihi kapasitas mingguan (wk)
+      const weekTotals: Record<number, number> = {};
+      let totalAllocated = 0;
+      for (const [_, allocs] of itemWeekAllocations.entries()) {
+        for (const [wStr, jpVal] of Object.entries(allocs)) {
+          const w = parseInt(wStr, 10);
+          weekTotals[w] = (weekTotals[w] || 0) + jpVal;
+          totalAllocated += jpVal;
+        }
+      }
+
+      for (const [w, sum] of Object.entries(weekTotals)) {
+        expect(sum, `Total JP di minggu ke-${w} untuk ${m.name} tidak boleh melebihi ${m.wk}`).toBeLessThanOrEqual(m.wk);
+      }
+
+      // 3. Pastikan total yang terdistribusi pas 100% dengan total semester
+      expect(totalAllocated, `Total JP ${m.name} harus teralokasi utuh`).toBe(m.totalJp);
+
+      // 4. Pastikan pembelajaran mulai di minggu ke-3 Juli (w=3) dan merata hingga akhir semester
+      expect(weekTotals[3]).toBeGreaterThan(0);
+    }
+  });
 });

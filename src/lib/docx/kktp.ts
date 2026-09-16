@@ -14,7 +14,7 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText, generateKopSuratDocx, createSignatureTable } from './helpers';
+import { sanitizeText, generateKopSuratDocx, createSignatureTable, getKaldikTitimangsa } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 
 export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
@@ -261,12 +261,14 @@ export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSe
     });
 
     // Signature Block
+    const isSem1 = sem.semester === 1 || String(sem.semester).includes('1') || sem.semester_label?.includes('1');
+    const titimangsa = getKaldikTitimangsa(metadata.tahun_pembelajaran, isSem1 ? 1 : 2);
     const sigTable = createSignatureTable({
       kepalaSekolah: metadata.kepala_sekolah,
       nipKepalaSekolah: metadata.nip_kepala_sekolah,
       guru: metadata.guru,
       nipGuru: metadata.nip_guru,
-      titimangsa: 'Purwakarta, ......................... 20..',
+      titimangsa,
       jabatanGuru: 'Guru Mata Pelajaran'
     });
 

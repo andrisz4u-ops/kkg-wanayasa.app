@@ -14,7 +14,7 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText, generateKopSuratDocx, createSignatureTable } from './helpers';
+import { sanitizeText, generateKopSuratDocx, createSignatureTable, getKaldikTitimangsa } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from '../kaldik-purwakarta';
@@ -377,13 +377,13 @@ export async function generateRpeDocxBuffer(data: AnalisisCpDocxInput, targetSem
     });
 
     // Signature Block
-    const titimangsaDate = isSem1 ? '13 Juli 2026' : '11 Januari 2027';
+    const titimangsaDate = getKaldikTitimangsa(metadata.tahun_pembelajaran || rpeData.tahunAjaran, isSem1 ? 1 : 2);
     const sigTable = createSignatureTable({
       kepalaSekolah: metadata.kepala_sekolah,
       nipKepalaSekolah: metadata.nip_kepala_sekolah,
       guru: metadata.guru,
       nipGuru: metadata.nip_guru,
-      titimangsa: `Purwakarta, ${titimangsaDate}`,
+      titimangsa: titimangsaDate,
       jabatanGuru: 'Guru Mata Pelajaran / Kelas'
     });
 

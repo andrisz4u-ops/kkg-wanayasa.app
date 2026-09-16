@@ -1219,6 +1219,33 @@ export async function generateKopSuratDocx(kopSuratUrl?: string | null, isLandsc
 }
 
 /**
+ * Helper untuk menentukan titimangsa Purwakarta berdasarkan tahun pembelajaran dan semester
+ * Prota & Sem 1: Purwakarta, 13 Juli [startYear]
+ * Sem 2: Purwakarta, 11 Januari [endYear]
+ */
+export function getKaldikTitimangsa(tahunStr?: string, semester: number = 1): string {
+    let startYear = '2026';
+    let endYear = '2027';
+    if (tahunStr) {
+        const match = String(tahunStr).match(/(\d{4})\s*[\/-]\s*(\d{4})/);
+        if (match) {
+            startYear = match[1];
+            endYear = match[2];
+        } else {
+            const singleMatch = String(tahunStr).match(/(\d{4})/);
+            if (singleMatch) {
+                startYear = singleMatch[1];
+                endYear = String(parseInt(startYear, 10) + 1);
+            }
+        }
+    }
+    const isSem2 = semester === 2 || String(semester).includes('2');
+    return isSem2 
+        ? `Purwakarta, 11 Januari ${endYear}`
+        : `Purwakarta, 13 Juli ${startYear}`;
+}
+
+/**
  * Helper untuk membuat Tabel Tanda Tangan resmi (Kepala Sekolah & Guru)
  * dengan teks yang rapi dan terpusat (center alignment) di masing-masing kolom
  */
@@ -1227,7 +1254,7 @@ export function createSignatureTable({
     nipKepalaSekolah,
     guru,
     nipGuru,
-    titimangsa = 'Purwakarta, ......................... 20..',
+    titimangsa = 'Purwakarta, 13 Juli 2026',
     jabatanGuru = 'Guru Mata Pelajaran'
 }: {
     kepalaSekolah?: string;

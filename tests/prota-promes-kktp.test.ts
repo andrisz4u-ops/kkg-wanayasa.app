@@ -229,6 +229,46 @@ describe('4-in-1 Engine DOCX Generators (Prota, Promes, KKTP)', () => {
     const rpeXml = await getDocumentXml(rpeBuf);
     expect(rpeXml).toContain('w:jc w:val="center"');
   });
+
+  it('should format signature titimangsa with Juli for Prota & Semester 1, and Januari for Semester 2', async () => {
+    // Prota (1 year) -> Juli
+    const protaBuf = await generateProtaDocxBuffer(sampleInput);
+    const protaXml = await getDocumentXml(protaBuf);
+    expect(protaXml).toContain('Purwakarta, 13 Juli 2025');
+
+    // Promes Semester 1 -> Juli
+    const promesSem1Buf = await generatePromesDocxBuffer(sampleInput, 1);
+    const promesSem1Xml = await getDocumentXml(promesSem1Buf);
+    expect(promesSem1Xml).toContain('Purwakarta, 13 Juli 2025');
+
+    // Promes Semester 2 -> Januari
+    const promesSem2Buf = await generatePromesDocxBuffer(sampleInput, 2);
+    const promesSem2Xml = await getDocumentXml(promesSem2Buf);
+    expect(promesSem2Xml).toContain('Purwakarta, 11 Januari 2026');
+
+    // Analisis CP (annual) -> Juli
+    const analisisBuf = await generateAnalisisCpDocxBuffer(sampleInput);
+    const analisisXml = await getDocumentXml(analisisBuf);
+    expect(analisisXml).toContain('Purwakarta, 13 Juli 2025');
+
+    // KKTP Semester 1 & Semester 2
+    const kktpSem1Buf = await generateKktpDocxBuffer(sampleInput, 1);
+    const kktpSem1Xml = await getDocumentXml(kktpSem1Buf);
+    expect(kktpSem1Xml).toContain('Purwakarta, 13 Juli 2025');
+
+    const kktpSem2Buf = await generateKktpDocxBuffer(sampleInput, 2);
+    const kktpSem2Xml = await getDocumentXml(kktpSem2Buf);
+    expect(kktpSem2Xml).toContain('Purwakarta, 11 Januari 2026');
+
+    // RPE Semester 1 & Semester 2
+    const rpeSem1Buf = await generateRpeDocxBuffer(sampleInput, 1);
+    const rpeSem1Xml = await getDocumentXml(rpeSem1Buf);
+    expect(rpeSem1Xml).toContain('Purwakarta, 13 Juli 2025');
+
+    const rpeSem2Buf = await generateRpeDocxBuffer(sampleInput, 2);
+    const rpeSem2Xml = await getDocumentXml(rpeSem2Buf);
+    expect(rpeSem2Xml).toContain('Purwakarta, 11 Januari 2026');
+  });
 });
 
 describe('Analisis CP Endpoints for Prota, Promes, KKTP', () => {

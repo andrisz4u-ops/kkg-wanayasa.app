@@ -146,15 +146,48 @@ export function getKopSuratHtml() {
 }
 
 /**
- * Lembar Pengesahan Tanda Tangan Dokumen
- * @param {object} inputData 
+ * Helper untuk menentukan titimangsa Purwakarta berdasarkan tahun ajaran dan semester
+ * Prota & Sem 1: Purwakarta, 13 Juli [startYear]
+ * Sem 2: Purwakarta, 11 Januari [endYear]
+ * @param {string} tahunStr 
+ * @param {number|string} semester 
  * @returns {string}
  */
-export function getPengesahanHtml(inputData) {
+export function getKaldikTitimangsa(tahunStr, semester = 1) {
+  let startYear = '2026';
+  let endYear = '2027';
+  if (tahunStr) {
+    const match = String(tahunStr).match(/(\d{4})\s*[\/-]\s*(\d{4})/);
+    if (match) {
+      startYear = match[1];
+      endYear = match[2];
+    } else {
+      const singleMatch = String(tahunStr).match(/(\d{4})/);
+      if (singleMatch) {
+        startYear = singleMatch[1];
+        endYear = String(parseInt(startYear, 10) + 1);
+      }
+    }
+  }
+  const isSem2 = semester === 2 || String(semester).includes('2');
+  return isSem2 
+    ? `Purwakarta, 11 Januari ${endYear}`
+    : `Purwakarta, 13 Juli ${startYear}`;
+}
+
+/**
+ * Lembar Pengesahan Tanda Tangan Dokumen
+ * @param {object} inputData 
+ * @param {string} titimangsa
+ * @returns {string}
+ */
+export function getPengesahanHtml(inputData, titimangsa = '') {
   const ksName = inputData?.namaKepalaSekolah || '...........................................';
   const ksNip = inputData?.nipKepalaSekolah ? `NIP. ${inputData.nipKepalaSekolah}` : 'NIP. .....................................';
   const guruName = inputData?.namaGuru || '...........................................';
   const guruNip = inputData?.nipGuru ? `NIP. ${inputData.nipGuru}` : 'NIP. .....................................';
+  const defaultTitimangsa = getKaldikTitimangsa(inputData?.tahunAjaran || inputData?.tahun_pembelajaran, 1);
+  const titimangsaDisplay = titimangsa || defaultTitimangsa;
 
   return `
     <div class="grid grid-cols-2 text-center text-xs font-serif pt-6 break-inside-avoid">
@@ -165,7 +198,7 @@ export function getPengesahanHtml(inputData) {
         <p>${escapeHtml(ksNip)}</p>
       </div>
       <div>
-        <p class="mb-1">&nbsp;</p>
+        <p class="mb-1">${escapeHtml(titimangsaDisplay)}</p>
         <p class="font-bold mb-16">Guru Mata Pelajaran / Kelas</p>
         <p class="font-bold underline text-sm mb-0.5">${escapeHtml(guruName)}</p>
         <p>${escapeHtml(guruNip)}</p>

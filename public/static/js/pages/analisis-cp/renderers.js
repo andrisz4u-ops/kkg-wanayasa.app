@@ -1,5 +1,5 @@
 import { escapeHtml, showToast } from '../../utils.js';
-import { getKopSuratHtml, getPengesahanHtml, getItemJpText, parseJpNum } from './helpers.js';
+import { getKopSuratHtml, getPengesahanHtml, getItemJpText, parseJpNum, getKaldikTitimangsa } from './helpers.js';
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js';
 import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from './kaldik-purwakarta.js';
 
@@ -117,11 +117,14 @@ export function renderAnalisisTable(data, inputData = {}) {
     });
   });
 
+  const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
+  const titimangsa = getKaldikTitimangsa(tahunAjaran, 1);
+
   html += `
         </tbody>
       </table>
     </div>
-    ${getPengesahanHtml(inputData)}
+    ${getPengesahanHtml(inputData, titimangsa)}
   `;
 
   return html;
@@ -274,7 +277,11 @@ export function renderProtaTable(data, inputData = {}) {
       </tbody>
     </table>
   </div>
-  ${getPengesahanHtml(inputData)}
+  ${(() => {
+    const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
+    const titimangsa = getKaldikTitimangsa(tahunAjaran, 1);
+    return getPengesahanHtml(inputData, titimangsa);
+  })()}
   `;
 
   return html;
@@ -612,11 +619,15 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       `;
     }
 
+    const isSem1 = sem.semester === 1 || String(sem.semester).includes('1') || sem.semester_label?.includes('1');
+    const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
+    const titimangsa = getKaldikTitimangsa(tahunAjaran, isSem1 ? 1 : 2);
+
     html += `
             </tbody>
           </table>
         </div>
-        ${getPengesahanHtml(inputData)}
+        ${getPengesahanHtml(inputData, titimangsa)}
       </div>
     `;
   });
@@ -814,7 +825,12 @@ export function renderRpeTable(data, inputData = {}, activeRpeSemester = 'all') 
           </p>
         </div>
 
-        ${getPengesahanHtml(inputData)}
+        ${(() => {
+          const isSem1 = semNum === 1;
+          const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || rpe.tahunAjaran || '2026/2027';
+          const titimangsa = getKaldikTitimangsa(tahunAjaran, isSem1 ? 1 : 2);
+          return getPengesahanHtml(inputData, titimangsa);
+        })()}
       </div>
     `;
   });
@@ -978,7 +994,12 @@ export function renderKktpTable(data, inputData = {}, activePromesSemester = 'al
           </table>
         </div>
 
-        ${getPengesahanHtml(inputData)}
+        ${(() => {
+          const isSem1 = sem.semester === 1 || String(sem.semester).includes('1') || sem.semester_label?.includes('1');
+          const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
+          const titimangsa = getKaldikTitimangsa(tahunAjaran, isSem1 ? 1 : 2);
+          return getPengesahanHtml(inputData, titimangsa);
+        })()}
       </div>
     `;
   });

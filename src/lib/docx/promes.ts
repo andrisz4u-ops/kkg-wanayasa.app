@@ -14,7 +14,7 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText, generateKopSuratDocx, createSignatureTable } from './helpers';
+import { sanitizeText, generateKopSuratDocx, createSignatureTable, getKaldikTitimangsa } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 import { calculateRpe } from '../kaldik-purwakarta';
@@ -401,12 +401,13 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
     });
 
     // Signature Block
+    const titimangsa = getKaldikTitimangsa(metadata.tahun_pembelajaran, isSem1 ? 1 : 2);
     const sigTable = createSignatureTable({
       kepalaSekolah: metadata.kepala_sekolah,
       nipKepalaSekolah: metadata.nip_kepala_sekolah,
       guru: metadata.guru,
       nipGuru: metadata.nip_guru,
-      titimangsa: 'Purwakarta, ......................... 20..',
+      titimangsa,
       jabatanGuru: 'Guru Mata Pelajaran'
     });
 

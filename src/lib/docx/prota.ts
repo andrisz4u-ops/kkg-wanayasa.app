@@ -14,7 +14,7 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText, generateKopSuratDocx, createSignatureTable } from './helpers';
+import { sanitizeText, generateKopSuratDocx, createSignatureTable, getKaldikTitimangsa } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 
@@ -327,7 +327,7 @@ export async function generateProtaDocxBuffer(data: AnalisisCpDocxInput): Promis
     nipKepalaSekolah: metadata.nip_kepala_sekolah,
     guru: metadata.guru,
     nipGuru: metadata.nip_guru,
-    titimangsa: 'Purwakarta, ......................... 20..',
+    titimangsa: getKaldikTitimangsa(metadata.tahun_pembelajaran, 1),
     jabatanGuru: 'Guru Mata Pelajaran'
   });
 

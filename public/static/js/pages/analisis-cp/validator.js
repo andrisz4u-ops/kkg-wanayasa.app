@@ -136,7 +136,9 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
   }
 
   // 5. Terapkan Standar Alokasi Waktu & Auto-Balance Intrakurikuler (Permendikdasmen No. 13 Tahun 2025)
-  const quota = getAlokasiWaktuResmi(data.metadata?.mata_pelajaran || '', data.metadata?.kelas || kelasNum);
+  const finalMapel = data.metadata?.mata_pelajaran || formMeta.mataPelajaran || formMeta.mata_pelajaran || '';
+  const finalKelas = data.metadata?.kelas || formMeta.kelas || formMeta.jenjangKelas || kelasNum;
+  const quota = getAlokasiWaktuResmi(finalMapel, finalKelas);
   if (data.metadata) {
     data.metadata.alokasi_waktu_standar = {
       dasar_hukum: quota.dasarHukum,

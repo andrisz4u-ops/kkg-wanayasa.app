@@ -699,17 +699,21 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
   }
 
   // 5. Terapkan Standar Alokasi Waktu & Auto-Balance Intrakurikuler (Permendikdasmen No. 13 Tahun 2025)
-  const quota = getAlokasiWaktuResmi(meta.mata_pelajaran || '', meta.kelas || kelasNum);
-  meta.alokasi_waktu_standar = {
-    dasar_hukum: quota.dasarHukum,
-    intrakurikuler_per_tahun: quota.intrakurikulerPerTahun,
-    kokurikuler_per_tahun: quota.kokurikulerPerTahun,
-    total_per_tahun: quota.totalPerTahun,
-    jp_per_minggu: quota.jpPerMinggu,
-    target_semester_jp: quota.intrakurikulerPerSemester,
-    minggu_per_semester: quota.mingguPerSemester,
-    minggu_per_tahun: quota.mingguPerTahun
-  };
+  const finalMapel = result.metadata?.mata_pelajaran || meta.mataPelajaran || meta.mata_pelajaran || '';
+  const finalKelas = result.metadata?.kelas || meta.kelas || meta.jenjangKelas || kelasNum;
+  const quota = getAlokasiWaktuResmi(finalMapel, finalKelas);
+  if (result.metadata) {
+    result.metadata.alokasi_waktu_standar = {
+      dasar_hukum: quota.dasarHukum,
+      intrakurikuler_per_tahun: quota.intrakurikulerPerTahun,
+      kokurikuler_per_tahun: quota.kokurikulerPerTahun,
+      total_per_tahun: quota.totalPerTahun,
+      jp_per_minggu: quota.jpPerMinggu,
+      target_semester_jp: quota.intrakurikulerPerSemester,
+      minggu_per_semester: quota.mingguPerSemester,
+      minggu_per_tahun: quota.mingguPerTahun
+    };
+  }
 
   for (const sem of result.semesters) {
     balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);

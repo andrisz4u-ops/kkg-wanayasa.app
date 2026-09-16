@@ -467,4 +467,45 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
     expect(json.data.my_cp).toBe(3);
     expect(json.data.per_mapel).toHaveLength(1);
   });
+
+  it('serves /standard-chapters endpoint with accurate grade 1 chapters', async () => {
+    const res = await analisisCpRoutes.request('/standard-chapters?mataPelajaran=Bahasa%20Indonesia&jenjangKelas=Kelas%201');
+    expect(res.status).toBe(200);
+    const json: any = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.buku_judul).toContain('Aku Bisa!');
+    expect(json.data.total_babs).toBe(8);
+    expect(json.data.chapters[0].bab).toContain('Bunyi Apa?');
+  });
+
+  it('supports liking a collaborative CP item via POST /:id/like', async () => {
+    const user = { id: 10, nama: 'Guru 1', role: 'guru' };
+    const mockDb: any = {
+      prepare: (query: string) => {
+        const runner: any = {
+          first: async () => {
+            if (query.toLowerCase().includes('sessions')) return user;
+            if (query.includes('SELECT like_count')) return { like_count: 5 };
+            return { 1: 1 };
+          },
+          run: async () => ({ success: true })
+        };
+        runner.bind = () => runner;
+        return runner;
+      },
+      batch: async () => []
+    };
+
+    const res = await analisisCpRoutes.request('/123/like', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer test-session-token'
+      }
+    }, { DB: mockDb });
+
+    expect(res.status).toBe(200);
+    const json: any = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.like_count).toBe(5);
+  });
 });

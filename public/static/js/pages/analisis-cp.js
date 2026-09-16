@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect, getActiveAiProviders, renderTahunAjaranOptions, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
+import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect, getActiveAiProviders, renderTahunAjaranOptions, detectUserDefaultKelas, detectUserDefaultMapel, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
@@ -19,6 +19,7 @@ let detectedChapters = [];
 let isCustomPdfUploaded = false;
 let activeAnalysisTab = 'analisis'; // 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp'
 let activePromesSemester = 'all'; // 'all' | 1 | 2
+let lastLoadedUserId = null;
 
 function handleSemesterChange(newSem) {
   activePromesSemester = newSem;
@@ -34,8 +35,18 @@ export async function renderAnalisisCp() {
     );
   }
 
+  // If user changed since last load, reset stale local state
+  if (lastLoadedUserId !== state.user.id) {
+    lastLoadedUserId = state.user.id;
+    currentAnalysisData = null;
+    currentInputData = null;
+    detectedChapters = [];
+    isCustomPdfUploaded = false;
+  }
+
   const defaultK = detectUserDefaultKelas(state.user);
   const defaultFase = (defaultK <= 2) ? 'A' : (defaultK <= 4) ? 'B' : 'C';
+  const defaultMapel = detectUserDefaultMapel(state.user, defaultK);
   const defaultKsNama = (state.user?.kepala_sekolah && state.user.kepala_sekolah !== 'null') ? state.user.kepala_sekolah : '';
   const defaultKsNip = (state.user?.nip_kepala_sekolah && state.user.nip_kepala_sekolah !== 'null') ? state.user.nip_kepala_sekolah : '';
 
@@ -113,18 +124,18 @@ export async function renderAnalisisCp() {
                   <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">MATA PELAJARAN</label>
                     <select name="mataPelajaran" id="select-mata-pelajaran" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                      <option value="Pendidikan Agama dan Budi Pekerti">Pendidikan Agama dan Budi Pekerti</option>
-                      <option value="Pendidikan Pancasila">Pendidikan Pancasila</option>
-                      <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                      <option value="Matematika">Matematika</option>
-                      <option value="Ilmu Pengetahuan Alam dan Sosial (IPAS)" selected>Ilmu Pengetahuan Alam dan Sosial (IPAS)</option>
-                      <option value="Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)">Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)</option>
-                      <option value="Bahasa Inggris">Bahasa Inggris</option>
-                      <option value="Seni Rupa">Seni Rupa</option>
-                      <option value="Koding dan Kecerdasan Artifisial">Koding dan Kecerdasan Artifisial</option>
-                      <option value="B.Sunda">Bahasa Sunda (Mulok)</option>
-                      <option value="Tatanen di Bale Atikan">Tatanen di Bale Atikan (TdBA)</option>
-                      <option value="AKPK">AKPK Purwakarta</option>
+                      <option value="Pendidikan Agama dan Budi Pekerti" ${defaultMapel === 'Pendidikan Agama dan Budi Pekerti' ? 'selected' : ''}>Pendidikan Agama dan Budi Pekerti</option>
+                      <option value="Pendidikan Pancasila" ${defaultMapel === 'Pendidikan Pancasila' ? 'selected' : ''}>Pendidikan Pancasila</option>
+                      <option value="Bahasa Indonesia" ${defaultMapel === 'Bahasa Indonesia' ? 'selected' : ''}>Bahasa Indonesia</option>
+                      <option value="Matematika" ${defaultMapel === 'Matematika' ? 'selected' : ''}>Matematika</option>
+                      <option value="Ilmu Pengetahuan Alam dan Sosial (IPAS)" ${defaultMapel === 'Ilmu Pengetahuan Alam dan Sosial (IPAS)' ? 'selected' : ''} ${defaultK <= 2 ? 'disabled class="hidden"' : ''}>Ilmu Pengetahuan Alam dan Sosial (IPAS) ${defaultK <= 2 ? '(Mulai Kls 3)' : ''}</option>
+                      <option value="Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)" ${defaultMapel === 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)' ? 'selected' : ''}>Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)</option>
+                      <option value="Bahasa Inggris" ${defaultMapel === 'Bahasa Inggris' ? 'selected' : ''}>Bahasa Inggris</option>
+                      <option value="Seni Rupa" ${defaultMapel === 'Seni Rupa' ? 'selected' : ''}>Seni Rupa</option>
+                      <option value="Koding dan Kecerdasan Artifisial" ${defaultMapel === 'Koding dan Kecerdasan Artifisial' ? 'selected' : ''} ${defaultK < 5 ? 'disabled class="hidden"' : ''}>Koding dan Kecerdasan Artifisial ${defaultK < 5 ? '(Mulai Kls 5)' : ''}</option>
+                      <option value="B.Sunda" ${defaultMapel === 'B.Sunda' ? 'selected' : ''}>Bahasa Sunda (Mulok)</option>
+                      <option value="Tatanen di Bale Atikan" ${defaultMapel === 'Tatanen di Bale Atikan' ? 'selected' : ''}>Tatanen di Bale Atikan (TdBA)</option>
+                      <option value="AKPK" ${defaultMapel === 'AKPK' ? 'selected' : ''}>AKPK Purwakarta</option>
                     </select>
                   </div>
 
@@ -776,7 +787,48 @@ export function initAnalisisCp() {
 
   document.getElementById('select-jenjang-kelas')?.addEventListener('change', async (e) => {
     const kelas = e.target.value;
-    const mapel = document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
+    const kNum = parseInt(kelas.replace(/\D/g, ''), 10) || 5;
+    const mapelEl = document.getElementById('select-mata-pelajaran');
+    let mapel = mapelEl?.value || 'Bahasa Indonesia';
+
+    // Update visibility and disabled state of IPAS and Koding
+    const ipasOpt = mapelEl?.querySelector('option[value="Ilmu Pengetahuan Alam dan Sosial (IPAS)"]');
+    const kodingOpt = mapelEl?.querySelector('option[value="Koding dan Kecerdasan Artifisial"]');
+
+    if (kNum <= 2) {
+      if (ipasOpt) {
+        ipasOpt.disabled = true;
+        ipasOpt.classList.add('hidden');
+      }
+      if (mapel === 'Ilmu Pengetahuan Alam dan Sosial (IPAS)') {
+        mapel = 'Bahasa Indonesia';
+        if (mapelEl) mapelEl.value = 'Bahasa Indonesia';
+        showToast(`IPAS tidak ada di ${kelas} (Fase A), otomatis dialihkan ke Bahasa Indonesia.`, 'info');
+      }
+    } else {
+      if (ipasOpt) {
+        ipasOpt.disabled = false;
+        ipasOpt.classList.remove('hidden');
+      }
+    }
+
+    if (kNum < 5) {
+      if (kodingOpt) {
+        kodingOpt.disabled = true;
+        kodingOpt.classList.add('hidden');
+      }
+      if (mapel === 'Koding dan Kecerdasan Artifisial') {
+        mapel = 'Bahasa Indonesia';
+        if (mapelEl) mapelEl.value = 'Bahasa Indonesia';
+        showToast(`Koding & AI baru dimulai di Kelas 5, otomatis dialihkan ke Bahasa Indonesia.`, 'info');
+      }
+    } else {
+      if (kodingOpt) {
+        kodingOpt.disabled = false;
+        kodingOpt.classList.remove('hidden');
+      }
+    }
+
     isCustomPdfUploaded = false;
     await seedDefaultChaptersForClass(kelas, mapel);
     showToast(`Struktur materi disesuaikan untuk ${kelas} (${mapel})`, 'info');
@@ -786,18 +838,19 @@ export function initAnalisisCp() {
   document.addEventListener('click', async (e) => {
     const btnPreset = e.target.closest('#btn-load-official-preset');
     if (btnPreset) {
-      const mapel = document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
       const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+      const mapel = document.getElementById('select-mata-pelajaran')?.value || 'Bahasa Indonesia';
       isCustomPdfUploaded = false;
       await seedDefaultChaptersForClass(kelas, mapel);
       showToast(`Berhasil memuat struktur 8 BAB resmi Kemendikbudristek untuk ${mapel} (${kelas})!`, 'success');
     }
   });
 
-  // Load initial chapters if empty for immediate testing delight
-  if (detectedChapters.length === 0) {
-    const initialMapel = document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
-    seedDefaultChaptersForClass(detectUserDefaultKelas(state.user), initialMapel);
+  // Load initial chapters if empty or if no active analysis session
+  const activeKelas = document.getElementById('select-jenjang-kelas')?.value || `Kelas ${detectUserDefaultKelas(state.user)}`;
+  const activeMapel = document.getElementById('select-mata-pelajaran')?.value || detectUserDefaultMapel(state.user, detectUserDefaultKelas(state.user));
+  if (detectedChapters.length === 0 || !currentAnalysisData) {
+    seedDefaultChaptersForClass(activeKelas, activeMapel);
   }
 }
 

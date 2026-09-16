@@ -967,14 +967,34 @@ export function renderTahunAjaranOptions(selectedVal) {
 }
 
 /**
- * Detect default class level (1-6) from user profile (mata_pelajaran, role_label, or role)
+ * Detect default class level (1-6) from user profile (mata_pelajaran, role_label, role, or explicit kelas)
  * Correctly parses Arabic numerals (1-6) and Roman numerals (I-VI).
  * Defaults to 5 if no class is specified.
  */
 export function detectUserDefaultKelas(user) {
   if (!user) return 5;
-  const str = `${user.mata_pelajaran || ''} ${user.role_label || ''} ${user.role || ''}`.trim();
+  if (user.kelas) {
+    const kNum = parseInt(String(user.kelas).replace(/\D/g, ''), 10);
+    if (kNum >= 1 && kNum <= 6) return kNum;
+  }
+  if (user.jenjang_kelas) {
+    const kNum = parseInt(String(user.jenjang_kelas).replace(/\D/g, ''), 10);
+    if (kNum >= 1 && kNum <= 6) return kNum;
+  }
+  const str = `${user.mata_pelajaran || ''} ${user.role_label || ''} ${user.role || ''} ${user.jabatan || ''}`.trim();
   if (!str) return 5;
+
+  // Direct check for "Guru Kelas X" or "Kelas X" pattern
+  const explicitClass = str.match(/\b(?:guru\s+)?kelas\s*([1-6]|I|II|III|IV|V|VI)\b/i);
+  if (explicitClass) {
+    const val = explicitClass[1].toUpperCase();
+    if (val === '1' || val === 'I') return 1;
+    if (val === '2' || val === 'II') return 2;
+    if (val === '3' || val === 'III') return 3;
+    if (val === '4' || val === 'IV') return 4;
+    if (val === '5' || val === 'V') return 5;
+    if (val === '6' || val === 'VI') return 6;
+  }
 
   // Check Roman numerals first
   if (/\b(VI|6)\b/i.test(str)) return 6;
@@ -990,4 +1010,34 @@ export function detectUserDefaultKelas(user) {
 
   return 5;
 }
+
+/**
+ * Detect default subject (mata pelajaran) for user based on role/mata_pelajaran and class level.
+ * Crucial rule: Kelas 1 & 2 (Fase A) NEVER default to IPAS (IPAS only exists from Kelas 3).
+ */
+export function detectUserDefaultMapel(user, defaultKelas) {
+  const k = defaultKelas || detectUserDefaultKelas(user);
+  const str = `${user?.mata_pelajaran || ''} ${user?.role_label || ''}`.toLowerCase();
+
+  if (/pai|agama|islam/i.test(str)) return 'Pendidikan Agama dan Budi Pekerti';
+  if (/pjok|penjas|olahraga/i.test(str)) return 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)';
+  if (/inggris|english/i.test(str)) return 'Bahasa Inggris';
+  if (/sunda/i.test(str)) return 'B.Sunda';
+  if (/seni/i.test(str)) return 'Seni Rupa';
+  if (/pancasila|pkn/i.test(str)) return 'Pendidikan Pancasila';
+  if (/matematika|mtk/i.test(str)) return 'Matematika';
+
+  // For Kelas 1 and 2 (Fase A), Kurikulum Merdeka does NOT have IPAS!
+  if (k <= 2) {
+    return 'Bahasa Indonesia';
+  }
+
+  // For Kelas 3-6: default to Bahasa Indonesia or IPAS
+  if (/ipa|ipas|sains/i.test(str)) {
+    return 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
+  }
+
+  return 'Bahasa Indonesia';
+}
+
 

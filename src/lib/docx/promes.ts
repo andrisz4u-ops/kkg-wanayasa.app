@@ -17,6 +17,7 @@ import {
 import { sanitizeText } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
+import { calculateRpe } from '../kaldik-purwakarta';
 
 export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
   const { metadata, semesters } = data;
@@ -232,11 +233,10 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
     const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || '', metadata.kelas || '5');
     const jpPerMinggu = quota.jpPerMinggu || 2;
 
-    // Minggu Efektif KBM (18-20 pekan):
-    // Masuk sekolah pertama 13 Juli 2026 (Minggu ke-3 Juli):
-    const activeKbmWeeks = isSem1
-      ? [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+    const jenjangKelas = metadata.kelas || '5';
+    const isKelas6 = String(jenjangKelas).replace(/\D/g, '') === '6';
+    const rpeData = calculateRpe(sem.semester, jpPerMinggu, jenjangKelas);
+    const activeKbmWeeks = rpeData.activeKbmWeeks;
 
     // Kumpulkan seluruh item semester untuk alokasi waterfall presisi
     const allSemesterItems: { item: any; bab: any }[] = [];
@@ -333,11 +333,16 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
 
         for (let w = 1; w <= 30; w++) {
           const allocJp = rowAlloc[w];
+          const weekStatus = rpeData.weekStatusMap[w];
+          const isNonKbm = weekStatus && !weekStatus.isKbm;
+
           rowCells.push(
             new TableCell({
               width: { size: WIDTH_WEEK, type: WidthType.DXA },
               verticalAlign: VerticalAlign.CENTER,
-              shading: allocJp ? { type: ShadingType.CLEAR, fill: 'E0E7FF' } : undefined,
+              shading: allocJp
+                ? { type: ShadingType.CLEAR, fill: 'E0E7FF' }
+                : (isNonKbm ? { type: ShadingType.CLEAR, fill: 'F8FAFC' } : undefined),
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -359,7 +364,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       });
     }
 
-    // Agenda Rows
+    // Agenda Rows Resmi Kaldik Disdik Purwakarta
     const createAgendaRow = (title: string, checkFn: (w: number) => string | null, fillHex: string) => {
       const cells: TableCell[] = [
         new TableCell({
@@ -387,7 +392,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
                   new TextRun({
                     text: textVal || '',
                     bold: true,
-                    size: 15,
+                    size: 14,
                     font: 'Times New Roman'
                   })
                 ]
@@ -401,11 +406,23 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
 
     if (isSem1) {
       tableRows.push(createAgendaRow('Masa Pengenalan Lingkungan Sekolah (MPLS)', (w) => w === 3 ? 'MPLS' : null, 'BAE6FD'));
+      tableRows.push(createAgendaRow('Sumatif Tengah Semester (STS)', (w) => w === 15 ? 'STS' : null, 'FEF08A'));
+      tableRows.push(createAgendaRow('Perkiraan Penilaian Sumatif Akhir Semester (SAS)', (w) => (w === 25 || w === 26 || w === 27) ? 'SAS' : null, 'E9D5FF'));
+      tableRows.push(createAgendaRow('Pengolahan Nilai & Remedial / Classmeeting', (w) => w === 28 ? 'PENG' : null, 'CCFBF1'));
+      tableRows.push(createAgendaRow('Pembagian Rapor Semester 1', (w) => w === 29 ? 'RPT' : null, '99F6E4'));
+      tableRows.push(createAgendaRow('Libur Akhir Tahun Ajaran Lalu / Libur Semester 1', (w) => (w === 1 || w === 2 || w === 30) ? 'LBR' : null, 'CBD5E1'));
+    } else {
+      tableRows.push(createAgendaRow('Libur Semester 1 (1 - 8 Jan 2027)', (w) => w === 1 ? 'LBR' : null, 'CBD5E1'));
+      tableRows.push(createAgendaRow('Prakiraan Libur Awal Ramadhan 1448 H', (w) => w === 7 ? 'LBR' : null, 'CBD5E1'));
+      tableRows.push(createAgendaRow('Kegiatan Masantren di Sakola (Purwakarta)', (w) => (w === 8 || w === 9 || w === 11) ? 'SAN' : null, 'BBF7D0'));
+      tableRows.push(createAgendaRow('Prakiraan Libur Idul Fitri 1448 H & Nyepi', (w) => w === 12 ? 'LBR' : null, 'CBD5E1'));
+      if (isKelas6) {
+        tableRows.push(createAgendaRow('Penilaian Sumatif Akhir Jenjang (PSAJ Kelas 6)', (w) => (w === 22 || w === 23) ? 'PSAJ' : null, 'FED7AA'));
+      }
+      tableRows.push(createAgendaRow('Perkiraan Penilaian Sumatif Akhir Tahun (ASAT)', (w) => (w === 26 || w === 27) ? 'ASAT' : null, 'E9D5FF'));
+      tableRows.push(createAgendaRow('Pengolahan Nilai & Pembagian Rapor Semester 2', (w) => w === 28 ? 'RPT' : null, '99F6E4'));
+      tableRows.push(createAgendaRow('Libur Akhir Tahun Ajaran 2026/2027', (w) => (w === 29 || w === 30) ? 'LBR' : null, 'CBD5E1'));
     }
-    tableRows.push(createAgendaRow('Sumatif Tengah Semester (STS)', (w) => (w === 13 || w === 14) ? 'STS' : null, 'FEF08A'));
-    tableRows.push(createAgendaRow('Sumatif Akhir Semester (SAS / ASAT)', (w) => (w === 26 || w === 27) ? 'SAS' : null, 'E9D5FF'));
-    tableRows.push(createAgendaRow('Pengolahan Nilai & Pembagian Rapor', (w) => w === 28 ? 'RPT' : null, 'CCFBF1'));
-    tableRows.push(createAgendaRow('Libur Akhir Semester', (w) => ((isSem1 && (w === 1 || w === 2)) || w >= 29) ? 'LBR' : null, 'CBD5E1'));
 
     const mainTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },

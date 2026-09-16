@@ -9,6 +9,7 @@ import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../lib/d
 import { generateProtaDocxBuffer } from '../lib/docx/prota';
 import { generatePromesDocxBuffer } from '../lib/docx/promes';
 import { generateKktpDocxBuffer } from '../lib/docx/kktp';
+import { generateRpeDocxBuffer } from '../lib/docx/rpe';
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from '../lib/alokasi-waktu';
 import { type AppBindings } from '../types/env';
 
@@ -1103,6 +1104,41 @@ analisisCp.post('/docx/kktp', async (c) => {
     return c.body(buffer as any);
   } catch (e: any) {
     console.error('KKTP DOCX Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// 4e. Download DOCX Rincian Pekan Efektif (RPE) - Standar Disdik Kab. Purwakarta
+analisisCp.post('/docx/rpe', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { metadata, semesters, semester } = body;
+
+    const kopUrl = await resolveKopUrl(c, metadata?.kop_surat_url);
+
+    const docxInput: AnalisisCpDocxInput = {
+      metadata: {
+        ...metadata,
+        kop_surat_url: kopUrl || null
+      },
+      semesters: Array.isArray(semesters) ? semesters : []
+    };
+
+    const targetSem = semester ? Number(semester) : undefined;
+    const buffer = await generateRpeDocxBuffer(docxInput, targetSem);
+
+    const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
+    const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
+    const semSuffix = targetSem ? `_Semester_${targetSem}` : '';
+    const filename = `RPE_${mapelSafe}_Kelas_${kelasSafe}${semSuffix}.docx`;
+
+    c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    c.header('Content-Disposition', `attachment; filename="${filename}"`);
+    c.header('Content-Length', buffer.length.toString());
+
+    return c.body(buffer as any);
+  } catch (e: any) {
+    console.error('RPE DOCX Error:', e);
     return Errors.internal(c, e.message);
   }
 });

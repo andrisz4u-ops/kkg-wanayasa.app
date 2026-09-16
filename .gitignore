@@ -34,6 +34,7 @@ backup/
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Temporary / debug / scratch files
 *.tmp

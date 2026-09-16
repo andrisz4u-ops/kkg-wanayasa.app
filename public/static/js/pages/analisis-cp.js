@@ -16,7 +16,7 @@ let currentAnalysisData = null;
 let currentInputData = null;
 let detectedChapters = [];
 let isCustomPdfUploaded = false;
-let activeAnalysisTab = 'analisis'; // 'analisis' | 'prota' | 'promes' | 'kktp'
+let activeAnalysisTab = 'analisis'; // 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp'
 let activePromesSemester = 'all'; // 'all' | 1 | 2
 
 function handleSemesterChange(newSem) {
@@ -315,6 +315,9 @@ export async function renderAnalisisCp() {
               <button type="button" data-tab="promes" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5">
                 <i class="fas fa-calendar-days text-amber-400"></i> <span>Promes</span>
               </button>
+              <button type="button" data-tab="rpe" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5">
+                <i class="fas fa-calendar-week text-purple-400"></i> <span>RPE</span>
+              </button>
               <button type="button" data-tab="kktp" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5">
                 <i class="fas fa-list-check text-emerald-400"></i> <span>KKTP</span>
               </button>
@@ -346,9 +349,9 @@ export async function renderAnalisisCp() {
               <i class="fas fa-file-word"></i> <span id="btn-download-docx-label">Unduh Word</span>
             </button>
 
-            <!-- Download All 4 Documents Button -->
-            <button type="button" id="btn-download-all-docs" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer" title="Unduh 4 Dokumen Word Sekaligus (Analisis CP, Prota, Promes, KKTP)">
-              <i class="fas fa-download"></i> <span class="hidden lg:inline">Unduh Semua (4 File)</span>
+            <!-- Download All 5 Documents Button -->
+            <button type="button" id="btn-download-all-docs" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer" title="Unduh 5 Dokumen Word Sekaligus (Analisis CP, Prota, Promes, RPE, KKTP)">
+              <i class="fas fa-download"></i> <span class="hidden lg:inline">Unduh Semua (5 File)</span>
             </button>
           </div>
         </div>

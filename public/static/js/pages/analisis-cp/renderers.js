@@ -1,6 +1,7 @@
 import { escapeHtml, showToast } from '../../utils.js';
 import { getKopSuratHtml, getPengesahanHtml, getItemJpText, parseJpNum } from './helpers.js';
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js';
+import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from './kaldik-purwakarta.js';
 
 /**
  * 1. RENDER TABEL UTAMA: ANALISIS CP, TP, DAN ATP (7 KOLOM)
@@ -407,17 +408,10 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
     const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || inputData?.mataPelajaran || '', metadata.kelas || inputData?.jenjangKelas || '5');
     const jpPerMinggu = quota.jpPerMinggu || 2;
 
-    // Minggu Efektif KBM (18-20 pekan):
-    // Masuk sekolah pertama 13 Juli 2026 (Minggu ke-3 Juli):
-    // Juli: w=3, 4, 5 (w=1,2 Libur TP Lalu, w=3 MPLS/Awal KBM)
-    // Agustus: w=6, 7, 8, 9, 10
-    // September: w=11, 12 (KBM), w=13, 14 (STS), w=15 (KBM)
-    // Oktober: w=16, 17, 18, 19, 20
-    // November: w=21, 22, 23, 24 (KBM / Kokurikuler)
-    // Desember: w=26, 27 (SAS), w=28 (RPT), w=29, 30 (LBR)
-    const activeKbmWeeks = isSem1
-      ? [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+    const jenjangKelas = metadata.kelas || inputData?.jenjangKelas || '5';
+    const isKelas6 = String(jenjangKelas).replace(/\D/g, '') === '6';
+    const rpeData = calculateRpe(sem.semester, jpPerMinggu, jenjangKelas);
+    const activeKbmWeeks = rpeData.activeKbmWeeks;
 
     // Distribusi Waterfall (Mengalir teratur sesuai jpPerMinggu tanpa tumpang tindih)
     const itemWeekAllocations = new Map();
@@ -476,19 +470,13 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
 
       for (let w = 1; w <= 30; w++) {
         const allocJp = rowAlloc[w];
+        const weekStatus = rpeData.weekStatusMap[w];
+        const isNonKbm = weekStatus && !weekStatus.isKbm;
 
         if (allocJp) {
           html += `<td class="border border-slate-900 p-0.5 text-center font-black bg-indigo-100/70 text-indigo-950">${allocJp}</td>`;
-        } else if (isSem1 && (w === 1 || w === 2)) {
-          html += `<td class="border border-slate-900 p-0.5 text-center bg-slate-100/80 text-[8px] text-slate-400"></td>`;
-        } else if (w === 13 || w === 14) {
-          html += `<td class="border border-slate-900 p-0.5 text-center bg-amber-50/40 text-[8px] text-amber-800"></td>`;
-        } else if (w === 26 || w === 27) {
-          html += `<td class="border border-slate-900 p-0.5 text-center bg-purple-50/40 text-[8px] text-purple-800"></td>`;
-        } else if (w === 28) {
-          html += `<td class="border border-slate-900 p-0.5 text-center bg-teal-50/40 text-[8px] text-teal-800"></td>`;
-        } else if (w >= 29) {
-          html += `<td class="border border-slate-900 p-0.5 text-center bg-slate-100 text-[8px] text-slate-400"></td>`;
+        } else if (isNonKbm) {
+          html += `<td class="border border-slate-900 p-0.5 text-center bg-slate-50/80 text-[7.5px] text-slate-400 select-none" title="${escapeHtml(weekStatus.label)}"></td>`;
         } else {
           html += `<td class="border border-slate-900 p-0.5 text-center"></td>`;
         }
@@ -507,43 +495,117 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
             return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
           }).join('')}
         </tr>
+        <tr class="bg-amber-50 font-bold text-amber-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Sumatif Tengah Semester (STS)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 15) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-amber-200 text-amber-900">STS</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-purple-50 font-bold text-purple-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Perkiraan Penilaian Sumatif Akhir Semester (SAS)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 25 || w === 26 || w === 27) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-purple-200 text-purple-900">SAS</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-teal-50 font-bold text-teal-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Pengolahan Nilai & Remedial / Classmeeting</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 28) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-teal-200 text-teal-900">PENG</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-emerald-50 font-bold text-emerald-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Pembagian Rapor Semester 1</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 29) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-emerald-200 text-emerald-900">RPT</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-slate-200 font-bold text-slate-800">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Libur Akhir Tahun Ajaran Lalu / Libur Semester 1</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 1 || w === 2 || w === 30) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+      `;
+    } else {
+      html += `
+        <tr class="bg-slate-100 font-bold text-slate-800">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Libur Semester 1 (1 - 8 Januari 2027)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 1) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-slate-100 font-bold text-slate-800">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Prakiraan Libur Awal Ramadhan 1448 H</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 7) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-emerald-50 font-bold text-emerald-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Kegiatan Masantren di Sakola (Purwakarta Karakter)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 8 || w === 9 || w === 11) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-emerald-200 text-emerald-900">SAN</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-slate-100 font-bold text-slate-800">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Prakiraan Libur Idul Fitri 1448 H & Nyepi</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 12) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        ${isKelas6 ? `
+          <tr class="bg-orange-50 font-bold text-orange-950">
+            <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Penilaian Sumatif Akhir Jenjang (PSAJ Kelas 6)</td>
+            ${Array.from({ length: 30 }, (_, i) => {
+              const w = i + 1;
+              if (w === 22 || w === 23) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-orange-200 text-orange-900">PSAJ</td>`;
+              return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+            }).join('')}
+          </tr>
+        ` : ''}
+        <tr class="bg-purple-50 font-bold text-purple-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Perkiraan Penilaian Sumatif Akhir Tahun (ASAT)</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 26 || w === 27) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-purple-200 text-purple-900">ASAT</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-teal-50 font-bold text-teal-950">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Pengolahan Nilai & Pembagian Rapor Semester 2</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 28) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-teal-200 text-teal-900">RPT</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
+        <tr class="bg-slate-200 font-bold text-slate-800">
+          <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Libur Akhir Tahun Ajaran 2026/2027</td>
+          ${Array.from({ length: 30 }, (_, i) => {
+            const w = i + 1;
+            if (w === 29 || w === 30) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
+            return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
+          }).join('')}
+        </tr>
       `;
     }
-
-    html += `
-      <tr class="bg-amber-50 font-bold text-amber-950">
-        <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Sumatif Tengah Semester (STS)</td>
-        ${Array.from({ length: 30 }, (_, i) => {
-          const w = i + 1;
-          if (w === 13 || w === 14) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-amber-200 text-amber-900">STS</td>`;
-          return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
-        }).join('')}
-      </tr>
-      <tr class="bg-purple-50 font-bold text-purple-950">
-        <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Sumatif Akhir Semester (SAS / ASAT)</td>
-        ${Array.from({ length: 30 }, (_, i) => {
-          const w = i + 1;
-          if (w === 26 || w === 27) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-purple-200 text-purple-900">SAS</td>`;
-          return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
-        }).join('')}
-      </tr>
-      <tr class="bg-teal-50 font-bold text-teal-950">
-        <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Pengolahan Nilai & Pembagian Rapor</td>
-        ${Array.from({ length: 30 }, (_, i) => {
-          const w = i + 1;
-          if (w === 28) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-teal-200 text-teal-900">RPT</td>`;
-          return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
-        }).join('')}
-      </tr>
-      <tr class="bg-slate-200 font-bold text-slate-800">
-        <td colspan="4" class="border border-slate-900 p-1.5 text-left text-[10.5px]">Libur Akhir Semester</td>
-        ${Array.from({ length: 30 }, (_, i) => {
-          const w = i + 1;
-          if ((isSem1 && (w === 1 || w === 2)) || w >= 29) return `<td class="border border-slate-900 p-0.5 text-center font-black bg-slate-300 text-slate-900">LBR</td>`;
-          return `<td class="border border-slate-900 p-0.5 text-center"></td>`;
-        }).join('')}
-      </tr>
-    `;
 
     html += `
             </tbody>
@@ -558,7 +620,205 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
 }
 
 /**
- * 4. RENDER TABEL KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)
+ * 4. RENDER TABEL RINCIAN PEKAN EFEKTIF (RPE) - STANDAR DISDIK KAB. PURWAKARTA
+ */
+export function renderRpeTable(data, inputData = {}, activeRpeSemester = 'all') {
+  const metadata = data.metadata || {};
+  const allSemesters = data.semesters || [];
+  const faseKelas = metadata.fase_kelas || `Fase ${metadata.fase || 'C'}, Kelas ${metadata.kelas || '5'}`;
+  const jenjangKelas = metadata.kelas || inputData?.jenjangKelas || '5';
+  const quota = getAlokasiWaktuResmi(metadata.mata_pelajaran || inputData?.mataPelajaran || '', jenjangKelas);
+  const jpPerMinggu = quota.jpPerMinggu || 2;
+
+  const activeSemesters = allSemesters.filter(s => {
+    if (activeRpeSemester === 'all') return true;
+    return s.semester === activeRpeSemester;
+  });
+
+  let html = `
+    <!-- Filter Bar Semester RPE -->
+    <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 print:hidden font-sans">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-700">Tampilkan Semester:</span>
+        <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeRpeSemester === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="all">Semua Semester</button>
+        <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeRpeSemester === 1 ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="1">Semester 1 (Ganjil)</button>
+        <button type="button" class="btn-sem-filter px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeRpeSemester === 2 ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}" data-sem="2">Semester 2 (Genap)</button>
+      </div>
+      <span class="text-[11px] text-slate-500 font-medium">Acuan: SE Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026</span>
+    </div>
+  `;
+
+  activeSemesters.forEach((sem, currentSemIdx) => {
+    const isSem1 = sem.semester === 1;
+    const rpe = calculateRpe(sem.semester, jpPerMinggu, jenjangKelas);
+
+    html += `
+      <div class="rpe-semester-block mb-12 ${currentSemIdx > 0 ? 'mt-12 pt-8 border-t-2 border-dashed border-slate-300' : ''}">
+        ${getKopSuratHtml()}
+
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-black uppercase tracking-wide text-slate-950 font-serif">RINCIAN PEKAN EFEKTIF (RPE)</h2>
+          <p class="text-xs font-bold text-slate-700 font-serif uppercase tracking-widest mt-0.5">
+            KURIKULUM MERDEKA - SEMESTER ${sem.semester} (${isSem1 ? 'GANJIL' : 'GENAP'}) TAHUN AJARAN ${escapeHtml(rpe.tahunAjaran)}
+          </p>
+          <p class="text-[11px] text-slate-500 italic font-serif mt-1">
+            Berdasarkan Pedoman Kalender Pendidikan Dinas Pendidikan Kabupaten Purwakarta TA 2026/2027
+          </p>
+        </div>
+
+        <div class="mb-6 max-w-xl">
+          <table class="w-full text-xs font-bold font-serif text-slate-900 border-collapse">
+            <tr>
+              <td class="py-1 w-44">Satuan Pendidikan</td>
+              <td class="py-1">: ${escapeHtml(metadata.satuan_pendidikan || inputData.namaSekolah || '-')}</td>
+            </tr>
+            <tr>
+              <td class="py-1">Mata Pelajaran</td>
+              <td class="py-1">: ${escapeHtml(metadata.mata_pelajaran || inputData.mataPelajaran || '-')}</td>
+            </tr>
+            <tr>
+              <td class="py-1">Fase / Kelas / Semester</td>
+              <td class="py-1">: ${escapeHtml(faseKelas)} / ${isSem1 ? 'I (Ganjil)' : 'II (Genap)'}</td>
+            </tr>
+            <tr>
+              <td class="py-1">Tahun Pelajaran</td>
+              <td class="py-1">: ${escapeHtml(metadata.tahun_pembelajaran || inputData.tahunAjaran || rpe.tahunAjaran)}</td>
+            </tr>
+            <tr>
+              <td class="py-1">Nama Guru</td>
+              <td class="py-1">: ${escapeHtml(metadata.guru || inputData.namaGuru || '-')}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Bagian I: Jumlah Pekan dalam Semester -->
+        <div class="mb-5">
+          <h3 class="text-xs font-bold font-serif text-slate-900 mb-2">I. Jumlah Pekan dalam Semester:</h3>
+          <table class="w-full text-[11px] border-collapse border border-slate-900 font-serif text-slate-900 mb-2">
+            <thead>
+              <tr class="bg-slate-100 text-center font-bold">
+                <th class="border border-slate-900 p-1.5 w-10">No</th>
+                <th class="border border-slate-900 p-1.5 text-left">Nama Bulan</th>
+                <th class="border border-slate-900 p-1.5 w-28">Jumlah Pekan</th>
+                <th class="border border-slate-900 p-1.5 w-28 bg-emerald-50 text-emerald-950">Pekan Efektif</th>
+                <th class="border border-slate-900 p-1.5 w-28 bg-rose-50 text-rose-950">Tidak Efektif</th>
+                <th class="border border-slate-900 p-1.5 text-left">Keterangan Agenda</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rpe.bulanList.map((b, idx) => `
+                <tr class="hover:bg-slate-50/60">
+                  <td class="border border-slate-900 p-1.5 text-center">${idx + 1}</td>
+                  <td class="border border-slate-900 p-1.5 font-bold">${escapeHtml(b.bulan)}</td>
+                  <td class="border border-slate-900 p-1.5 text-center">${b.totalPekan}</td>
+                  <td class="border border-slate-900 p-1.5 text-center font-bold bg-emerald-50/40 text-emerald-900">${b.pekanEfektif}</td>
+                  <td class="border border-slate-900 p-1.5 text-center bg-rose-50/30 text-rose-900">${b.pekanTidakEfektif}</td>
+                  <td class="border border-slate-900 p-1.5 text-slate-600">${escapeHtml(b.keterangan || '-')}</td>
+                </tr>
+              `).join('')}
+              <tr class="bg-slate-100 font-bold">
+                <td colspan="2" class="border border-slate-900 p-1.5 text-center">JUMLAH TOTAL</td>
+                <td class="border border-slate-900 p-1.5 text-center">${rpe.totalPekanKalender}</td>
+                <td class="border border-slate-900 p-1.5 text-center bg-emerald-100 text-emerald-950">${rpe.pekanEfektif}</td>
+                <td class="border border-slate-900 p-1.5 text-center bg-rose-100 text-rose-950">${rpe.pekanTidakEfektif}</td>
+                <td class="border border-slate-900 p-1.5 text-center">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Bagian II: Rincian Pekan Tidak Efektif -->
+        <div class="mb-5">
+          <h3 class="text-xs font-bold font-serif text-slate-900 mb-2">II. Rincian Pekan Tidak Efektif (KBM &lt; 3 Hari):</h3>
+          <table class="w-full text-[11px] border-collapse border border-slate-900 font-serif text-slate-900 mb-2">
+            <thead>
+              <tr class="bg-slate-100 text-center font-bold">
+                <th class="border border-slate-900 p-1.5 w-10">No</th>
+                <th class="border border-slate-900 p-1.5 text-left">Nama Kegiatan / Agenda Sekolah</th>
+                <th class="border border-slate-900 p-1.5 text-center w-52">Waktu Pelaksanaan</th>
+                <th class="border border-slate-900 p-1.5 text-center w-24">Jml Pekan</th>
+                <th class="border border-slate-900 p-1.5 text-left">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rpe.agendaTidakEfektif.map((ag, idx) => `
+                <tr class="hover:bg-slate-50/60">
+                  <td class="border border-slate-900 p-1.5 text-center">${idx + 1}</td>
+                  <td class="border border-slate-900 p-1.5 font-bold">${escapeHtml(ag.kegiatan)}</td>
+                  <td class="border border-slate-900 p-1.5 text-center text-slate-700">${escapeHtml(ag.tanggal)}</td>
+                  <td class="border border-slate-900 p-1.5 text-center font-bold">${ag.jumlahPekan} Pekan</td>
+                  <td class="border border-slate-900 p-1.5 text-slate-600">${escapeHtml(ag.keterangan)}</td>
+                </tr>
+              `).join('')}
+              <tr class="bg-slate-100 font-bold">
+                <td colspan="3" class="border border-slate-900 p-1.5 text-center">TOTAL PEKAN TIDAK EFEKTIF</td>
+                <td class="border border-slate-900 p-1.5 text-center bg-rose-100 text-rose-950">${rpe.pekanTidakEfektif} Pekan</td>
+                <td class="border border-slate-900 p-1.5 text-center">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Bagian III: Rekapitulasi Pekan Efektif -->
+        <div class="mb-5 p-4 bg-slate-50 border border-slate-300 rounded-xl text-xs font-serif leading-relaxed">
+          <h3 class="font-bold text-slate-900 mb-2">III. Rekapitulasi Pekan Efektif Pembelajaran:</h3>
+          <ul class="space-y-1.5 text-slate-800">
+            <li>1. Jumlah Pekan Kalender Pendidikan : <strong>${rpe.totalPekanKalender} Pekan</strong></li>
+            <li>2. Jumlah Pekan Tidak Efektif : <strong>${rpe.pekanTidakEfektif} Pekan</strong></li>
+            <li class="text-emerald-800 font-black text-sm pt-1">
+              3. Jumlah Pekan Efektif KBM (1 - 2) : <strong>${rpe.pekanEfektif} PEKAN EFEKTIF</strong>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Bagian IV: Distribusi Jam Pelajaran (JP) -->
+        <div class="mb-6">
+          <h3 class="text-xs font-bold font-serif text-slate-900 mb-2">IV. Distribusi Alokasi Waktu Jam Pelajaran (JP):</h3>
+          <table class="w-full text-[11px] border-collapse border border-slate-900 font-serif text-slate-900">
+            <thead>
+              <tr class="bg-slate-100 text-center font-bold">
+                <th class="border border-slate-900 p-1.5 w-10">No</th>
+                <th class="border border-slate-900 p-1.5 text-left">Uraian Alokasi Waktu</th>
+                <th class="border border-slate-900 p-1.5 text-center w-52">Perhitungan</th>
+                <th class="border border-slate-900 p-1.5 text-center w-28">Jumlah JP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="border border-slate-900 p-1.5 text-center font-bold">1</td>
+                <td class="border border-slate-900 p-1.5 font-bold">Jumlah Jam Pelajaran Efektif Tersedia (Intrakurikuler)</td>
+                <td class="border border-slate-900 p-1.5 text-center">${rpe.pekanEfektif} Pekan × ${rpe.jpPerMinggu} JP</td>
+                <td class="border border-slate-900 p-1.5 text-center font-black bg-emerald-100 text-emerald-950">${rpe.totalJpTersedia} JP</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-900 p-1.5 text-center">2</td>
+                <td class="border border-slate-900 p-1.5">Alokasi Pembelajaran Tatap Muka (Materi Pokok & TP)</td>
+                <td class="border border-slate-900 p-1.5 text-center text-slate-600">Sesuai Distribusi Bab di Promes</td>
+                <td class="border border-slate-900 p-1.5 text-center font-bold">${rpe.jpTatapMuka} JP</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-900 p-1.5 text-center">3</td>
+                <td class="border border-slate-900 p-1.5">Alokasi Jam Cadangan (Asesmen Sumatif Lingkup Materi / Remedial / Pengayaan)</td>
+                <td class="border border-slate-900 p-1.5 text-center text-slate-600">Cadangan ~10%</td>
+                <td class="border border-slate-900 p-1.5 text-center font-bold text-indigo-900">${rpe.jpCadangan} JP</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="text-[10px] text-slate-500 italic mt-1.5 font-serif">
+            * Catatan: Sesuai pedoman Dinas Pendidikan Kabupaten Purwakarta, alokasi waktu mengacu pada Permendikdasmen No. 13 Tahun 2025 (${rpe.jpPerMinggu} JP/minggu).
+          </p>
+        </div>
+
+        ${getPengesahanHtml(inputData)}
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+/**
+ * 5. RENDER TABEL KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)
  */
 export function renderKktpTable(data, inputData = {}, activePromesSemester = 'all') {
   const metadata = data.metadata || {};
@@ -742,6 +1002,7 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
   if (downloadLabel) {
     if (activeAnalysisTab === 'prota') downloadLabel.innerText = 'Unduh Word Prota';
     else if (activeAnalysisTab === 'promes') downloadLabel.innerText = 'Unduh Word Promes';
+    else if (activeAnalysisTab === 'rpe') downloadLabel.innerText = 'Unduh Word RPE';
     else if (activeAnalysisTab === 'kktp') downloadLabel.innerText = 'Unduh Word KKTP';
     else downloadLabel.innerText = 'Unduh Word Analisis CP';
   }
@@ -813,6 +1074,8 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
     contentHtml = renderProtaTable(data, inputData);
   } else if (activeAnalysisTab === 'promes') {
     contentHtml = renderPromesTable(data, inputData, activePromesSemester);
+  } else if (activeAnalysisTab === 'rpe') {
+    contentHtml = renderRpeTable(data, inputData, activePromesSemester);
   } else if (activeAnalysisTab === 'kktp') {
     contentHtml = renderKktpTable(data, inputData, activePromesSemester);
   } else {

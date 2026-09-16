@@ -9,7 +9,7 @@ import { syncCanvasToAnalysisData } from './renderers.js';
 
 /**
  * Unduh Dokumen Word (.docx) sesuai tab aktif
- * @param {string} type - 'analisis' | 'prota' | 'promes' | 'kktp'
+ * @param {string} type - 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp'
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
  * @param {string|number} activePromesSemester 
@@ -25,6 +25,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
 
   const docTypeName = type === 'prota' ? 'Program Tahunan (PROTA)'
                     : type === 'promes' ? 'Program Semester (PROMES)'
+                    : type === 'rpe' ? 'Rincian Pekan Efektif (RPE)'
                     : type === 'kktp' ? 'Kriteria Ketercapaian (KKTP)'
                     : 'Analisis CP, TP, dan ATP';
 
@@ -36,6 +37,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
 
     const endpoint = type === 'prota' ? '/api/analisis-cp/docx/prota'
                    : type === 'promes' ? '/api/analisis-cp/docx/promes'
+                   : type === 'rpe' ? '/api/analisis-cp/docx/rpe'
                    : type === 'kktp' ? '/api/analisis-cp/docx/kktp'
                    : '/api/analisis-cp/docx';
 
@@ -71,6 +73,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
     const kelasSafe = (currentInputData?.jenjangKelas || 'Kelas_5').replace(/\s+/g, '_');
     const prefix = type === 'prota' ? 'PROTA'
                  : type === 'promes' ? 'PROMES'
+                 : type === 'rpe' ? 'RPE'
                  : type === 'kktp' ? 'KKTP'
                  : 'Analisis_CP_TP_ATP';
 
@@ -88,7 +91,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
 }
 
 /**
- * Unduh Semua 4 Paket Dokumen Word Sekaligus secara berurutan
+ * Unduh Semua 5 Paket Dokumen Word Sekaligus secara berurutan
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
  */
@@ -98,8 +101,8 @@ export async function downloadAllDocs(currentAnalysisData, currentInputData) {
     return;
   }
 
-  showToast('Memulai pengunduhan 4 paket dokumen Word (Analisis CP, Prota, Promes, KKTP)...', 'info');
-  const tabs = ['analisis', 'prota', 'promes', 'kktp'];
+  showToast('Memulai pengunduhan 5 paket dokumen Word (Analisis CP, Prota, Promes, RPE, KKTP)...', 'info');
+  const tabs = ['analisis', 'prota', 'promes', 'rpe', 'kktp'];
 
   for (let i = 0; i < tabs.length; i++) {
     await downloadDocx(tabs[i], currentAnalysisData, currentInputData);
@@ -108,7 +111,7 @@ export async function downloadAllDocs(currentAnalysisData, currentInputData) {
     }
   }
 
-  showToast('Seluruh 4 paket dokumen berhasil diunduh!', 'success');
+  showToast('Seluruh 5 paket dokumen berhasil diunduh!', 'success');
 }
 
 /**

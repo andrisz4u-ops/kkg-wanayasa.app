@@ -206,6 +206,29 @@ describe('4-in-1 Engine DOCX Generators (Prota, Promes, KKTP)', () => {
       globalThis.fetch = origFetch;
     }
   });
+
+  it('should center align signatures for KS and Guru across all generated documents', async () => {
+    const promesBuf = await generatePromesDocxBuffer(sampleInput, 1);
+    const promesXml = await getDocumentXml(promesBuf);
+    expect(promesXml).toContain('Mengetahui');
+    expect(promesXml).toContain('w:jc w:val="center"');
+
+    const protaBuf = await generateProtaDocxBuffer(sampleInput);
+    const protaXml = await getDocumentXml(protaBuf);
+    expect(protaXml).toContain('w:jc w:val="center"');
+
+    const kktpBuf = await generateKktpDocxBuffer(sampleInput);
+    const kktpXml = await getDocumentXml(kktpBuf);
+    expect(kktpXml).toContain('w:jc w:val="center"');
+
+    const analisisBuf = await generateAnalisisCpDocxBuffer(sampleInput);
+    const analisisXml = await getDocumentXml(analisisBuf);
+    expect(analisisXml).toContain('w:jc w:val="center"');
+
+    const rpeBuf = await generateRpeDocxBuffer(sampleInput, 1);
+    const rpeXml = await getDocumentXml(rpeBuf);
+    expect(rpeXml).toContain('w:jc w:val="center"');
+  });
 });
 
 describe('Analisis CP Endpoints for Prota, Promes, KKTP', () => {

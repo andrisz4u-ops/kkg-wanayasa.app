@@ -1218,4 +1218,103 @@ export async function generateKopSuratDocx(kopSuratUrl?: string | null, isLandsc
     return content;
 }
 
+/**
+ * Helper untuk membuat Tabel Tanda Tangan resmi (Kepala Sekolah & Guru)
+ * dengan teks yang rapi dan terpusat (center alignment) di masing-masing kolom
+ */
+export function createSignatureTable({
+    kepalaSekolah,
+    nipKepalaSekolah,
+    guru,
+    nipGuru,
+    titimangsa = 'Purwakarta, ......................... 20..',
+    jabatanGuru = 'Guru Mata Pelajaran'
+}: {
+    kepalaSekolah?: string;
+    nipKepalaSekolah?: string;
+    guru?: string;
+    nipGuru?: string;
+    titimangsa?: string;
+    jabatanGuru?: string;
+}): Table {
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+            top: { style: BorderStyle.NONE },
+            bottom: { style: BorderStyle.NONE },
+            left: { style: BorderStyle.NONE },
+            right: { style: BorderStyle.NONE },
+            insideHorizontal: { style: BorderStyle.NONE },
+            insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+            new TableRow({
+                children: [
+                    new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                        },
+                        children: [
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 140, after: 40 },
+                                children: [new TextRun({ text: 'Mengetahui,', size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 650 },
+                                children: [new TextRun({ text: 'Kepala Sekolah', bold: true, size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: kepalaSekolah || '..........................................', bold: true, underline: {}, size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 60 },
+                                children: [new TextRun({ text: `NIP. ${nipKepalaSekolah || '................................'}`, size: 19, font: 'Times New Roman' })]
+                            }),
+                        ]
+                    }),
+                    new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                        },
+                        children: [
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { before: 140, after: 40 },
+                                children: [new TextRun({ text: titimangsa, size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 650 },
+                                children: [new TextRun({ text: jabatanGuru, bold: true, size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: guru || '..........................................', bold: true, underline: {}, size: 20, font: 'Times New Roman' })]
+                            }),
+                            new Paragraph({
+                                alignment: AlignmentType.CENTER,
+                                spacing: { after: 60 },
+                                children: [new TextRun({ text: `NIP. ${nipGuru || '................................'}`, size: 19, font: 'Times New Roman' })]
+                            }),
+                        ]
+                    }),
+                ]
+            })
+        ]
+    });
+}
+
+
 

@@ -14,7 +14,7 @@ import {
   ShadingType,
   PageOrientation,
 } from 'docx';
-import { sanitizeText, generateKopSuratDocx } from './helpers';
+import { sanitizeText, generateKopSuratDocx, createSignatureTable } from './helpers';
 import type { AnalisisCpDocxInput } from './analisis-cp';
 
 export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
@@ -261,60 +261,13 @@ export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSe
     });
 
     // Signature Block
-    const sigTable = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              children: [
-                new Paragraph({
-                  spacing: { before: 200, after: 40 },
-                  children: [new TextRun({ text: 'Mengetahui,', size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  spacing: { after: 600 },
-                  children: [new TextRun({ text: 'Kepala Sekolah', bold: true, size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: metadata.kepala_sekolah || '..........................................', bold: true, underline: {}, size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `NIP. ${metadata.nip_kepala_sekolah || '................................'}`, size: 19, font: 'Times New Roman' })]
-                }),
-              ]
-            }),
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              children: [
-                new Paragraph({
-                  spacing: { before: 200, after: 40 },
-                  children: [new TextRun({ text: `Purwakarta, ......................... 20..`, size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  spacing: { after: 600 },
-                  children: [new TextRun({ text: 'Guru Mata Pelajaran', bold: true, size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: metadata.guru || '..........................................', bold: true, underline: {}, size: 20, font: 'Times New Roman' })]
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `NIP. ${metadata.nip_guru || '................................'}`, size: 19, font: 'Times New Roman' })]
-                }),
-              ]
-            }),
-          ]
-        })
-      ]
+    const sigTable = createSignatureTable({
+      kepalaSekolah: metadata.kepala_sekolah,
+      nipKepalaSekolah: metadata.nip_kepala_sekolah,
+      guru: metadata.guru,
+      nipGuru: metadata.nip_guru,
+      titimangsa: 'Purwakarta, ......................... 20..',
+      jabatanGuru: 'Guru Mata Pelajaran'
     });
 
     docSections.push({

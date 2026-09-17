@@ -41,6 +41,75 @@ export function formatCpContentHtml(cpText, babTitle = '') {
 }
 
 /**
+ * Ekstraksi seluruh Capaian Pembelajaran (CP) dan Elemen unik yang diajarkan pada semester tertentu
+ */
+export function extractSemesterCpItems(sem) {
+  const babs = sem?.babs || [];
+  const items = [];
+
+  babs.forEach((bab, babIdx) => {
+    const rawCp = (bab?.cp || '').trim();
+    if (!rawCp) return;
+
+    let element = '';
+    let cpText = rawCp;
+
+    const bracketMatch = rawCp.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+    if (bracketMatch) {
+      element = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+      cpText = bracketMatch[2].trim();
+    } else {
+      const colonMatch = rawCp.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/i);
+      if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
+        element = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+        cpText = colonMatch[2].trim();
+      } else {
+        const titleMatch = (bab.bab || '').match(/\[(.*?)\]/);
+        if (titleMatch) {
+          element = titleMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+        }
+      }
+    }
+
+    element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
+
+    // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
+    const existingIndex = items.findIndex(it => {
+      if (element && it.element) {
+        return it.element.toUpperCase() === element.toUpperCase();
+      }
+      return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
+    });
+
+    if (existingIndex >= 0) {
+      items[existingIndex].babIndices.push(babIdx);
+      if (cpText.length > items[existingIndex].cp.length) {
+        items[existingIndex].cp = cpText;
+        items[existingIndex].raw = rawCp;
+      }
+    } else {
+      items.push({
+        element,
+        cp: cpText || rawCp,
+        raw: rawCp,
+        babIndices: [babIdx]
+      });
+    }
+  });
+
+  if (items.length === 0) {
+    items.push({
+      element: '',
+      cp: 'Memahami konsep dasar dan menerapkan kompetensi esensial pembelajaran sesuai standar kurikulum merdeka.',
+      raw: 'Memahami konsep dasar dan menerapkan kompetensi esensial pembelajaran sesuai standar kurikulum merdeka.',
+      babIndices: [0]
+    });
+  }
+
+  return items;
+}
+
+/**
  * 1. RENDER TABEL UTAMA: ANALISIS CP, TP, DAN ATP (7 KOLOM)
  */
 export function renderAnalisisTable(data, inputData = {}) {
@@ -376,7 +445,9 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
       ? ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
       : ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
 
-    const firstCp = sem.babs?.[0]?.cp || 'Memahami konsep dasar dan menerapkan kompetensi esensial pembelajaran sesuai standar kurikulum merdeka.';
+    const realSemIdx = allSemesters.findIndex(s => s.semester === sem.semester);
+    const effectiveSemIdx = realSemIdx >= 0 ? realSemIdx : currentSemIdx;
+    const cpItems = extractSemesterCpItems(sem);
 
     html += `
       <div class="promes-semester-block mb-12 ${currentSemIdx > 0 ? 'mt-12 pt-8 border-t-2 border-dashed border-slate-300' : ''}">
@@ -416,10 +487,21 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
 
         <!-- Bagian A: Capaian Pembelajaran Utuh -->
         <div class="mb-5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-serif leading-relaxed">
-          <strong class="block mb-1 text-slate-900">A. Capaian Pembelajaran (CP) Resmi:</strong>
-          <p class="text-slate-800 text-justify" contenteditable="true" data-field="cp" data-sem-idx="${sem.semester - 1}" data-bab-idx="0">
-            ${escapeHtml(firstCp).replace(/\n/g, '<br>')}
-          </p>
+          <strong class="block mb-2 text-slate-900 font-bold">A. Capaian Pembelajaran (CP) Resmi:</strong>
+          <div class="space-y-3">
+            ${cpItems.map((item, itemIdx) => `
+              <div class="cp-element-item ${itemIdx > 0 ? 'pt-2.5 border-t border-slate-200/80' : ''}">
+                ${item.element ? `
+                  <div class="font-bold text-slate-900 mb-1 text-[11px] tracking-wide uppercase">
+                    [ELEMEN: ${escapeHtml(item.element)}]
+                  </div>
+                ` : ''}
+                <p class="text-slate-800 text-justify" contenteditable="true" data-field="cp" data-sem-idx="${effectiveSemIdx}" data-bab-idx="${item.babIndices[0]}" data-bab-indices="${item.babIndices.join(',')}">
+                  ${escapeHtml(item.cp).replace(/\n/g, '<br>')}
+                </p>
+              </div>
+            `).join('')}
+          </div>
         </div>
 
         <!-- Bagian B: Matriks Distribusi Alokasi Waktu Pembelajaran (30 Minggu) -->
@@ -1243,7 +1325,25 @@ export function syncCanvasToAnalysisData(analysisData) {
 
     if (field === 'no') targetBab.no = val;
     else if (field === 'bab') targetBab.bab = val;
-    else if (field === 'cp') targetBab.cp = val;
+    else if (field === 'cp') {
+      const rawIndices = el.dataset.babIndices;
+      if (rawIndices) {
+        const indices = rawIndices.split(',').map(n => Number(n.trim())).filter(n => !isNaN(n));
+        indices.forEach(bIdx => {
+          if (targetSem.babs?.[bIdx]) {
+            const orig = targetSem.babs[bIdx].cp || '';
+            const elMatch = orig.match(/^(\[[^\]]+\]\s*|(?:Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*)/i);
+            if (elMatch && !val.startsWith('[') && !val.toLowerCase().startsWith('elemen')) {
+              targetSem.babs[bIdx].cp = `${elMatch[1].trim()}\n${val}`;
+            } else {
+              targetSem.babs[bIdx].cp = val;
+            }
+          }
+        });
+      } else {
+        targetBab.cp = val;
+      }
+    }
     else if (itemIdx >= 0 && targetBab.items?.[itemIdx]) {
       if (field === 'materi_pokok') targetBab.items[itemIdx].materi_pokok = val;
       else if (field === 'kode_tp') targetBab.items[itemIdx].kode_tp = val;

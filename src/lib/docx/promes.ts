@@ -19,6 +19,82 @@ import type { AnalisisCpDocxInput } from './analisis-cp';
 import { getAlokasiWaktuResmi } from '../alokasi-waktu';
 import { calculateRpe } from '../kaldik-purwakarta';
 
+export interface SemesterCpItem {
+  element: string;
+  cp: string;
+  raw: string;
+  babIndices: number[];
+}
+
+/**
+ * Ekstraksi seluruh Capaian Pembelajaran (CP) dan Elemen unik yang diajarkan pada semester tertentu
+ */
+export function extractSemesterCpItems(sem: { babs?: any[] }): SemesterCpItem[] {
+  const babs = sem?.babs || [];
+  const items: SemesterCpItem[] = [];
+
+  babs.forEach((bab, babIdx) => {
+    const rawCp = (bab?.cp || '').trim();
+    if (!rawCp) return;
+
+    let element = '';
+    let cpText = rawCp;
+
+    const bracketMatch = rawCp.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+    if (bracketMatch) {
+      element = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+      cpText = bracketMatch[2].trim();
+    } else {
+      const colonMatch = rawCp.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/i);
+      if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
+        element = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+        cpText = colonMatch[2].trim();
+      } else {
+        const titleMatch = (bab.bab || '').match(/\[(.*?)\]/);
+        if (titleMatch) {
+          element = titleMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+        }
+      }
+    }
+
+    element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
+
+    // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
+    const existingIndex = items.findIndex(it => {
+      if (element && it.element) {
+        return it.element.toUpperCase() === element.toUpperCase();
+      }
+      return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
+    });
+
+    if (existingIndex >= 0) {
+      items[existingIndex].babIndices.push(babIdx);
+      if (cpText.length > items[existingIndex].cp.length) {
+        items[existingIndex].cp = cpText;
+        items[existingIndex].raw = rawCp;
+      }
+    } else {
+      items.push({
+        element,
+        cp: cpText || rawCp,
+        raw: rawCp,
+        babIndices: [babIdx]
+      });
+    }
+  });
+
+  if (items.length === 0) {
+    items.push({
+      element: '',
+      cp: 'Memahami konsep dasar dan menerapkan kompetensi esensial pembelajaran sesuai standar kurikulum merdeka.',
+      raw: 'Memahami konsep dasar dan menerapkan kompetensi esensial pembelajaran sesuai standar kurikulum merdeka.',
+      babIndices: [0]
+    });
+  }
+
+  return items;
+}
+
 export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, targetSemesterNum?: number): Promise<Uint8Array> {
   const { metadata, semesters } = data;
   const kopSuratContent = await generateKopSuratDocx(metadata.kop_surat_url, true);
@@ -110,20 +186,48 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
       )
     });
 
-    // Extract CP narrative from first bab if available
-    const firstCp = sem.babs?.[0]?.cp || '';
+    // Extract CP items for all unique elements in this semester
+    const cpItems = extractSemesterCpItems(sem);
     const cpSection: Paragraph[] = [];
-    if (firstCp) {
+    if (cpItems.length > 0) {
       cpSection.push(
         new Paragraph({
-          spacing: { before: 100, after: 40 },
-          children: [new TextRun({ text: 'A. Capaian Pembelajaran (CP):', bold: true, size: 20, font: 'Times New Roman' })]
-        }),
-        new Paragraph({
-          spacing: { after: 120 },
-          children: [new TextRun({ text: sanitizeText(firstCp), size: 19, font: 'Times New Roman' })]
+          spacing: { before: 100, after: 60 },
+          children: [new TextRun({ text: 'A. Capaian Pembelajaran (CP) Resmi:', bold: true, size: 20, font: 'Times New Roman' })]
         })
       );
+
+      cpItems.forEach((item, idx) => {
+        const isLast = idx === cpItems.length - 1;
+        if (item.element) {
+          cpSection.push(
+            new Paragraph({
+              spacing: { before: idx > 0 ? 80 : 20, after: 20 },
+              children: [
+                new TextRun({
+                  text: `[ELEMEN: ${item.element.toUpperCase()}]`,
+                  bold: true,
+                  size: 19,
+                  font: 'Times New Roman'
+                })
+              ]
+            })
+          );
+        }
+        cpSection.push(
+          new Paragraph({
+            spacing: { after: isLast ? 120 : 60 },
+            alignment: AlignmentType.JUSTIFIED,
+            children: [
+              new TextRun({
+                text: sanitizeText(item.cp),
+                size: 19,
+                font: 'Times New Roman'
+              })
+            ]
+          })
+        );
+      });
     }
 
     // Column Widths: ATP (35%), Alokasi (8%), 30 weeks (57% / 30 = ~1.9% each)

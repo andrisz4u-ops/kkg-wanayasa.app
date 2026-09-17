@@ -6523,6 +6523,10 @@ h1,
   padding-top: max(0.6rem, env(safe-area-inset-top));
 }
 
+.pt-2\.5 {
+  padding-top: 0.625rem;
+}
+
 .text-left {
   text-align: left;
 }
@@ -10442,6 +10446,11 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   --tw-ring-color: rgb(254 202 202 / var(--tw-ring-opacity, 1));
 }
 
+.focus\:ring-teal-500:focus {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(38 148 148 / var(--tw-ring-opacity, 1));
+}
+
 .focus\:ring-teal-500\/10:focus {
   --tw-ring-color: rgb(38 148 148 / 0.1);
 }
@@ -10452,11 +10461,6 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 
 .focus\:ring-violet-500\/20:focus {
   --tw-ring-color: rgb(139 92 246 / 0.2);
-}
-
-.focus\:ring-teal-500:focus {
-  --tw-ring-opacity: 1;
-  --tw-ring-color: rgb(38 148 148 / var(--tw-ring-opacity, 1));
 }
 
 .focus-visible\:outline-none:focus-visible {

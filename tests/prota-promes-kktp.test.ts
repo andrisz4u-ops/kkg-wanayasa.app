@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import { generateProtaDocxBuffer } from '../src/lib/docx/prota';
-import { generatePromesDocxBuffer } from '../src/lib/docx/promes';
+import { generatePromesDocxBuffer, extractSemesterCpItems } from '../src/lib/docx/promes';
 import { generateKktpDocxBuffer } from '../src/lib/docx/kktp';
 import { generateAnalisisCpDocxBuffer } from '../src/lib/docx/analisis-cp';
 import { generateRpeDocxBuffer } from '../src/lib/docx/rpe';
@@ -329,5 +329,87 @@ describe('Analisis CP Endpoints for Prota, Promes, KKTP', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toContain('openxmlformats-officedocument');
     expect(res.headers.get('Content-Disposition')).toContain('KKTP_');
+  });
+
+  it('extractSemesterCpItems should extract, clean, and deduplicate all elements/CPs from semester babs', () => {
+    const sem = {
+      semester: 1,
+      babs: [
+        {
+          no: 1,
+          bab: 'Bab 1: Menulis Surat',
+          cp: '[ELEMEN: MENULIS] Menulis berbagai tipe teks sederhana berdasarkan gagasan...'
+        },
+        {
+          no: 2,
+          bab: 'Bab 2: Membaca Cerita',
+          cp: '[ELEMEN: MEMBACA DAN MEMIRSA] Membaca kata-kata dengan berbagai pola kombinasi huruf...'
+        },
+        {
+          no: 3,
+          bab: 'Bab 3: Menyimak Dialog',
+          cp: 'Elemen Menyimak: Menganalisis informasi dari teks nonsastra...'
+        },
+        {
+          no: 4,
+          bab: 'Bab 4: Menulis Puisi',
+          cp: '[ELEMEN: MENULIS] Menulis berbagai tipe teks sederhana berdasarkan gagasan dan imajinasi...'
+        }
+      ]
+    };
+
+    const items = extractSemesterCpItems(sem);
+    expect(items).toHaveLength(3); // Menulis (deduped), Membaca dan Memirsa, Menyimak
+    expect(items[0].element).toBe('MENULIS');
+    expect(items[0].babIndices).toEqual([0, 3]);
+    expect(items[1].element).toBe('MEMBACA DAN MEMIRSA');
+    expect(items[1].babIndices).toEqual([1]);
+    expect(items[2].element).toBe('Menyimak');
+    expect(items[2].babIndices).toEqual([2]);
+  });
+
+  it('generatePromesDocxBuffer should include all unique semester elements in Section A of DOCX', async () => {
+    const multiElementInput: AnalisisCpDocxInput = {
+      metadata: {
+        ...sampleInput.metadata,
+        mata_pelajaran: 'Bahasa Indonesia',
+        kelas: '6',
+        fase_kelas: 'Fase C / Kelas 6'
+      },
+      semesters: [
+        {
+          semester: 1,
+          semester_label: 'SEMESTER 1',
+          babs: [
+            {
+              no: 1,
+              bab: 'Bab 1: Bangga Menjadi Anak Indonesia',
+              cp: '[ELEMEN: MENULIS] Menulis berbagai tipe teks sederhana berdasarkan gagasan...',
+              items: [{ kode_tp: '6.1', materi_pokok: 'Menulis Teks', tp: 'TP 1', atp: 'ATP 1', alokasi_waktu: '4 JP' }]
+            },
+            {
+              no: 2,
+              bab: 'Bab 2: Musisi Jalanan',
+              cp: '[ELEMEN: MEMBACA DAN MEMIRSA] Membaca kata-kata dengan fasih...',
+              items: [{ kode_tp: '6.2', materi_pokok: 'Membaca', tp: 'TP 2', atp: 'ATP 2', alokasi_waktu: '4 JP' }]
+            },
+            {
+              no: 3,
+              bab: 'Bab 3: Taman Nasional',
+              cp: '[ELEMEN: MENYIMAK] Menganalisis informasi teks aural...',
+              items: [{ kode_tp: '6.3', materi_pokok: 'Menyimak', tp: 'TP 3', atp: 'ATP 3', alokasi_waktu: '4 JP' }]
+            }
+          ]
+        }
+      ]
+    };
+
+    const buffer = await generatePromesDocxBuffer(multiElementInput, 1);
+    const xml = await getDocumentXml(buffer);
+
+    expect(xml).toContain('A. Capaian Pembelajaran (CP) Resmi:');
+    expect(xml).toContain('[ELEMEN: MENULIS]');
+    expect(xml).toContain('[ELEMEN: MEMBACA DAN MEMIRSA]');
+    expect(xml).toContain('[ELEMEN: MENYIMAK]');
   });
 });

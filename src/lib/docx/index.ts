@@ -5,3 +5,4 @@ export * from './proker';
 export * from './laporan';
 export * from './rpp';
 export * from './analisis-cp';
+export * from './program-sekolah';

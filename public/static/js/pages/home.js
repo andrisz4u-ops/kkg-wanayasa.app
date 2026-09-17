@@ -66,7 +66,7 @@ async function renderEducatorDashboard() {
   const userSchool = user.sekolah || 'SDN di Gugus 3 Wanayasa';
   const userMapel = user.mata_pelajaran || 'Guru Kelas';
   const userNip = user.nip ? `NIP. ${user.nip}` : 'Pendidik Terdaftar';
-  const isAdmin = ['admin', 'operator'].includes(user.role);
+  const isAdmin = ['super_admin', 'admin', 'operator'].includes(user.role);
 
   const todayFormatted = new Date().toLocaleDateString('id-ID', {
     weekday: 'long',
@@ -132,6 +132,16 @@ async function renderEducatorDashboard() {
                 <i class="fas fa-book-bookmark text-sm"></i>
                 <span>Analisis CP (AI)</span>
               </button>
+
+              ${isAdmin ? `
+              <button 
+                onclick="navigate('program-sekolah')" 
+                class="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5 flex items-center gap-2.5 cursor-pointer"
+              >
+                <i class="fas fa-file-lines text-sm"></i>
+                <span>Program Sekolah (AI)</span>
+              </button>
+              ` : ''}
 
               <button 
                 onclick="navigate('rpp')" 
@@ -1419,7 +1429,7 @@ async function renderPublicHome() {
               <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 text-xs sm:text-sm">
                 <div>
                   <h5 class="font-bold text-slate-900 uppercase tracking-wide text-xs mb-1.5 text-teal-700">A. Capaian & Tujuan Pembelajaran</h5>
-                  <p class="text-slate-600 leading-relaxed">Peserta didik mampu mengidentifikasi bagian-bagian tubuh tumbuhan (akar, batang, daun, bunga, buah) serta mengaitkan fungsinya dengan proses fotosintesis dan fotosintesis air dalam kehidupan tumbuhan.</p>
+                  <p class="text-slate-600 leading-relaxed">Murid mampu mengidentifikasi bagian-bagian tubuh tumbuhan (akar, batang, daun, bunga, buah) serta mengaitkan fungsinya dengan proses fotosintesis dan fotosintesis air dalam kehidupan tumbuhan.</p>
                 </div>
 
                 <div class="pt-2 border-t border-slate-100">

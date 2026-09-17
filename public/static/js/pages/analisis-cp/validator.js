@@ -2,6 +2,31 @@
 // public/static/js/pages/analisis-cp/validator.js
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js';
 
+export function replacePesertaDidik(data) {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'string') {
+    return data
+      .replace(/lembar\s+kerja\s+peserta\s+didik\s*\((?:lkpd|lkm)\)/gi, 'Lembar Kerja Murid (LKM)')
+      .replace(/lembar\s+kerja\s+peserta\s+didik/gi, 'Lembar Kerja Murid')
+      .replace(/peserta\s+didik/gi, (match) => {
+        if (match === 'PESERTA DIDIK') return 'MURID';
+        if (match === 'peserta didik') return 'murid';
+        return 'Murid';
+      });
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => replacePesertaDidik(item));
+  }
+  if (typeof data === 'object') {
+    const res = {};
+    for (const key of Object.keys(data)) {
+      res[key] = replacePesertaDidik(data[key]);
+    }
+    return res;
+  }
+  return data;
+}
+
 /**
  * Validasi dan perbaikan otomatis data Analisis CP sebelum rendering atau penyimpanan
  * @param {object} rawData - Data mentah hasil generate AI atau dari cache/DB
@@ -99,12 +124,12 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
         semObj.babs.push({
           no: ch.no,
           bab: ch.bab || `Bab ${ch.no}`,
-          cp: formMeta.baseCP || 'Peserta didik memahami dan menerapkan kompetensi dasar sesuai kurikulum.',
+          cp: formMeta.baseCP || 'Murid memahami dan menerapkan kompetensi dasar sesuai kurikulum.',
           materi_list: materiList,
           items: materiList.map((m) => ({
             kode_tp: '',
             materi_pokok: m,
-            tp: `Peserta didik mampu memahami dan menguasai materi ${m}.`,
+            tp: `Murid mampu memahami dan menguasai materi ${m}.`,
             atp: `Mempelajari konsep dasar ${m}, mendiskusikannya secara kelompok, dan mengerjakan asesmen formatif.`,
             alokasi_waktu: '4 JP'
           }))
@@ -126,12 +151,20 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     sem.babs.sort((a, b) => (a.no || 0) - (b.no || 0));
 
     for (const bab of sem.babs) {
+      // Pastikan prefix elemen terpasang pada bab.cp jika bab memiliki penanda elemen [Elemen]
+      if (bab.bab && (!bab.cp || !bab.cp.includes('['))) {
+        const matchEl = bab.bab.match(/\[(.*?)\]/);
+        if (matchEl) {
+          bab.cp = bab.cp ? `[${matchEl[1]}] ${bab.cp}` : `[${matchEl[1]}] Capaian Pembelajaran standar kurikulum resmi.`;
+        }
+      }
+
       if (!Array.isArray(bab.items) || bab.items.length === 0) {
         bab.items = [
           {
             kode_tp: `${kelasNum}.${globalTpCounter++}`,
             materi_pokok: bab.bab || 'Materi Pokok',
-            tp: `Peserta didik mampu memahami konsep ${bab.bab || 'materi ini'}.`,
+            tp: `Murid mampu memahami konsep ${bab.bab || 'materi ini'}.`,
             atp: `Eksplorasi konsep, diskusi terbimbing, dan penerapan kompetensi.`,
             alokasi_waktu: '4 JP'
           }
@@ -151,7 +184,7 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
           }
 
           if (!item.materi_pokok) item.materi_pokok = bab.bab || 'Materi Pokok';
-          if (!item.tp) item.tp = `Peserta didik mampu memahami konsep ${item.materi_pokok}.`;
+          if (!item.tp) item.tp = `Murid mampu memahami konsep ${item.materi_pokok}.`;
           if (!item.atp) item.atp = `Aktivitas pembelajaran dan latihan kompetensi terkait ${item.materi_pokok}.`;
         }
       }
@@ -179,5 +212,5 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
   }
 
-  return data;
+  return replacePesertaDidik(data);
 }

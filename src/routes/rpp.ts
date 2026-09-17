@@ -6,6 +6,7 @@ import { generateRppBuffer, type RppInputData, type RppContentData } from '../li
 import { cpData, getOfficialCP, getDynamicCP } from '../lib/cp-data';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
+import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings } from '../types/env';
 
 const rpp = new Hono<{ Bindings: AppBindings }>();
@@ -192,6 +193,9 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
       - aktivitas: Berikan langkah 1, 2, 3 untuk dikerjakan murid.
       - hasil_kerja: Berikan panduan apa yang harus ditulis di lembar jawaban.
       - penilaian: Wajib berikan minimal 5 soal (pilihan ganda atau esai).
+
+      ATURAN TERMINOLOGI:
+      - DILARANG MENGGUNAKAN KATA 'Peserta Didik' / 'peserta didik'. Selalu gunakan kata 'Murid' / 'murid'.
     `;
 }
 
@@ -246,7 +250,7 @@ rpp.post('/generate', async (c) => {
       });
     } catch (_) {}
 
-    return successResponse(c, result);
+    return successResponse(c, replacePesertaDidik(result));
   } catch (e: any) {
     console.error('RPP Gen Error:', e);
     return Errors.internal(c, e.message);
@@ -331,7 +335,7 @@ rpp.post('/generate-stream', async (c) => {
             step: 3,
             totalSteps: 4,
             title: 'Asesmen & Instrumen LKPD',
-            message: 'Menyusun rubrik asesmen formatif-sumatif dan lembar kerja peserta didik...',
+            message: 'Menyusun rubrik asesmen formatif-sumatif dan lembar kerja murid...',
             percent: 80
           })
         });
@@ -370,7 +374,7 @@ rpp.post('/generate-stream', async (c) => {
           event: 'done',
           data: JSON.stringify({
             success: true,
-            data: result
+            data: replacePesertaDidik(result)
           })
         });
       } catch (err: any) {
@@ -427,8 +431,8 @@ rpp.post('/docx', async (c) => {
     });
 
     const buffer = await generateRppBuffer(
-      inputData as RppInputData,
-      content as RppContentData,
+      replacePesertaDidik(inputData) as RppInputData,
+      replacePesertaDidik(content) as RppContentData,
       {
         nama_ketua: kkg.nama_ketua,
         nip_ketua: kkg.nip_ketua,
@@ -489,9 +493,18 @@ OUTPUT YANG DIBUTUHKAN (Format JSON):
     ]
   },
   "sikap": {
-     "deskripsi": "Rubrik observasi sikap profil pelajar pancasila...",
-     "indikator": ["Beriman dan Bertakwa", "Mandiri", "Bernalar Kritis", "Kreatif", "Gotong Royong", "Kebhinekaan Global"],
-     "catatan": "Panduan pengisian jurnal sikap..."
+     "deskripsi": "Rubrik observasi sikap 8 Dimensi Profil Lulusan berdasarkan SK Kepala BSKAP No. 058/H/KR/2025...",
+     "indikator": [
+       "Keimanan dan Ketakwaan terhadap Tuhan YME",
+       "Kewargaan",
+       "Penalaran Kritis",
+       "Kreativitas",
+       "Kolaborasi",
+       "Kemandirian",
+       "Kesehatan",
+       "Komunikasi"
+     ],
+     "catatan": "Panduan pengisian jurnal sikap berdasarkan 3 tahapan perkembangan: Berkembang (menuju standar), Cakap (standar kelulusan/SKL), dan Mahir (melampaui standar)."
   }
 }
 

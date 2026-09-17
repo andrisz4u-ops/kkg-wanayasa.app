@@ -849,7 +849,7 @@ let _currentActiveTab = 'soal';
 function ensureClientKisiMetadata(data, formData = {}) {
   if (!data) return;
   const fallbackCP = (formData.capaianPembelajaran && String(formData.capaianPembelajaran).trim()) || 
-                     `Peserta didik dapat memahami dan menerapkan konsep dasar ${formData.topik || 'materi pembelajaran'}.`;
+                     `Murid dapat memahami dan menerapkan konsep dasar ${formData.topik || 'materi pembelajaran'}.`;
   const fallbackMateri = (formData.topik && String(formData.topik).trim()) || 'Materi Pokok';
 
   const normalizeLevel = (raw) => {
@@ -865,7 +865,7 @@ function ensureClientKisiMetadata(data, formData = {}) {
       q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
       q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
       if (!q.indikator || !String(q.indikator).trim()) {
-        q.indikator = `Disajikan pertanyaan mengenai ${q.materi}, peserta didik dapat menentukan jawaban yang tepat.`;
+        q.indikator = `Disajikan pertanyaan mengenai ${q.materi}, murid dapat menentukan jawaban yang tepat.`;
       }
       q.level = normalizeLevel(q.level);
       q.bentuk = q.bentuk || 'Pilihan Ganda';
@@ -880,7 +880,7 @@ function ensureClientKisiMetadata(data, formData = {}) {
       q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
       q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
       if (!q.indikator || !String(q.indikator).trim()) {
-        q.indikator = `Disajikan stimulus mengenai ${q.materi}, peserta didik dapat melengkapi pernyataan dengan tepat.`;
+        q.indikator = `Disajikan stimulus mengenai ${q.materi}, murid dapat melengkapi pernyataan dengan tepat.`;
       }
       q.level = normalizeLevel(q.level);
       q.bentuk = q.bentuk || isianBentuk;
@@ -894,7 +894,7 @@ function ensureClientKisiMetadata(data, formData = {}) {
       q.cp = (q.cp && String(q.cp).trim()) || fallbackCP;
       q.materi = (q.materi && String(q.materi).trim()) || fallbackMateri;
       if (!q.indikator || !String(q.indikator).trim()) {
-        q.indikator = `Disajikan masalah/wacana mengenai ${q.materi}, peserta didik dapat menganalisis dan menyajikan pemecahan yang logis.`;
+        q.indikator = `Disajikan masalah/wacana mengenai ${q.materi}, murid dapat menganalisis dan menyajikan pemecahan yang logis.`;
       }
       q.level = normalizeLevel(q.level || 'L3');
       q.bentuk = q.bentuk || 'Uraian';
@@ -1234,9 +1234,8 @@ export function initKisi() {
         }
 
         const topikEl = form.querySelector('[name="topik"]');
-        if (topikEl) topikEl.focus();
-
-        showToast(`✨ Materi dari RPP (${bridge.topik}) berhasil disinkronkan ke Asesmen & Soal!`, 'success');
+        const sourceLabel = bridge.source === 'analisis-cp' ? 'Analisis CP' : 'RPP';
+        showToast(`✨ Materi dari ${sourceLabel} (${bridge.topik}) berhasil disinkronkan ke Asesmen & Soal!`, 'success');
       }
     }
   } catch (_) {}

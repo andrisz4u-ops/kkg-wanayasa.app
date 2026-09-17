@@ -26,7 +26,7 @@ describe('RPP DOCX Generation', () => {
             kebutuhan: 'Bimbingan bertahap pada perkalian bersusun.'
         },
         desain: {
-            capaian: 'Peserta didik dapat melakukan operasi perkalian bilangan cacah.',
+            capaian: 'Murid dapat melakukan operasi perkalian bilangan cacah.',
             metode_pembelajaran: {
                 strategi: 'Problem Based Learning',
                 langkah_langkah: ['Orientasi masalah', 'Organisasi belajar', 'Penyelidikan']

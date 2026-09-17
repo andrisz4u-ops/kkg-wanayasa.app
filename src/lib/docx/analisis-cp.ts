@@ -132,7 +132,7 @@ export async function generateAnalisisCpDocxBuffer(data: AnalisisCpDocxInput): P
   const headerCells = [
     { text: 'No', width: 4 },
     { text: 'BAB', width: 15 },
-    { text: 'CP (Capaian Pembelajaran)', width: 22 },
+    { text: 'Elemen / Capaian Pembelajaran', width: 22 },
     { text: 'Materi Pokok', width: 17 },
     { text: 'Kode TP', width: 7 },
     { text: 'TP (Tujuan Pembelajaran)', width: 17 },
@@ -178,7 +178,7 @@ export async function generateAnalisisCpDocxBuffer(data: AnalisisCpDocxInput): P
         kode_tp: `${metadata.kelas || '5'}.${bab.no}`,
         materi_pokok: (bab.materi_list || []).join('\n') || bab.bab,
         tp: 'Menyelesaikan pembelajaran pada topik ini.',
-        atp: 'Peserta didik mempelajari materi ini melalui kegiatan terpadu.'
+        atp: 'Murid mempelajari materi ini melalui kegiatan terpadu.'
       }];
 
       // Format Materi Pokok as numbered list if multiple
@@ -220,15 +220,58 @@ export async function generateAnalisisCpDocxBuffer(data: AnalisisCpDocxInput): P
             ]
           }));
 
-          // CP
+          // Elemen / Capaian Pembelajaran
+          const cpRaw = sanitizeText(bab.cp || '');
+          const bracketMatch = cpRaw.match(/^\[([^\]]+)\]\s*(.*)$/s);
+          const colonMatch = !bracketMatch ? cpRaw.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*(.*)$/is) : null;
+
+          let cpParagraphs: Paragraph[] = [];
+          if (bracketMatch) {
+            const elName = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+            const rest = bracketMatch[2].trim();
+            cpParagraphs.push(new Paragraph({
+              spacing: { before: 40, after: 30 },
+              children: [
+                new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
+              ]
+            }));
+            rest.split('\n').forEach(pText => {
+              if (pText.trim()) {
+                cpParagraphs.push(new Paragraph({
+                  spacing: { before: 20, after: 30 },
+                  children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
+                }));
+              }
+            });
+          } else if (colonMatch && !colonMatch[1].includes('http')) {
+            const elName = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+            const rest = colonMatch[2].trim();
+            cpParagraphs.push(new Paragraph({
+              spacing: { before: 40, after: 30 },
+              children: [
+                new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
+              ]
+            }));
+            rest.split('\n').forEach(pText => {
+              if (pText.trim()) {
+                cpParagraphs.push(new Paragraph({
+                  spacing: { before: 20, after: 30 },
+                  children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
+                }));
+              }
+            });
+          } else {
+            cpParagraphs = cpRaw.split('\n').map(pText => new Paragraph({
+              spacing: { before: 40, after: 40 },
+              children: [new TextRun({ text: pText, size: 18, font: 'Times New Roman' })]
+            }));
+          }
+
           cells.push(new TableCell({
             width: { size: 22, type: WidthType.PERCENTAGE },
             rowSpan: rowSpanCount,
             verticalAlign: VerticalAlign.TOP,
-            children: sanitizeText(bab.cp).split('\n').map(pText => new Paragraph({
-              spacing: { before: 40, after: 40 },
-              children: [new TextRun({ text: pText, size: 18, font: 'Times New Roman' })]
-            }))
+            children: cpParagraphs
           }));
         }
 

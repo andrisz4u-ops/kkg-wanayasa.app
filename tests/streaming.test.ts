@@ -75,7 +75,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 mataPelajaran: 'IPAS',
                 topik: 'Organ Pencernaan Manusia',
                 jenjangKelas: 'Kelas 5',
-                resolvedCP: 'Peserta didik menganalisis sistem organ pencernaan manusia.',
+                resolvedCP: 'Murid menganalisis sistem organ pencernaan manusia.',
                 isGambarEnabled: true
             });
             expect(promptHigh).toContain('KUNCI TEPAT 4 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 35%');
@@ -87,7 +87,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 mataPelajaran: 'Pendidikan Pancasila',
                 topik: 'Gotong Royong di Lingkungan Sekitar',
                 jenjangKelas: 'Kelas 5',
-                resolvedCP: 'Peserta didik memahami pentingnya gotong royong dalam keberagaman.',
+                resolvedCP: 'Murid memahami pentingnya gotong royong dalam keberagaman.',
                 isGambarEnabled: true
             });
             expect(promptMedium).toContain('KUNCI TEPAT 3 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 25%');
@@ -101,14 +101,14 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 mataPelajaran: 'Pendidikan Pancasila',
                 topik: 'Gotong Royong di Lingkungan Sekitar',
                 jenjangKelas: 'Kelas 5',
-                resolvedCP: 'Peserta didik memahami pentingnya gotong royong dalam keberagaman.',
+                resolvedCP: 'Murid memahami pentingnya gotong royong dalam keberagaman.',
                 hotsRatio: '20:30:50',
                 isGambarEnabled: true
             });
 
             expect(prompt).toContain('Pendidikan Pancasila');
             expect(prompt).toContain('Gotong Royong di Lingkungan Sekitar');
-            expect(prompt).toContain('Peserta didik memahami pentingnya gotong royong dalam keberagaman.');
+            expect(prompt).toContain('Murid memahami pentingnya gotong royong dalam keberagaman.');
             expect(prompt).toContain('"pg": [');
             expect(prompt).toContain('"indikator":');
             expect(prompt).toContain('"level":');
@@ -125,7 +125,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 mataPelajaran: 'Matematika',
                 topik: 'Pecahan Senilai',
                 jenjangKelas: 'Kelas 4',
-                resolvedCP: 'Peserta didik dapat membandingkan pecahan senilai.',
+                resolvedCP: 'Murid dapat membandingkan pecahan senilai.',
                 isianType: 'Standard'
             });
 

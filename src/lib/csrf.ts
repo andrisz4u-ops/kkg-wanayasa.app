@@ -31,6 +31,7 @@ const CSRF_IGNORE_PATHS = [
     '/api/tts/generate', // AI generation (session-authenticated)
     '/api/tts/custom', // Crossword assembler (session-authenticated)
     '/api/banksoal*', // Bank Soal API (session-authenticated)
+    '/api/program-sekolah*', // Program Sekolah AI & DOCX (session-authenticated)
 ];
 
 /**

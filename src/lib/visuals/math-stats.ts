@@ -2956,7 +2956,7 @@ export function renderDiagramBatangDaunSvg(params: { label?: string }): string {
   <rect x="50" y="214" width="280" height="22" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
   <text x="190" y="229" text-anchor="middle" font-size="9" font-weight="600" fill="#1e40af">Kunci Pembacaan: 4 | 5 artinya nilai 45</text>
 
-  <text x="190" y="247" text-anchor="middle" font-size="9.5" font-weight="600" fill="#475569">Jika nilai peserta didik tersebut adalah 78, angka pada [${escapeXml(labelChar)}] adalah ...</text>
+  <text x="190" y="247" text-anchor="middle" font-size="9.5" font-weight="600" fill="#475569">Jika nilai murid tersebut adalah 78, angka pada [${escapeXml(labelChar)}] adalah ...</text>
 </svg>`;
 }
 

@@ -6,6 +6,7 @@ import { api } from '../../api.js';
 import { state } from '../../state.js';
 import { openArchiveDrawer } from '../../storage-archive.js';
 import { syncCanvasToAnalysisData } from './renderers.js';
+import { replacePesertaDidik } from './validator.js';
 
 /**
  * Unduh Dokumen Word (.docx) sesuai tab aktif
@@ -22,6 +23,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
 
   // Sinkronkan editan teks pengguna di kanvas terlebih dahulu
   syncCanvasToAnalysisData(currentAnalysisData);
+  replacePesertaDidik(currentAnalysisData);
 
   const docTypeName = type === 'prota' ? 'Program Tahunan (PROTA)'
                     : type === 'promes' ? 'Program Semester (PROMES)'
@@ -128,6 +130,7 @@ export async function saveToDatabase(currentAnalysisData, currentInputData) {
   }
 
   syncCanvasToAnalysisData(currentAnalysisData);
+  replacePesertaDidik(currentAnalysisData);
 
   showToast('Menyimpan ke CP Kolaboratif...', 'info');
 

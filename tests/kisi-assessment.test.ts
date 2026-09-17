@@ -6,9 +6,9 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
         it('should preserve existing complete metadata for an item', () => {
             const rawItem = {
                 no: 1,
-                cp: 'Peserta didik memahami siklus air dan dampaknya bagi kehidupan.',
+                cp: 'Murid memahami siklus air dan dampaknya bagi kehidupan.',
                 materi: 'Siklus Air',
-                indikator: 'Disajikan bagan siklus air, peserta didik dapat menentukan tahapan evaporasi dengan benar.',
+                indikator: 'Disajikan bagan siklus air, murid dapat menentukan tahapan evaporasi dengan benar.',
                 level: 'L1',
                 bentuk: 'Pilihan Ganda',
                 soal: 'Tahapan perubahan air menjadi uap air disebut...',
@@ -18,7 +18,7 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             const result = normalizeItemKisiMetadata(rawItem, 'Pilihan Ganda', 1, 'Fallback CP', 'Sains');
 
             expect(result.no).toBe(1);
-            expect(result.cp).toBe('Peserta didik memahami siklus air dan dampaknya bagi kehidupan.');
+            expect(result.cp).toBe('Murid memahami siklus air dan dampaknya bagi kehidupan.');
             expect(result.materi).toBe('Siklus Air');
             expect(result.indikator).toContain('evaporasi');
             expect(result.level).toBe('L1');
@@ -72,14 +72,14 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 rawItem,
                 'Uraian',
                 15,
-                'Peserta didik mampu menganalisis interaksi lingkungan hidup.',
+                'Murid mampu menganalisis interaksi lingkungan hidup.',
                 'Pelestarian Lingkungan'
             );
 
             expect(result.no).toBe(15);
-            expect(result.cp).toBe('Peserta didik mampu menganalisis interaksi lingkungan hidup.');
+            expect(result.cp).toBe('Murid mampu menganalisis interaksi lingkungan hidup.');
             expect(result.materi).toBe('Pelestarian Lingkungan');
-            expect(result.indikator).toBe('Disajikan pertanyaan mengenai Pelestarian Lingkungan, peserta didik dapat menentukan jawaban yang tepat.');
+            expect(result.indikator).toBe('Disajikan pertanyaan mengenai Pelestarian Lingkungan, murid dapat menentukan jawaban yang tepat.');
             expect(result.level).toBe('L1');
             expect(result.bentuk).toBe('Uraian');
         });

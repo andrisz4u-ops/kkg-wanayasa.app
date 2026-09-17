@@ -66,6 +66,32 @@ export function distributeChaptersToSemesters(
   }));
 }
 
+// Helper untuk mengganti seluruh variasi kata 'Peserta didik' menjadi 'Murid'
+export function replacePesertaDidik<T>(data: T): T {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'string') {
+    return data
+      .replace(/lembar\s+kerja\s+peserta\s+didik\s*\((?:lkpd|lkm)\)/gi, 'Lembar Kerja Murid (LKM)')
+      .replace(/lembar\s+kerja\s+peserta\s+didik/gi, 'Lembar Kerja Murid')
+      .replace(/peserta\s+didik/gi, (match) => {
+        if (match === 'PESERTA DIDIK') return 'MURID';
+        if (match === 'peserta didik') return 'murid';
+        return 'Murid';
+      }) as unknown as T;
+  }
+  if (Array.isArray(data)) {
+    return data.map(item => replacePesertaDidik(item)) as unknown as T;
+  }
+  if (typeof data === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(data)) {
+      res[key] = replacePesertaDidik((data as any)[key]);
+    }
+    return res as T;
+  }
+  return data;
+}
+
 import { standardCurriculumDatabase, type CurriculumChapter, type CurriculumPreset } from '../lib/curriculum-database';
 export { standardCurriculumDatabase, type CurriculumChapter, type CurriculumPreset };
 
@@ -257,9 +283,10 @@ ${JSON.stringify(filteredChapters, null, 2)}
 
 PETUNJUK ANALISIS KEDINASAN (SANGAT KETAT):
 1. [KOLOM BAB]: Tuliskan nama bab secara lengkap sesuai data buku di atas.
-2. [KOLOM CP]: Pilih dan petakan kalimat Capaian Pembelajaran RESMI pemerintah di atas yang paling selaras menaungi materi bab ini. Awali dengan nama elemen resminya, contoh:
-   \"Pemahaman IPAS: Menjelaskan fenomena gelombang bunyi dan cahaya dalam kehidupan sehari-hari.\"
-   \"Pemahaman IPAS: Menganalisis hubungan antar komponen biotik dan abiotik, serta pengaruhnya terhadap ekosistem.\"
+2. [KOLOM ELEMEN / CAPAIAN PEMBELAJARAN]: Pilih dan petakan kalimat Capaian Pembelajaran RESMI pemerintah di atas yang paling selaras menaungi materi bab ini. Wajib awali dengan nama Elemen resminya secara jelas dalam tanda kurung siku [Nama Elemen], contoh:
+   "[Al-Qur’an Hadis] Murid mampu membaca, menghafal, menulis, dan memahami surah-surah pendek atau ayat Al-Qur'an serta hadis..."
+   "[Pemahaman IPAS] Menjelaskan fenomena gelombang bunyi dan cahaya dalam kehidupan sehari-hari."
+   "[Akidah] Mengenal rukun iman dan mengimani sifat-sifat Allah SWT..."
    DILARANG MENGARANG teks CP baru di luar substansi resmi pemerintah.
 3. [KOLOM MATERI POKOK]: Rincikan 2 sampai 4 submateri/topik pokok penting dalam bab tersebut dengan nomor urut (contoh: \"1. Sifat Cahaya\", \"2. Indra Penglihatan (Mata)\", \"3. Sifat Bunyi\", \"4. Indra Pendengaran (Telinga)\").
 4. [KOLOM KODE TP]: Wajib menggunakan format kelas.nomor_urut.
@@ -269,12 +296,14 @@ PETUNJUK ANALISIS KEDINASAN (SANGAT KETAT):
    Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson: Mendesain, Menjelaskan, Mengidentifikasi, Menganalisis, Menyajikan, dll).
    Contoh: \"Mendesain percobaan sederhana untuk membuktikan sifat cahaya dan menjelaskan hasilnya.\"
 6. [KOLOM ATP (ALUR TUJUAN PEMBELAJARAN)]:
-   Rumuskan langkah kegiatan/alur konkret yang dijalani peserta didik di kelas untuk mencapai TP tersebut.
-   Contoh: \"Peserta didik melakukan percobaan menggunakan cermin, gelas berisi air, dan karton lubang untuk membuktikan sifat cahaya (merambat lurus, menembus benda bening, dipantulkan, dibiaskan).\"
+   Rumuskan langkah kegiatan/alur konkret yang dijalani murid di kelas untuk mencapai TP tersebut.
+   Contoh: \"Murid melakukan percobaan menggunakan cermin, gelas berisi air, dan karton lubang untuk membuktikan sifat cahaya (merambat lurus, menembus benda bening, dipantulkan, dibiaskan).\"
 7. [KOLOM ALOKASI WAKTU - PERMENDIKDASMEN 13/2025]:
    Cantumkan alokasi waktu Jam Pelajaran (JP) yang realistis per item/materi (contoh: \"2 JP\", \"3 JP\", \"4 JP\", atau \"5 JP\"). Total penjumlahan seluruh alokasi_waktu materi pada semester harus proporsional mendekati atau pas dengan kuota resmi intrakurikuler (${quota.intrakurikulerPerSemester} JP per semester).
 8. [PENGELOMPOKKAN SEMESTER]:
    Kelompokkan bab-bab ke dalam \"SEMESTER 1\" dan \"SEMESTER 2\" sesuai nilai 'semester' pada masing-masing bab.
+9. [STANDARDISASI KATA MURID]:
+   DILARANG KERAS menggunakan istilah 'Peserta Didik' atau 'peserta didik'. Selalu gunakan kata 'Murid' atau 'murid' dalam seluruh perumusan CP, TP, dan ATP!
 
 FORMAT OUTPUT:
 Keluarkan HANYA JSON valid dengan struktur berikut:
@@ -551,12 +580,12 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
         semObj.babs.push({
           no: ch.no,
           bab: ch.bab || `Bab ${ch.no}`,
-          cp: meta.baseCP || 'Peserta didik memahami dan menerapkan kompetensi dasar sesuai kurikulum.',
+          cp: meta.baseCP || 'Murid memahami dan menerapkan kompetensi dasar sesuai kurikulum.',
           materi_list: materiList,
           items: materiList.map((m: string) => ({
             kode_tp: '',
             materi_pokok: m,
-            tp: `Peserta didik mampu memahami dan menguasai materi ${m}.`,
+            tp: `Murid mampu memahami dan menguasai materi ${m}.`,
             atp: `Mempelajari konsep dasar ${m}, mendiskusikannya secara kelompok, dan mengerjakan asesmen formatif.`,
             alokasi_waktu: '4 JP'
           }))
@@ -583,7 +612,7 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
           {
             kode_tp: `${kelasNum}.${globalTpCounter++}`,
             materi_pokok: bab.bab || 'Materi Pokok',
-            tp: `Peserta didik mampu memahami dan menguasai konsep ${bab.bab || 'materi ini'}.`,
+            tp: `Murid mampu memahami dan menguasai konsep ${bab.bab || 'materi ini'}.`,
             atp: `Eksplorasi konsep, diskusi terbimbing, dan penerapan kompetensi.`,
             alokasi_waktu: '4 JP'
           }
@@ -603,7 +632,7 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
           }
 
           if (!item.materi_pokok) item.materi_pokok = bab.bab || 'Materi Pokok';
-          if (!item.tp) item.tp = `Peserta didik mampu memahami konsep ${item.materi_pokok}.`;
+          if (!item.tp) item.tp = `Murid mampu memahami konsep ${item.materi_pokok}.`;
           if (!item.atp) item.atp = `Aktivitas pembelajaran dan latihan kompetensi terkait ${item.materi_pokok}.`;
         }
       }
@@ -631,7 +660,7 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
     balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
   }
 
-  return result;
+  return replacePesertaDidik(result);
 }
 
 // 2. Generate Analisis CP (Non-Streaming)
@@ -896,7 +925,7 @@ analisisCp.post('/docx', async (c) => {
       semesters
     };
 
-    const buffer = await generateAnalisisCpDocxBuffer(docxInput);
+    const buffer = await generateAnalisisCpDocxBuffer(replacePesertaDidik(docxInput));
 
     const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
@@ -933,7 +962,7 @@ analisisCp.post('/docx/prota', async (c) => {
       semesters
     };
 
-    const buffer = await generateProtaDocxBuffer(docxInput);
+    const buffer = await generateProtaDocxBuffer(replacePesertaDidik(docxInput));
 
     const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
@@ -971,7 +1000,7 @@ analisisCp.post('/docx/promes', async (c) => {
     };
 
     const targetSem = semester ? Number(semester) : undefined;
-    const buffer = await generatePromesDocxBuffer(docxInput, targetSem);
+    const buffer = await generatePromesDocxBuffer(replacePesertaDidik(docxInput), targetSem);
 
     const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
@@ -1010,7 +1039,7 @@ analisisCp.post('/docx/kktp', async (c) => {
     };
 
     const targetSem = semester ? Number(semester) : undefined;
-    const buffer = await generateKktpDocxBuffer(docxInput, targetSem);
+    const buffer = await generateKktpDocxBuffer(replacePesertaDidik(docxInput), targetSem);
 
     const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
@@ -1045,7 +1074,7 @@ analisisCp.post('/docx/rpe', async (c) => {
     };
 
     const targetSem = semester ? Number(semester) : undefined;
-    const buffer = await generateRpeDocxBuffer(docxInput, targetSem);
+    const buffer = await generateRpeDocxBuffer(replacePesertaDidik(docxInput), targetSem);
 
     const mapelSafe = String(metadata?.mata_pelajaran || 'Mapel').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const kelasSafe = String(metadata?.kelas || 'Kelas').replace(/[\\/?%*:|"<>]/g, '').replace(/\s+/g, '_');

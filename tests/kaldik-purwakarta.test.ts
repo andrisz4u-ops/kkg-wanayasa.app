@@ -26,21 +26,21 @@ const sampleInput: AnalisisCpDocxInput = {
         {
           no: 1,
           bab: 'Unit 1: What a Delicious Bakso!',
-          cp: 'Peserta didik memahami dan merespons teks lisan dan visual sederhana tentang makanan dan minuman.',
+          cp: 'Murid memahami dan merespons teks lisan dan visual sederhana tentang makanan dan minuman.',
           materi_list: ['Food and Drinks', 'Taste and Texture'],
           items: [
             {
               kode_tp: '5.1.1',
               materi_pokok: 'Taste of Food',
               tp: 'Mengidentifikasi rasa makanan manis, asin, asam, pahit.',
-              atp: 'Peserta didik mengamati gambar makanan dan menyebutkan rasanya dalam bahasa Inggris.',
+              atp: 'Murid mengamati gambar makanan dan menyebutkan rasanya dalam bahasa Inggris.',
               alokasi_waktu: '2 JP'
             },
             {
               kode_tp: '5.1.2',
               materi_pokok: 'Describing Food',
               tp: 'Mendeskripsikan makanan favorit.',
-              atp: 'Peserta didik membuat kalimat sederhana tentang makanan favorit beserta rasanya.',
+              atp: 'Murid membuat kalimat sederhana tentang makanan favorit beserta rasanya.',
               alokasi_waktu: '2 JP'
             }
           ]
@@ -54,14 +54,14 @@ const sampleInput: AnalisisCpDocxInput = {
         {
           no: 6,
           bab: 'Unit 6: How Much is It?',
-          cp: 'Peserta didik menggunakan bahasa Inggris sederhana untuk berbelanja dan menyebutkan harga.',
+          cp: 'Murid menggunakan bahasa Inggris sederhana untuk berbelanja dan menyebutkan harga.',
           materi_list: ['Numbers 1-100', 'Shopping'],
           items: [
             {
               kode_tp: '5.6.1',
               materi_pokok: 'Price and Numbers',
               tp: 'Menyebutkan harga barang.',
-              atp: 'Peserta didik melakukan role play percakapan jual beli.',
+              atp: 'Murid melakukan role play percakapan jual beli.',
               alokasi_waktu: '2 JP'
             }
           ]

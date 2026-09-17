@@ -78,10 +78,10 @@ kisi.post('/visual-render', async (c) => {
 export const normalizeItemKisiMetadata = (item: any, defaultBentuk: string, defaultNo: number, fallbackCP: string, fallbackMateri: string) => {
     if (!item) return item;
     item.no = item.no || defaultNo;
-    item.cp = (item.cp && String(item.cp).trim()) || (fallbackCP && String(fallbackCP).trim()) || `Peserta didik dapat memahami dan menerapkan konsep dasar ${fallbackMateri || 'materi terkait'}.`;
+    item.cp = (item.cp && String(item.cp).trim()) || (fallbackCP && String(fallbackCP).trim()) || `Murid dapat memahami dan menerapkan konsep dasar ${fallbackMateri || 'materi terkait'}.`;
     item.materi = (item.materi && String(item.materi).trim()) || fallbackMateri || 'Materi Pokok';
     if (!item.indikator || !String(item.indikator).trim()) {
-        item.indikator = `Disajikan pertanyaan mengenai ${item.materi}, peserta didik dapat menentukan jawaban yang tepat.`;
+        item.indikator = `Disajikan pertanyaan mengenai ${item.materi}, murid dapat menentukan jawaban yang tepat.`;
     }
     // Standardisasi Level Kognitif ke L1, L2, L3 (Puspendik / BSKAP)
     const rawLevel = String(item.level || '').toUpperCase();
@@ -901,7 +901,7 @@ export const buildAssessmentPrompt = (params: {
             "no": ${startNo},
             "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
             "materi": "Materi / Sub-topik spesifik butir soal ini",
-            "indikator": "Indikator Soal baku (contoh: Disajikan wacana/stimulus ..., peserta didik dapat ...)",
+            "indikator": "Indikator Soal baku (contoh: Disajikan wacana/stimulus ..., murid dapat ...)",
             "level": "L1/L2/L3 (Pilih salah satu sesuai standar Puspendik)",
             "bentuk": "Pilihan Ganda",
             "soal": "Pertanyaan Pilihan Ganda (sajikan naskah soal bersih tanpa teks kurung siku [] dan JANGAN mencantumkan tag visual_stimulus di sini)",
@@ -921,7 +921,7 @@ export const buildAssessmentPrompt = (params: {
                 "no": ${totalPrevPG + 1},
                 "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
                 "materi": "Materi / Sub-topik spesifik butir soal ini",
-                "indikator": "Indikator Soal baku (Disajikan ..., peserta didik dapat ...)",
+                "indikator": "Indikator Soal baku (Disajikan ..., murid dapat ...)",
                 "level": "L1/L2/L3",
                 "bentuk": "${isianBentukLabel}",
                 "soal": "...",
@@ -935,7 +935,7 @@ export const buildAssessmentPrompt = (params: {
                 "no": ${uraianStartNo},
                 "cp": "Rumusan Capaian Pembelajaran terkait butir soal ini",
                 "materi": "Materi / Sub-topik spesifik butir soal ini",
-                "indikator": "Indikator Soal baku (Disajikan stimulus kasus/data ..., peserta didik dapat menganalisis/merancang ...)",
+                "indikator": "Indikator Soal baku (Disajikan stimulus kasus/data ..., murid dapat menganalisis/merancang ...)",
                 "level": "L3",
                 "bentuk": "Uraian",
                 "soal": "Soal uraian L3 (Penalaran): sertakan stimulus/data/kasus nyata, tuntut penalaran analitis atau evaluasi",
@@ -1037,7 +1037,8 @@ export const buildAssessmentPrompt = (params: {
         3. PROPORSI TARGET LEVEL: ${hotsRatio || '30:40:30'} (L1 : L2 : L3). Terapkan secara presisi!
         4. TUGAS: ${taskDesc}
         5. ATURAN INDIKATOR SOAL: Setiap butir soal WAJIB memiliki indikator soal baku:
-           "Disajikan [stimulus/konteks], peserta didik dapat [kata kerja operasional] [materi]".
+           "Disajikan [stimulus/konteks], murid dapat [kata kerja operasional] [materi]".
+           DILARANG MENGGUNAKAN KATA 'Peserta Didik' / 'peserta didik'. Selalu gunakan kata 'Murid' / 'murid'.
         6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
         7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
         8. ATURAN KONSISTENSI FORMAT TABEL (SANGAT PENTING):

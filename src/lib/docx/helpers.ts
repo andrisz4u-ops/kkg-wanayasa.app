@@ -34,12 +34,24 @@ import { SuratData, ProkerData, LaporanData, KKGSettings, Kegiatan, RppInputData
 const DEFAULT_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Logo_Kabupaten_Purwakarta.png';
 
 
+export function replacePesertaDidik(text: any): string {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/lembar\s+kerja\s+peserta\s+didik\s*\((?:lkpd|lkm)\)/gi, 'Lembar Kerja Murid (LKM)')
+        .replace(/lembar\s+kerja\s+peserta\s+didik/gi, 'Lembar Kerja Murid')
+        .replace(/peserta\s+didik/gi, (match) => {
+            if (match === 'PESERTA DIDIK') return 'MURID';
+            if (match === 'peserta didik') return 'murid';
+            return 'Murid';
+        });
+}
+
 export function sanitizeText(text: any): string {
     if (text === null || text === undefined) return '';
-    const str = String(text);
+    const replaced = replacePesertaDidik(text);
     // Remove control characters that are invalid in XML and can cause DOCX corruption
     // This allows: tab (\t), line feed (\n), carriage return (\r)
-    return str.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u10000-\u10FFFF]/g, '');
+    return replaced.replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u10000-\u10FFFF]/g, '');
 }
 
 export function cleanMarkdownSymbols(text: string): string {

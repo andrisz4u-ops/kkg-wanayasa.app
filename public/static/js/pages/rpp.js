@@ -184,9 +184,9 @@ export async function renderRpp() {
           </div>
         </form>
 
-        <!-- Dimensi Profil Pelajar Pancasila -->
+        <!-- 8 Dimensi Profil Lulusan (SK BSKAP 058/H/KR/2025) -->
         <div class="rpp-profil-bar">
-          <span class="rpp-profil-label">DIMENSI PROFIL:</span>
+          <span class="rpp-profil-label">8 DIMENSI PROFIL LULUSAN:</span>
           <div class="rpp-profil-tags" id="profil-tags">
             ${['Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas', 'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi']
       .map(d => `<button type="button" class="rpp-tag" data-dim="${d}">${d}</button>`).join('')}
@@ -1098,7 +1098,7 @@ function renderResult(data, formData) {
     if (p.lkpd) {
       h += `<br clear="all" style="mso-special-character:line-break; page-break-before:always" />`;
       h += `<div style="margin-top:10px;">`;
-      h += `<h4 style="text-decoration:underline; text-align:center; text-transform:uppercase; margin-bottom:20px;">LEMBAR KERJA PESERTA DIDIK (LKPD) - PERTEMUAN ${p.nomor}</h4>`;
+      h += `<h4 style="text-decoration:underline; text-align:center; text-transform:uppercase; margin-bottom:20px;">LEMBAR KERJA MURID (LKM) - PERTEMUAN ${p.nomor}</h4>`;
       h += `<table class="main-table" style="margin-bottom:15px;">
               <tr>
                 <td style="width:20%; font-weight:bold;">Nama Murid/Kelompok</td>
@@ -1243,7 +1243,7 @@ function renderLampiran(attachments) {
   // 3. Jurnal Sikap
   if (attachments.sikap) {
     h += `<div style="margin-bottom:20px;">
-      <h4 style="background:#f1f5f9; padding:8px; border-left:4px solid #f59e0b; margin-bottom:12px; font-weight:bold;">3. JURNAL PENILAIAN SIKAP (Profil Pelajar Pancasila)</h4>
+      <h4 style="background:#f1f5f9; padding:8px; border-left:4px solid #f59e0b; margin-bottom:12px; font-weight:bold;">3. JURNAL PENILAIAN SIKAP (Profil Lulusan 8 Dimensi - SK BSKAP No. 058/H/KR/2025)</h4>
       <p style="margin-bottom:8px; font-style:italic;">${attachments.sikap.deskripsi || ''}</p>
       <p style="margin-bottom:12px;"><strong>Catatan Guru:</strong> ${attachments.sikap.catatan || '-'}</p>
       <table class="main-table">

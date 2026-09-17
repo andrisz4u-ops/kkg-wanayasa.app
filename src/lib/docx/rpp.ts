@@ -701,7 +701,7 @@ export async function generateRppDocx(
             skenarioSection.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 20 },
-                children: [new TextRun({ text: 'LEMBAR KERJA PESERTA DIDIK (LKPD)', font: FONT_FAMILY, size: FONT_SIZE_HEADER, bold: true, underline: {} })],
+                children: [new TextRun({ text: 'LEMBAR KERJA MURID (LKM)', font: FONT_FAMILY, size: FONT_SIZE_HEADER, bold: true, underline: {} })],
             }));
             skenarioSection.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -895,7 +895,7 @@ export async function generateRppDocx(
             lampiranSection.push(new Paragraph({ spacing: { after: 120 } }));
         }
         if (lampiran.sikap) {
-            lampiranSection.push(new Paragraph({ spacing: { before: 120, after: 60 }, shading: { fill: 'F1F5F9', type: 'clear', color: 'auto' }, children: [new TextRun({ text: '3. JURNAL PENILAIAN SIKAP (Profil Pelajar Pancasila)', font: FONT_FAMILY, size: FONT_SIZE_SMALL, bold: true })] }));
+            lampiranSection.push(new Paragraph({ spacing: { before: 120, after: 60 }, shading: { fill: 'F1F5F9', type: 'clear', color: 'auto' }, children: [new TextRun({ text: '3. JURNAL PENILAIAN SIKAP (Profil Lulusan 8 Dimensi - SK BSKAP No. 058/H/KR/2025)', font: FONT_FAMILY, size: FONT_SIZE_SMALL, bold: true })] }));
             if (lampiran.sikap.deskripsi) lampiranSection.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: String(lampiran.sikap.deskripsi), font: FONT_FAMILY, size: FONT_SIZE_SMALL, italics: true })] }));
             if (lampiran.sikap.catatan) lampiranSection.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'Catatan Guru: ', font: FONT_FAMILY, size: FONT_SIZE_SMALL, bold: true }), new TextRun({ text: String(lampiran.sikap.catatan), font: FONT_FAMILY, size: FONT_SIZE_SMALL })] }));
             lampiranSection.push(new Table({

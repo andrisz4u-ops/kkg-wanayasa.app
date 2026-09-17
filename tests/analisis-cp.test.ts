@@ -6,6 +6,7 @@ import {
   getStandardCurriculumChapters,
   validateAndRepairAnalysisResult,
   ensureAnalisisCpTables,
+  replacePesertaDidik,
   default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
@@ -334,13 +335,13 @@ describe('Analisis CP - DOCX Document Generation', () => {
                   kode_tp: '5.1',
                   materi_pokok: '1. Sifat Cahaya',
                   tp: 'Mendesain percobaan sederhana untuk membuktikan sifat cahaya dan menjelaskan hasilnya.',
-                  atp: 'Peserta didik melakukan percobaan menggunakan cermin, gelas air, dan karton lubang.'
+                  atp: 'Murid melakukan percobaan menggunakan cermin, gelas air, dan karton lubang.'
                 },
                 {
                   kode_tp: '5.2',
                   materi_pokok: '2. Indra Penglihatan (Mata)',
                   tp: 'Mengetahui bagian-bagian mata dan menjelaskan cara kerjanya.',
-                  atp: 'Peserta didik mengamati model/gambar mata dan mengurutkan proses masuknya cahaya.'
+                  atp: 'Murid mengamati model/gambar mata dan mengurutkan proses masuknya cahaya.'
                 }
               ]
             }
@@ -360,7 +361,7 @@ describe('Analisis CP - DOCX Document Generation', () => {
                   kode_tp: '5.14',
                   materi_pokok: '1. Sistem Pernapasan',
                   tp: 'Mendeskripsikan mekanisme pernapasan pada manusia.',
-                  atp: 'Peserta didik membuat alat peraga paru-paru dari botol bekas dan balon.'
+                  atp: 'Murid membuat alat peraga paru-paru dari botol bekas dan balon.'
                 }
               ]
             }
@@ -507,5 +508,22 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
     const json: any = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.like_count).toBe(5);
+  });
+
+  it('strictly converts any variant of "peserta didik" to "Murid" via replacePesertaDidik', () => {
+    const dirtyData = {
+      tp: 'Peserta didik mampu menghitung volume kubus.',
+      atp: 'peserta didik melakukan penyelidikan konkret.',
+      lkpd: 'LEMBAR KERJA PESERTA DIDIK (LKPD)',
+      nested: [
+        { desc: 'Seluruh PESERTA DIDIK mengikuti KBM.' }
+      ]
+    };
+
+    const cleanData = replacePesertaDidik(dirtyData);
+    expect(cleanData.tp).toBe('Murid mampu menghitung volume kubus.');
+    expect(cleanData.atp).toBe('murid melakukan penyelidikan konkret.');
+    expect(cleanData.lkpd).toBe('Lembar Kerja Murid (LKM)');
+    expect(cleanData.nested[0].desc).toBe('Seluruh MURID mengikuti KBM.');
   });
 });

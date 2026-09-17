@@ -555,7 +555,7 @@ function renderTtsResult(data, formData) {
 
     <!-- TITLE -->
     <div style="text-align:center; margin-bottom: 20px; text-transform:uppercase;">
-      <h3 style="font-size:13pt; font-weight:bold; margin-bottom:2px; text-decoration:underline;">LEMBAR KERJA PESERTA DIDIK (LKPD)</h3>
+      <h3 style="font-size:13pt; font-weight:bold; margin-bottom:2px; text-decoration:underline;">LEMBAR KERJA MURID (LKM)</h3>
       <h4 style="font-size:11pt; font-weight:bold; margin:0;">TEKA-TEKI SILANG: ${escapeHtml(formData.topik || data.topik || 'PEMBELAJARAN')}</h4>
     </div>
 
@@ -571,7 +571,7 @@ function renderTtsResult(data, formData) {
         </td>
         <td style="width:50%; vertical-align:top;">
           <table style="width:100%; border-collapse:collapse;">
-            <tr><td style="width:140px; font-weight:bold;">Nama Peserta Didik</td><td>: ............................................</td></tr>
+            <tr><td style="width:140px; font-weight:bold;">Nama Murid</td><td>: ............................................</td></tr>
             <tr><td style="font-weight:bold;">No. Absen / Kelompok</td><td>: ............................................</td></tr>
             <tr><td style="font-weight:bold;">Hari / Tanggal</td><td>: ............................................</td></tr>
           </table>

@@ -85,6 +85,9 @@ export async function renderAnalisisCp() {
             </div>
           </div>
           <div class="flex items-center gap-2.5">
+            <button type="button" id="btn-restore-draft" class="hidden px-3.5 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer" title="Pulihkan draf analisis terakhir">
+              <i class="fas fa-clock-rotate-left text-amber-400"></i> <span class="hidden sm:inline">Pulihkan Draf</span>
+            </button>
             <button type="button" id="btn-cp-kolaboratif" class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white border border-purple-400/30 text-xs font-black tracking-wide transition-all flex items-center gap-2 shadow-lg shadow-purple-600/25 cursor-pointer">
               <i class="fas fa-users text-amber-300"></i>
               <span>CP Kolaboratif</span>
@@ -92,6 +95,30 @@ export async function renderAnalisisCp() {
             </button>
             <button type="button" id="btn-analisis-archive" class="px-4 py-2.5 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
               <i class="fas fa-folder-open text-amber-400"></i> <span class="hidden sm:inline">Riwayat Saya</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Banner Pemulihan Draf Otomatis -->
+        <div id="analisis-draft-banner" class="hidden mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-amber-950/40 border border-amber-500/30 text-amber-200 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 text-base shrink-0 shadow-inner">
+              <i class="fas fa-clock-rotate-left"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="text-xs font-black text-amber-300 uppercase tracking-wider">Draf Terakhir Ditemukan</h4>
+                <span class="px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 text-[10px] font-bold">Lokal</span>
+              </div>
+              <p id="analisis-draft-info" class="text-[11.5px] text-slate-300 mt-0.5">Tersedia dokumen analisis yang belum Anda simpan ke server.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button type="button" id="btn-banner-restore-draft" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer">
+              <i class="fas fa-rotate-left text-slate-950"></i> Pulihkan Sekarang
+            </button>
+            <button type="button" id="btn-banner-dismiss-draft" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer">
+              Abaikan
             </button>
           </div>
         </div>
@@ -695,6 +722,7 @@ export function initAnalisisCp() {
         currentInputData = item.inputData || {};
         currentAnalysisData = validateAndRepairAnalysisData(item.content, item.inputData?.chapters || [], currentInputData);
         renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        saveDraftToStorage();
         showToast(`Membuka riwayat: ${item.title}`, 'info');
       },
       async (item) => {
@@ -732,6 +760,7 @@ export function initAnalisisCp() {
         document.getElementById('analisis-form-view')?.classList.add('hidden');
         document.getElementById('analisis-result-view')?.classList.remove('hidden');
         renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        saveDraftToStorage();
         showToast(`Dokumen CP "${item.mata_pelajaran} (${item.jenjang_kelas})" dari ${item.nama_sekolah} berhasil dimuat!`, 'success');
       },
       onDownload: async (item) => {
@@ -775,6 +804,233 @@ export function initAnalisisCp() {
     showToast(`Membuka generator RPP untuk "${babTitle}"...`, 'info');
     navigate('rpp');
   };
+
+  // Bridge to Kisi-Kisi & Asesmen Soal global handler
+  window.bridgeToKisi = function(babTitle, cpText, semester) {
+    const mapel = currentInputData?.mataPelajaran || document.getElementById('select-mata-pelajaran')?.value || '';
+    const jenjangKelas = currentInputData?.jenjangKelas || document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+
+    sessionStorage.setItem('kkg_bridge_data', JSON.stringify({
+      target: 'kisi',
+      source: 'analisis-cp',
+      mataPelajaran: mapel,
+      jenjangKelas: jenjangKelas,
+      semester: semester ? String(semester) : '1',
+      topik: babTitle,
+      capaian: cpText
+    }));
+
+    showToast(`Membuka generator Asesmen & Soal untuk "${babTitle}"...`, 'info');
+    navigate('kisi');
+  };
+
+  // Global handler to add a TP item to a Bab in currentAnalysisData
+  window.addTpItemToBab = function(semIdx, babIdx, itemIdx) {
+    if (!currentAnalysisData) return;
+    syncCanvasToAnalysisData(currentAnalysisData);
+
+    const sem = currentAnalysisData.semesters?.[semIdx];
+    if (!sem) return;
+    const bab = sem.babs?.[babIdx];
+    if (!bab) return;
+
+    if (!Array.isArray(bab.items) || bab.items.length === 0) {
+      bab.items = [{
+        kode_tp: `${currentAnalysisData.metadata?.kelas || '5'}.${bab.no}.1`,
+        materi_pokok: bab.bab,
+        tp: 'Menyelesaikan capaian materi pada bab ini.',
+        atp: 'Murid melakukan serangkaian aktivitas pembelajaran terpadu.',
+        alokasi_waktu: '2 JP'
+      }];
+    }
+
+    const kelasVal = currentAnalysisData.metadata?.kelas || (currentInputData?.jenjangKelas?.match(/\d+/) || ['5'])[0];
+    const newIdx = bab.items.length + 1;
+    const prevItem = bab.items[itemIdx] || {};
+    const newItem = {
+      kode_tp: `${kelasVal}.${bab.no}.${newIdx}`,
+      materi_pokok: prevItem.materi_pokok || bab.bab,
+      tp: 'Tujuan pembelajaran lanjutan untuk memperdalam materi.',
+      atp: 'Melaksanakan aktivitas telaah mandiri dan penguatan konsep secara terarah.',
+      alokasi_waktu: '2 JP'
+    };
+
+    bab.items.splice(itemIdx + 1, 0, newItem);
+    renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+    saveDraftToStorage();
+    showToast('Baris Tujuan Pembelajaran (TP) berhasil ditambahkan!', 'success');
+  };
+
+  // Global handler to remove a TP item from a Bab in currentAnalysisData
+  window.removeTpItemFromBab = function(semIdx, babIdx, itemIdx) {
+    if (!currentAnalysisData) return;
+    syncCanvasToAnalysisData(currentAnalysisData);
+
+    const sem = currentAnalysisData.semesters?.[semIdx];
+    if (!sem) return;
+    const bab = sem.babs?.[babIdx];
+    if (!bab || !Array.isArray(bab.items)) return;
+
+    if (bab.items.length <= 1) {
+      showToast('Setiap bab minimal harus memiliki satu baris TP.', 'warning');
+      return;
+    }
+
+    bab.items.splice(itemIdx, 1);
+    renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+    saveDraftToStorage();
+    showToast('Baris TP berhasil dihapus.', 'info');
+  };
+
+  // Draft local storage helpers
+  function getDraftStorageKey() {
+    const uid = state.user?.id || 'guest';
+    return `kkg_analisis_cp_draft_${uid}`;
+  }
+
+  function saveDraftToStorage() {
+    try {
+      if (!state.user) return;
+      if (!currentAnalysisData && (!detectedChapters || detectedChapters.length === 0)) return;
+
+      const draft = {
+        timestamp: Date.now(),
+        inputData: currentInputData || {
+          namaSekolah: document.getElementById('input-nama-sekolah')?.value || '',
+          mataPelajaran: document.getElementById('select-mata-pelajaran')?.value || '',
+          jenjangKelas: document.getElementById('select-jenjang-kelas')?.value || '',
+          tahunAjaran: document.querySelector('select[name="tahunAjaran"]')?.value || '',
+          sumberBuku: document.getElementById('input-sumber-buku')?.value || '',
+          namaGuru: document.querySelector('input[name="namaGuru"]')?.value || '',
+          nipGuru: document.querySelector('input[name="nipGuru"]')?.value || '',
+          namaKepalaSekolah: document.querySelector('input[name="namaKepalaSekolah"]')?.value || '',
+          nipKepalaSekolah: document.querySelector('input[name="nipKepalaSekolah"]')?.value || ''
+        },
+        detectedChapters: detectedChapters || [],
+        analysisData: currentAnalysisData,
+        activeTab: activeAnalysisTab,
+        activeSemester: activePromesSemester
+      };
+
+      localStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
+    } catch (e) {
+      console.warn('Gagal menyimpan draf analisis:', e);
+    }
+  }
+
+  function checkAndShowDraftBanner() {
+    try {
+      const raw = localStorage.getItem(getDraftStorageKey());
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft || (!draft.analysisData && (!draft.detectedChapters || draft.detectedChapters.length === 0))) return;
+
+      const banner = document.getElementById('analisis-draft-banner');
+      const restoreBtn = document.getElementById('btn-restore-draft');
+      const infoText = document.getElementById('analisis-draft-info');
+
+      if (banner) banner.classList.remove('hidden');
+      if (restoreBtn) restoreBtn.classList.remove('hidden');
+
+      const dateStr = draft.timestamp ? new Date(draft.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+      const mapelName = draft.inputData?.mataPelajaran || 'Analisis CP';
+      const kelasName = draft.inputData?.jenjangKelas || '';
+
+      if (infoText) {
+        const hasContent = !!draft.analysisData;
+        infoText.innerText = `Draf tersimpan (${dateStr}): ${mapelName} ${kelasName} • ${hasContent ? 'Hasil Analisis Lengkap' : `${draft.detectedChapters?.length || 0} Bab Terstruktur`}`;
+      }
+    } catch (_) {}
+  }
+
+  function restoreDraft() {
+    try {
+      const raw = localStorage.getItem(getDraftStorageKey());
+      if (!raw) {
+        showToast('Tidak ada draf yang tersimpan.', 'info');
+        return;
+      }
+      const draft = JSON.parse(raw);
+
+      if (draft.inputData) {
+        currentInputData = draft.inputData;
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el && val !== undefined) el.value = val;
+        };
+        const setByName = (name, val) => {
+          const el = document.querySelector(`[name="${name}"]`);
+          if (el && val !== undefined) el.value = val;
+        };
+
+        setVal('input-nama-sekolah', draft.inputData.namaSekolah);
+        setVal('select-mata-pelajaran', draft.inputData.mataPelajaran);
+        setVal('select-jenjang-kelas', draft.inputData.jenjangKelas);
+        setVal('input-sumber-buku', draft.inputData.sumberBuku);
+        setByName('tahunAjaran', draft.inputData.tahunAjaran);
+        setByName('namaGuru', draft.inputData.namaGuru);
+        setByName('nipGuru', draft.inputData.nipGuru);
+        setByName('namaKepalaSekolah', draft.inputData.namaKepalaSekolah);
+        setByName('nipKepalaSekolah', draft.inputData.nipKepalaSekolah);
+      }
+
+      if (Array.isArray(draft.detectedChapters) && draft.detectedChapters.length > 0) {
+        detectedChapters = draft.detectedChapters;
+        renderChaptersList();
+      }
+
+      if (draft.analysisData) {
+        currentAnalysisData = draft.analysisData;
+        activeAnalysisTab = draft.activeTab || 'analisis';
+        activePromesSemester = draft.activeSemester || 'all';
+
+        document.getElementById('analisis-form-view')?.classList.add('hidden');
+        document.getElementById('analisis-result-view')?.classList.remove('hidden');
+        renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        showToast('Draf analisis berhasil dipulihkan!', 'success');
+      } else {
+        showToast('Draf formulir dan daftar bab berhasil dipulihkan!', 'success');
+      }
+
+      document.getElementById('analisis-draft-banner')?.classList.add('hidden');
+      document.getElementById('btn-restore-draft')?.classList.add('hidden');
+    } catch (err) {
+      console.error('Gagal memulihkan draf:', err);
+      showToast('Gagal memulihkan draf.', 'error');
+    }
+  }
+
+  function dismissDraft() {
+    try {
+      localStorage.removeItem(getDraftStorageKey());
+      document.getElementById('analisis-draft-banner')?.classList.add('hidden');
+      document.getElementById('btn-restore-draft')?.classList.add('hidden');
+      showToast('Draf telah diabaikan.', 'info');
+    } catch (_) {}
+  }
+
+  // Draft listeners
+  document.getElementById('btn-restore-draft')?.addEventListener('click', restoreDraft);
+  document.getElementById('btn-banner-restore-draft')?.addEventListener('click', restoreDraft);
+  document.getElementById('btn-banner-dismiss-draft')?.addEventListener('click', dismissDraft);
+
+  // Auto-check draft on load
+  checkAndShowDraftBanner();
+
+  // Autosave triggers on form and canvas changes
+  let autosaveTimer = null;
+  const triggerAutoSave = (delay = 1000) => {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      if (currentAnalysisData) {
+        syncCanvasToAnalysisData(currentAnalysisData);
+      }
+      saveDraftToStorage();
+    }, delay);
+  };
+
+  form?.addEventListener('input', () => triggerAutoSave(1500));
+  document.getElementById('analisis-canvas')?.addEventListener('input', () => triggerAutoSave(1500));
 
   // Subject & Grade change listeners to auto-suggest official textbook structure
   document.getElementById('select-mata-pelajaran')?.addEventListener('change', async (e) => {
@@ -1234,6 +1490,7 @@ function renderChaptersList() {
     input.addEventListener('change', (e) => {
       const idx = Number(e.target.dataset.idx);
       if (detectedChapters[idx]) detectedChapters[idx].bab = e.target.value.trim();
+      saveDraftToStorage();
     });
   });
 
@@ -1242,6 +1499,7 @@ function renderChaptersList() {
       const idx = Number(e.target.dataset.idx);
       if (detectedChapters[idx]) {
         detectedChapters[idx].materi_pokok = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+        saveDraftToStorage();
       }
     });
   });
@@ -1252,6 +1510,7 @@ function renderChaptersList() {
       if (detectedChapters[idx]) {
         detectedChapters[idx].semester = detectedChapters[idx].semester === 1 ? 2 : 1;
         renderChaptersList();
+        saveDraftToStorage();
       }
     });
   });
@@ -1262,6 +1521,7 @@ function renderChaptersList() {
       detectedChapters.splice(idx, 1);
       redistributeSemesters();
       renderChaptersList();
+      saveDraftToStorage();
     });
   });
 }
@@ -1331,6 +1591,7 @@ async function generateAnalisisCpFromForm() {
         // Validasi & Auto-repair Client Side
         currentAnalysisData = validateAndRepairAnalysisData(finalResultData, detectedChapters, payload);
         renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        saveDraftToStorage();
         showToast('Analisis CP, TP, dan ATP berhasil dirakit!', 'success');
 
         saveDocArchive({
@@ -1358,6 +1619,7 @@ async function generateAnalisisCpFromForm() {
       if (fallbackRes && fallbackRes.success && fallbackRes.data) {
         currentAnalysisData = validateAndRepairAnalysisData(fallbackRes.data, detectedChapters, payload);
         renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+        saveDraftToStorage();
         showToast('Analisis CP, TP, dan ATP berhasil dirakit!', 'success');
 
         saveDocArchive({

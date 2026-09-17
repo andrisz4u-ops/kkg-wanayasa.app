@@ -78,7 +78,7 @@ export async function generateTtsDocx(data, formData, kopSuratUrl) {
   }
 
   // 2. JUDUL LKPD
-  children.push(makePara('LEMBAR KERJA PESERTA DIDIK (LKPD)', {
+  children.push(makePara('LEMBAR KERJA MURID (LKM)', {
     bold: true,
     size: 26, // 13pt
     align: AlignmentType.CENTER,
@@ -96,7 +96,7 @@ export async function generateTtsDocx(data, formData, kopSuratUrl) {
   const metaRows = [
     [
       { label: 'Mata Pelajaran', val: formData.mataPelajaran || data.mataPelajaran || '-' },
-      { label: 'Nama Peserta Didik', val: '............................................' }
+      { label: 'Nama Murid', val: '............................................' }
     ],
     [
       { label: 'Kelas / Fase', val: formData.jenjangKelas || data.jenjangKelas || 'Kelas 5' },

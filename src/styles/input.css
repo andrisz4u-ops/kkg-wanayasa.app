@@ -771,3 +771,43 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 .animate-shake {
     animation: game-shake 0.35s ease-in-out;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   Program Sekolah Universal Document & Print Styles
+   ═════════════════════════════════════════════════════════════════════════ */
+.program-page-sheet {
+    max-width: 210mm;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+@media print {
+    .no-print,
+    #sidebar,
+    header,
+    nav,
+    .app-header,
+    #program-wizard-section,
+    .sticky {
+        display: none !important;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .program-document-wrapper {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .program-page-sheet {
+        page-break-after: always;
+        break-after: page;
+        padding: 2.5cm 2.5cm 2.5cm 3.5cm !important;
+    }
+}

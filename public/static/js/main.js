@@ -308,6 +308,7 @@ const pages = {
   laporan: async () => (await loadPageModule('laporan')).renderLaporan(),
   notifications: async () => (await loadPageModule('notifications')).renderNotifications(),
   'analisis-cp': async () => (await loadPageModule('analisis-cp')).renderAnalisisCp(),
+  'program-sekolah': async () => (await loadPageModule('program-sekolah')).renderProgramSekolah(),
   rpp: async () => (await loadPageModule('rpp')).renderRpp(),
   kisi: async () => (await loadPageModule('kisi')).renderKisi(),
   slide: async () => (await loadPageModule('slide')).renderSlide(),
@@ -320,7 +321,7 @@ const customLayoutPages = ['admin', 'surat', 'proker', 'laporan'];
 
 // Protected pages (require authentication)
 const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications'];
-const adminPages = ['admin'];
+const adminPages = ['admin', 'program-sekolah'];
 
 // Accordion state tracking for sidebar categories — persisted to localStorage
 (function() {
@@ -395,10 +396,11 @@ const navSections = [
     title: 'Asisten AI',
     icon: 'fa-wand-magic-sparkles',
     isAI: true,
-    badgeText: '5 Modul',
+    badgeText: '6 Modul',
     defaultOpen: true,
     items: [
       { page: 'analisis-cp', label: 'Analisis CP (AI)', icon: 'fa-book-bookmark', public: true, ai: true },
+      { page: 'program-sekolah', label: 'Program Sekolah', icon: 'fa-file-lines', admin: true, ai: true },
       { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
       { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
       { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
@@ -526,7 +528,7 @@ function renderNavLinks(activePage) {
 // Mobile Bottom Navigation Bar (App Bar Bawah untuk HP)
 function renderMobileBottomNav(activePage) {
   const isLoggedIn = !!state.user;
-  const isAIActive = ['analisis-cp', 'rpp', 'kisi', 'slide', 'tts', 'games'].includes(activePage);
+  const isAIActive = ['analisis-cp', 'program-sekolah', 'rpp', 'kisi', 'slide', 'tts', 'games'].includes(activePage);
 
   return `
     <!-- Mobile Bottom Navigation Bar (Fixed Ergonomic Thumb Bar) -->
@@ -606,6 +608,7 @@ function renderMobileBottomNav(activePage) {
 
 // Mobile AI Bottom Sheet (Lembar Aksi Cepat 4 Modul AI di HP)
 function renderMobileAiSheet(activePage) {
+  const isAdminPanelUser = ['super_admin', 'admin', 'operator'].includes(state.user?.role || '');
   return `
     <!-- Mobile AI Action Sheet Modal Overlay -->
     <div 
@@ -656,6 +659,24 @@ function renderMobileAiSheet(activePage) {
               </div>
             </div>
           </button>
+
+          <!-- 0b. Program Sekolah Universal (AI) (Khusus Admin/Operator) -->
+          ${isAdminPanelUser ? `
+          <button 
+            onclick="window.closeMobileAiSheet(); navigate('program-sekolah');" 
+            class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer col-span-2 ${activePage === 'program-sekolah' ? 'bg-indigo-50/90 border-indigo-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-indigo-50/40 hover:border-indigo-300'}"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-sm shadow-2xs shrink-0">
+                <i class="fas fa-file-lines"></i>
+              </div>
+              <div>
+                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Program Sekolah (AI)</span>
+                <span class="block text-[10px] text-slate-500 font-normal leading-snug">Kokurikuler Profil Lulusan, 7 KAIH, HBG, dll.</span>
+              </div>
+            </div>
+          </button>
+          ` : ''}
 
           <!-- 1. RPP & Modul Ajar -->
           <button 
@@ -801,6 +822,10 @@ async function render() {
       const { initAnalisisCp } = await loadPageModule('analisis-cp');
       if (initAnalisisCp) setTimeout(() => initAnalisisCp(), 100);
     }
+    if (page === 'program-sekolah') {
+      const { initProgramSekolah } = await loadPageModule('program-sekolah');
+      if (initProgramSekolah) setTimeout(() => initProgramSekolah(), 100);
+    }
     if (page === 'rpp') {
       const { initRpp } = await loadPageModule('rpp');
       setTimeout(() => initRpp(), 100);
@@ -859,6 +884,7 @@ async function render() {
   const pageMetadata = {
     home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : 'Beranda Utama', icon: 'fa-home', category: 'Dasbor' },
     'analisis-cp': { title: 'Analisis CP, TP & ATP (BSKAP 046/2025)', icon: 'fa-book-bookmark', category: 'Asisten AI' },
+    'program-sekolah': { title: 'Program Kerja & Pembiasaan Sekolah (AI)', icon: 'fa-file-lines', category: 'Asisten AI' },
     rpp: { title: 'AI RPP & Modul Ajar Generator', icon: 'fa-magic', category: 'Asisten AI' },
     kisi: { title: 'Asesmen & Kisi-Kisi HOTS/AKM', icon: 'fa-list-check', category: 'Asisten AI' },
     slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },

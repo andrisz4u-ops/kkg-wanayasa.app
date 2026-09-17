@@ -286,81 +286,81 @@ export const standardCurriculumDatabase: Record<string, Record<string, Curriculu
   },
   'pendidikan agama dan budi pekerti': {
     '1': {
-      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas I (Kemendikbudristek)',
+      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas I (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Aku Cinta Al-Qur\'an', materi_pokok: ['Huruf hijaiyah berharakat', 'QS Al-Fatihah dan Al-Ikhlas'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Mengenal Rukun Iman', materi_pokok: ['Iman kepada Allah SWT dan Rasul-Nya', 'Ciptaan Allah'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Aku Suka Membaca Basmalah dan Hamdalah', materi_pokok: ['Adab berdoa', 'Kalimat tayibah sehari-hari'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Mengenal Rukun Islam dan Syahadatain', materi_pokok: ['Dua kalimat syahadat', 'Sholat 5 waktu'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Mengenal Nabi dan Rasul Teladan', materi_pokok: ['Nabi Adam a.s.', 'Nabi Muhammad SAW panutan'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Al-Qur\'an Pedoman Hidupku', materi_pokok: ['QS Al-Kausar dan An-Nas', 'Menyayangi sesama ciptaan Allah'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Kasih Sayang terhadap Sesama', materi_pokok: ['Sikap santun kepada orang tua', 'Hormat kepada guru'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Bersuci dan Berwudhu', materi_pokok: ['Tata cara wudhu yang benar', 'Hidup bersih dan rapi'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Aku Cinta Al-Qur\'an', materi_pokok: ['Huruf hijaiyah berharakat', 'QS Al-Fatihah dan Al-Ikhlas'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Mengenal Rukun Iman', materi_pokok: ['Iman kepada Allah SWT dan Rasul-Nya', 'Ciptaan Allah'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akhlak] Aku Suka Membaca Basmalah dan Hamdalah', materi_pokok: ['Adab berdoa', 'Kalimat tayibah sehari-hari'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Mengenal Rukun Islam dan Syahadatain', materi_pokok: ['Dua kalimat syahadat', 'Sholat 5 waktu'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Mengenal Nabi dan Rasul Teladan', materi_pokok: ['Nabi Adam a.s.', 'Nabi Muhammad SAW panutan'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Al-Qur’an Hadis] Al-Qur\'an Pedoman Hidupku', materi_pokok: ['QS Al-Kausar dan An-Nas', 'Menyayangi sesama ciptaan Allah'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akhlak] Kasih Sayang terhadap Sesama', materi_pokok: ['Sikap santun kepada orang tua', 'Hormat kepada guru'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Fikih] Bersuci dan Berwudhu', materi_pokok: ['Tata cara wudhu yang benar', 'Hidup bersih dan rapi'], semester: 2 }
       ]
     },
     '2': {
-      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas II (Kemendikbudristek)',
+      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas II (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Ayo Belajar Al-Qur\'an', materi_pokok: ['Hukum bacaan mad thabi\'i', 'QS An-Nas dan Al-Falaq'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Asmaul Husna Teladanku', materi_pokok: ['Al-Hafizh, Al-Wali', 'Al-\'Alim, Al-Khabir'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Perilaku Terpuji dalam Keseharian', materi_pokok: ['Sikap jujur dan disiplin', 'Berterima kasih dan tolong-menolong'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Shalat Fardhu Berjamaah', materi_pokok: ['Bacaan shalat lengkap', 'Keutamaan shalat berjamaah di masjid'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Kisah Keteladanan Nabi Nuh a.s.', materi_pokok: ['Kesabaran dalam dakwah', 'Ketaatan kepada perintah Allah'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Senang Membaca Al-Qur\'an', materi_pokok: ['QS Al-Kafirun dan Al-Ma\'un', 'Menghindari kemusyrikan'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Beriman kepada Malaikat Allah', materi_pokok: ['Nama dan tugas 10 Malaikat Allah', 'Pengawasan malaikat'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Adab Makan, Minum, dan Tidur', materi_pokok: ['Doa sebelum dan sesudah makan', 'Sunnah Rasulullah sebelum tidur'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Ayo Belajar Al-Qur\'an', materi_pokok: ['Hukum bacaan mad thabi\'i', 'QS An-Nas dan Al-Falaq'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Asmaul Husna Teladanku', materi_pokok: ['Al-Hafizh, Al-Wali', 'Al-\'Alim, Al-Khabir'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akhlak] Perilaku Terpuji dalam Keseharian', materi_pokok: ['Sikap jujur dan disiplin', 'Berterima kasih dan tolong-menolong'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Shalat Fardhu Berjamaah', materi_pokok: ['Bacaan shalat lengkap', 'Keutamaan shalat berjamaah di masjid'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Kisah Keteladanan Nabi Nuh a.s.', materi_pokok: ['Kesabaran dalam dakwah', 'Ketaatan kepada perintah Allah'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Al-Qur’an Hadis] Senang Membaca Al-Qur\'an', materi_pokok: ['QS Al-Kafirun dan Al-Ma\'un', 'Menghindari kemusyrikan'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akidah] Beriman kepada Malaikat Allah', materi_pokok: ['Nama dan tugas 10 Malaikat Allah', 'Pengawasan malaikat'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Akhlak] Adab Makan, Minum, dan Tidur', materi_pokok: ['Doa sebelum dan sesudah makan', 'Sunnah Rasulullah sebelum tidur'], semester: 2 }
       ]
     },
     '3': {
-      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas III (Kemendikbudristek)',
+      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas III (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Asyiknya Belajar Surah Pendek', materi_pokok: ['QS Al-Humazah', 'QS At-Takasur', 'Pesan moral surah'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Meyakini Kitab-Kitab Allah SWT', materi_pokok: ['Mengenal 4 kitab suci', 'Al-Qur\'an kitab penyempurna'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Berperilaku Terpuji', materi_pokok: ['Sikap tawadhu dan ikhlas', 'Memohon pertolongan hanya pada Allah'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Kewajiban dan Hikmah Shalat', materi_pokok: ['Syarat sah dan rukun shalat', 'Hikmah shalat bagi kedisiplinan'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Kisah Teladan Nabi Ibrahim dan Nabi Ismail', materi_pokok: ['Keikhlasan berkorban', 'Asal usul ibadah kurban'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Keindahan Surah Al-Qari\'ah dan Az-Zalzalah', materi_pokok: ['Tafsir surah hari kiamat', 'Mawas diri'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Asmaul Husna Al-Wahhab dan Al-Kabir', materi_pokok: ['Makna Allah Maha Pemberi', 'Kebesaran Allah SWT'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Puasa Ramadhan dan Amalan Sunnah', materi_pokok: ['Ketentuan puasa Ramadhan', 'Amalan shalat tarawih dan tadarus'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Asyiknya Belajar Surah Pendek', materi_pokok: ['QS Al-Humazah', 'QS At-Takasur', 'Pesan moral surah'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Meyakini Kitab-Kitab Allah SWT', materi_pokok: ['Mengenal 4 kitab suci', 'Al-Qur\'an kitab penyempurna'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akhlak] Berperilaku Terpuji', materi_pokok: ['Sikap tawadhu dan ikhlas', 'Memohon pertolongan hanya pada Allah'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Kewajiban dan Hikmah Shalat', materi_pokok: ['Syarat sah dan rukun shalat', 'Hikmah shalat bagi kedisiplinan'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Kisah Teladan Nabi Ibrahim dan Nabi Ismail', materi_pokok: ['Keikhlasan berkorban', 'Asal usul ibadah kurban'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Al-Qur’an Hadis] Keindahan Surah Al-Qari\'ah dan Az-Zalzalah', materi_pokok: ['Tafsir surah hari kiamat', 'Mawas diri'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akidah] Asmaul Husna Al-Wahhab dan Al-Kabir', materi_pokok: ['Makna Allah Maha Pemberi', 'Kebesaran Allah SWT'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Fikih] Puasa Ramadhan dan Amalan Sunnah', materi_pokok: ['Ketentuan puasa Ramadhan', 'Amalan shalat tarawih dan tadarus'], semester: 2 }
       ]
     },
     '4': {
-      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas IV (Kemendikbudristek)',
+      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas IV (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Mari Belajar Surah Al-Hujurat Ayat 13', materi_pokok: ['Membaca dan menghafal QS Al-Hujurat 13', 'Keragaman bangsa manusia'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Teladan Asmaul Husna Mulia', materi_pokok: ['Al-Malik, Al-Aziz', 'Al-Quddus, As-Salam, Al-Mu\'min'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Indahnya Saling Menghargai dalam Keragaman', materi_pokok: ['Toleransi beragama', 'Kerukunan hidup bermasyarakat'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Menyambut Usia Baligh', materi_pokok: ['Tanda baligh secara fiqih & biologi', 'Kewajiban mandi wajib'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Kisah Hijrah Nabi Muhammad SAW ke Madinah', materi_pokok: ['Sebab-sebab hijrah', 'Membangun persaudaraan Muhajirin & Anshar'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Mari Belajar Surah At-Tin', materi_pokok: ['Tafsir QS At-Tin', 'Kemuliaan martabat manusia'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Beriman kepada Rasul-Rasul Allah', materi_pokok: ['Sifat wajib & mustahil rasul', 'Mukjizat rasul ulul azmi'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Shalat Jumat, Shalat Duha, dan Shalat Tahajud', materi_pokok: ['Ketentuan shalat Jumat', 'Keutamaan shalat sunnah duha & tahajud'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Mari Belajar Surah Al-Hujurat Ayat 13', materi_pokok: ['Membaca dan menghafal QS Al-Hujurat 13', 'Keragaman bangsa manusia'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Teladan Asmaul Husna Mulia', materi_pokok: ['Al-Malik, Al-Aziz', 'Al-Quddus, As-Salam, Al-Mu\'min'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akhlak] Indahnya Saling Menghargai dalam Keragaman', materi_pokok: ['Toleransi beragama', 'Kerukunan hidup bermasyarakat'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Menyambut Usia Baligh', materi_pokok: ['Tanda baligh secara fiqih & biologi', 'Kewajiban mandi wajib'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Kisah Hijrah Nabi Muhammad SAW ke Madinah', materi_pokok: ['Sebab-sebab hijrah', 'Membangun persaudaraan Muhajirin & Anshar'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Al-Qur’an Hadis] Mari Belajar Surah At-Tin', materi_pokok: ['Tafsir QS At-Tin', 'Kemuliaan martabat manusia'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akidah] Beriman kepada Rasul-Rasul Allah', materi_pokok: ['Sifat wajib & mustahil rasul', 'Mukjizat rasul ulul azmi'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Fikih] Shalat Jumat, Shalat Duha, dan Shalat Tahajud', materi_pokok: ['Ketentuan shalat Jumat', 'Keutamaan shalat sunnah duha & tahajud'], semester: 2 }
       ]
     },
     '5': {
-      judul: 'Buku Siswa Pendidikan Agama Islam dan Budi Pekerti Kelas V (Kemendikbudristek)',
+      judul: 'Buku Siswa Pendidikan Agama Islam dan Budi Pekerti Kelas V (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Menyayangi Anak Yatim (QS. Al-Ma’un)', materi_pokok: ['Membaca & menghafal QS Al-Maun', 'Pesan pokok QS Al-Maun', 'Menyayangi anak yatim'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Lebih Dekat dengan Nama-Nama Allah', materi_pokok: ['Asmaul Husna Al-Qawiyyu', 'Asmaul Husna Al-Qayyum', 'Asmaul Husna Al-Muhyi & Al-Mumit'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Aku Anak Saleh Menghargai Keragaman', materi_pokok: ['Keragaman suku & agama manusia', 'Sikap toleransi & saling menghargai'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Hidup Lapang dengan Berbagi', materi_pokok: ['Makna zakat fitrah & mal', 'Infak, sedekah, dan hadiah'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Meneladani Perjuangan Rasulullah SAW', materi_pokok: ['Peristiwa Fathu Makkah', 'Haji Wada dan pesan terakhir Rasulullah'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Hidup Damai dalam Kebersamaan', materi_pokok: ['Mengenal kitab-kitab suci Allah', 'Taurat, Zabur, Injil, Al-Quran'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Ketika Hati Bersih dari Sifat Tercela', materi_pokok: ['Menghindari sifat dengki & sombong', 'Menumbuhkan sifat tawadhu'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Senangnya Berteman Tanpa Membeda-bedakan', materi_pokok: ['Hikmah persaudaraan (ukhuwah)', 'Menjaga kerukunan antarumat'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Menyayangi Anak Yatim (QS. Al-Ma’un)', materi_pokok: ['Membaca & menghafal QS Al-Maun', 'Pesan pokok QS Al-Maun', 'Menyayangi anak yatim'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Lebih Dekat dengan Nama-Nama Allah', materi_pokok: ['Asmaul Husna Al-Qawiyyu', 'Asmaul Husna Al-Qayyum', 'Asmaul Husna Al-Muhyi & Al-Mumit'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akhlak] Aku Anak Saleh Menghargai Keragaman', materi_pokok: ['Keragaman suku & agama manusia', 'Sikap toleransi & saling menghargai'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Hidup Lapang dengan Berbagi', materi_pokok: ['Makna zakat fitrah & mal', 'Infak, sedekah, dan hadiah'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Meneladani Perjuangan Rasulullah SAW', materi_pokok: ['Peristiwa Fathu Makkah', 'Haji Wada dan pesan terakhir Rasulullah'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Akidah] Hidup Damai dalam Kebersamaan', materi_pokok: ['Mengenal kitab-kitab suci Allah', 'Taurat, Zabur, Injil, Al-Quran'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akhlak] Ketika Hati Bersih dari Sifat Tercela', materi_pokok: ['Menghindari sifat dengki & sombong', 'Menumbuhkan sifat tawadhu'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Akhlak] Senangnya Berteman Tanpa Membeda-bedakan', materi_pokok: ['Hikmah persaudaraan (ukhuwah)', 'Menjaga kerukunan antarumat'], semester: 2 }
       ]
     },
     '6': {
-      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas VI (Kemendikbudristek)',
+      judul: 'Buku Siswa PAI dan Budi Pekerti Kelas VI (Kemendikbudristek • BSKAP 020/2026)',
       chapters: [
-        { no: 1, bab: 'Bab 1: Indahnya Kebersamaan dalam QS Al-Hujurat 10-12', materi_pokok: ['Persaudaraan mukmin', 'Larangan menggunjing (ghibah)'], semester: 1 },
-        { no: 2, bab: 'Bab 2: Meyakini Hari Akhir (Kiamat)', materi_pokok: ['Kiamat sugra dan kubra', 'Hikmah beriman pada hari akhir'], semester: 1 },
-        { no: 3, bab: 'Bab 3: Keteladanan Asmaul Husna As-Samad & Al-Muqtadir', materi_pokok: ['Asmaul Husna As-Samad', 'Al-Muqtadir, Al-Muqaddim, Al-Baqi'], semester: 1 },
-        { no: 4, bab: 'Bab 4: Indahnya Berbagi Zakat, Infak, dan Sedekah', materi_pokok: ['Hukum dan mustahik zakat', 'Manajemen infak dan sedekah'], semester: 1 },
-        { no: 5, bab: 'Bab 5: Kisah Teladan Khulafaur Rasyidin', materi_pokok: ['Abu Bakar Ash-Shiddiq, Umar bin Khattab', 'Utsman bin Affan, Ali bin Abi Thalib'], semester: 2 },
-        { no: 6, bab: 'Bab 6: Keagungan Surah Al-A\'la dan Al-Ghasyiyah', materi_pokok: ['Pesan tauhid QS Al-A\'la', 'Peringatan QS Al-Ghasyiyah'], semester: 2 },
-        { no: 7, bab: 'Bab 7: Meyakini Qada dan Qadar Allah', materi_pokok: ['Takdir mubram dan muallaq', 'Ikhtiar dan tawakal'], semester: 2 },
-        { no: 8, bab: 'Bab 8: Peduli Lingkungan dan Menjaga Bumi', materi_pokok: ['Konservasi alam dalam Islam', 'Larangan berbuat kerusakan di bumi'], semester: 2 }
+        { no: 1, bab: 'Bab 1: [Al-Qur’an Hadis] Indahnya Kebersamaan dalam QS Al-Hujurat 10-12', materi_pokok: ['Persaudaraan mukmin', 'Larangan menggunjing (ghibah)'], semester: 1 },
+        { no: 2, bab: 'Bab 2: [Akidah] Meyakini Hari Akhir (Kiamat)', materi_pokok: ['Kiamat sugra dan kubra', 'Hikmah beriman pada hari akhir'], semester: 1 },
+        { no: 3, bab: 'Bab 3: [Akidah] Keteladanan Asmaul Husna As-Samad & Al-Muqtadir', materi_pokok: ['Asmaul Husna As-Samad', 'Al-Muqtadir, Al-Muqaddim, Al-Baqi'], semester: 1 },
+        { no: 4, bab: 'Bab 4: [Fikih] Indahnya Berbagi Zakat, Infak, dan Sedekah', materi_pokok: ['Hukum dan mustahik zakat', 'Manajemen infak dan sedekah'], semester: 1 },
+        { no: 5, bab: 'Bab 5: [Sejarah Peradaban Islam] Kisah Teladan Khulafaur Rasyidin', materi_pokok: ['Abu Bakar Ash-Shiddiq, Umar bin Khattab', 'Utsman bin Affan, Ali bin Abi Thalib'], semester: 2 },
+        { no: 6, bab: 'Bab 6: [Al-Qur’an Hadis] Keagungan Surah Al-A\'la dan Al-Ghasyiyah', materi_pokok: ['Pesan tauhid QS Al-A\'la', 'Peringatan QS Al-Ghasyiyah'], semester: 2 },
+        { no: 7, bab: 'Bab 7: [Akidah] Meyakini Qada dan Qadar Allah', materi_pokok: ['Takdir mubram dan muallaq', 'Ikhtiar dan tawakal'], semester: 2 },
+        { no: 8, bab: 'Bab 8: [Akhlak] Peduli Lingkungan dan Menjaga Bumi', materi_pokok: ['Konservasi alam dalam Islam', 'Larangan berbuat kerusakan di bumi'], semester: 2 }
       ]
     }
   },

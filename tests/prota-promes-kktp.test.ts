@@ -43,14 +43,14 @@ const sampleInput: AnalisisCpDocxInput = {
               kode_tp: '5.1',
               materi_pokok: 'Sifat Cahaya',
               tp: 'Mendesain percobaan pembuktian sifat cahaya.',
-              atp: 'Peserta didik melakukan penyelidikan pembuktian sifat cahaya merambat lurus dan menembus benda bening.',
+              atp: 'Murid melakukan penyelidikan pembuktian sifat cahaya merambat lurus dan menembus benda bening.',
               alokasi_waktu: '2 JP'
             },
             {
               kode_tp: '5.2',
               materi_pokok: 'Indra Penglihatan',
               tp: 'Menjelaskan bagian dan fungsi mata.',
-              atp: 'Peserta didik mengamati bagan mata manusia dan mendiskusikan mekanisme penglihatan.',
+              atp: 'Murid mengamati bagan mata manusia dan mendiskusikan mekanisme penglihatan.',
               alokasi_waktu: '3 JP'
             }
           ]
@@ -71,7 +71,7 @@ const sampleInput: AnalisisCpDocxInput = {
               kode_tp: '5.5',
               materi_pokok: 'Sistem Pernapasan',
               tp: 'Mengidentifikasi organ pernapasan manusia.',
-              atp: 'Peserta didik membuat model sederhana organ pernapasan dan mengamati alur udara.',
+              atp: 'Murid membuat model sederhana organ pernapasan dan mengamati alur udara.',
               alokasi_waktu: '2 JP'
             }
           ]

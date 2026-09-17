@@ -4,6 +4,43 @@ import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js
 import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from './kaldik-purwakarta.js';
 
 /**
+ * Format teks Capaian Pembelajaran dengan badge/penanda Elemen yang jelas
+ */
+export function formatCpContentHtml(cpText, babTitle = '') {
+  if (!cpText) {
+    const titleMatch = (babTitle || '').match(/\[(.*?)\]/);
+    if (titleMatch) {
+      return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(titleMatch[1])}]</div><div>-</div>`;
+    }
+    return '-';
+  }
+
+  // Check if cpText starts with [Elemen] or [Elemen: ...]
+  const bracketMatch = cpText.match(/^\[([^\]]+)\]\s*(.*)$/s);
+  if (bracketMatch) {
+    const elName = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+    const rest = bracketMatch[2].trim();
+    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(elName)}]</div><div class="leading-relaxed">${escapeHtml(rest).replace(/\n/g, '<br>')}</div>`;
+  }
+
+  // Check if cpText starts with "Elemen: ..." or "Pemahaman IPAS: ..."
+  const colonMatch = cpText.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*(.*)$/is);
+  if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
+    const elName = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+    const rest = colonMatch[2].trim();
+    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(elName)}]</div><div class="leading-relaxed">${escapeHtml(rest).replace(/\n/g, '<br>')}</div>`;
+  }
+
+  // If babTitle has [Elemen] and cpText doesn't have an element yet:
+  const titleMatch = (babTitle || '').match(/\[(.*?)\]/);
+  if (titleMatch) {
+    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(titleMatch[1])}]</div><div class="leading-relaxed">${escapeHtml(cpText).replace(/\n/g, '<br>')}</div>`;
+  }
+
+  return escapeHtml(cpText).replace(/\n/g, '<br>');
+}
+
+/**
  * 1. RENDER TABEL UTAMA: ANALISIS CP, TP, DAN ATP (7 KOLOM)
  */
 export function renderAnalisisTable(data, inputData = {}) {
@@ -46,7 +83,7 @@ export function renderAnalisisTable(data, inputData = {}) {
           <tr class="bg-[#D9D2E9] text-center font-bold">
             <th class="border border-slate-900 p-2 w-[4%]">No</th>
             <th class="border border-slate-900 p-2 w-[15%]">BAB</th>
-            <th class="border border-slate-900 p-2 w-[22%]">CP (Capaian Pembelajaran)</th>
+            <th class="border border-slate-900 p-2 w-[22%]">Elemen / Capaian Pembelajaran</th>
             <th class="border border-slate-900 p-2 w-[17%]">Materi Pokok</th>
             <th class="border border-slate-900 p-2 w-[7%]">Kode TP</th>
             <th class="border border-slate-900 p-2 w-[17%]">TP (Tujuan Pembelajaran)</th>
@@ -70,7 +107,7 @@ export function renderAnalisisTable(data, inputData = {}) {
         kode_tp: `${metadata.kelas || '5'}.${bab.no}`,
         materi_pokok: (bab.materi_list || []).join('<br>') || bab.bab,
         tp: 'Menyelesaikan capaian materi pada bab ini.',
-        atp: 'Peserta didik melakukan serangkaian aktivitas terpadu untuk mencapai tujuan pembelajaran.',
+        atp: 'Murid melakukan serangkaian aktivitas terpadu untuk mencapai tujuan pembelajaran.',
         alokasi_waktu: '2 JP'
       }];
 
@@ -87,12 +124,17 @@ export function renderAnalisisTable(data, inputData = {}) {
             </td>
             <td rowspan="${rowSpan}" class="border border-slate-900 p-2.5 align-top font-bold" data-sem-idx="${semIdx}" data-bab-idx="${babIdx}">
               <div contenteditable="true" data-field="bab" class="outline-none">${escapeHtml(bab.bab)}</div>
-              <button type="button" onclick="window.bridgeToRpp('${escapeHtml(bab.bab).replace(/'/g, "\\'")}', '${escapeHtml(bab.cp).replace(/'/g, "\\'")}', ${sem.semester})" class="mt-2.5 px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300 text-[10px] font-bold flex items-center gap-1.5 cursor-pointer print:hidden transition-all shadow-2xs" title="Lanjut buat RPP untuk Bab ini">
-                <i class="fas fa-magic text-teal-600"></i> Buat RPP Bab Ini
-              </button>
+              <div class="mt-2 flex flex-col gap-1.5 print:hidden">
+                <button type="button" onclick="window.bridgeToRpp('${escapeHtml(bab.bab).replace(/'/g, "\\'")}', '${escapeHtml(bab.cp).replace(/'/g, "\\'")}', ${sem.semester})" class="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-300 text-[9.5px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs" title="Lanjut buat RPP untuk Bab ini">
+                  <i class="fas fa-magic text-teal-600"></i> Buat RPP Bab Ini
+                </button>
+                <button type="button" onclick="window.bridgeToKisi('${escapeHtml(bab.bab).replace(/'/g, "\\'")}', '${escapeHtml(bab.cp).replace(/'/g, "\\'")}', ${sem.semester})" class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 text-[9.5px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs" title="Lanjut buat Kisi-Kisi & Soal untuk Bab ini">
+                  <i class="fas fa-file-signature text-indigo-600"></i> Buat Soal Bab Ini
+                </button>
+              </div>
             </td>
             <td rowspan="${rowSpan}" class="border border-slate-900 p-2.5 align-top text-justify" contenteditable="true" data-field="cp" data-sem-idx="${semIdx}" data-bab-idx="${babIdx}">
-              ${escapeHtml(bab.cp).replace(/\n/g, '<br>')}
+              ${formatCpContentHtml(bab.cp, bab.bab)}
             </td>
           `;
         }
@@ -109,8 +151,18 @@ export function renderAnalisisTable(data, inputData = {}) {
           <td class="border border-slate-900 p-2.5 align-top text-justify" contenteditable="true" data-field="tp" data-sem-idx="${semIdx}" data-bab-idx="${babIdx}" data-item-idx="${itemIdx}">
             ${escapeHtml(item.tp)}
           </td>
-          <td class="border border-slate-900 p-2.5 align-top text-justify" contenteditable="true" data-field="atp" data-sem-idx="${semIdx}" data-bab-idx="${babIdx}" data-item-idx="${itemIdx}">
-            ${escapeHtml(item.atp)}
+          <td class="border border-slate-900 p-2.5 align-top text-justify">
+            <div contenteditable="true" data-field="atp" data-sem-idx="${semIdx}" data-bab-idx="${babIdx}" data-item-idx="${itemIdx}" class="outline-none">${escapeHtml(item.atp)}</div>
+            <div class="mt-2 flex items-center justify-end gap-1.5 print:hidden">
+              <button type="button" onclick="window.addTpItemToBab(${semIdx}, ${babIdx}, ${itemIdx})" class="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-[9px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-2xs" title="Tambah baris TP baru pada bab ini">
+                <i class="fas fa-plus text-[8px]"></i> TP
+              </button>
+              ${items.length > 1 ? `
+              <button type="button" onclick="window.removeTpItemFromBab(${semIdx}, ${babIdx}, ${itemIdx})" class="px-1.5 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-[9px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-2xs" title="Hapus baris TP ini">
+                <i class="fas fa-trash-alt text-[8px]"></i>
+              </button>
+              ` : ''}
+            </div>
           </td>
         </tr>`;
       });
@@ -214,7 +266,7 @@ export function renderProtaTable(data, inputData = {}) {
         kode_tp: `${metadata.kelas || '5'}.${bab.no}`,
         materi_pokok: (bab.materi_list || []).join('<br>') || bab.bab,
         tp: 'Menyelesaikan capaian materi.',
-        atp: 'Peserta didik melakukan serangkaian alur aktivitas pembelajaran.',
+        atp: 'Murid melakukan serangkaian alur aktivitas pembelajaran.',
         alokasi_waktu: '2 JP'
       }];
 

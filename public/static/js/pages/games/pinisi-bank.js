@@ -164,7 +164,7 @@ export const PINISI_QUESTION_BANK = {
       // Paket 1: Profesi & Tempat Pelayanan
       [
         { q: "Dokter memeriksa dan mengobati pasien di dalam ruangan rumah _____.", a: "sakit", opts: ["sakit", "makan", "panggung", "ibadah"], exp: "Rumah sakit adalah pusat rujukan kesehatan dengan fasilitas medis lengkap." },
-        { q: "Guru mengajar dan mendidik siswa dengan penuh kesabaran di ruang perpustakaan dan ruang _____.", a: "kelas", opts: ["kelas", "tunggu", "rapat", "bengkel"], exp: "Guru mendampingi tumbuh kembang dan pencapaian karakter peserta didik." },
+        { q: "Guru mengajar dan mendidik siswa dengan penuh kesabaran di ruang perpustakaan dan ruang _____.", a: "kelas", opts: ["kelas", "tunggu", "rapat", "bengkel"], exp: "Guru mendampingi tumbuh kembang dan pencapaian karakter murid." },
         { q: "Koki meracik bumbu dan memasak hidangan lezat di restoran berbintang lima bersama staf _____.", a: "dapur", opts: ["dapur", "resepsionis", "keamanan", "parkir"], exp: "Koki atau chef bertanggung jawab atas kelezatan dan kebersihan sajian menu." },
         { q: "Masinis mengendalikan lokomotif agar melaju dengan aman di atas lintasan rel kereta _____.", a: "api", opts: ["api", "kuda", "gantung", "dorong"], exp: "Masinis bertanggung jawab mengantarkan ribuan penumpang kereta api." },
         { q: "Pilot menerbangkan burung besi berbadan besar menembus awan dengan kecepatan tinggi di jalur lalu lintas _____.", a: "udara", opts: ["udara", "laut", "darat", "sungai"], exp: "Pilot memiliki keahlian terbang dan navigasi pesawat komersial." },

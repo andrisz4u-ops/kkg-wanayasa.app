@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import programSekolah, {
   buildProgramPrompt,
+  buildSectionPrompt,
   validateAndRepairProgramResult,
   regulasiProgramDatabase,
   ensureProgramSekolahTables,
 } from '../src/routes/program-sekolah';
-import { generateProgramDocxBuffer } from '../src/lib/docx/program-sekolah';
+import { generateProgramDocxBuffer, generateProgramLampiranOnlyDocxBuffer } from '../src/lib/docx/program-sekolah';
 
 describe('Program Sekolah Universal (AI) Tests', () => {
   describe('Prompt Builder & Regulatory Foundations', () => {
@@ -320,6 +321,114 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       expect(res.status).toBe(200);
       const json = await res.json() as any;
       expect(json.success).toBe(true);
+    });
+  });
+
+  describe('Granular Chapter Generation & Standalone Reflection Sheet Export', () => {
+    const mockAdminDb: any = {
+      prepare: vi.fn().mockImplementation((q: string) => ({
+        bind: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 1, role: 'admin', nama: 'Admin Wanayasa' }),
+          all: vi.fn().mockResolvedValue({ results: [] }),
+          run: vi.fn().mockResolvedValue({}),
+        }),
+      })),
+      batch: vi.fn().mockResolvedValue([]),
+    };
+
+    it('should build specific, focused prompts for each section', () => {
+      const pBab1 = buildSectionPrompt('bab1', {
+        template: 'kokurikuler-p5',
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        spesifik: { tema: 'Bangunlah Jiwa dan Raganya' },
+      });
+      expect(pBab1).toContain('BAGIAN YANG HARUS DISUSUN: BAB I PENDAHULUAN');
+      expect(pBab1).toContain('SDN 1 Cibogogirang');
+      expect(pBab1).toContain('latar_belakang');
+
+      const pBab2 = buildSectionPrompt('bab2', {
+        template: 'kokurikuler-p5',
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        spesifik: {},
+      });
+      expect(pBab2).toContain('BAGIAN YANG HARUS DISUSUN: BAB II KAJIAN KONSEPTUAL');
+      expect(pBab2).toContain('8 Dimensi Profil Lulusan');
+
+      const pBab3 = buildSectionPrompt('bab3', {
+        template: '7kaih',
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        spesifik: {},
+      });
+      expect(pBab3).toContain('BAGIAN YANG HARUS DISUSUN: BAB III RENCANA PROGRAM');
+      expect(pBab3).toContain('rincian_biaya');
+
+      const pBab4 = buildSectionPrompt('bab4_5', {
+        template: 'literasi',
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        spesifik: {},
+      });
+      expect(pBab4).toContain('BAGIAN YANG HARUS DISUSUN: BAB IV (MONITORING');
+      expect(pBab4).toContain('BAB V (PENUTUP)');
+    });
+
+    it('should generate valid standalone reflection and assessment rubric DOCX', async () => {
+      const data = validateAndRepairProgramResult({}, {
+        template: 'kokurikuler-p5',
+        identitas: {
+          namaSekolah: 'SDN Percontohan Refleksi',
+          tahunAjaran: '2025/2026',
+          penyusun: 'Ibu Ratna, S.Pd.',
+        },
+      });
+
+      const buffer = await generateProgramLampiranOnlyDocxBuffer(data);
+      expect(buffer).toBeInstanceOf(Uint8Array);
+      expect(buffer.length).toBeGreaterThan(5000);
+    });
+
+    it('should export standalone reflection DOCX via /docx-lampiran endpoint', async () => {
+      const data = validateAndRepairProgramResult({}, {
+        template: '7kaih',
+        identitas: {
+          namaSekolah: 'SDN 1 Wanayasa',
+          tahunAjaran: '2025/2026',
+        },
+      });
+
+      const res = await programSekolah.request('/docx-lampiran', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+        },
+        body: JSON.stringify(data),
+      }, { DB: mockAdminDb } as any);
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('officedocument.wordprocessingml');
+      expect(res.headers.get('Content-Disposition')).toContain('Refleksi_dan_Rubrik');
+      const ab = await res.arrayBuffer();
+      expect(ab.byteLength).toBeGreaterThan(5000);
+    });
+
+    it('should validate section parameter in /generate-section endpoint', async () => {
+      // Invalid section parameter
+      const resBad = await programSekolah.request('/generate-section', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+        },
+        body: JSON.stringify({
+          template: 'kokurikuler-p5',
+          section: 'invalid_section',
+        }),
+      }, { DB: mockAdminDb } as any);
+
+      expect(resBad.status).toBe(400);
+      const jsonBad = await resBad.json() as any;
+      expect(jsonBad.success).toBe(false);
+      expect(jsonBad.error?.message || jsonBad.error).toContain('Parameter section tidak valid');
     });
   });
 });

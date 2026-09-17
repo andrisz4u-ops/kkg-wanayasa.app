@@ -396,11 +396,11 @@ const navSections = [
     title: 'Asisten AI',
     icon: 'fa-wand-magic-sparkles',
     isAI: true,
-    badgeText: '6 Modul',
+    badgeText: null,
     defaultOpen: true,
     items: [
       { page: 'analisis-cp', label: 'Analisis CP (AI)', icon: 'fa-book-bookmark', public: true, ai: true },
-      { page: 'program-sekolah', label: 'Program Sekolah', icon: 'fa-file-lines', admin: true, ai: true },
+      { page: 'program-sekolah', label: 'Program Sekolah (Beta)', icon: 'fa-file-lines', admin: true, ai: true, beta: true },
       { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
       { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
       { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
@@ -462,6 +462,9 @@ function renderNavLinks(activePage) {
 
     if (visibleItems.length === 0) return '';
 
+    // Hitung badge count dinamis berdasarkan item yang terlihat
+    const dynamicBadgeText = section.isAI ? `${visibleItems.length} Modul` : section.badgeText;
+
     return `
       <div class="mb-3.5">
         <!-- Section Header Toggle Button -->
@@ -476,8 +479,8 @@ function renderNavLinks(activePage) {
           <div class="flex items-center gap-2 min-w-0">
             <i class="fas ${section.icon} text-xs ${section.isAI ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}"></i>
             <span class="${section.isAI ? 'text-teal-700 font-black' : 'text-slate-500 font-bold'} truncate">${section.title}</span>
-            ${section.badgeText ? `
-              <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 border border-teal-500/20">${section.badgeText}</span>
+            ${section.badgeText || dynamicBadgeText ? `
+              <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 border border-teal-500/20">${dynamicBadgeText || section.badgeText}</span>
             ` : ''}
           </div>
           <i class="nav-section-chevron-${section.id} fas fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
@@ -510,11 +513,13 @@ function renderNavLinks(activePage) {
                   <i class="fas ${item.icon} text-base"></i>
                 </span>
                 <span class="text-[13.5px] sm:text-[14px] tracking-tight truncate flex-1 leading-snug">${item.label}</span>
-                ${isAI ? (
+                ${item.beta && item.admin ? (
+                  '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 border border-amber-500/25 ml-auto shrink-0 flex items-center gap-1" title="Fitur beta — hanya admin & operator"><i class="fas fa-flask text-[8px]"></i> Beta</span>'
+                ) : (isAI ? (
                   !isLoggedIn
                     ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 ml-auto shrink-0 flex items-center gap-1" title="Perlu Login Akun Pendidik"><i class="fas fa-lock text-[8px]"></i> AI</span>'
                     : '<span class="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-700 border border-teal-500/20 ml-auto shrink-0">AI</span>'
-                ) : ''}
+                ) : '')}
                 ${item.page === 'pengumuman' ? '<span class="w-2 h-2 bg-amber-500 rounded-full ml-auto shrink-0 animate-pulse"></span>' : ''}
               </button>
             `;

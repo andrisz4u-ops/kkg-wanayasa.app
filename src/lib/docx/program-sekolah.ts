@@ -2193,3 +2193,163 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
   const buffer = await Packer.toBuffer(doc);
   return new Uint8Array(buffer);
 }
+
+/**
+ * Unduh Lembar Refleksi & Rubrik Saja (DOCX Terpisah untuk Murid & Fasilitator)
+ * Berisi Lampiran 2 (Rubrik Asesmen) dan Lampiran 3 (Lembar Refleksi / Jurnal) siap cetak dan fotokopi.
+ */
+export async function generateProgramLampiranOnlyDocxBuffer(
+  data: ProgramSekolahData
+): Promise<Uint8Array> {
+  const meta = data.metadata || ({} as any);
+  const tahun = meta.tahun_ajaran ? meta.tahun_ajaran.split('/')[0] : '2025';
+  const kota = meta.kota || 'Purwakarta';
+
+  const children: (Paragraph | Table)[] = [];
+
+  // Header Identitas Berkas Lampiran
+  children.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 100, after: 60 },
+      children: [
+        new TextRun({
+          text: sanitizeText((meta.nama_sekolah || 'SATUAN PENDIDIKAN').toUpperCase()),
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BAB_HEADER,
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 80 },
+      children: [
+        new TextRun({
+          text: 'INSTRUMEN ASESMEN AUTENTIK & LEMBAR REFLEKSI DIRI MURID',
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_SUB_HEADER,
+          color: '1E293B',
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 120 },
+      children: [
+        new TextRun({
+          text: sanitizeText(`${meta.judul_program || 'Program Sekolah'} - Tahun Ajaran ${meta.tahun_ajaran || '2025/2026'}`),
+          italics: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          color: '475569',
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { before: 0, after: 200 },
+      border: {
+        bottom: {
+          style: BorderStyle.SINGLE,
+          size: 12,
+          color: '94A3B8',
+        },
+      },
+    })
+  );
+
+  // Lampiran 2 & 3: Template-Specific Dynamic Attachments
+  const dynamicLampiranElements = buildTemplateSpecificLampiran(meta.template_id || 'kokurikuler-p5', meta, tahun);
+  children.push(...dynamicLampiranElements);
+
+  // Kolom Tanda Tangan & Paraf (3 Kolom: Orang Tua, Murid, Guru / Fasilitator)
+  const ttdBorder = {
+    top: { style: BorderStyle.NONE },
+    bottom: { style: BorderStyle.NONE },
+    left: { style: BorderStyle.NONE },
+    right: { style: BorderStyle.NONE },
+    insideHorizontal: { style: BorderStyle.NONE },
+    insideVertical: { style: BorderStyle.NONE },
+  };
+
+  children.push(
+    new Paragraph({
+      spacing: { before: 300, after: 100 },
+      children: [
+        new TextRun({
+          text: `${kota}, .................................... ${tahun}`,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+        }),
+      ],
+    }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: ttdBorder,
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 33, type: WidthType.PERCENTAGE },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: 'Mengetahui,\nOrang Tua / Wali Murid', font: FONT_NAME, size: SIZE_BODY })],
+                }),
+                new Paragraph({ spacing: { before: 700 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: '( ........................................ )', font: FONT_NAME, size: SIZE_BODY })] }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 34, type: WidthType.PERCENTAGE },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: 'Murid yang Bersangkutan', font: FONT_NAME, size: SIZE_BODY })],
+                }),
+                new Paragraph({ spacing: { before: 700 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: '( ........................................ )', font: FONT_NAME, size: SIZE_BODY })] }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 33, type: WidthType.PERCENTAGE },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new TextRun({ text: 'Guru / Fasilitator Pendamping', font: FONT_NAME, size: SIZE_BODY })],
+                }),
+                new Paragraph({ spacing: { before: 700 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: `( ${meta.penyusun || '........................................'} )`, bold: true, font: FONT_NAME, size: SIZE_BODY })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: meta.nip_penyusun ? `NIP. ${meta.nip_penyusun}` : '', font: FONT_NAME, size: SIZE_BODY })] }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    })
+  );
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.PORTRAIT,
+              width: 11906,
+              height: 16838,
+            },
+            margin: {
+              top: 1701,
+              bottom: 1701,
+              left: 2268,
+              right: 1701,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return new Uint8Array(buffer);
+}

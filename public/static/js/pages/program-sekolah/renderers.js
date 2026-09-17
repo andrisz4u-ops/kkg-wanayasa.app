@@ -41,8 +41,14 @@ export function renderProgramCanvas(data, activeTab = 'all') {
           </button>
         </div>
 
-        <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
-          <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200">
+        <div class="flex items-center gap-2 text-xs font-medium">
+          <button type="button" onclick="window.downloadProgramLampiranOnlyDocx && window.downloadProgramLampiranOnlyDocx()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+            title="Unduh khusus Lembar Refleksi Murid & Rubrik Asesmen (DOCX) terpisah siap cetak/fotokopi">
+            <i class="fa-solid fa-clipboard-check text-teal-600"></i>
+            <span>Cetak Refleksi & Rubrik (DOCX)</span>
+          </button>
+          <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-md border border-emerald-200">
             <i class="fa-solid fa-pen-to-square"></i> Live Editable: Klik teks untuk mengedit langsung
           </span>
         </div>
@@ -308,7 +314,15 @@ function renderBab1(b1 = {}) {
 
   return `
     <div class="program-page-sheet border-b-2 border-dashed border-slate-300 pb-16 mb-16 print:border-0 print:pb-0 print:mb-0 print:break-after-page">
-      <div class="text-center mb-8">
+      <div class="relative text-center mb-8">
+        <div class="no-print absolute right-0 top-0">
+          <button type="button" onclick="window.regenerateProgramSection && window.regenerateProgramSection('bab1')" 
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-sans font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors shadow-2xs cursor-pointer"
+            title="Generate ulang Bab I secara mendalam dengan AI">
+            <i class="fa-solid fa-arrows-rotate text-indigo-500"></i>
+            <span>Regenerate Bab I</span>
+          </button>
+        </div>
         <h2 class="text-xl font-bold uppercase tracking-wider text-slate-900">BAB I</h2>
         <h3 class="text-lg font-bold uppercase tracking-wide text-slate-900">PENDAHULUAN</h3>
       </div>
@@ -365,7 +379,15 @@ function renderBab2(b2 = {}) {
 
   return `
     <div class="program-page-sheet border-b-2 border-dashed border-slate-300 pb-16 mb-16 print:border-0 print:pb-0 print:mb-0 print:break-after-page">
-      <div class="text-center mb-8">
+      <div class="relative text-center mb-8">
+        <div class="no-print absolute right-0 top-0">
+          <button type="button" onclick="window.regenerateProgramSection && window.regenerateProgramSection('bab2')" 
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-sans font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors shadow-2xs cursor-pointer"
+            title="Generate ulang Bab II secara mendalam dengan AI">
+            <i class="fa-solid fa-arrows-rotate text-indigo-500"></i>
+            <span>Regenerate Bab II</span>
+          </button>
+        </div>
         <h2 class="text-xl font-bold uppercase tracking-wider text-slate-900">BAB II</h2>
         <h3 class="text-lg font-bold uppercase tracking-wide text-slate-900">${judulBab}</h3>
       </div>
@@ -401,7 +423,15 @@ function renderBab3(b3 = {}) {
 
   return `
     <div class="program-page-sheet border-b-2 border-dashed border-slate-300 pb-16 mb-16 print:border-0 print:pb-0 print:mb-0 print:break-after-page">
-      <div class="text-center mb-8">
+      <div class="relative text-center mb-8">
+        <div class="no-print absolute right-0 top-0">
+          <button type="button" onclick="window.regenerateProgramSection && window.regenerateProgramSection('bab3')" 
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-sans font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors shadow-2xs cursor-pointer"
+            title="Generate ulang Bab III (Kegiatan, Tim, Matriks & RAB) secara mendalam dengan AI">
+            <i class="fa-solid fa-arrows-rotate text-indigo-500"></i>
+            <span>Regenerate Bab III</span>
+          </button>
+        </div>
         <h2 class="text-xl font-bold uppercase tracking-wider text-slate-900">BAB III</h2>
         <h3 class="text-lg font-bold uppercase tracking-wide text-slate-900">RENCANA PROGRAM DAN STRATEGI PELAKSANAAN</h3>
       </div>
@@ -579,7 +609,15 @@ function renderBab4(b4 = {}) {
 
   return `
     <div class="program-page-sheet border-b-2 border-dashed border-slate-300 pb-16 mb-16 print:border-0 print:pb-0 print:mb-0 print:break-after-page">
-      <div class="text-center mb-8">
+      <div class="relative text-center mb-8">
+        <div class="no-print absolute right-0 top-0">
+          <button type="button" onclick="window.regenerateProgramSection && window.regenerateProgramSection('bab4_5')" 
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-sans font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors shadow-2xs cursor-pointer"
+            title="Generate ulang Bab IV (Monev) & Bab V (Penutup) secara mendalam dengan AI">
+            <i class="fa-solid fa-arrows-rotate text-indigo-500"></i>
+            <span>Regenerate Bab IV & V</span>
+          </button>
+        </div>
         <h2 class="text-xl font-bold uppercase tracking-wider text-slate-900">BAB IV</h2>
         <h3 class="text-lg font-bold uppercase tracking-wide text-slate-900">MONITORING, EVALUASI, DAN TINDAK LANJUT</h3>
       </div>

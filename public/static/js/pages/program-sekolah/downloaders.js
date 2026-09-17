@@ -223,3 +223,61 @@ function renderArchiveDrawerHtml(items, onSelectProgram) {
     });
   });
 }
+
+/**
+ * Unduh Khusus Lembar Refleksi Diri Murid & Rubrik Asesmen Autentik (DOCX Siap Cetak/Fotokopi)
+ */
+export async function downloadProgramLampiranOnlyDocx(programData) {
+  if (!programData || !programData.metadata) {
+    showToast('Data dokumen program sekolah tidak ditemukan', 'error');
+    return;
+  }
+
+  showLoading('Menyiapkan Lembar Refleksi & Rubrik (DOCX)...');
+
+  try {
+    const res = await fetch('/api/program-sekolah/docx-lampiran', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(programData),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal mengekspor instrumen lampiran DOCX');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = 'Lembar_Refleksi_dan_Rubrik.docx';
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    } else {
+      const safeTitle = (programData.metadata.judul_program || 'Program_Sekolah')
+        .replace(/[\\/?%*:|"<>]/g, '')
+        .replace(/\s+/g, '_')
+        .slice(0, 35);
+      filename = `${safeTitle}_Refleksi_dan_Rubrik.docx`;
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    showToast('Instrumen Lembar Refleksi & Rubrik (DOCX) berhasil diunduh!', 'success');
+  } catch (err) {
+    console.error('Download Lampiran DOCX Error:', err);
+    showToast(err.message || 'Terjadi kesalahan saat mengunduh instrumen lampiran', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+

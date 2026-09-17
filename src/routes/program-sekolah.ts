@@ -4,7 +4,7 @@ import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
-import { generateProgramDocxBuffer, type ProgramSekolahData } from '../lib/docx/program-sekolah';
+import { generateProgramDocxBuffer, generateProgramLampiranOnlyDocxBuffer, type ProgramSekolahData } from '../lib/docx/program-sekolah';
 import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings } from '../types/env';
 
@@ -375,6 +375,221 @@ OUTPUT WAJIB: Keluarkan HANYA satu objek JSON valid tanpa markdown backticks (ta
       "Orang tua murid diharapkan memberikan dukungan afektif dan waktu berkualitas dalam berdialog bersama anak saat memvalidasi jurnal pembiasaan di rumah.",
       "Pengawas pembina dan Dinas Pendidikan diharapkan terus memberikan supervisi konstruktif guna menjaga akuntabilitas dan mutu implementasi program di sekolah."
     ]
+  }
+}`;
+}
+
+// ============================================
+// Pembangun Prompt Per-Bab Spesifik (Hemat Token & Lebih Mendalam)
+// ============================================
+export function buildSectionPrompt(
+  section: 'bab1' | 'bab2' | 'bab3' | 'bab4_5',
+  params: {
+    template: string;
+    identitas: {
+      namaSekolah: string;
+      tahunAjaran: string;
+      jenjang: string;
+      faseKelas?: string;
+      penyusun: string;
+      nipPenyusun?: string;
+      jabatanPenyusun?: string;
+      kepalaSekolah?: string;
+      nipKepalaSekolah?: string;
+      komiteSekolah?: string;
+      pengawas?: string;
+      kota?: string;
+    };
+    spesifik: Record<string, any>;
+    currentData?: any;
+  }
+): string {
+  const { template, identitas, spesifik } = params;
+  const legalList = regulasiProgramDatabase[template] || regulasiProgramDatabase['kustom'];
+
+  let fokusDeskripsi = '';
+  if (template === 'kokurikuler-p5' || template === 'kokurikuler-profil-lulusan') {
+    fokusDeskripsi = `Tema Kokurikuler: "${spesifik.tema || 'Gaya Hidup Berkelanjutan'}". Alokasi JP: ${spesifik.alokasiJp || '108 JP/Tahun'}. Fokus 8 Dimensi Profil Lulusan (SK BSKAP 058/H/KR/2025): ${Array.isArray(spesifik.dimensi) ? spesifik.dimensi.join(', ') : (spesifik.dimensi || 'Keimanan & Ketakwaan, Kewargaan, Penalaran Kritis, Kolaborasi')}. Model: ${spesifik.modelJadwal || 'Model Blok Terpusat'}. Asesmen 3 Tingkat: Berkembang, Cakap, Mahir.`;
+  } else if (template === '7kaih') {
+    fokusDeskripsi = `Program 7 Kebiasaan Anak Indonesia Hebat (7 KAIH) dan 7 Poe Atikan Purwakarta Istimewa. Fokus: ${spesifik.fokusKebiasaan || 'Pembiasaan Harian'}. Catatan: ${spesifik.catatan || 'Keterlibatan orang tua'}.`;
+  } else if (template === 'hari-belajar-guru') {
+    fokusDeskripsi = `Program Hari Belajar Guru (HBG) & Kombel. Frekuensi: ${spesifik.frekuensi || '1x Pekan'}. Materi: ${spesifik.fokusMateri || 'Refleksi Pembelajaran'}.`;
+  } else if (template === 'literasi') {
+    fokusDeskripsi = `Gerakan Literasi Sekolah (GLS). Fokus: ${spesifik.fokus || 'Pojok Baca & Membaca Senyap 15 Menit'}.`;
+  } else if (template === 'uks') {
+    fokusDeskripsi = `UKS dan Sekolah Sehat (Trias UKS). Mitra: ${spesifik.mitra || 'Puskesmas'}. Fokus: ${spesifik.fokus || 'Skrining berkala'}.`;
+  } else if (template === 'adiwiyata') {
+    fokusDeskripsi = `Adiwiyata & Lingkungan Hidup (PBLHS + TdBA Purwakarta). Target: ${spesifik.targetLevel || 'Kabupaten'}. Aksi: ${spesifik.aksiUtama || 'Bank Sampah & Kebun Sekolah'}.`;
+  } else if (template === 'keagamaan') {
+    fokusDeskripsi = `Pembiasaan Keagamaan & Budi Pekerti. Jadwal: ${spesifik.jadwalIbadah || 'Sholat Berjamaah & Tadarus'}.`;
+  } else {
+    fokusDeskripsi = `Program: ${spesifik.judulKustom || 'Inovasi Sekolah'}. Deskripsi: ${spesifik.deskripsiKustom || 'Pengembangan Mutu'}.`;
+  }
+
+  const baseHeader = `Anda adalah Pakar Manajemen Pendidikan Nasional dan Pengembang Kurikulum Kemendikdasmen RI.
+Tugas Anda adalah menyusun salah satu bab spesifik dari Dokumen Program Kerja Sekolah Resmi secara sangat komprehensif, kaya narasi ilmiah, dan sangat operasional.
+
+IDENTITAS PROGRAM:
+- Nama Satuan Pendidikan: ${identitas.namaSekolah || 'SD Negeri Gugus 3 Wanayasa'}
+- Tahun Ajaran: ${identitas.tahunAjaran || '2025/2026'}
+- Jenjang: ${identitas.jenjang || 'Sekolah Dasar (SD)'}
+- Sasaran: ${identitas.faseKelas || 'Fase A, B, dan C (Kelas 1 - 6)'}
+- Penyusun: ${identitas.penyusun || 'Tim Pengembang Kurikulum'}
+- Kepala Sekolah: ${identitas.kepalaSekolah || 'Kepala Satuan Pendidikan'}
+- Fokus & Parameter: ${fokusDeskripsi}
+`;
+
+  if (section === 'bab1') {
+    return `${baseHeader}
+BAGIAN YANG HARUS DISUSUN: BAB I PENDAHULUAN
+Aturan Penulisan:
+1. Latar Belakang: Buat minimal 3-4 paragraf ilmiah berbobot tinggi:
+   - Paragraf 1 (Das Sollen): Standar Nasional Pendidikan, Permendikdasmen No. 13 Tahun 2025, Asta Cita ke-4 Kabinet Merah Putih, dan Visi Indonesia Emas 2045.
+   - Paragraf 2 (Das Sein): Potret kondisi empiris sekolah, data Rapor Pendidikan (iklim keamanan, karakter, literasi-numerasi), dan tantangan perilaku nyata murid.
+   - Paragraf 3 (Solusi Strategis): Urgensi dan rasionalisasi program kerja sebagai intervensi terukur.
+2. Dasar Hukum: Rujuk peraturan resmi hierarkis:
+${legalList.map(l => `   * ${l}`).join('\n')}
+3. Tujuan Program: Minimal 4 butir berprinsip SMART dengan kata kerja operasional (KKO) terukur.
+4. Sasaran: Rincikan sasaran murid per fase/kelas, pendidik, serta orang tua/komite.
+5. Manfaat Program: Dirinci dalam 4 pilar: (1) Bagi Murid, (2) Bagi Pendidik & Tenaga Kependidikan, (3) Bagi Satuan Pendidikan, dan (4) Bagi Orang Tua & Masyarakat.
+
+OUTPUT WAJIB: Keluarkan HANYA satu objek JSON valid tanpa markdown (tanpa \`\`\`json):
+{
+  "bab_1_pendahuluan": {
+    "latar_belakang": ["Paragraf 1...", "Paragraf 2...", "Paragraf 3..."],
+    "dasar_hukum": [
+${legalList.map(l => `      "${l}"`).join(',\n')}
+    ],
+    "tujuan": ["Tujuan 1...", "Tujuan 2...", "Tujuan 3...", "Tujuan 4..."],
+    "sasaran": ["Sasaran murid...", "Sasaran pendidik...", "Sasaran orang tua..."],
+    "manfaat": [
+      "Bagi Murid: ...",
+      "Bagi Pendidik & Tenaga Kependidikan: ...",
+      "Bagi Satuan Pendidikan: ...",
+      "Bagi Orang Tua & Masyarakat: ..."
+    ]
+  }
+}`;
+  }
+
+  if (section === 'bab2') {
+    return `${baseHeader}
+BAGIAN YANG HARUS DISUSUN: BAB II KAJIAN KONSEPTUAL DAN LANDASAN TEORITIS
+Aturan Penulisan:
+1. Susun kajian teori yang kuat, mendalam, dan kontekstual sesuai jenis program:
+   - Jika Kokurikuler: Teori Experiential Learning David Kolb, Framework Pembelajaran Mendalam (Deep Learning), 4 Prinsip Kokurikuler, dan 8 Dimensi Profil Lulusan (SK BSKAP No. 058/H/KR/2025).
+   - Jika 7KAIH: Teori Habituasi Ki Hajar Dewantara, Teori Belajar Sosial Albert Bandura (Modeling), Harmonisasi 7 Poe Atikan Purwakarta Istimewa.
+   - Jika Hari Belajar Guru: Community of Practice Etienne Wenger, Andragogi Malcolm Knowles, Inkuiri Kolaboratif.
+   - Jika Literasi: Balanced Literacy, 3 Tahap GLS (Pembiasaan, Pengembangan, Pembelajaran).
+   - Jika UKS: Trias UKS, Gerakan Sekolah Sehat (5 Sehat).
+   - Jika Adiwiyata: Etika Lingkungan Hidup, PBLHS, Integrasi TdBA Purwakarta.
+   - Jika Keagamaan: Kecerdasan Spiritual, Keteladanan Akhlak Mulia, Moderasi Beragama.
+2. Buat judul_bab dan minimal 2-3 sub_bab dengan ulasan ilmiah 2-3 paragraf mendalam per sub-bab.
+
+OUTPUT WAJIB: Keluarkan HANYA satu objek JSON valid tanpa markdown (tanpa \`\`\`json):
+{
+  "bab_2_kajian_konseptual": {
+    "judul_bab": "KAJIAN KONSEPTUAL DAN LANDASAN PENGUATAN...",
+    "sub_bab": [
+      {
+        "judul": "A. Kajian Teori Pokok...",
+        "isi": ["Paragraf ulasan 1...", "Paragraf ulasan 2..."]
+      },
+      {
+        "judul": "B. Prinsip dan Dimensi Pelaksanaan...",
+        "isi": ["Paragraf ulasan 1...", "Paragraf ulasan 2..."]
+      },
+      {
+        "judul": "C. Pembudayaan Berkelanjutan...",
+        "isi": ["Paragraf ulasan 1...", "Paragraf ulasan 2..."]
+      }
+    ]
+  }
+}`;
+  }
+
+  if (section === 'bab3') {
+    return `${baseHeader}
+BAGIAN YANG HARUS DISUSUN: BAB III RENCANA PROGRAM DAN STRATEGI PELAKSANAAN
+Aturan Penulisan:
+1. Rencana Kegiatan Aksi Nyata: Susun minimal 6-8 kegiatan konkret operasional. Setiap kegiatan memuat:
+   - nama, deskripsi, tahapan (3 tahap: 1. Persiapan/Pra, 2. Pelaksanaan Inti, 3. Output/Artefak Fisik), tujuan, waktu, sasaran, pic.
+2. Tim Pelaksana & Uraian Tugas: Susun struktur tim (Penanggung Jawab, Ketua Pelaksana, Sekretaris, Bendahara, Seksi Acara, Seksi Sarpras, Seksi Dokumentasi) beserta tugas pokok fungsinya.
+3. Matriks Action Plan 12 Bulan (Juli-Juni) yang membedakan kegiatan mingguan/bulanan dan evaluasi semester.
+4. Dukungan Sarana & Rencana Anggaran Biaya (RAB):
+   - Uraikan sarana prasarana penunjang.
+   - Susun tabel rincian_biaya realistis (5-7 pos pengeluaran BOS) dengan kolom total_anggaran terakumulasi logis (Rp 1.500.000 s.d Rp 5.000.000).
+
+OUTPUT WAJIB: Keluarkan HANYA satu objek JSON valid tanpa markdown (tanpa \`\`\`json):
+{
+  "bab_3_rencana_program": {
+    "kegiatan_utama": [
+      {
+        "nama": "Nama Kegiatan 1",
+        "deskripsi": "Deskripsi operasional...",
+        "tahapan": ["1. Persiapan: ...", "2. Pelaksanaan: ...", "3. Output: ..."],
+        "tujuan": "Tujuan terukur...",
+        "waktu": "Waktu spesifik...",
+        "sasaran": "Sasaran peserta...",
+        "pic": "Penanggung jawab..."
+      }
+    ],
+    "tim_pelaksana": {
+      "penanggung_jawab": "Kepala Sekolah",
+      "ketua": "${identitas.penyusun || 'Koordinator Program'}",
+      "sekretaris": "Nama Guru",
+      "bendahara": "Nama Guru",
+      "seksi_bidang": [
+        { "bidang": "Seksi Acara & Fasilitator", "tugas": "Mengatur skenario kegiatan..." },
+        { "bidang": "Seksi Logistik & Sarpras", "tugas": "Menyiapkan alat dan bahan..." },
+        { "bidang": "Seksi Dokumentasi & Publikasi", "tugas": "Mendokumentasikan karya murid..." }
+      ]
+    },
+    "jadwal_pelaksanaan": [
+      { "bulan": "Juli", "minggu_ke": "Pekan 3-4", "kegiatan": "Sosialisasi & Pembentukan Tim", "pic": "Tim Pengembang" }
+    ],
+    "anggaran_dan_sarana": {
+      "sarana_prasarana": ["Sarana 1...", "Sarana 2..."],
+      "rincian_biaya": [
+        { "pos_anggaran": "Pengadaan Bahan...", "volume": "1 Paket", "harga_satuan": "Rp 500.000", "total": "Rp 500.000", "sumber": "BOS Reguler" }
+      ],
+      "total_anggaran": "Rp 2.500.000"
+    }
+  }
+}`;
+  }
+
+  // bab4_5
+  return `${baseHeader}
+BAGIAN YANG HARUS DISUSUN: BAB IV (MONITORING, EVALUASI & TINDAK LANJUT) DAN BAB V (PENUTUP)
+Aturan Penulisan:
+1. BAB IV MONITORING, EVALUASI, DAN TINDAK LANJUT:
+   - Mekanisme Pemantauan: Monitoring harian oleh wali kelas, supervisi bulanan kepala sekolah, dan evaluasi tim kurikulum.
+   - Indikator: Rincikan minimal 3 tingkatan indikator keberhasilan SMART:
+     (1) Indikator Proses (keterlaksanaan aksi >= 95%).
+     (2) Indikator Output (kelengkapan jurnal dan artefak murid >= 85%).
+     (3) Indikator Dampak / Outcome (peningkatan iklim karakter/keamanan).
+   - Evaluasi & Refleksi Berkala.
+   - Tindak Lanjut & Apresiasi: Pemberian bintang kebaikan/apresiasi berkala dan bimbingan/refleksi kolektif.
+2. BAB V PENUTUP:
+   - Kesimpulan: Komitmen integritas pelaksanaan program di sekolah.
+   - Saran & Rekomendasi: Rekomendasi konkret bagi Pendidik, Murid, Orang Tua, dan Dinas Pendidikan.
+
+OUTPUT WAJIB: Keluarkan HANYA satu objek JSON valid tanpa markdown (tanpa \`\`\`json):
+{
+  "bab_4_monitoring": {
+    "mekanisme": ["Pemantauan harian...", "Supervisi bulanan..."],
+    "indikator_keberhasilan": [
+      "Indikator Proses: Keterlaksanaan seluruh agenda aksi mencapai minimal 95%.",
+      "Indikator Output: Kelengkapan instrumen jurnal refleksi murid mencapai minimal 90%.",
+      "Indikator Dampak (Outcome): Peningkatan nilai karakter dan iklim sekolah..."
+    ],
+    "evaluasi_dan_refleksi": ["Refleksi tengah semester...", "Audit portofolio akhir tahun..."],
+    "tindak_lanjut": ["Apresiasi piagam/lencana...", "Bimbingan terpadu..."]
+  },
+  "bab_5_penutup": {
+    "kesimpulan": ["Kesimpulan komitmen 1...", "Kesimpulan kesinambungan 2..."],
+    "saran": ["Bagi Pendidik: ...", "Bagi Orang Tua: ...", "Bagi Dinas Pendidikan: ..."]
   }
 }`;
 }
@@ -1043,6 +1258,187 @@ programSekolah.post('/generate', async (c) => {
 });
 
 // ============================================
+// Endpoint 2b: Generate Khusus Bab / Bagian Tertentu (Hemat Token & Lebih Mendalam)
+// ============================================
+programSekolah.post('/generate-section', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { template, identitas, spesifik, section, aiProvider, currentData } = body;
+
+    if (!template) {
+      return Errors.badRequest(c, 'Template program kerja wajib dipilih');
+    }
+    if (!section || !['bab1', 'bab2', 'bab3', 'bab4_5'].includes(section)) {
+      return Errors.badRequest(c, 'Parameter section tidak valid (bab1, bab2, bab3, bab4_5)');
+    }
+
+    const ai = new AIService(c.env);
+    const prompt = buildSectionPrompt(section, {
+      template,
+      identitas: identitas || {},
+      spesifik: spesifik || {},
+      currentData: currentData || {},
+    });
+
+    const slugMap: Record<string, string> = {
+      vertex: 'vertex-proxy',
+      gemini: 'gemini-flash',
+      bedrock: 'bedrock-claude',
+      mistral: 'mistral-large',
+      z_ai: 'glm4-flash',
+    };
+    const preferredSlug = slugMap[aiProvider] || aiProvider;
+
+    const rawResult = await ai.generateJSON(prompt, preferredSlug);
+    const sanitizedResult = replacePesertaDidik(rawResult);
+
+    // Merge section ke dalam currentData jika ada
+    let merged = currentData ? { ...currentData } : {};
+
+    if (section === 'bab1' && sanitizedResult.bab_1_pendahuluan) {
+      merged.bab_1_pendahuluan = sanitizedResult.bab_1_pendahuluan;
+
+    } else if (section === 'bab2' && sanitizedResult.bab_2_kajian_konseptual) {
+      merged.bab_2_kajian_konseptual = sanitizedResult.bab_2_kajian_konseptual;
+
+    } else if (section === 'bab3') {
+      // Normalisasi: AI bab3 menggunakan schema berbeda dari renderer canonical
+      // Ambil dari key manapun yang AI kembalikan (bab_3_rencana_program atau langsung dari root)
+      const raw3 = sanitizedResult.bab_3_rencana_program || sanitizedResult;
+
+      // A. Kegiatan: AI mungkin kembalikan key 'kegiatan_utama' atau 'kegiatan'
+      const rawKegiatan = raw3?.kegiatan_utama || raw3?.kegiatan || [];
+
+      // Normalkan format per kegiatan ke canonical (nama/deskripsi/tahapan/tujuan/waktu/sasaran/pic)
+      const kegiatan = Array.isArray(rawKegiatan) ? rawKegiatan.map((k: any, i: number) => ({
+        nama: k.nama || k.name || `Kegiatan ${i + 1}`,
+        deskripsi: k.deskripsi || k.description || '',
+        tahapan: Array.isArray(k.tahapan) ? k.tahapan
+          : (k.langkah ? [k.langkah] : ['1. Persiapan', '2. Pelaksanaan', '3. Evaluasi']),
+        tujuan: k.tujuan || k.tujuan_kegiatan || '',
+        waktu: k.waktu || k.jadwal || '',
+        sasaran: k.sasaran || '',
+        pic: k.pic || k.penanggung_jawab || 'Tim Program',
+        anggaran: k.anggaran || '',
+      })) : [];
+
+      // B. Tim Pelaksana: AI mungkin kembalikan object {penanggung_jawab, ketua, seksi_bidang} atau array flat
+      const rawTim = raw3?.tim_pelaksana;
+      let timPelaksana: any[] = [];
+      if (Array.isArray(rawTim)) {
+        // Sudah dalam format flat array → gunakan langsung
+        timPelaksana = rawTim;
+      } else if (rawTim && typeof rawTim === 'object') {
+        // Format object → konversi ke flat array
+        const rows: any[] = [];
+        let no = 1;
+        if (rawTim.penanggung_jawab) rows.push({ no: no++, jabatan: 'Penanggung Jawab / Pengarah', nama: rawTim.penanggung_jawab, tugas: 'Menetapkan kebijakan dan melakukan supervisi mutu program.' });
+        if (rawTim.ketua) rows.push({ no: no++, jabatan: 'Ketua Pelaksana', nama: rawTim.ketua, tugas: 'Mengkoordinasikan pelaksanaan aksi dan menyusun laporan pertanggungjawaban.' });
+        if (rawTim.sekretaris) rows.push({ no: no++, jabatan: 'Sekretaris', nama: rawTim.sekretaris, tugas: 'Mencatat notulen rapat, mengelola administrasi, dan mendokumentasikan program.' });
+        if (rawTim.bendahara) rows.push({ no: no++, jabatan: 'Bendahara', nama: rawTim.bendahara, tugas: 'Mengelola anggaran BOSP, menyiapkan kuitansi, dan menyusun laporan keuangan.' });
+        if (Array.isArray(rawTim.seksi_bidang)) {
+          rawTim.seksi_bidang.forEach((s: any) => {
+            rows.push({ no: no++, jabatan: s.bidang || 'Seksi', nama: '...', tugas: s.tugas || '' });
+          });
+        }
+        timPelaksana = rows;
+      }
+
+      // C. Action Plan: AI mungkin pakai key 'jadwal_pelaksanaan' atau 'action_plan'
+      const rawJadwal = raw3?.jadwal_pelaksanaan || raw3?.action_plan || [];
+      const actionPlan = Array.isArray(rawJadwal) ? rawJadwal.map((j: any, i: number) => ({
+        no: j.no || i + 1,
+        kegiatan: j.kegiatan || j.nama || `Kegiatan ${i + 1}`,
+        bulan: Array.isArray(j.bulan) ? j.bulan : (j.bulan_ke ? [j.bulan_ke] : [i + 1]),
+        pic: j.pic || 'Tim Program',
+      })) : [];
+
+      // D. Sarana & Anggaran: AI pakai 'anggaran_dan_sarana.rincian_biaya', normalkan ke 'tabel_anggaran'
+      const anggaranSarana = raw3?.anggaran_dan_sarana || {};
+      const saranaTeks = anggaranSarana?.sarana_prasarana || raw3?.sarana_anggaran || [];
+      const saranaText = Array.isArray(saranaTeks) ? saranaTeks : [String(saranaTeks)];
+
+      const rawBiaya = anggaranSarana?.rincian_biaya || raw3?.tabel_anggaran || [];
+      let totalNum = 0;
+      const tabelAnggaran = Array.isArray(rawBiaya) ? rawBiaya.map((b: any, idx: number) => {
+        const rawTot = String(b.total || b.total_biaya || '');
+        const num = parseInt(rawTot.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num)) totalNum += num;
+        return {
+          no: b.no || idx + 1,
+          uraian: b.uraian || b.pos_anggaran || b.nama || `Item ${idx + 1}`,
+          volume: String(b.volume || '1'),
+          satuan: String(b.satuan || 'Paket'),
+          total: rawTot.startsWith('Rp') ? rawTot : (num ? `Rp ${num.toLocaleString('id-ID')}` : '-'),
+          sumber: b.sumber || 'BOSP Reguler',
+        };
+      }) : [];
+
+      const totalAnggaran = anggaranSarana?.total_anggaran || raw3?.total_anggaran
+        || (totalNum > 0 ? `Rp ${totalNum.toLocaleString('id-ID')}` : 'Rp 2.450.000');
+
+      // Rakit bab_3_rencana_program canonical dan merge
+      const bab3Canonical: any = {};
+      if (kegiatan.length > 0) bab3Canonical.kegiatan = kegiatan;
+      if (timPelaksana.length > 0) bab3Canonical.tim_pelaksana = timPelaksana;
+      if (actionPlan.length > 0) bab3Canonical.action_plan = actionPlan;
+      if (saranaText.length > 0) bab3Canonical.sarana_anggaran = saranaText;
+      if (tabelAnggaran.length > 0) bab3Canonical.tabel_anggaran = tabelAnggaran;
+      bab3Canonical.total_anggaran = totalAnggaran;
+
+      merged.bab_3_rencana_program = {
+        ...(merged.bab_3_rencana_program || {}),
+        ...bab3Canonical,
+      };
+
+    } else if (section === 'bab4_5') {
+      // Normalisasi: AI bab4_5 mungkin menggunakan 'bab_4_monitoring' atau 'bab_4_monitoring_evaluasi'
+      const raw4 = sanitizedResult.bab_4_monitoring_evaluasi || sanitizedResult.bab_4_monitoring || sanitizedResult;
+      if (raw4 && typeof raw4 === 'object') {
+        merged.bab_4_monitoring_evaluasi = {
+          mekanisme: raw4.mekanisme || [],
+          // Normalisasi key indikator: bisa 'indikator', 'indikator_keberhasilan', atau 'indikator_keberhasilan_smart'
+          indikator: raw4.indikator || raw4.indikator_keberhasilan || raw4.indikator_keberhasilan_smart || [],
+          evaluasi: raw4.evaluasi || raw4.evaluasi_dan_refleksi || [],
+          tindak_lanjut: raw4.tindak_lanjut || [],
+        };
+      }
+      const raw5 = sanitizedResult.bab_5_penutup;
+      if (raw5 && typeof raw5 === 'object') {
+        merged.bab_5_penutup = {
+          kesimpulan: raw5.kesimpulan || [],
+          saran: raw5.saran || [],
+        };
+      }
+    }
+
+    // Telemetry log
+    try {
+      const user = c.get('user' as any);
+      await recordAIGeneration(c.env.DB, {
+        user_id: user?.id || 1,
+        user_nama: user?.nama || (identitas?.penyusun || 'Guru'),
+        sekolah: user?.sekolah || (identitas?.namaSekolah || 'SDN'),
+        feature_type: 'PROGRAM_SEKOLAH_SECTION',
+        mata_pelajaran: `${template}_${section}`,
+        topik: `Generate ${section} ${identitas?.namaSekolah || ''}`,
+        jenjang_kelas: identitas?.jenjang || 'SD',
+        ai_provider: preferredSlug,
+      });
+    } catch (_) {}
+
+    return successResponse(c, {
+      section,
+      sectionData: sanitizedResult,
+      mergedData: merged,
+    });
+  } catch (e: any) {
+    console.error('Program Sekolah Section Gen Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// ============================================
 // Endpoint 3: Download DOCX Lengkap (BAB I-V + Lampiran dlm 1 File)
 // ============================================
 programSekolah.post('/docx', async (c) => {
@@ -1069,6 +1465,37 @@ programSekolah.post('/docx', async (c) => {
     return c.body(buffer as any);
   } catch (e: any) {
     console.error('Program Sekolah DOCX Export Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// ============================================
+// Endpoint 3b: Download Lembar Refleksi & Rubrik Saja (DOCX Terpisah Siap Cetak/Fotokopi)
+// ============================================
+programSekolah.post('/docx-lampiran', async (c) => {
+  try {
+    const body = await c.req.json();
+    const data: ProgramSekolahData = body;
+
+    if (!data || !data.metadata) {
+      return Errors.badRequest(c, 'Data dokumen program sekolah tidak valid');
+    }
+
+    const buffer = await generateProgramLampiranOnlyDocxBuffer(data);
+
+    const titleSafe = String(data.metadata.judul_program || 'Program_Sekolah')
+      .replace(/[\\/?%*:|"<>]/g, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 40);
+    const filename = `${titleSafe}_Refleksi_dan_Rubrik_${data.metadata.tahun_ajaran?.replace('/', '-') || '2025-2026'}.docx`;
+
+    c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    c.header('Content-Disposition', `attachment; filename="${filename}"`);
+    c.header('Content-Length', buffer.length.toString());
+
+    return c.body(buffer as any);
+  } catch (e: any) {
+    console.error('Program Sekolah DOCX Lampiran Export Error:', e);
     return Errors.internal(c, e.message);
   }
 });

@@ -42,7 +42,11 @@ kisi.get('/cp-reference', async (c) => {
         fase,
         cp: officialCP || '',
         elements: elements || {},
-        source: 'Keputusan Kepala BSKAP No. 046 Tahun 2025'
+        source: (mapel.toLowerCase().includes('agama') || mapel.toLowerCase().includes('paibp'))
+            ? 'Keputusan Kepala BKPDM No. 020 Tahun 2026'
+            : (mapel.toLowerCase().includes('sunda') || mapel.toLowerCase().includes('tatanen') || mapel.toLowerCase().includes('akpk'))
+                ? 'Muatan Lokal Kurikulum Merdeka'
+                : 'Keputusan Kepala BSKAP No. 046 Tahun 2025'
     });
 });
 
@@ -1021,7 +1025,14 @@ export const buildAssessmentPrompt = (params: {
         └──────────────────────────────────────────────────────────────────────────
 
         II. ATURAN WAJIB KISI-KISI & PENYUSUNAN SOAL:
-        1. CP (Capaian Pembelajaran): ${resolvedCP ? `Berdasarkan rujukan resmi BSKAP No. 046 Tahun 2025: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : 'Formulasikan otomatis sesuai capaian pembelajaran resmi BSKAP No. 046 Tahun 2025 untuk topik ini'}
+        ${(() => {
+            const regName = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
+                ? 'Kepka BKPDM No. 020 Tahun 2026'
+                : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
+                    ? 'Muatan Lokal Kurikulum Merdeka'
+                    : 'BSKAP No. 046 Tahun 2025';
+            return `1. CP (Capaian Pembelajaran): ${resolvedCP ? `Berdasarkan rujukan resmi ${regName}: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : `Formulasikan otomatis sesuai capaian pembelajaran resmi ${regName} untuk topik ini`}`;
+        })()}
         2. LINGKUP MATERI: ${topik}
         3. PROPORSI TARGET LEVEL: ${hotsRatio || '30:40:30'} (L1 : L2 : L3). Terapkan secara presisi!
         4. TUGAS: ${taskDesc}
@@ -1496,14 +1507,19 @@ kisi.post('/generate-stream', async (c) => {
         c.header('X-Accel-Buffering', 'no');
         return streamSSE(c, async (stream) => {
             try {
-                // Step 1: Analisis Kurikulum & CP BSKAP 046/2025
+                // Step 1: Analisis Kurikulum & CP
+                const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
+                    ? 'Kepka BKPDM 020/2026'
+                    : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
+                        ? 'Muatan Lokal'
+                        : 'BSKAP 046/2025';
                 await stream.writeSSE({
                     event: 'step',
                     data: JSON.stringify({
                         step: 1,
                         totalSteps: 5,
-                        title: 'Analisis CP BSKAP 046/2025',
-                        message: `Menelaah materi "${topik}" berdasar rujukan resmi BSKAP No. 046/2025 (${jenjangKelas || 'SD'})...`,
+                        title: `Analisis CP ${regTitle}`,
+                        message: `Menelaah materi "${topik}" berdasar rujukan resmi ${regTitle} (${jenjangKelas || 'SD'})...`,
                         percent: 15
                     })
                 });

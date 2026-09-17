@@ -54,6 +54,10 @@ describe('Kelola CP (Capaian Pembelajaran) Admin & Resolver Tests', () => {
       expect(matchSubjectKey('Tatanen di Bale Atikan', keys)).toBe('Tatanen di Bale Atikan');
       expect(matchSubjectKey('TdBA', keys)).toBe('Tatanen di Bale Atikan');
       expect(matchSubjectKey('AKPK', keys)).toBe('AKPK');
+      expect(matchSubjectKey('PAIBP', keys)).toBeTruthy();
+      expect(matchSubjectKey('Pendidikan Agama Islam', keys)).toBeTruthy();
+      expect(matchSubjectKey('PAI', keys)).toBeTruthy();
+      expect(matchSubjectKey('Agama Islam', keys)).toBeTruthy();
     });
 
     it('should return null if no matching key found', () => {
@@ -89,6 +93,48 @@ describe('Kelola CP (Capaian Pembelajaran) Admin & Resolver Tests', () => {
       const akpkElements = getOfficialCPElements('AKPK', 'Kelas 5');
       expect(akpkElements).toBeDefined();
       expect(akpkElements).toHaveProperty('Ajeg Nusantara');
+    });
+
+    it('should retrieve official CP for PAIBP with Kepka BKPDM No. 020 Tahun 2026', () => {
+      const cpA = getOfficialCP('PAIBP', 'Kelas 1');
+      const cpB = getOfficialCP('Pendidikan Agama Islam dan Budi Pekerti', 'Kelas 4');
+      const cpC = getOfficialCP('Pendidikan Agama dan Budi Pekerti', 'Kelas 5');
+
+      expect(cpA).toBeDefined();
+      expect(cpA).toContain('Membaca dan membedakan huruf hijaiah berharakat');
+      expect(cpA).toContain('Surah al-Fātiḥah');
+      expect(cpA).toContain('rukun iman');
+      expect(cpA).toContain('rukun Islam');
+      expect(cpA).toContain('Menceritakan kisah keteladanan beberapa nabi dan rasul');
+
+      expect(cpB).toBeDefined();
+      expect(cpB).toContain('Membaca, menulis, dan membedakan huruf hijaiah bersambung');
+      expect(cpB).toContain('taklīf');
+      expect(cpB).toContain('periode Makkah');
+
+      expect(cpC).toBeDefined();
+      expect(cpC).toContain('puasa wajib dan sunah');
+      expect(cpC).toContain('periode Madinah dan khulafaurasyidin');
+    });
+
+    it('should retrieve 5 official elements for PAIBP based on Kepka BKPDM No. 020 Tahun 2026', () => {
+      const elementsA = getOfficialCPElements('PAIBP', 'Kelas 1');
+      expect(elementsA).toBeDefined();
+      expect(Object.keys(elementsA!)).toHaveLength(5);
+      expect(elementsA).toHaveProperty('Al-Qur’an Hadis');
+      expect(elementsA).toHaveProperty('Akidah');
+      expect(elementsA).toHaveProperty('Akhlak');
+      expect(elementsA).toHaveProperty('Fikih');
+      expect(elementsA).toHaveProperty('Sejarah Peradaban Islam');
+      expect(elementsA!['Al-Qur’an Hadis']).toContain('Membaca dan membedakan huruf hijaiah berharakat');
+
+      const elementsB = getOfficialCPElements('Pendidikan Agama Islam dan Budi Pekerti', 'Kelas 3');
+      expect(elementsB).toBeDefined();
+      expect(elementsB!['Fikih']).toContain('taklīf');
+
+      const elementsC = getOfficialCPElements('Pendidikan Agama dan Budi Pekerti', 'Kelas 6');
+      expect(elementsC).toBeDefined();
+      expect(elementsC!['Sejarah Peradaban Islam']).toContain('periode Madinah');
     });
   });
 
@@ -203,6 +249,42 @@ describe('Kelola CP (Capaian Pembelajaran) Admin & Resolver Tests', () => {
       const seededCount = await seedDefaultCPToDatabase(mockDb);
       expect(seededCount).toBeGreaterThan(0);
       expect(insertCalls).toBe(seededCount);
+    });
+
+    it('should assign Kepka BKPDM No. 020 Tahun 2026 regulation for PAIBP subjects', async () => {
+      const insertedRows: any[] = [];
+      const mockDb = {
+        prepare: vi.fn().mockImplementation((sql: string) => {
+          if (sql.includes('SELECT COUNT(*)')) {
+            return {
+              first: vi.fn().mockResolvedValue({ count: 0 })
+            };
+          }
+          return {
+            bind: vi.fn().mockImplementation((...args: any[]) => {
+              insertedRows.push({
+                subject: args[0],
+                fase: args[1],
+                teks_cp: args[2],
+                elements: args[3],
+                regulasi: args[4]
+              });
+              return {
+                run: vi.fn().mockResolvedValue({ success: true })
+              };
+            })
+          };
+        })
+      };
+
+      await seedDefaultCPToDatabase(mockDb);
+      const paibpRows = insertedRows.filter(r => 
+        r.subject.toLowerCase().includes('agama') || r.subject.toLowerCase().includes('paibp')
+      );
+      expect(paibpRows.length).toBeGreaterThan(0);
+      paibpRows.forEach(row => {
+        expect(row.regulasi).toBe('Kepka BKPDM No. 020 Tahun 2026');
+      });
     });
   });
 });

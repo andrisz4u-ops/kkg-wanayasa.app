@@ -1979,7 +1979,9 @@ admin.post('/cp/reset', async (c) => {
           const defaultElements = cpElementsData[subject]?.[f] || {};
           const reg = (subject === 'B.Sunda' || subject === 'Tatanen di Bale Atikan' || subject === 'AKPK')
             ? 'Muatan Lokal Kurikulum Merdeka'
-            : 'BSKAP No. 046 Tahun 2025';
+            : (subject.toLowerCase().includes('agama') || subject.toLowerCase().includes('paibp'))
+              ? 'Kepka BKPDM No. 020 Tahun 2026'
+              : 'BSKAP No. 046 Tahun 2025';
 
           await c.env.DB.prepare(`
             INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi, updated_by)
@@ -2026,7 +2028,9 @@ admin.post('/cp/reset', async (c) => {
         const defaultElements = cpElementsData[matchedKey]?.[f] || {};
         const reg = (matchedKey === 'B.Sunda' || matchedKey === 'Tatanen di Bale Atikan' || matchedKey === 'AKPK')
           ? 'Muatan Lokal Kurikulum Merdeka'
-          : 'BSKAP No. 046 Tahun 2025';
+          : (matchedKey.toLowerCase().includes('agama') || matchedKey.toLowerCase().includes('paibp'))
+            ? 'Kepka BKPDM No. 020 Tahun 2026'
+            : 'BSKAP No. 046 Tahun 2025';
 
         await c.env.DB.prepare(`
           INSERT INTO capaian_pembelajaran (mata_pelajaran, fase, teks_cp, elemen_json, regulasi, updated_by)

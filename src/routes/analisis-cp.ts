@@ -117,7 +117,7 @@ export function getStandardCurriculumChapters(mataPelajaran: string, jenjangKela
     else if (normMapel.includes('ipas') || normMapel.includes('ipa') || normMapel.includes('ips') || normMapel.includes('ilmu pengetahuan alam')) subjectKey = 'ipas';
     else if (normMapel.includes('matematika')) subjectKey = 'matematika';
     else if (normMapel.includes('pancasila') || normMapel.includes('pkn')) subjectKey = 'pendidikan pancasila';
-    else if (normMapel.includes('agama')) subjectKey = 'pendidikan agama dan budi pekerti';
+    else if (normMapel.includes('agama') || normMapel.includes('paibp') || normMapel.includes('pai') || normMapel.includes('islam')) subjectKey = 'pendidikan agama dan budi pekerti';
     else if (normMapel.includes('pjok') || normMapel.includes('jasmani') || normMapel.includes('olahraga')) subjectKey = 'pendidikan jasmani, olahraga, dan kesehatan (pjok)';
     else if (normMapel.includes('inggris')) subjectKey = 'bahasa inggris';
     else if (normMapel.includes('seni') || normMapel.includes('rupa')) subjectKey = 'seni rupa';
@@ -246,7 +246,7 @@ IDENTITAS DOKUMEN:
 - Tahun Pembelajaran: ${tahunAjaran || '2025/2026'}
 - Target Analisis: ${targetSemester === '1' ? 'Semester 1 Saja' : targetSemester === '2' ? 'Semester 2 Saja' : 'Setahun Penuh (Semester 1 dan 2)'}
 
-CAPAIAN PEMBELAJARAN (CP) RESMI PEMERINTAH (BSKAP No. 046 Tahun 2025):
+CAPAIAN PEMBELAJARAN (CP) RESMI PEMERINTAH (${(mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp')) ? 'Kepka BKPDM No. 020 Tahun 2026' : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk')) ? 'Muatan Lokal Kurikulum Merdeka' : 'BSKAP No. 046 Tahun 2025'}):
 ${baseCP || 'Gunakan Capaian Pembelajaran standar resmi untuk mata pelajaran dan fase ini.'}
 
 DETAIL ELEMEN CP RESMI:
@@ -422,7 +422,7 @@ async function resolveOfficialCP(mataPelajaran: string, jenjangKelas: string, db
       const lk = key.toLowerCase();
       return normalizedSubject === lk ||
              normalizedSubject.includes(lk) || lk.includes(normalizedSubject) ||
-             (lk.includes('agama') && normalizedSubject.includes('agama')) ||
+             ((lk.includes('agama') || lk.includes('paibp')) && (normalizedSubject.includes('agama') || normalizedSubject.includes('paibp') || normalizedSubject.includes('pai') || normalizedSubject.includes('islam'))) ||
              (lk.includes('pancasila') && normalizedSubject.includes('pancasila')) ||
              (lk.includes('ipas') && (normalizedSubject.includes('ipas') || normalizedSubject.includes('ilmu pengetahuan alam'))) ||
              (lk.includes('matematika') && normalizedSubject.includes('matematika')) ||
@@ -752,12 +752,17 @@ analisisCp.post('/generate-stream', async (c) => {
     c.header('X-Accel-Buffering', 'no');
     return streamSSE(c, async (stream) => {
       try {
+        const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
+          ? 'Kepka BKPDM 020/2026'
+          : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
+            ? 'Muatan Lokal'
+            : 'BSKAP 046/2025';
         await stream.writeSSE({
           event: 'step',
           data: JSON.stringify({
             step: 1,
             totalSteps: 4,
-            title: 'Sinkronisasi CP BSKAP 046/2025',
+            title: `Sinkronisasi CP ${regTitle}`,
             message: `Memvalidasi capaian pembelajaran resmi untuk ${mataPelajaran} (${jenjangKelas})...`,
             percent: 25
           })

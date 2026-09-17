@@ -594,7 +594,7 @@ export function initRpp() {
           cpInput.value = cpVal;
           cpInput.focus();
         }
-        showToast(`CP resmi ${resp.data.fase} (BSKAP No. 046/2025) berhasil dimuat!`, 'success');
+        showToast(`CP resmi ${resp.data.fase} (${resp.data.source || 'BSKAP No. 046/2025'}) berhasil dimuat!`, 'success');
       } else {
         showToast('Rumusan CP resmi belum tersedia untuk kombinasi ini. AI akan memformulasikannya otomatis.', 'info');
       }

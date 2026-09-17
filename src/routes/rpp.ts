@@ -45,9 +45,13 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
     profilLulusan, lampirkanLKPD, aiProvider
   } = body;
 
+  const regName = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
+    ? 'Kepka BKPDM No. 020 Tahun 2026'
+    : 'BSKAP No. 046 Tahun 2025';
+
   const userCP = baseCP
-    ? `Gunakan Capaian Pembelajaran resmi BSKAP No. 046 Tahun 2025 berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
-    : "Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka secara otomatis untuk mata pelajaran dan topik ini.";
+    ? `Gunakan Capaian Pembelajaran resmi ${regName} berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
+    : `Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka (${regName}) secara otomatis untuk mata pelajaran dan topik ini.`;
 
   const profileDimensions = Array.isArray(profilLulusan)
     ? profilLulusan.join(', ')
@@ -287,13 +291,14 @@ rpp.post('/generate-stream', async (c) => {
     c.header('X-Accel-Buffering', 'no');
     return streamSSE(c, async (stream) => {
       try {
+        const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp')) ? 'Kepka BKPDM 020/2026' : 'BSKAP 046/2025';
         await stream.writeSSE({
           event: 'step',
           data: JSON.stringify({
             step: 1,
             totalSteps: 4,
-            title: 'Analisis CP BSKAP 046/2025',
-            message: `Menelaah kesiapan murid & CP resmi BSKAP No. 046/2025 untuk topik "${topik}"...`,
+            title: `Analisis CP ${regTitle}`,
+            message: `Menelaah kesiapan murid & CP resmi ${regTitle} untuk topik "${topik}"...`,
             percent: 20
           })
         });

@@ -26,6 +26,136 @@ function handleSemesterChange(newSem) {
   renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
 }
 
+// ============================================================
+// DRAFT LOCAL STORAGE HELPERS (MODULE-LEVEL)
+// ============================================================
+function getDraftStorageKey() {
+  const uid = state.user?.id || 'guest';
+  return `kkg_analisis_cp_draft_${uid}`;
+}
+
+export function saveDraftToStorage() {
+  try {
+    if (!state.user) return;
+    if (!currentAnalysisData && (!detectedChapters || detectedChapters.length === 0)) return;
+
+    const draft = {
+      timestamp: Date.now(),
+      inputData: currentInputData || {
+        namaSekolah: document.getElementById('input-nama-sekolah')?.value || '',
+        mataPelajaran: document.getElementById('select-mata-pelajaran')?.value || '',
+        jenjangKelas: document.getElementById('select-jenjang-kelas')?.value || '',
+        tahunAjaran: document.querySelector('select[name="tahunAjaran"]')?.value || '',
+        sumberBuku: document.getElementById('input-sumber-buku')?.value || '',
+        namaGuru: document.querySelector('input[name="namaGuru"]')?.value || '',
+        nipGuru: document.querySelector('input[name="nipGuru"]')?.value || '',
+        namaKepalaSekolah: document.querySelector('input[name="namaKepalaSekolah"]')?.value || '',
+        nipKepalaSekolah: document.querySelector('input[name="nipKepalaSekolah"]')?.value || ''
+      },
+      detectedChapters: detectedChapters || [],
+      analysisData: currentAnalysisData,
+      activeTab: activeAnalysisTab,
+      activeSemester: activePromesSemester
+    };
+
+    localStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
+  } catch (e) {
+    console.warn('Gagal menyimpan draf analisis:', e);
+  }
+}
+
+function checkAndShowDraftBanner() {
+  try {
+    const raw = localStorage.getItem(getDraftStorageKey());
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (!draft || (!draft.analysisData && (!draft.detectedChapters || draft.detectedChapters.length === 0))) return;
+
+    const banner = document.getElementById('analisis-draft-banner');
+    const restoreBtn = document.getElementById('btn-restore-draft');
+    const infoText = document.getElementById('analisis-draft-info');
+
+    if (banner) banner.classList.remove('hidden');
+    if (restoreBtn) restoreBtn.classList.remove('hidden');
+
+    const dateStr = draft.timestamp ? new Date(draft.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+    const mapelName = draft.inputData?.mataPelajaran || 'Analisis CP';
+    const kelasName = draft.inputData?.jenjangKelas || '';
+
+    if (infoText) {
+      const hasContent = !!draft.analysisData;
+      infoText.innerText = `Draf tersimpan (${dateStr}): ${mapelName} ${kelasName} • ${hasContent ? 'Hasil Analisis Lengkap' : `${draft.detectedChapters?.length || 0} Bab Terstruktur`}`;
+    }
+  } catch (_) {}
+}
+
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(getDraftStorageKey());
+    if (!raw) {
+      showToast('Tidak ada draf yang tersimpan.', 'info');
+      return;
+    }
+    const draft = JSON.parse(raw);
+
+    if (draft.inputData) {
+      currentInputData = draft.inputData;
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+      };
+      const setByName = (name, val) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el && val !== undefined) el.value = val;
+      };
+
+      setVal('input-nama-sekolah', draft.inputData.namaSekolah);
+      setVal('select-mata-pelajaran', draft.inputData.mataPelajaran);
+      setVal('select-jenjang-kelas', draft.inputData.jenjangKelas);
+      setVal('input-sumber-buku', draft.inputData.sumberBuku);
+      setByName('tahunAjaran', draft.inputData.tahunAjaran);
+      setByName('namaGuru', draft.inputData.namaGuru);
+      setByName('nipGuru', draft.inputData.nipGuru);
+      setByName('namaKepalaSekolah', draft.inputData.namaKepalaSekolah);
+      setByName('nipKepalaSekolah', draft.inputData.nipKepalaSekolah);
+    }
+
+    if (Array.isArray(draft.detectedChapters) && draft.detectedChapters.length > 0) {
+      detectedChapters = draft.detectedChapters;
+      renderChaptersList();
+    }
+
+    if (draft.analysisData) {
+      currentAnalysisData = draft.analysisData;
+      activeAnalysisTab = draft.activeTab || 'analisis';
+      activePromesSemester = draft.activeSemester || 'all';
+
+      document.getElementById('analisis-form-view')?.classList.add('hidden');
+      document.getElementById('analisis-result-view')?.classList.remove('hidden');
+      renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+      showToast('Draf analisis berhasil dipulihkan!', 'success');
+    } else {
+      showToast('Draf formulir dan daftar bab berhasil dipulihkan!', 'success');
+    }
+
+    document.getElementById('analisis-draft-banner')?.classList.add('hidden');
+    document.getElementById('btn-restore-draft')?.classList.add('hidden');
+  } catch (err) {
+    console.error('Gagal memulihkan draf:', err);
+    showToast('Gagal memulihkan draf.', 'error');
+  }
+}
+
+function dismissDraft() {
+  try {
+    localStorage.removeItem(getDraftStorageKey());
+    document.getElementById('analisis-draft-banner')?.classList.add('hidden');
+    document.getElementById('btn-restore-draft')?.classList.add('hidden');
+    showToast('Draf telah diabaikan.', 'info');
+  } catch (_) {}
+}
+
+
 export async function renderAnalisisCp() {
   if (!state.user) {
     return renderLockedFeature(
@@ -881,133 +1011,6 @@ export function initAnalisisCp() {
     saveDraftToStorage();
     showToast('Baris TP berhasil dihapus.', 'info');
   };
-
-  // Draft local storage helpers
-  function getDraftStorageKey() {
-    const uid = state.user?.id || 'guest';
-    return `kkg_analisis_cp_draft_${uid}`;
-  }
-
-  function saveDraftToStorage() {
-    try {
-      if (!state.user) return;
-      if (!currentAnalysisData && (!detectedChapters || detectedChapters.length === 0)) return;
-
-      const draft = {
-        timestamp: Date.now(),
-        inputData: currentInputData || {
-          namaSekolah: document.getElementById('input-nama-sekolah')?.value || '',
-          mataPelajaran: document.getElementById('select-mata-pelajaran')?.value || '',
-          jenjangKelas: document.getElementById('select-jenjang-kelas')?.value || '',
-          tahunAjaran: document.querySelector('select[name="tahunAjaran"]')?.value || '',
-          sumberBuku: document.getElementById('input-sumber-buku')?.value || '',
-          namaGuru: document.querySelector('input[name="namaGuru"]')?.value || '',
-          nipGuru: document.querySelector('input[name="nipGuru"]')?.value || '',
-          namaKepalaSekolah: document.querySelector('input[name="namaKepalaSekolah"]')?.value || '',
-          nipKepalaSekolah: document.querySelector('input[name="nipKepalaSekolah"]')?.value || ''
-        },
-        detectedChapters: detectedChapters || [],
-        analysisData: currentAnalysisData,
-        activeTab: activeAnalysisTab,
-        activeSemester: activePromesSemester
-      };
-
-      localStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
-    } catch (e) {
-      console.warn('Gagal menyimpan draf analisis:', e);
-    }
-  }
-
-  function checkAndShowDraftBanner() {
-    try {
-      const raw = localStorage.getItem(getDraftStorageKey());
-      if (!raw) return;
-      const draft = JSON.parse(raw);
-      if (!draft || (!draft.analysisData && (!draft.detectedChapters || draft.detectedChapters.length === 0))) return;
-
-      const banner = document.getElementById('analisis-draft-banner');
-      const restoreBtn = document.getElementById('btn-restore-draft');
-      const infoText = document.getElementById('analisis-draft-info');
-
-      if (banner) banner.classList.remove('hidden');
-      if (restoreBtn) restoreBtn.classList.remove('hidden');
-
-      const dateStr = draft.timestamp ? new Date(draft.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
-      const mapelName = draft.inputData?.mataPelajaran || 'Analisis CP';
-      const kelasName = draft.inputData?.jenjangKelas || '';
-
-      if (infoText) {
-        const hasContent = !!draft.analysisData;
-        infoText.innerText = `Draf tersimpan (${dateStr}): ${mapelName} ${kelasName} • ${hasContent ? 'Hasil Analisis Lengkap' : `${draft.detectedChapters?.length || 0} Bab Terstruktur`}`;
-      }
-    } catch (_) {}
-  }
-
-  function restoreDraft() {
-    try {
-      const raw = localStorage.getItem(getDraftStorageKey());
-      if (!raw) {
-        showToast('Tidak ada draf yang tersimpan.', 'info');
-        return;
-      }
-      const draft = JSON.parse(raw);
-
-      if (draft.inputData) {
-        currentInputData = draft.inputData;
-        const setVal = (id, val) => {
-          const el = document.getElementById(id);
-          if (el && val !== undefined) el.value = val;
-        };
-        const setByName = (name, val) => {
-          const el = document.querySelector(`[name="${name}"]`);
-          if (el && val !== undefined) el.value = val;
-        };
-
-        setVal('input-nama-sekolah', draft.inputData.namaSekolah);
-        setVal('select-mata-pelajaran', draft.inputData.mataPelajaran);
-        setVal('select-jenjang-kelas', draft.inputData.jenjangKelas);
-        setVal('input-sumber-buku', draft.inputData.sumberBuku);
-        setByName('tahunAjaran', draft.inputData.tahunAjaran);
-        setByName('namaGuru', draft.inputData.namaGuru);
-        setByName('nipGuru', draft.inputData.nipGuru);
-        setByName('namaKepalaSekolah', draft.inputData.namaKepalaSekolah);
-        setByName('nipKepalaSekolah', draft.inputData.nipKepalaSekolah);
-      }
-
-      if (Array.isArray(draft.detectedChapters) && draft.detectedChapters.length > 0) {
-        detectedChapters = draft.detectedChapters;
-        renderChaptersList();
-      }
-
-      if (draft.analysisData) {
-        currentAnalysisData = draft.analysisData;
-        activeAnalysisTab = draft.activeTab || 'analisis';
-        activePromesSemester = draft.activeSemester || 'all';
-
-        document.getElementById('analisis-form-view')?.classList.add('hidden');
-        document.getElementById('analisis-result-view')?.classList.remove('hidden');
-        renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
-        showToast('Draf analisis berhasil dipulihkan!', 'success');
-      } else {
-        showToast('Draf formulir dan daftar bab berhasil dipulihkan!', 'success');
-      }
-
-      document.getElementById('analisis-draft-banner')?.classList.add('hidden');
-      document.getElementById('btn-restore-draft')?.classList.add('hidden');
-    } catch (err) {
-      console.error('Gagal memulihkan draf:', err);
-      showToast('Gagal memulihkan draf.', 'error');
-    }
-  }
-
-  function dismissDraft() {
-    try {
-      localStorage.removeItem(getDraftStorageKey());
-      document.getElementById('analisis-draft-banner')?.classList.add('hidden');
-      document.getElementById('btn-restore-draft')?.classList.add('hidden');
-      showToast('Draf telah diabaikan.', 'info');
-    } catch (_) {}
-  }
 
   // Draft listeners
   document.getElementById('btn-restore-draft')?.addEventListener('click', restoreDraft);

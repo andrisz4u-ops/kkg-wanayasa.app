@@ -34,11 +34,18 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
             expect(quota.exactImages).toBe(4);
         });
 
-        it('should assign medium visual quota (25% -> 3 images/10 PG) for Social, Pancasila, PJOK, and Arts', () => {
+        it('should assign medium visual quota (25% -> 3 images/10 PG) for Social, PJOK, and Arts', () => {
+            // Pendidikan Pancasila with conceptual topic → low visual (10%)
             const quotaPkn = calculateAdaptiveVisualQuota('Pendidikan Pancasila', 'Keragaman Suku dan Budaya', 10, 'Kelas 4');
-            expect(quotaPkn.category).toBe('medium');
-            expect(quotaPkn.ratio).toBe(0.25);
-            expect(quotaPkn.exactImages).toBe(3);
+            expect(quotaPkn.category).toBe('low');
+            expect(quotaPkn.ratio).toBe(0.10);
+            expect(quotaPkn.exactImages).toBe(1);
+
+            // Pendidikan Pancasila with visual topic (lambang/simbol) → low visual (20%)
+            const quotaPknVisual = calculateAdaptiveVisualQuota('Pendidikan Pancasila', 'Lambang Garuda Pancasila dan Simbol Sila', 10, 'Kelas 3');
+            expect(quotaPknVisual.category).toBe('low');
+            expect(quotaPknVisual.ratio).toBe(0.20);
+            expect(quotaPknVisual.exactImages).toBe(2);
 
             const quotaPjok = calculateAdaptiveVisualQuota('PJOK', 'Teknik Dasar Bola Voli', 10, 'Kelas 5');
             expect(quotaPjok.category).toBe('medium');
@@ -90,7 +97,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 resolvedCP: 'Murid memahami pentingnya gotong royong dalam keberagaman.',
                 isGambarEnabled: true
             });
-            expect(promptMedium).toContain('KUNCI TEPAT 3 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 25%');
+            expect(promptMedium).toContain('KUNCI TEPAT 1 BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF 10%');
         });
 
         it('should build structured prompt for PG questions including BSKAP 046/2025 CP', () => {

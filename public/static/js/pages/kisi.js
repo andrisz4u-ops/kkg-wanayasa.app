@@ -1335,8 +1335,9 @@ export function initKisi() {
           { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
           { id: 2, label: 'Naskah PG', icon: 'fa-list-ol' },
           { id: 3, label: 'Isian & Uraian', icon: 'fa-pen-fancy' },
-          { id: 4, label: 'Matriks Kisi', icon: 'fa-table-cells' },
-          { id: 5, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
+          { id: 4, label: 'Quality Gate', icon: 'fa-shield-halved' },
+          { id: 5, label: 'Matriks Kisi', icon: 'fa-table-cells' },
+          { id: 6, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
         ]
       });
 
@@ -1671,6 +1672,35 @@ function renderResult(data, formData) {
   // 1. SECTION: NASKAH SOAL SISWA
   // -------------------------------------------------------------
   let htmlSoal = `<div id="section-soal-view" class="asesmen-view-section">`;
+
+  // Quality Gate Executive Audit Banner (Screen only, hidden when printing)
+  if (data._audit) {
+    htmlSoal += `
+      <div class="quality-gate-banner print:hidden mb-5 p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-300 dark:bg-slate-800 dark:border-emerald-700 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-200">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+            <i class="fas fa-shield-halved text-base"></i>
+          </div>
+          <div>
+            <div class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              Terverifikasi AI Quality Gate (Standar Puspendik)
+              <span class="px-2 py-0.5 bg-emerald-600 text-white rounded-full text-[10px] font-extrabold shadow-2xs">Skor Mutu: ${data._audit.overall_quality_score}/100</span>
+            </div>
+            <div class="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+              ${data._audit.total_reviewed} Butir Diuji Forensik • ${data._audit.repaired_count > 0 ? `${data._audit.repaired_count} butir disempurnakan otomatis • ` : ''}Kunci Jawaban Valid & Distraktor Homogen
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-white/90 dark:bg-slate-700 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-600">
+            <i class="fas fa-check-circle text-emerald-600"></i>
+            <span>Lolos Uji Mutu BSKAP 046/2025</span>
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
   htmlSoal += `
       <div style="text-align:center; margin-bottom: 20px;">
         <img src="${kopSuratUrl}" style="width:100%; height:auto; object-fit:contain;" alt="Kop Surat" crossorigin="anonymous">
@@ -1746,10 +1776,17 @@ function renderResult(data, formData) {
       }
 
       const pgIdx = data.pg.indexOf(q);
-      const actionsHTML = `<div class="soal-actions print:hidden">
+      const actionsHTML = `<div class="soal-actions print:hidden flex items-center gap-1.5">
         <button type="button" class="btn-edit-soal" data-type="pg" data-index="${pgIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
         <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
+
+      const auditBadgeHTML = q.audit ? `
+        <div class="soal-audit-tag print:hidden inline-flex items-center gap-1 px-2 py-0.5 mb-1.5 rounded-md text-[10px] font-bold ${q.audit.status === 'repaired' ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700' : 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'}" title="${escapeHtml(q.audit.notes || '')}">
+          <i class="fas ${q.audit.status === 'repaired' ? 'fa-wand-magic-sparkles text-amber-600' : 'fa-shield-halved text-emerald-600'}"></i>
+          <span>${q.audit.status === 'repaired' ? 'Quality Gate: Auto-Healed' : 'Quality Gate: Verified'} (${q.audit.quality_score}%)</span>
+        </div>
+      ` : '';
 
       if (q.gambar && q.gambar.url) {
         htmlSoal += `
@@ -1759,6 +1796,7 @@ function renderResult(data, formData) {
               <tr>
                 <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
                 <td style="vertical-align:top; padding:1px 0;">
+                  ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 6px 0 8px 0; text-align:left;">
                     <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
@@ -1800,6 +1838,7 @@ function renderResult(data, formData) {
               <tr>
                 <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
                 <td style="vertical-align:top; padding:1px 0;">
+                  ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   ${optionsHTML}
                 </td>

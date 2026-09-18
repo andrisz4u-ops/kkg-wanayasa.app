@@ -52,7 +52,7 @@ function extractCoreKeyword(text: string): string {
  * Helper: Search Wikipedia & Wikimedia Commons for authentic historical photos,
  * Indonesian national heroes, cultural heritage sites, real maps, and biology/nature specimens.
  */
-async function searchWikimediaImage(query: string): Promise<{ url: string; creditName: string } | null> {
+async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): Promise<{ url: string; creditName: string } | null> {
     try {
         const rawClean = query.replace(/[\[\]]/g, '').trim();
         const extracted = extractCoreKeyword(rawClean);
@@ -62,14 +62,15 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
         const genericBlocklist = new Set([
             'perhatikan gambar', 'gambar berikut', 'perhatikan gambar berikut',
             'perhatikan', 'gambar', 'berikut', 'amatilah', 'diagram', 'ilustrasi',
-            'soal', 'nomor', 'pertanyaan', 'manakah', 'apakah', 'pilihan'
+            'soal', 'nomor', 'pertanyaan', 'manakah', 'apakah', 'pilihan',
+            'educational diagram', 'diagram alur', 'flowchart', 'skema', 'pola'
         ]);
         if (!cleanQuery || cleanQuery.length < 3 || genericBlocklist.has(cleanQuery.toLowerCase())) {
             return null;
         }
 
         // 1. Query Wikipedia Bahasa Indonesia (Prioritas untuk sejarah, tokoh, & tempat Indonesia)
-        const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
+        const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
         const res = await fetch(idWikiUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
         if (res.ok) {
             const data = await res.json() as any;
@@ -78,9 +79,12 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
                 const pageList = Object.values(pages) as any[];
                 pageList.sort((a, b) => (a.index || 99) - (b.index || 99));
                 for (const page of pageList) {
-                    if (page.thumbnail?.source) {
+                    const src = page.thumbnail?.source;
+                    if (src) {
+                        const cleanSrc = src.split('?')[0];
+                        if (excludeUrls && (excludeUrls.has(src) || excludeUrls.has(cleanSrc))) continue;
                         return {
-                            url: page.thumbnail.source,
+                            url: src,
                             creditName: `Wikimedia Commons (${page.title})`
                         };
                     }
@@ -89,7 +93,7 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
         }
 
         // 2. Query Wikimedia Commons langsung
-        const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=3&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
+        const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
         const commRes = await fetch(commonsUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
         if (commRes.ok) {
             const commData = await commRes.json() as any;
@@ -99,9 +103,12 @@ async function searchWikimediaImage(query: string): Promise<{ url: string; credi
                 pageList.sort((a, b) => (a.index || 99) - (b.index || 99));
                 for (const page of pageList) {
                     const imgInfo = page?.imageinfo?.[0];
-                    if (imgInfo?.thumburl || imgInfo?.url) {
+                    const candidateUrl = imgInfo?.thumburl || imgInfo?.url;
+                    if (candidateUrl) {
+                        const cleanCand = candidateUrl.split('?')[0];
+                        if (excludeUrls && (excludeUrls.has(candidateUrl) || excludeUrls.has(cleanCand))) continue;
                         return {
-                            url: imgInfo.thumburl || imgInfo.url,
+                            url: candidateUrl,
                             creditName: 'Wikimedia Commons'
                         };
                     }
@@ -127,23 +134,40 @@ export class UnsplashService {
         return true;
     }
 
-    async searchImage(query: string, fallbackAlt: string, subjectContext?: string, englishVisualPrompt?: string): Promise<UnsplashImagePayload | null> {
-        const cleanQuery = query.replace(/[^\w\s-]/g, '').trim() || 'educational diagram';
+    async searchImage(
+        query: string,
+        fallbackAlt: string,
+        subjectContext?: string,
+        englishVisualPrompt?: string,
+        excludeUrls?: Set<string>,
+        excludeIds?: Set<string>
+    ): Promise<UnsplashImagePayload | null> {
+        const cleanQuery = query.replace(/[^\w\s-]/g, '').trim();
+
+        // Generic blocklist: JANGAN PERNAH fallback ke 'educational diagram' atau kata generik!
+        // Kata generik di Unsplash selalu menghasilkan foto buku Rusia bergambar sirkuit (Andrey Sizov)
+        const genericBlocklist = new Set([
+            'educational diagram', 'diagram', 'diagram alur', 'foto', 'gambar',
+            'soal', 'materi', 'asesmen', 'ujian', 'pelajaran', 'ilustrasi',
+            'flowchart', 'skema', 'pola', 'pola warna', 'pola gambar', 'chart'
+        ]);
+
+        if (!cleanQuery || cleanQuery.length < 3 || genericBlocklist.has(cleanQuery.toLowerCase())) {
+            return null;
+        }
 
         // 1. Prioritas Utama: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi untuk semua materi)
-        if (cleanQuery.length >= 3) {
-            const wikiImg = await searchWikimediaImage(cleanQuery);
-            if (wikiImg) {
-                return {
-                    source: 'unsplash',
-                    url: wikiImg.url,
-                    alt: fallbackAlt || cleanQuery,
-                    query: cleanQuery,
-                    creditName: wikiImg.creditName,
-                    creditUrl: 'https://commons.wikimedia.org',
-                    unsplashId: `wiki_${Date.now()}`
-                };
-            }
+        const wikiImg = await searchWikimediaImage(cleanQuery, excludeUrls);
+        if (wikiImg) {
+            return {
+                source: 'unsplash',
+                url: wikiImg.url,
+                alt: fallbackAlt || cleanQuery,
+                query: cleanQuery,
+                creditName: wikiImg.creditName,
+                creditUrl: 'https://commons.wikimedia.org',
+                unsplashId: `wiki_${Date.now()}`
+            };
         }
 
         // 2. Prioritas Kedua: Generasi AI Diagram Presisi (FLUX / Cloudflare AI) dengan Prompt Bahasa Inggris Terstruktur
@@ -185,15 +209,17 @@ export class UnsplashService {
                             offset += c.length;
                         }
                     } else if (typeof cfResult === 'string' && cfResult.startsWith('data:')) {
-                        return {
-                            source: 'cloudflare-ai',
-                            url: cfResult,
-                            alt: fallbackAlt || cleanQuery,
-                            query: cleanQuery,
-                            creditName: 'Cloudflare Workers AI (FLUX)',
-                            creditUrl: 'https://developers.cloudflare.com/workers-ai/',
-                            unsplashId: `cf_${Date.now()}`
-                        };
+                        if (!excludeUrls || !excludeUrls.has(cfResult)) {
+                            return {
+                                source: 'cloudflare-ai',
+                                url: cfResult,
+                                alt: fallbackAlt || cleanQuery,
+                                query: cleanQuery,
+                                creditName: 'Cloudflare Workers AI (FLUX)',
+                                creditUrl: 'https://developers.cloudflare.com/workers-ai/',
+                                unsplashId: `cf_${Date.now()}`
+                            };
+                        }
                     }
 
                     if (bytes && bytes.length > 0) {
@@ -203,15 +229,18 @@ export class UnsplashService {
                             binary += String.fromCharCode(bytes[i]);
                         }
                         const base64 = btoa(binary);
-                        return {
-                            source: 'cloudflare-ai',
-                            url: `data:image/jpeg;base64,${base64}`,
-                            alt: fallbackAlt || cleanQuery,
-                            query: cleanQuery,
-                            creditName: 'Cloudflare Workers AI (FLUX)',
-                            creditUrl: 'https://developers.cloudflare.com/workers-ai/',
-                            unsplashId: `cf_${Date.now()}`
-                        };
+                        const dataUrl = `data:image/jpeg;base64,${base64}`;
+                        if (!excludeUrls || !excludeUrls.has(dataUrl)) {
+                            return {
+                                source: 'cloudflare-ai',
+                                url: dataUrl,
+                                alt: fallbackAlt || cleanQuery,
+                                query: cleanQuery,
+                                creditName: 'Cloudflare Workers AI (FLUX)',
+                                creditUrl: 'https://developers.cloudflare.com/workers-ai/',
+                                unsplashId: `cf_${Date.now()}`
+                            };
+                        }
                     }
                 }
             } catch (cfErr) {
@@ -225,7 +254,7 @@ export class UnsplashService {
                 const searchUrl = new URL('https://api.unsplash.com/search/photos');
                 searchUrl.searchParams.set('query', cleanQuery);
                 searchUrl.searchParams.set('page', '1');
-                searchUrl.searchParams.set('per_page', '10');
+                searchUrl.searchParams.set('per_page', '15');
                 searchUrl.searchParams.set('orientation', 'landscape');
                 searchUrl.searchParams.set('content_filter', 'high');
 
@@ -238,23 +267,54 @@ export class UnsplashService {
 
                 if (response.ok) {
                     const payload = await response.json() as UnsplashSearchResponse;
-                    const first = payload.results?.find((item) => item.urls?.regular && item.user?.name && item.user?.links?.html);
 
-                    if (first?.urls?.regular && first.user?.name && first.user?.links?.html) {
-                        const creditUrl = new URL(first.user.links.html);
+                    // Helper: filter out irrelevant stock polluters
+                    const isStockPolluter = (item: any): boolean => {
+                        const uName = (item.user?.name || '').toLowerCase();
+                        const uUsername = (item.user?.username || '').toLowerCase();
+                        const desc = `${item.description || ''} ${item.alt_description || ''}`.toLowerCase();
+
+                        // Blocklist Andrey Sizov Russian technical diagram photo
+                        if (uName.includes('андрей') || uName.includes('сизов') || uName.includes('andrey sizov') || uUsername.includes('asizov')) {
+                            return true;
+                        }
+                        // Blocklist Cyrillic/Russian textbook pages
+                        if (/[\u0400-\u04FF]/.test(desc) || /[\u0400-\u04FF]/.test(uName)) {
+                            return true;
+                        }
+                        // Blocklist generic circuit boards / schematics unless question explicitly asks for electrical circuit
+                        const isCircuit = desc.includes('circuit') || desc.includes('schematic') || desc.includes('blueprint') || desc.includes('diagram');
+                        const queryAllowsCircuit = /listrik|rangkaian|elektronika|circuit/i.test(cleanQuery);
+                        if (isCircuit && !queryAllowsCircuit) {
+                            return true;
+                        }
+                        return false;
+                    };
+
+                    const candidate = payload.results?.find((item) => {
+                        if (!item.urls?.regular || !item.user?.name || !item.user?.links?.html) return false;
+                        const cleanUrl = item.urls.regular.split('?')[0];
+                        if (excludeUrls && (excludeUrls.has(item.urls.regular) || excludeUrls.has(cleanUrl))) return false;
+                        if (excludeIds && excludeIds.has(item.id)) return false;
+                        if (isStockPolluter(item)) return false;
+                        return true;
+                    });
+
+                    if (candidate?.urls?.regular && candidate.user?.name && candidate.user?.links?.html) {
+                        const creditUrl = new URL(candidate.user.links.html);
                         creditUrl.searchParams.set('utm_source', 'kkg_slide_generator');
                         creditUrl.searchParams.set('utm_medium', 'referral');
 
-                        const alt = (first.alt_description || first.description || fallbackAlt || 'Gambar pembelajaran').slice(0, 180);
+                        const alt = (candidate.alt_description || candidate.description || fallbackAlt || 'Gambar pembelajaran').slice(0, 180);
 
                         return {
                             source: 'unsplash',
-                            url: first.urls.regular,
+                            url: candidate.urls.regular,
                             alt,
                             query: cleanQuery,
-                            creditName: first.user.name,
+                            creditName: candidate.user.name,
                             creditUrl: creditUrl.toString(),
-                            unsplashId: first.id,
+                            unsplashId: candidate.id,
                         };
                     }
                 }

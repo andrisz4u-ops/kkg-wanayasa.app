@@ -10,6 +10,7 @@ import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getF
 import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
 import { validate, createAssessmentSchema } from '../lib/validation';
+import { runAssessmentQualityGate } from '../lib/assessment-validator';
 import { type AppBindings } from '../types/env';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
@@ -120,8 +121,12 @@ export const cleanPromptDebris = (text: string): string => {
     let s = String(text);
 
     // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
-    s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
+    s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^\]]*\]/gi, '');
     s = s.replace(/\[[^\]]*\]/g, '');
+
+    // 1b. Hapus tag kurung biasa yang berisi deskripsi gambar buatan AI:
+    // Contoh: "(Gambar dengan pola: Merah, Kuning, ...)" atau "(Gambar komputer dengan panah menunjuk CPU)"
+    s = s.replace(/\((?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^)]*\)/gi, '');
 
     // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
     let safetyCounter = 0;
@@ -251,16 +256,21 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
     const m = (mapel || '').toLowerCase();
     if (m.includes('pancasila') || m.includes('pkn') || m.includes('sejarah') || m.includes('ips')) {
         return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
-          * Untuk stimulus Peta Kepulauan Indonesia, gunakan "visual_stimulus": { "type": "peta_indonesia", "params": { "pointer": "sumatra" (atau kalimantan/sulawesi/papua/maluku/bali_nusra/jawa), "label": "X" } }.
-            SANGAT PENTING: VARIASIKAN pulau sasaran (jangan hanya Pulau Jawa!) dan variasikan topik soal:
+          * ATURAN KRITIS MAPEL PENDIDIKAN PANCASILA / PKn:
+            - MAYORITAS materi Pancasila bersifat KONSEPTUAL-NORMATIF (nilai, sikap, aturan, hak & kewajiban, musyawarah, gotong royong, toleransi). Soal-soal bertema ini TIDAK MEMERLUKAN stimulus gambar visual — cukup gunakan stimulus TEKS/WACANA/KASUS.
+            - HANYA gunakan stimulus visual SVG ("visual_stimulus") jika soal SECARA EKSPLISIT menanyakan:
+              1. Identifikasi SIMBOL/LAMBANG fisik Garuda Pancasila → { "type": "perisai_pancasila", "params": { "sila": 1-5, "label": "X" } }
+              2. Struktur PEMERINTAHAN DAERAH (hirarki Gubernur-Bupati-Camat-Lurah-RW-RT) → { "type": "struktur_pemda", "params": { "targetLevel": "kecamatan", "label": "X" } }
+              3. Lembaga TRIAS POLITIKA (DPR-Presiden-MA) → { "type": "trias_politika", "params": { "cabang": "legislatif", "label": "X" } }
+              4. PETA Indonesia & wilayah NKRI → { "type": "peta_indonesia", "params": { "pointer": "sumatra", "label": "X" } }
+              5. Jenis NORMA masyarakat → { "type": "norma_masyarakat", "params": { "jenisNorma": "kesopanan", "label": "X" } }
+            - Untuk soal tentang NILAI Pancasila, SIKAP, PERILAKU, HAK & KEWAJIBAN, ATURAN, MUSYAWARAH, GOTONG ROYONG, TOLERANSI, KEBERAGAMAN: DILARANG KERAS menggunakan visual_stimulus! Kosongkan (null).
+          * Untuk stimulus Peta Kepulauan Indonesia, VARIASIKAN pulau sasaran (jangan hanya Pulau Jawa!):
             1. Letak geografis / nama pulau: "Pulau yang ditunjuk huruf X adalah ..."
-            2. Keragaman budaya & rumah adat: Honai (Papua), Tongkonan (Sulawesi), Gadang (Sumatra), Joglo (Jawa), Gapura Candi Bentar (Bali/Nusra).
-            3. Kekayaan alam / rempah-rempah: Kepulauan penghasil cengkih & pala (Maluku).
-            4. Bentang alam / danau / gunung / sungai: Danau Toba (Sumatra), Sungai Kapuas (Kalimantan), Puncak Jaya (Papua).
-            5. Pembagian zona waktu: WIB (Sumatra/Jawa), WITA (Sulawesi/Bali/Nusra/Kalsel/Kaltim), WIT (Maluku/Papua).
-          * Untuk simbol lambang Garuda Pancasila, gunakan: "visual_stimulus": { "type": "perisai_pancasila", "params": { "sila": 1 (atau 2/3/4/5), "label": "X" } }.
-          * Prioritas Foto/Arsip: Tokoh pahlawan nasional, gedung bersejarah, naskah proklamasi, atau peninggalan candi.
-          * "gambar_keyword": Nama tokoh/tempat resmi Bahasa Indonesia (contoh: "Ir. Soekarno", "Rumah Laksamana Maeda", "Candi Borobudur").
+            2. Keragaman budaya & rumah adat: Honai (Papua), Tongkonan (Sulawesi), Gadang (Sumatra), Joglo (Jawa).
+            3. Kekayaan alam: Kepulauan penghasil cengkih & pala (Maluku), Danau Toba (Sumatra), Sungai Kapuas (Kalimantan).
+          * Prioritas Foto/Arsip (hanya untuk topik kesejarahan): Tokoh pahlawan nasional, gedung bersejarah, peninggalan candi.
+          * "gambar_keyword": Nama tokoh/tempat resmi Bahasa Indonesia (contoh: "Ir. Soekarno", "Candi Borobudur").
           * "gambar_prompt_en": "historic photograph or official emblem of [topic], clean background, high resolution, authentic national archive style"`;
     }
     if (m.includes('sunda') || m.includes('seni') || m.includes('budaya')) {
@@ -433,7 +443,9 @@ export const resolveQuestionVisualStimulus = async (
     mataPelajaran: string,
     topik: string,
     unsplash: UnsplashService | null,
-    usedStimulusSignatures?: Set<string>
+    usedStimulusSignatures?: Set<string>,
+    usedImageUrls?: Set<string>,
+    usedImageIds?: Set<string>
 ): Promise<void> => {
     // 1. Cek visual stimulus eksplisit dari AI
     let visualCfg = q.visual_stimulus;
@@ -482,7 +494,20 @@ export const resolveQuestionVisualStimulus = async (
         if (q.pembahasan || q.penjelasan) {
             fullContext += ` pembahasan: ${q.pembahasan || q.penjelasan}`;
         }
-        visualCfg = detectStimulusFromSoalText(fullContext, mataPelajaran);
+
+        // GUARD: Untuk Pendidikan Pancasila / PKn, hanya auto-detect visual jika teks soal
+        // secara eksplisit menyebut lambang/simbol/perisai/peta/struktur pemerintahan.
+        // Mencegah false positive: soal tentang nilai/sikap/norma tidak boleh dipaksa pakai SVG.
+        const isPancasilaMapel = /pancasila|pkn|kewarganegaraan/i.test(mataPelajaran);
+        const soalLower = fullContext.toLowerCase();
+        const hasPancasilaVisualKeyword = /perisai|lambang negara|garuda pancasila|lambang pancasila|simbol sila|struktur pemerintah|hirarki pemerintah|trias politika|legislatif|eksekutif|yudikatif|peta indonesia|peta nusantara|peta kepulauan|norma masyarakat|norma kesopanan|norma kesusilaan|norma hukum/i.test(soalLower);
+
+        if (isPancasilaMapel && !hasPancasilaVisualKeyword) {
+            // Mapel Pancasila/PKn tanpa kata kunci visual → JANGAN auto-detect, biarkan tanpa gambar
+            visualCfg = null;
+        } else {
+            visualCfg = detectStimulusFromSoalText(fullContext, mataPelajaran);
+        }
     }
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
@@ -748,7 +773,11 @@ export const resolveQuestionVisualStimulus = async (
     if (visualCfg && visualCfg.type) {
         const svgRes = generateVisualStimulus(visualCfg);
         if (svgRes) {
-            usedStimulusSignatures?.add(buildStimulusSignature(visualCfg));
+            const sig = buildStimulusSignature(visualCfg);
+            usedStimulusSignatures?.add(sig);
+            if (svgRes.dataUri) {
+                usedImageUrls?.add(svgRes.dataUri);
+            }
 
             q.gambar = {
                 url: svgRes.dataUri,
@@ -763,28 +792,77 @@ export const resolveQuestionVisualStimulus = async (
 
     // 5. Jika bukan SVG parametrik atau dialihkan oleh Diversity Guard, cari gambar otentik (Wikipedia / Unsplash)
     if (unsplash) {
+        const soalTextLower = String(q.soal || '').toLowerCase();
+        // Guard: Soal yang membutuhkan stimulus diagram/skema presisi berlabel (tanda panah, huruf X, pola urutan, alur)
+        // DILARANG KERAS menggunakan foto stok Unsplash! Foto stok tidak memiliki tanda panah ke CPU atau pola warna khusus soal.
+        const requiresDiagram = /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
+
+        if (requiresDiagram) {
+            delete q.gambar;
+            delete q.visual_stimulus;
+            delete q.gambar_keyword;
+            delete q.gambar_prompt_en;
+            return;
+        }
+
         let bracketHint = '';
         const bracketMatch = String(q.soal || '').match(/\[(?:gambar|foto|diagram|ilustrasi|deskripsi)[^\]]*:?([^\]]*)\]/i);
         if (bracketMatch && bracketMatch[1]) {
             bracketHint = bracketMatch[1].trim();
         }
 
-        const searchKeyword = q.gambar_keyword || visualCfg?.keyword || topik || 'diagram';
-        const promptEn = q.gambar_prompt_en || bracketHint || `${topik} educational textbook diagram, clean white background`;
+        const genericBlocklist = new Set([
+            'educational diagram', 'diagram', 'diagram alur', 'foto', 'gambar',
+            'soal', 'materi', 'asesmen', 'ujian', 'pelajaran', 'ilustrasi',
+            'flowchart', 'skema', 'pola', 'pola warna', 'pola gambar', 'chart'
+        ]);
+        let searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
+        if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+            searchKeyword = topik || '';
+        }
+
+        // Jika keyword tetap kosong atau terlalu generik, batalkan pencarian foto acak
+        if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+            delete q.gambar;
+            delete q.visual_stimulus;
+            return;
+        }
+
+        const promptEn = q.gambar_prompt_en || bracketHint || `${searchKeyword} authentic educational photo, clean white background`;
         const subjectContext = `${mataPelajaran} ${topik}`;
 
         try {
-            const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn);
-            if (img) {
+            const img = await unsplash.searchImage(searchKeyword, q.soal, subjectContext, promptEn, usedImageUrls, usedImageIds);
+            if (img && img.url) {
+                const canonicalUrl = img.url.split('?')[0];
+                const imgId = img.unsplashId || canonicalUrl;
+
+                // Cegah duplikasi foto kembar di butir soal berbeda dalam satu paket
+                if (usedImageUrls?.has(img.url) || usedImageUrls?.has(canonicalUrl) || usedImageIds?.has(imgId) || usedStimulusSignatures?.has(`url:${canonicalUrl}`)) {
+                    console.warn(`[DiversityGuard] Soal ${q.no || '?'}: Duplicate photo URL rejected: ${canonicalUrl}`);
+                    delete q.gambar;
+                    delete q.visual_stimulus;
+                    return;
+                }
+
+                usedImageUrls?.add(img.url);
+                usedImageUrls?.add(canonicalUrl);
+                usedImageIds?.add(imgId);
+                usedStimulusSignatures?.add(`url:${canonicalUrl}`);
                 usedStimulusSignatures?.add(`photo:${searchKeyword}`);
                 q.gambar = {
                     url: img.url,
                     credit: img.creditName,
                     type: img.source === 'cloudflare-ai' ? 'ai' : 'photo'
                 };
+            } else {
+                delete q.gambar;
+                delete q.visual_stimulus;
             }
         } catch (e) {
             console.error('Image search error:', e);
+            delete q.gambar;
+            delete q.visual_stimulus;
         }
     }
 };
@@ -845,9 +923,28 @@ export const calculateAdaptiveVisualQuota = (
         };
     }
 
-    // 2. Kategori Sedang (Medium Visual: 25% -> 2 s.d. 3 butir per 10 soal PG)
-    // Mencakup: IPS, Sejarah, Geografi, PKn / Pendidikan Pancasila, PJOK, Seni Budaya & Prakarya (SBdP), Kesenian Daerah
-    const isSocialCulture = /pancasila|pkn|kewarganegaraan|ips|sejarah|geografi|pjok|jasmani|olahraga|seni|budaya|sbdp|musik|rupa|tari|batik/i.test(combined);
+    // 2a. Kategori Rendah Khusus Pancasila / PKn (Visual Minimal 10% -> 1 butir per 10 soal PG)
+    // Mayoritas materi Pancasila bersifat konseptual-normatif (nilai, sikap, hak & kewajiban),
+    // sehingga proporsi gambar harus sangat rendah agar tidak memaksa SVG yang tidak relevan.
+    const isPancasilaPkn = /pancasila|pkn|kewarganegaraan/i.test(m);
+    if (isPancasilaPkn) {
+        // Cek apakah topik spesifik memiliki visual yang relevan (lambang, peta, struktur pemda)
+        const hasVisualTopic = /lambang|simbol|perisai|garuda|peta|wilayah|provinsi|kabupaten|pemerintah|trias politika|lembaga negara/i.test(t);
+        const ratio = hasVisualTopic ? 0.20 : 0.10;
+        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+        return {
+            exactImages,
+            ratio,
+            category: 'low',
+            categoryLabel: hasVisualTopic
+                ? 'Pancasila & PKn - Topik Visual (Lambang/Peta/Struktur 20%)'
+                : 'Pancasila & PKn - Konseptual Normatif (Visual Minimal 10%)'
+        };
+    }
+
+    // 2b. Kategori Sedang (Medium Visual: 25% -> 2 s.d. 3 butir per 10 soal PG)
+    // Mencakup: IPS, Sejarah, Geografi, PJOK, Seni Budaya & Prakarya (SBdP), Kesenian Daerah
+    const isSocialCulture = /ips|sejarah|geografi|pjok|jasmani|olahraga|seni|budaya|sbdp|musik|rupa|tari|batik/i.test(combined);
     if (isSocialCulture) {
         const ratio = 0.25;
         const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
@@ -1211,15 +1308,52 @@ export async function enrichAndNormalizePG(
         scoredQuestions.sort((a: any, b: any) => b.score - a.score);
         const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
         const usedStimulusSignatures = new Set<string>();
+        const usedImageUrls = new Set<string>();
+        const usedImageIds = new Set<string>();
 
         for (const q of deduped) {
             if (targetSelected.has(q)) {
-                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures);
+                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds);
             } else {
                 delete q.gambar;
                 delete q.gambar_keyword;
                 delete q.gambar_prompt_en;
                 delete q.visual_stimulus;
+            }
+        }
+
+        // =========================================================================
+        // ENFORCE STRICT ZERO-DUPLICATE & IRRELEVANCY POLICY ACROSS THE ENTIRE PACKET
+        // =========================================================================
+        const seenCanonicalUrls = new Set<string>();
+        const seenSvgSignatures = new Set<string>();
+
+        for (const q of deduped) {
+            if (q.gambar && q.gambar.url) {
+                const rawUrl = String(q.gambar.url).trim();
+                const canonicalUrl = rawUrl.split('?')[0];
+
+                if (seenCanonicalUrls.has(canonicalUrl) || seenCanonicalUrls.has(rawUrl)) {
+                    console.warn(`[PacketDiversityGuard] Question #${q.no}: Duplicate image URL stripped (${canonicalUrl}).`);
+                    delete q.gambar;
+                    delete q.visual_stimulus;
+                    delete q.gambar_keyword;
+                    delete q.gambar_prompt_en;
+                } else {
+                    seenCanonicalUrls.add(canonicalUrl);
+                    seenCanonicalUrls.add(rawUrl);
+                }
+            }
+
+            if (q.visual_stimulus && q.visual_stimulus.type) {
+                const sig = buildStimulusSignature(q.visual_stimulus);
+                if (seenSvgSignatures.has(sig)) {
+                    console.warn(`[PacketDiversityGuard] Question #${q.no}: Duplicate SVG signature stripped (${sig}).`);
+                    delete q.gambar;
+                    delete q.visual_stimulus;
+                } else {
+                    seenSvgSignatures.add(sig);
+                }
             }
 
             if (!q.gambar && !q.visual_stimulus) {
@@ -1436,6 +1570,16 @@ kisi.post('/generate', async (c) => {
             });
         }
 
+        // Quality Gate: Verifikasi forensik & auto-healing multi-tier sebelum finalisasi
+        await runAssessmentQualityGate(ai, finalData, {
+            mataPelajaran,
+            topik,
+            jenjangKelas,
+            semester
+        }, {
+            preferredSlug
+        });
+
         // Finalisasi paket asesmen (Normalisasi matriks kisi-kisi, Telemetri, & Bank Soal)
         await finalizeAssessmentPackage(finalData, {
             resolvedCP,
@@ -1518,7 +1662,7 @@ kisi.post('/generate-stream', async (c) => {
                     event: 'step',
                     data: JSON.stringify({
                         step: 1,
-                        totalSteps: 5,
+                        totalSteps: 6,
                         title: `Analisis CP ${regTitle}`,
                         message: `Menelaah materi "${topik}" berdasar rujukan resmi ${regTitle} (${jenjangKelas || 'SD'})...`,
                         percent: 15
@@ -1541,7 +1685,7 @@ kisi.post('/generate-stream', async (c) => {
                         event: 'step',
                         data: JSON.stringify({
                             step: 2,
-                            totalSteps: 5,
+                            totalSteps: 6,
                             title: 'Merancang Kisi-kisi & Naskah PG',
                             message: `Menghubungkan Engine AI [${preferredSlug}] & menyusun ${totalPG} butir soal pilihan ganda...`,
                             percent: 35
@@ -1580,10 +1724,10 @@ kisi.post('/generate-stream', async (c) => {
                         event: 'step',
                         data: JSON.stringify({
                             step: 3,
-                            totalSteps: 5,
+                            totalSteps: 6,
                             title: 'Menyusun Soal Isian & Uraian HOTS',
                             message: `Memformulasikan soal isian (${totalIsian}) dan penalaran uraian L3 (${totalUraian})...`,
-                            percent: 65
+                            percent: 55
                         })
                     });
 
@@ -1613,15 +1757,54 @@ kisi.post('/generate-stream', async (c) => {
                     }
                 }
 
-                // Step 4: Standarisasi & Normalisasi Matriks Kisi-Kisi
+                // Step 4: AI Verifikator & Quality Gate (Audit Forensik Mutu & Kaidah Puspendik)
                 await stream.writeSSE({
                     event: 'step',
                     data: JSON.stringify({
                         step: 4,
-                        totalSteps: 5,
+                        totalSteps: 6,
+                        title: 'AI Verifikator & Quality Gate',
+                        message: 'Audit forensik mutu: memverifikasi kebenaran kunci, kaidah Puspendik, & auto-healing...',
+                        percent: 75
+                    })
+                });
+
+                await runAssessmentQualityGate(ai, finalData, {
+                    mataPelajaran,
+                    topik,
+                    jenjangKelas,
+                    semester
+                }, {
+                    preferredSlug,
+                    onProgress: async (msg, pct) => {
+                        try {
+                            await stream.writeSSE({
+                                event: 'step',
+                                data: JSON.stringify({
+                                    step: 4,
+                                    totalSteps: 6,
+                                    title: 'AI Verifikator & Quality Gate',
+                                    message: msg,
+                                    percent: pct
+                                })
+                            });
+                            await stream.writeSSE({
+                                event: 'token',
+                                data: JSON.stringify({ text: `\n🛡️ [QualityGate] ${msg}\n` })
+                            });
+                        } catch (_) {}
+                    }
+                });
+
+                // Step 5: Standarisasi & Normalisasi Matriks Kisi-Kisi
+                await stream.writeSSE({
+                    event: 'step',
+                    data: JSON.stringify({
+                        step: 5,
+                        totalSteps: 6,
                         title: 'Standarisasi Matriks Kisi-kisi',
                         message: 'Menyelaraskan rumusan indikator, level kognitif L1-L3, dan kunci jawaban...',
-                        percent: 85
+                        percent: 90
                     })
                 });
 
@@ -1637,14 +1820,14 @@ kisi.post('/generate-stream', async (c) => {
                     preferredSlug: preferredSlug || null
                 });
 
-                // Step 5: Selesai & Kirimkan Payload Final
+                // Step 6: Selesai & Kirimkan Payload Final
                 await stream.writeSSE({
                     event: 'step',
                     data: JSON.stringify({
-                        step: 5,
-                        totalSteps: 5,
+                        step: 6,
+                        totalSteps: 6,
                         title: 'Finalisasi Selesai',
-                        message: 'Paket Asesmen & Kisi-kisi Matriks siap ditampilkan!',
+                        message: 'Paket Asesmen & Kisi-kisi Matriks terverifikasi siap ditampilkan!',
                         percent: 100
                     })
                 });

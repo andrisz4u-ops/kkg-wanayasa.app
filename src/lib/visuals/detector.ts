@@ -2183,9 +2183,11 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
   },
 
   // Rule 169: perisai_pancasila
+  // PENTING: Hanya match ketika soal secara EKSPLISIT menanyakan lambang/simbol/perisai Garuda Pancasila,
+  // BUKAN saat soal menyebut kata "pancasila" dalam konteks nilai/sikap/norma (yang tidak butuh diagram SVG).
   {
     id: 'perisai_pancasila',
-    match: (text, stemText, mapel) => text.includes('pancasila') || text.includes('perisai') || text.includes('lambang negara') || text.includes('burung garuda') || (text.includes('sila') && (text.includes('pertama') || text.includes('kedua') || text.includes('ketiga') || text.includes('keempat') || text.includes('kelima') || text.includes('ke-') || text.includes('bintang') || text.includes('rantai') || text.includes('beringin') || text.includes('banteng') || text.includes('padi'))),
+    match: (text, stemText, mapel) => text.includes('perisai') || text.includes('lambang negara') || text.includes('burung garuda') || text.includes('lambang pancasila') || text.includes('garuda pancasila') || (text.includes('simbol') && text.includes('sila')) || (text.includes('sila') && (text.includes('bintang') || text.includes('rantai emas') || text.includes('pohon beringin') || text.includes('kepala banteng') || text.includes('padi dan kapas') || text.includes('padi kapas'))),
     extract: (text, stemText, mapel) => {
       let sila = 1;
     if (stemText.includes('bintang') || stemText.includes('ketuhanan') || stemText.includes('pertama') || stemText.includes('ke-1') || stemText.includes('sila 1')) sila = 1;
@@ -2197,6 +2199,7 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
     return { type: 'perisai_pancasila', params: { sila, label: 'X' } };
     }
   },
+
 
   // Rule 170: magnet
   {
@@ -2939,6 +2942,44 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
     id: 'garis_bilangan',
     match: (text) => text.includes('garis bilangan'),
     extract: () => ({ type: 'garis_bilangan', params: { min: -5, max: 5, titik: [{ x: 2, label: 'P' }] } })
+  },
+  {
+    id: 'pola_warna',
+    match: (text) => text.includes('pola warna') || text.includes('urutan warna') || text.includes('barisan warna') || (text.includes('pola') && (text.includes('merah') || text.includes('kuning') || text.includes('hijau') || text.includes('biru'))),
+    extract: (text) => {
+      const found: string[] = [];
+      const regex = /\b(merah|kuning|hijau|biru|ungu|oranye|jingga|pink|hitam|putih)\b/gi;
+      let m;
+      while ((m = regex.exec(text)) !== null) {
+        found.push(m[1].toLowerCase());
+      }
+      const pola = found.length >= 3 ? found.slice(0, 7) : ['merah', 'kuning', 'hijau', 'biru', 'merah', 'kuning', 'hijau'];
+      return { type: 'pola_warna', params: { pola, label: '?' } };
+    }
+  },
+  {
+    id: 'perangkat_komputer',
+    match: (text) => (text.includes('komputer') || text.includes('cpu') || text.includes('pc')) && (text.includes('komponen') || text.includes('perangkat') || text.includes('otak') || text.includes('tanda panah') || text.includes('panah') || text.includes('fungsi') || text.includes('pemroses') || text.includes('monitor') || text.includes('keyboard')),
+    extract: (text) => {
+      let pointer: 'cpu' | 'monitor' | 'keyboard' | 'mouse' = 'cpu';
+      if (text.includes('cpu') || text.includes('otak komputer') || text.includes('unit pemroses') || text.includes('casing')) {
+        pointer = 'cpu';
+      } else if (text.includes('penampil gambar') || text.includes('monitor') || text.includes('layar')) {
+        pointer = 'monitor';
+      } else if (text.includes('papan ketik') || text.includes('keyboard')) {
+        pointer = 'keyboard';
+      } else if (text.includes('tetikus') || text.includes('mouse')) {
+        pointer = 'mouse';
+      } else {
+        pointer = 'cpu';
+      }
+      return { type: 'perangkat_komputer', params: { pointer, label: 'X' } };
+    }
+  },
+  {
+    id: 'pola_gambar',
+    match: (text) => text.includes('pola gambar') || text.includes('barisan pola') || text.includes('pola noktah') || text.includes('pola lingkaran'),
+    extract: () => ({ type: 'pola_gambar', params: { counts: [1, 3, 5, 7], targetSuku: 4, label: 'X' } })
   },
 ];
 

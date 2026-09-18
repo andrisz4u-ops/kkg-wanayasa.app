@@ -233,7 +233,9 @@ import {
   renderJenisParagrafInduktifDeduktifSvg,
   renderUnsurIklanMediaCetakSvg,
   renderPohonKeluargaGenealogiSvg,
-  renderKoperasiSekolahSvg
+  renderKoperasiSekolahSvg,
+  renderPolaWarnaSvg,
+  renderPerangkatKomputerSvg
 } from './visuals/literacy-social';
 
 // Export all submodules to ensure 100% backward compatibility
@@ -448,6 +450,16 @@ export const VISUAL_RENDERER_REGISTRY: Record<string, VisualRendererRegistration
   'pola_gambar': { render: renderPolaGambarSvg, defaultTitle: 'Barisan Pola Gambar Geometri' },
   'barisan_pola': { render: renderPolaGambarSvg, defaultTitle: 'Barisan Pola Gambar Geometri' },
   'pola_bilangan_gambar': { render: renderPolaGambarSvg, defaultTitle: 'Barisan Pola Gambar Geometri' },
+  // pola_warna
+  'pola_warna': { render: renderPolaWarnaSvg, defaultTitle: 'Barisan Pola Urutan Warna' },
+  'urutan_warna': { render: renderPolaWarnaSvg, defaultTitle: 'Barisan Pola Urutan Warna' },
+  'barisan_warna': { render: renderPolaWarnaSvg, defaultTitle: 'Barisan Pola Urutan Warna' },
+  // perangkat_komputer
+  'perangkat_komputer': { render: renderPerangkatKomputerSvg, defaultTitle: 'Perangkat Keras Sistem Komputer' },
+  'komponen_komputer': { render: renderPerangkatKomputerSvg, defaultTitle: 'Perangkat Keras Sistem Komputer' },
+  'sistem_komputer': { render: renderPerangkatKomputerSvg, defaultTitle: 'Perangkat Keras Sistem Komputer' },
+  'cpu': { render: renderPerangkatKomputerSvg, defaultTitle: 'Unit Pemroses Komputer (CPU)' },
+  'monitor_komputer': { render: renderPerangkatKomputerSvg, defaultTitle: 'Perangkat Monitor Komputer' },
   // flowchart
   'flowchart': { render: renderFlowchartSvg, defaultTitle: 'Diagram Alir Algoritma (Flowchart)' },
   'diagram_alir': { render: renderFlowchartSvg, defaultTitle: 'Diagram Alir Algoritma (Flowchart)' },

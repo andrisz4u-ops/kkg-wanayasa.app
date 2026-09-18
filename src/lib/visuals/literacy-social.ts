@@ -2412,4 +2412,162 @@ export function renderKoperasiSekolahSvg(params: KoperasiSekolahParams): string 
 </svg>`;
 }
 
+/**
+ * 31. Render Barisan Pola Warna (Informatika & Matematika SD)
+ */
+export function renderPolaWarnaSvg(params: {
+  pola?: string[];
+  bentuk?: 'lingkaran' | 'kotak';
+  label?: string;
+}): string {
+  const defaultPola = ['merah', 'kuning', 'hijau', 'biru', 'merah', 'kuning', 'hijau'];
+  const rawPola = (Array.isArray(params.pola) && params.pola.length >= 3) ? params.pola : defaultPola;
+  const labelChar = params.label || '?';
+
+  const colorMap: Record<string, { fill: string; stroke: string; name: string }> = {
+    merah: { fill: '#ef4444', stroke: '#b91c1c', name: 'Merah' },
+    kuning: { fill: '#facc15', stroke: '#ca8a04', name: 'Kuning' },
+    hijau: { fill: '#22c55e', stroke: '#15803d', name: 'Hijau' },
+    biru: { fill: '#3b82f6', stroke: '#1d4ed8', name: 'Biru' },
+    ungu: { fill: '#a855f7', stroke: '#7e22ce', name: 'Ungu' },
+    oranye: { fill: '#f97316', stroke: '#c2410c', name: 'Oranye' },
+    jingga: { fill: '#f97316', stroke: '#c2410c', name: 'Jingga' },
+    merah_muda: { fill: '#ec4899', stroke: '#be185d', name: 'Merah Muda' },
+    pink: { fill: '#ec4899', stroke: '#be185d', name: 'Pink' },
+    hitam: { fill: '#1e293b', stroke: '#0f172a', name: 'Hitam' },
+    putih: { fill: '#ffffff', stroke: '#94a3b8', name: 'Putih' }
+  };
+
+  const totalItems = Math.min(rawPola.length, 7) + 1;
+  const itemW = 42;
+  const gap = 12;
+  const totalW = totalItems * itemW + (totalItems - 1) * gap;
+  const startX = (450 - totalW) / 2;
+  const cy = 60;
+
+  let itemsSvg = '';
+  for (let i = 0; i < totalItems - 1; i++) {
+    const rawColor = String(rawPola[i] || '').toLowerCase().trim();
+    const c = colorMap[rawColor] || colorMap['biru'];
+    const cx = startX + i * (itemW + gap) + itemW / 2;
+
+    itemsSvg += `
+      <g>
+        <circle cx="${cx}" cy="${cy}" r="${itemW / 2}" fill="${c.fill}" stroke="${c.stroke}" stroke-width="2.5"/>
+        <text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="${rawColor === 'kuning' || rawColor === 'putih' ? '#0f172a' : '#ffffff'}">${i + 1}</text>
+        <text x="${cx}" y="${cy + itemW / 2 + 16}" text-anchor="middle" font-size="8.5" font-weight="600" fill="#475569">${c.name}</text>
+      </g>
+    `;
+  }
+
+  // Target box (?)
+  const targetCx = startX + (totalItems - 1) * (itemW + gap) + itemW / 2;
+  itemsSvg += `
+    <g>
+      <rect x="${targetCx - itemW / 2}" y="${cy - itemW / 2}" width="${itemW}" height="${itemW}" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5 3"/>
+      <text x="${targetCx}" y="${cy + 7}" text-anchor="middle" font-size="20" font-weight="bold" fill="#dc2626">${escapeXml(labelChar)}</text>
+      <text x="${targetCx}" y="${cy + itemW / 2 + 16}" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">Berikutnya</text>
+    </g>
+  `;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 125" width="450" height="125" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="450" height="125" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="225" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Barisan Pola Urutan Warna</text>
+  ${itemsSvg}
+</svg>`;
+}
+
+/**
+ * 32. Render Perangkat Keras Komputer (Informatika SD/SMP)
+ * Komponen: Monitor, CPU (System Unit), Keyboard, Mouse
+ */
+export function renderPerangkatKomputerSvg(params: {
+  pointer?: 'cpu' | 'monitor' | 'keyboard' | 'mouse';
+  label?: string;
+}): string {
+  const pointer = String(params.pointer || 'cpu').toLowerCase();
+  const labelChar = params.label || 'X';
+
+  const isCpu = pointer.includes('cpu') || pointer.includes('otak') || pointer.includes('proses') || pointer.includes('casing') || pointer.includes('unit');
+  const isMonitor = pointer.includes('monitor') || pointer.includes('layar') || pointer.includes('tampilan');
+  const isKeyboard = pointer.includes('keyboard') || pointer.includes('ketik') || pointer.includes('papan');
+  const isMouse = pointer.includes('mouse') || pointer.includes('tetikus');
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 200" width="420" height="200" style="background:#ffffff; font-family:'Segoe UI',Arial,sans-serif;">
+  <rect width="420" height="200" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="8"/>
+  <text x="210" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">Perangkat Sistem Komputer</text>
+
+  <!-- Meja Komputer -->
+  <line x1="30" y1="175" x2="390" y2="175" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- CPU / System Unit (Kiri) -->
+  <g id="comp-cpu">
+    <rect x="60" y="45" width="70" height="120" rx="6" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+    <rect x="64" y="49" width="62" height="112" rx="4" fill="#334155"/>
+    <rect x="72" y="60" width="46" height="8" rx="2" fill="#0f172a"/>
+    <rect x="72" y="73" width="46" height="8" rx="2" fill="#0f172a"/>
+    <circle cx="95" cy="98" r="7" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+    <circle cx="95" cy="98" r="3" fill="#38bdf8"/>
+    <rect x="85" y="115" width="8" height="4" fill="#0f172a"/>
+    <rect x="97" y="115" width="8" height="4" fill="#0f172a"/>
+    <line x1="72" y1="135" x2="118" y2="135" stroke="#0f172a" stroke-width="2"/>
+    <line x1="72" y1="140" x2="118" y2="140" stroke="#0f172a" stroke-width="2"/>
+    <line x1="72" y1="145" x2="118" y2="145" stroke="#0f172a" stroke-width="2"/>
+  </g>
+
+  <!-- Monitor (Tengah) -->
+  <g id="comp-monitor">
+    <polygon points="225,145 245,145 248,165 222,165" fill="#475569"/>
+    <rect x="205" y="163" width="60" height="6" rx="3" fill="#334155"/>
+    <rect x="160" y="45" width="150" height="100" rx="6" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+    <rect x="166" y="51" width="138" height="84" rx="3" fill="#0284c7"/>
+    <path d="M 166,115 Q 220,75 304,105 L 304,135 L 166,135 Z" fill="#38bdf8" opacity="0.7"/>
+    <circle cx="235" cy="141" r="1.5" fill="#22c55e"/>
+  </g>
+
+  <!-- Keyboard (Bawah Monitor) -->
+  <g id="comp-keyboard">
+    <polygon points="175,150 295,150 305,172 165,172" fill="#334155" stroke="#0f172a" stroke-width="1.5"/>
+    <line x1="178" y1="156" x2="292" y2="156" stroke="#64748b" stroke-width="2" stroke-dasharray="4 2"/>
+    <line x1="174" y1="162" x2="296" y2="162" stroke="#64748b" stroke-width="2" stroke-dasharray="4 2"/>
+    <line x1="171" y1="168" x2="299" y2="168" stroke="#64748b" stroke-width="2" stroke-dasharray="6 2"/>
+  </g>
+
+  <!-- Mouse (Kanan) -->
+  <g id="comp-mouse">
+    <ellipse cx="335" cy="163" rx="14" ry="10" fill="#334155" stroke="#0f172a" stroke-width="1.5"/>
+    <line x1="335" y1="153" x2="335" y2="163" stroke="#0f172a" stroke-width="1.5"/>
+    <ellipse cx="335" cy="158" rx="2" ry="3" fill="#64748b"/>
+  </g>
+
+  <!-- Red Pointer Arrow & Label [X] -->
+  <g id="pointer-marker">
+    <defs>
+      <marker id="arrow-comp-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#e11d48"/>
+      </marker>
+    </defs>
+    ${isCpu ? `
+      <line x1="32" y1="50" x2="65" y2="75" stroke="#e11d48" stroke-width="3" marker-end="url(#arrow-comp-red)"/>
+      <circle cx="26" cy="42" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="26" y="47" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : isMonitor ? `
+      <line x1="235" y1="20" x2="235" y2="42" stroke="#e11d48" stroke-width="3" marker-end="url(#arrow-comp-red)"/>
+      <circle cx="235" cy="18" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="235" y="23" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : isKeyboard ? `
+      <line x1="140" y1="185" x2="175" y2="165" stroke="#e11d48" stroke-width="3" marker-end="url(#arrow-comp-red)"/>
+      <circle cx="132" cy="187" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="132" y="192" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    ` : `
+      <line x1="380" y1="180" x2="352" y2="168" stroke="#e11d48" stroke-width="3" marker-end="url(#arrow-comp-red)"/>
+      <circle cx="390" cy="185" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2"/>
+      <text x="390" y="190" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">${escapeXml(labelChar)}</text>
+    `}
+  </g>
+
+  <text x="210" y="192" text-anchor="middle" font-size="9.5" font-weight="600" fill="#334155">Komponen bertanda panah "[${escapeXml(labelChar)}]" adalah ...</text>
+</svg>`;
+}
+
 

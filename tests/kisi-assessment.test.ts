@@ -628,4 +628,57 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             expect(res3).toBeNull();
         });
     });
+
+    describe('Surgical Batch Question Regeneration (Multi-Item 1-Call)', () => {
+        it('should construct a cohesive batch regeneration prompt with target question numbers, preserved levels, and custom instructions', async () => {
+            const { buildBatchRegeneratePrompt } = await import('../src/routes/kisi');
+
+            const prompt = buildBatchRegeneratePrompt({
+                mataPelajaran: 'IPAS',
+                topik: 'Sistem Peredaran Darah Manusia',
+                jenjangKelas: 'Kelas 5',
+                semester: 'Ganjil',
+                capaianPembelajaran: 'Peserta didik memahami sistem organ tubuh manusia...',
+                customInstruction: 'Gunakan studi kasus kehidupan sehari-hari anak dan tingkatkan analisis HOTS',
+                itemsToReplace: [
+                    { type: 'pg', no: 3, level: 'L2', materi: 'Fungsi Jantung', currentSoal: 'Soal lama fungsi jantung...' },
+                    { type: 'pg', no: 5, level: 'L1', materi: 'Pembuluh Darah', currentSoal: 'Soal lama pembuluh darah...' },
+                    { type: 'pg', no: 7, level: 'L3', materi: 'Penyakit Anemia', currentSoal: 'Soal lama penyakit anemia...' },
+                    { type: 'pg', no: 13, level: 'L2', materi: 'Cara Menjaga Kesehatan', currentSoal: 'Soal lama kesehatan...' }
+                ],
+                existingQuestionsSummary: [
+                    'No 1: Organ pernapasan hidung',
+                    'No 2: Fungsi paru-paru',
+                    'No 4: Urutan peredaran darah besar'
+                ]
+            });
+
+            expect(prompt).toContain('NOMOR URUT: 3');
+            expect(prompt).toContain('NOMOR URUT: 5');
+            expect(prompt).toContain('NOMOR URUT: 7');
+            expect(prompt).toContain('NOMOR URUT: 13');
+            expect(prompt).toContain('Gunakan studi kasus kehidupan sehari-hari');
+            expect(prompt).toContain('RINGKASAN MATERI SOAL-SOAL LAIN');
+            expect(prompt).toContain('No 1: Organ pernapasan hidung');
+            expect(prompt).toContain('DILARANG menggunakan teks/wacana ini lagi');
+        });
+
+        it('should reject unauthorized /regenerate-batch request without auth session', async () => {
+            const kisiRoute = (await import('../src/routes/kisi')).default;
+            const res = await kisiRoute.request('/regenerate-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mataPelajaran: 'IPAS',
+                    topik: 'Peredaran Darah',
+                    itemsToReplace: [{ type: 'pg', no: 3 }]
+                })
+            });
+
+            expect(res.status).toBe(401);
+            const data = await res.json();
+            expect(data.success).toBe(false);
+            expect(data.error?.message).toContain('belum login');
+        });
+    });
 });

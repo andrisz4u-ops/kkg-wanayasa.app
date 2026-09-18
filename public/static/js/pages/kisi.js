@@ -269,6 +269,24 @@ export async function renderKisi() {
         <div id="asesmen-canvas" class="asesmen-a4">
           <!-- Content will be rendered here -->
         </div>
+
+        <!-- Floating Batch Action Bar (Hidden until questions selected) -->
+        <div id="kisi-floating-batch-bar" class="hidden print:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3.5 transition-all duration-300">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="text-xs font-bold whitespace-nowrap" id="batch-selected-count">0 Soal Dipilih</span>
+          </div>
+          <div class="h-4 w-px bg-slate-700"></div>
+          <button type="button" id="btn-batch-regenerate" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-transform hover:scale-105">
+            <i class="fas fa-wand-magic-sparkles"></i> Regenerate Terpilih
+          </button>
+          <button type="button" id="btn-batch-delete" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors">
+            <i class="fas fa-trash-alt"></i> Hapus
+          </button>
+          <button type="button" id="btn-batch-cancel" class="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 cursor-pointer transition-colors">
+            Batal
+          </button>
+        </div>
       </div>
     </div>
 
@@ -544,6 +562,48 @@ export async function renderKisi() {
         color: #ffffff;
         border-color: #dc2626;
         transform: scale(1.03);
+      }
+      .soal-actions .btn-regenerate-soal {
+        background: #f5f3ff;
+        color: #7c3aed;
+        border-color: #ddd6fe;
+      }
+      .soal-actions .btn-regenerate-soal:hover {
+        background: #7c3aed;
+        color: #ffffff;
+        border-color: #7c3aed;
+        transform: scale(1.03);
+      }
+      .soal-item-wrapper.soal-item-selected {
+        background: #f0fdfa !important;
+        border-color: #06b6d4 !important;
+        box-shadow: 0 0 0 1.5px #06b6d4, 0 4px 12px rgba(6, 182, 212, 0.15) !important;
+      }
+      .batch-preset-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 12px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+      }
+      .batch-preset-pill:hover {
+        background: #e0f2fe;
+        color: #0369a1;
+        border-color: #7dd3fc;
+        transform: translateY(-1px);
+      }
+      .batch-preset-pill.active {
+        background: #0284c7;
+        color: #ffffff;
+        border-color: #0284c7;
       }
       .soal-editor-overlay {
         position: fixed;
@@ -844,6 +904,7 @@ export async function renderKisi() {
 let _lastFormData = {};
 let _lastGeneratedData = {};
 let _currentActiveTab = 'soal';
+let _selectedBatchItems = new Map();
 
 // Helper: pastikan setiap butir soal memiliki metadata kisi-kisi (CP, Materi, Indikator, Level L1/L2/L3, Bentuk)
 function ensureClientKisiMetadata(data, formData = {}) {
@@ -1612,12 +1673,46 @@ export function initKisi() {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download mr-2"></i>Unduh .docx'; }
     }
   });
+
+  // Floating Batch Action Bar Listeners
+  document.getElementById('btn-batch-regenerate')?.addEventListener('click', () => {
+    const list = Array.from(_selectedBatchItems.values());
+    if (list.length === 0) {
+      showToast('Pilih minimal satu butir soal untuk di-regenerate.', 'error');
+      return;
+    }
+    openBatchRegenerateModal(list, _lastGeneratedData, _lastFormData);
+  });
+
+  document.getElementById('btn-batch-delete')?.addEventListener('click', () => {
+    batchDeleteSoal(_lastGeneratedData, _lastFormData);
+  });
+
+  document.getElementById('btn-batch-cancel')?.addEventListener('click', () => {
+    _selectedBatchItems.clear();
+    updateBatchBarUI();
+    document.querySelectorAll('.soal-batch-checkbox').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.soal-item-wrapper').forEach(w => { w.classList.remove('soal-item-selected'); });
+    showToast('Pilihan butir soal dibatalkan.', 'info');
+  });
 }
 
 function renderResult(data, formData) {
   // Simpan formData dan raw data ke module scope untuk download handler
   _lastFormData = formData;
   _lastGeneratedData = data;
+
+  // Bersihkan pilihan batch yang nomornya sudah tidak ada di data
+  const validKeys = new Set([
+    ...(data.pg || []).map(q => `pg_${q.no}`),
+    ...(data.isian?.data || []).map(q => `isian_${q.no}`),
+    ...(data.uraian || []).map(q => `uraian_${q.no}`)
+  ]);
+  for (const key of _selectedBatchItems.keys()) {
+    if (!validKeys.has(key)) {
+      _selectedBatchItems.delete(key);
+    }
+  }
 
   // Pastikan setiap butir soal memiliki metadata kisi-kisi terstandarisasi (CP, Materi, Indikator, Level L1/L2/L3, Bentuk)
   ensureClientKisiMetadata(data, formData);
@@ -1776,7 +1871,9 @@ function renderResult(data, formData) {
       }
 
       const pgIdx = data.pg.indexOf(q);
+      const isChecked = _selectedBatchItems.has(`pg_${q.no}`);
       const actionsHTML = `<div class="soal-actions print:hidden flex items-center gap-1.5">
+        <button type="button" class="btn-regenerate-soal" data-type="pg" data-index="${pgIdx}" data-no="${q.no}" title="Regenerate Soal No. ${q.no} dengan AI"><i class="fas fa-wand-magic-sparkles text-violet-500"></i> Ganti</button>
         <button type="button" class="btn-edit-soal" data-type="pg" data-index="${pgIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
         <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
@@ -1790,11 +1887,16 @@ function renderResult(data, formData) {
 
       if (q.gambar && q.gambar.url) {
         htmlSoal += `
-          <div class="soal-item-wrapper">
+          <div class="soal-item-wrapper ${isChecked ? 'soal-item-selected' : ''}" data-type="pg" data-no="${q.no}">
             ${actionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
               <tr>
-                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="width:38px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">
+                  <div class="flex items-center gap-1.5">
+                    <input type="checkbox" class="soal-batch-checkbox print:hidden rounded accent-cyan-600 w-3.5 h-3.5 cursor-pointer" data-type="pg" data-index="${pgIdx}" data-no="${q.no}" ${isChecked ? 'checked' : ''} title="Pilih soal ini untuk diganti serentak">
+                    <span>${q.no}.</span>
+                  </div>
+                </td>
                 <td style="vertical-align:top; padding:1px 0;">
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
@@ -1832,11 +1934,16 @@ function renderResult(data, formData) {
         `;
       } else {
         htmlSoal += `
-          <div class="soal-item-wrapper">
+          <div class="soal-item-wrapper ${isChecked ? 'soal-item-selected' : ''}" data-type="pg" data-no="${q.no}">
             ${actionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
               <tr>
-                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="width:38px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">
+                  <div class="flex items-center gap-1.5">
+                    <input type="checkbox" class="soal-batch-checkbox print:hidden rounded accent-cyan-600 w-3.5 h-3.5 cursor-pointer" data-type="pg" data-index="${pgIdx}" data-no="${q.no}" ${isChecked ? 'checked' : ''} title="Pilih soal ini untuk diganti serentak">
+                    <span>${q.no}.</span>
+                  </div>
+                </td>
                 <td style="vertical-align:top; padding:1px 0;">
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
@@ -1961,16 +2068,23 @@ function renderResult(data, formData) {
       }
     } else {
       data.isian.data.forEach((q, isianIdx) => {
-        const isianActionsHTML = `<div class="soal-actions print:hidden">
+        const isChecked = _selectedBatchItems.has(`isian_${q.no}`);
+        const isianActionsHTML = `<div class="soal-actions print:hidden flex items-center gap-1.5">
+          <button type="button" class="btn-regenerate-soal" data-type="isian" data-index="${isianIdx}" data-no="${q.no}" title="Regenerate Soal No. ${q.no} dengan AI"><i class="fas fa-wand-magic-sparkles text-violet-500"></i> Ganti</button>
           <button type="button" class="btn-edit-soal" data-type="isian" data-index="${isianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
           <button type="button" class="btn-delete-soal" data-type="isian" data-index="${isianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
         </div>`;
         htmlSoal += `
-          <div class="soal-item-wrapper">
+          <div class="soal-item-wrapper ${isChecked ? 'soal-item-selected' : ''}" data-type="isian" data-no="${q.no}">
             ${isianActionsHTML}
             <table class="layout-table soal-item-row" style="width:100%;">
               <tr>
-                <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+                <td style="width:38px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">
+                  <div class="flex items-center gap-1.5">
+                    <input type="checkbox" class="soal-batch-checkbox print:hidden rounded accent-cyan-600 w-3.5 h-3.5 cursor-pointer" data-type="isian" data-index="${isianIdx}" data-no="${q.no}" ${isChecked ? 'checked' : ''} title="Pilih soal ini untuk diganti serentak">
+                    <span>${q.no}.</span>
+                  </div>
+                </td>
                 <td style="vertical-align:top; padding:1px 0;">
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                 </td>
@@ -1992,16 +2106,23 @@ function renderResult(data, formData) {
     `;
 
     data.uraian.forEach((q, uraianIdx) => {
-      const uraianActionsHTML = `<div class="soal-actions print:hidden">
+      const isChecked = _selectedBatchItems.has(`uraian_${q.no}`);
+      const uraianActionsHTML = `<div class="soal-actions print:hidden flex items-center gap-1.5">
+        <button type="button" class="btn-regenerate-soal" data-type="uraian" data-index="${uraianIdx}" data-no="${q.no}" title="Regenerate Soal No. ${q.no} dengan AI"><i class="fas fa-wand-magic-sparkles text-violet-500"></i> Ganti</button>
         <button type="button" class="btn-edit-soal" data-type="uraian" data-index="${uraianIdx}" title="Edit Soal No. ${q.no}"><i class="fas fa-pencil-alt"></i> Edit</button>
         <button type="button" class="btn-delete-soal" data-type="uraian" data-index="${uraianIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
       htmlSoal += `
-        <div class="soal-item-wrapper" style="margin-bottom:16px;">
+        <div class="soal-item-wrapper ${isChecked ? 'soal-item-selected' : ''}" data-type="uraian" data-no="${q.no}" style="margin-bottom:16px;">
           ${uraianActionsHTML}
           <table class="layout-table soal-item-row" style="width:100%;">
             <tr>
-              <td style="width:26px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">${q.no}.</td>
+              <td style="width:38px; font-weight:bold; vertical-align:top; padding:1px 0; line-height:1.45;">
+                <div class="flex items-center gap-1.5">
+                  <input type="checkbox" class="soal-batch-checkbox print:hidden rounded accent-cyan-600 w-3.5 h-3.5 cursor-pointer" data-type="uraian" data-index="${uraianIdx}" data-no="${q.no}" ${isChecked ? 'checked' : ''} title="Pilih soal ini untuk diganti serentak">
+                  <span>${q.no}.</span>
+                </div>
+              </td>
               <td style="vertical-align:top; padding:1px 0;">
                 <div class="soal-text" style="margin-bottom:14px;">${formatSoalText(q.soal)}</div>
               </td>
@@ -2227,6 +2348,53 @@ function renderResult(data, formData) {
       deleteSoal(type, index, data, formData);
     });
   });
+
+  // Attach batch selection checkbox listeners
+  canvas.querySelectorAll('.soal-batch-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const type = cb.dataset.type;
+      const no = parseInt(cb.dataset.no, 10);
+      const index = parseInt(cb.dataset.index, 10);
+      const key = `${type}_${no}`;
+
+      let item;
+      if (type === 'pg') item = data.pg?.[index];
+      else if (type === 'isian') item = data.isian?.data?.[index];
+      else if (type === 'uraian') item = data.uraian?.[index];
+
+      const wrapper = cb.closest('.soal-item-wrapper');
+
+      if (cb.checked) {
+        _selectedBatchItems.set(key, { type, no, index, item });
+        if (wrapper) wrapper.classList.add('soal-item-selected');
+      } else {
+        _selectedBatchItems.delete(key);
+        if (wrapper) wrapper.classList.remove('soal-item-selected');
+      }
+      updateBatchBarUI();
+    });
+  });
+
+  // Attach single item regenerate trigger listener
+  canvas.querySelectorAll('.btn-regenerate-soal').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.type;
+      const no = parseInt(btn.dataset.no, 10);
+      const index = parseInt(btn.dataset.index, 10);
+
+      let item;
+      if (type === 'pg') item = data.pg?.[index];
+      else if (type === 'isian') item = data.isian?.data?.[index];
+      else if (type === 'uraian') item = data.uraian?.[index];
+
+      openBatchRegenerateModal([{ type, no, index, item }], data, formData);
+    });
+  });
+
+  // Update floating batch bar counter & visibility
+  updateBatchBarUI();
 
   // Attach interactive crossword game player listener
   if (isianType === 'Crossword' && data.isian?.crossword?.success) {
@@ -2997,6 +3165,311 @@ function deleteSoal(type, index, data, formData) {
 
   renderResult(data, formData);
   showToast(`Soal ${typeLabel} No. ${qNo} berhasil dihapus. Nomor soal diperbarui otomatis.`, 'info');
+}
+
+// ============================================================
+// BATCH ACTIONS: UPDATE FLOATING BAR, BATCH DELETE, & BATCH REGENERATE
+// ============================================================
+
+function updateBatchBarUI() {
+  const bar = document.getElementById('kisi-floating-batch-bar');
+  const countLabel = document.getElementById('batch-selected-count');
+  if (!bar) return;
+
+  const count = _selectedBatchItems.size;
+  if (count === 0) {
+    bar.classList.add('hidden');
+    return;
+  }
+
+  bar.classList.remove('hidden');
+  const sortedNos = Array.from(_selectedBatchItems.values())
+    .map(it => it.no)
+    .sort((a, b) => a - b);
+  const nosText = sortedNos.map(n => `#${n}`).join(', ');
+  if (countLabel) {
+    countLabel.textContent = `${count} Soal Dipilih (${nosText})`;
+  }
+}
+
+function batchDeleteSoal(data, formData) {
+  const selected = Array.from(_selectedBatchItems.values());
+  if (selected.length === 0) return;
+
+  const nosText = selected.map(s => `#${s.no}`).sort((a, b) => a - b).join(', ');
+  if (!confirm(`Yakin ingin menghapus ${selected.length} butir soal terpilih (${nosText})?\nNomor soal yang tersisa akan diperbarui secara otomatis.`)) {
+    return;
+  }
+
+  const selectedNos = new Set(selected.map(s => s.no));
+
+  if (data.pg) data.pg = data.pg.filter(q => !selectedNos.has(q.no));
+  if (data.isian?.data) data.isian.data = data.isian.data.filter(q => !selectedNos.has(q.no));
+  if (data.uraian) data.uraian = data.uraian.filter(q => !selectedNos.has(q.no));
+
+  // Auto-renumber all questions consecutively
+  let runNo = 1;
+  if (data.pg) data.pg.forEach(q => { q.no = runNo++; });
+  if (data.isian?.data) data.isian.data.forEach(q => { q.no = runNo++; });
+  if (data.uraian) data.uraian.forEach(q => { q.no = runNo++; });
+
+  _selectedBatchItems.clear();
+  updateBatchBarUI();
+  renderResult(data, formData);
+
+  saveDocArchive({
+    module: 'kisi',
+    title: `${formData.mataPelajaran || 'Asesmen'} - ${formData.topik || 'Topik'} (${formData.jenjangKelas || 'SD'})`,
+    subtitle: `${formData.jenisUjian || 'Ulangan'} | ${formData.semester || 'Smt 1'}`,
+    inputData: formData,
+    content: data
+  });
+
+  showToast(`${selected.length} butir soal berhasil dihapus. Nomor soal diperbarui otomatis.`, 'info');
+}
+
+function openBatchRegenerateModal(selectedList, data, formData) {
+  if (!selectedList || selectedList.length === 0) return;
+
+  const existing = document.querySelector('.batch-regen-overlay');
+  if (existing) existing.remove();
+
+  // Sort selected questions ascending by number
+  selectedList.sort((a, b) => a.no - b.no);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'soal-editor-overlay batch-regen-overlay';
+  overlay.innerHTML = `
+    <div class="soal-editor-modal" style="max-width: 650px;">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
+            <i class="fas fa-wand-magic-sparkles text-sm"></i>
+          </div>
+          <div>
+            <h3 style="margin:0; font-size:15px; font-weight:800;" class="text-slate-900 dark:text-white">
+              Regenerate ${selectedList.length} Butir Soal Pilihan (1 Call AI Efisien)
+            </h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 m-0">
+              Mengganti nomor terpilih dengan butir soal baru tanpa merombak butir soal lainnya.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="btn-batch-modal-close text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1 cursor-pointer">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Chips of selected questions -->
+      <div style="margin-bottom: 14px;">
+        <label style="margin-bottom:6px; font-size:11px; font-weight:700; color:#475569;">Daftar Soal yang Akan Diganti:</label>
+        <div class="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 max-h-28 overflow-y-auto">
+          ${selectedList.map(it => `
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-100/80 dark:bg-cyan-950/70 text-cyan-800 dark:text-cyan-300 text-xs font-bold border border-cyan-300 dark:border-cyan-800">
+              <span>#${it.no}</span>
+              <span class="text-[10px] uppercase opacity-75">(${it.type === 'pg' ? 'PG' : it.type === 'isian' ? 'Isian' : 'Uraian'})</span>
+            </span>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Quick Preset Pills -->
+      <div style="margin-bottom: 14px;">
+        <label style="margin-bottom:6px; font-size:11px; font-weight:700; color:#475569;">Preset Arahan Pedagogis (Klik untuk memilih):</label>
+        <div class="flex flex-wrap gap-1.5" id="batch-presets-container">
+          <button type="button" class="batch-preset-pill" data-preset="Buatkan soal dengan kalimat lebih ringkas, ramah anak usia SD, dan kosakata mudah dipahami.">
+            👶 Lebih Sederhana & Ramah Anak
+          </button>
+          <button type="button" class="batch-preset-pill" data-preset="Tingkatkan level kognitif ke HOTS (L3) dengan studi kasus analisis kritis dan pemecahan masalah nyata.">
+            🧠 Tingkatkan Level HOTS (C4-C6)
+          </button>
+          <button type="button" class="batch-preset-pill" data-preset="Gunakan konteks kehidupan sehari-hari anak di sekolah, rumah, atau masyarakat sebagai stimulus cerita.">
+            🏫 Kontekstual Sehari-Hari
+          </button>
+          <button type="button" class="batch-preset-pill" data-preset="Sajikan stimulus berupa data ringkas, tabel perbandingan sederhana, atau fakta empiris.">
+            📊 Stimulus Data / Tabel
+          </button>
+          <button type="button" class="batch-preset-pill" data-preset="Pastikan distraktor/pengecoh sangat homogen, masuk akal, dan tidak ada pilihan jawaban klise.">
+            ⚖️ Pengecoh Homogen
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Prompt Textarea -->
+      <div style="margin-bottom: 14px;">
+        <label style="margin-bottom:4px; font-size:11px; font-weight:700; color:#475569;">Instruksi Khusus untuk AI (Opsional):</label>
+        <textarea id="batch-regen-custom-prompt" rows="3" placeholder="Contoh: Nomor 3 & 5 fokus pada pengamalan sila ke-3 di kelas, nomor 7 soal analisis studi kasus, nomor 13 uraian dengan rubrik penskoran detail..."></textarea>
+      </div>
+
+      <!-- Notice Banner -->
+      <div style="margin-bottom: 16px; padding: 12px; border-radius: 12px; background: #f5f3ff; border: 1px solid #ddd6fe; display: flex; align-items: flex-start; gap: 10px;">
+        <i class="fas fa-shield-halved text-violet-600 mt-0.5 text-sm shrink-0"></i>
+        <div style="font-size: 11.5px; color: #5b21b6; line-height: 1.45;">
+          <b>Surgical 1-Call AI & Zero Duplicate Guarantee:</b>
+          <div style="margin-top: 2px; color: #6d28d9;">
+            Seluruh ${selectedList.length} nomor soal diproses serentak dalam 1 request cerdas. AI menerima wacana soal lain yang ada agar materi tidak tumpang tindih, dan stimulus gambar baru otomatis diverifikasi bebas duplikasi.
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="editor-actions">
+        <button type="button" class="btn-editor-cancel btn-batch-modal-cancel">Batal</button>
+        <button type="button" id="btn-submit-batch-regen" class="btn-editor-save flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold cursor-pointer">
+          <i class="fas fa-wand-magic-sparkles"></i>
+          <span>Regenerate ${selectedList.length} Soal Baru</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Preset pill toggle interaction
+  overlay.querySelectorAll('.batch-preset-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      pill.classList.toggle('active');
+      const textarea = overlay.querySelector('#batch-regen-custom-prompt');
+      const text = pill.dataset.preset;
+      if (pill.classList.contains('active')) {
+        if (textarea.value.trim()) {
+          textarea.value = textarea.value.trim() + '\n- ' + text;
+        } else {
+          textarea.value = text;
+        }
+      } else {
+        textarea.value = textarea.value.replace('- ' + text, '').replace(text, '').trim();
+      }
+    });
+  });
+
+  // Close handlers
+  const closeModal = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', escBatchHandler);
+  };
+
+  const escBatchHandler = (e) => {
+    if (e.key === 'Escape') closeModal();
+  };
+  document.addEventListener('keydown', escBatchHandler);
+
+  overlay.querySelector('.btn-batch-modal-close')?.addEventListener('click', closeModal);
+  overlay.querySelector('.btn-batch-modal-cancel')?.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  // Submit Batch Regeneration
+  overlay.querySelector('#btn-submit-batch-regen')?.addEventListener('click', async () => {
+    const btnSubmit = overlay.querySelector('#btn-submit-batch-regen');
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = `<i class="fas fa-spinner fa-spin mr-1.5"></i> Meregenerasi ${selectedList.length} Soal...`;
+
+    const customInstruction = overlay.querySelector('#batch-regen-custom-prompt')?.value.trim() || '';
+
+    // Collect summaries of untouched questions so AI does not duplicate topics/stems
+    const selectedNos = new Set(selectedList.map(s => s.no));
+    const allExisting = [
+      ...(data.pg || []),
+      ...(data.isian?.data || []),
+      ...(data.uraian || [])
+    ];
+    const untouched = allExisting.filter(q => !selectedNos.has(q.no));
+    const existingQuestionsSummary = untouched.map(q => {
+      const stem = (q.soal || '').replace(/<[^>]*>/g, '').substring(0, 80);
+      return q.materi ? `${q.materi}: ${stem}` : stem;
+    }).filter(Boolean);
+
+    // Collect all currently used image URLs in this exam
+    const usedImageUrls = allExisting.map(q => q.gambar?.url).filter(Boolean);
+
+    const payload = {
+      mataPelajaran: formData.mataPelajaran,
+      topik: formData.topik,
+      jenjangKelas: formData.jenjangKelas,
+      semester: formData.semester,
+      capaianPembelajaran: formData.capaianPembelajaran,
+      customInstruction,
+      itemsToReplace: selectedList.map(it => ({
+        type: it.type,
+        no: it.no,
+        level: it.item?.level || 'L2',
+        materi: it.item?.materi || formData.topik,
+        cp: it.item?.cp || formData.capaianPembelajaran,
+        currentSoal: it.item?.soal
+      })),
+      existingQuestionsSummary,
+      usedImageUrls,
+      aiProvider: formData.aiProvider || state.preferredAiProvider,
+      useGambar: formData.useGambar !== false
+    };
+
+    try {
+      const res = await api('/kisi/regenerate-batch', {
+        method: 'POST',
+        body: payload,
+        timeout: 180000
+      });
+
+      if (res.success && Array.isArray(res.data?.items)) {
+        const replacements = res.data.items;
+
+        replacements.forEach(rep => {
+          if (!rep || !rep.no) return;
+          const tNo = rep.no;
+
+          // Replace in PG
+          if (data.pg) {
+            const pIdx = data.pg.findIndex(q => q.no === tNo);
+            if (pIdx !== -1) {
+              data.pg[pIdx] = rep;
+              return;
+            }
+          }
+          // Replace in Isian
+          if (data.isian?.data) {
+            const iIdx = data.isian.data.findIndex(q => q.no === tNo);
+            if (iIdx !== -1) {
+              data.isian.data[iIdx] = rep;
+              return;
+            }
+          }
+          // Replace in Uraian
+          if (data.uraian) {
+            const uIdx = data.uraian.findIndex(q => q.no === tNo);
+            if (uIdx !== -1) {
+              data.uraian[uIdx] = rep;
+              return;
+            }
+          }
+        });
+
+        _selectedBatchItems.clear();
+        updateBatchBarUI();
+        closeModal();
+        renderResult(data, formData);
+
+        // Auto-archive
+        saveDocArchive({
+          module: 'kisi',
+          title: `${formData.mataPelajaran || 'Asesmen'} - ${formData.topik || 'Topik'} (${formData.jenjangKelas || 'SD'})`,
+          subtitle: `${formData.jenisUjian || 'Ulangan'} | ${formData.semester || 'Smt 1'}`,
+          inputData: formData,
+          content: data
+        });
+
+        showToast(`Berhasil meregenerasi ${replacements.length} butir soal pilihan dalam 1 panggilan AI!`, 'success');
+      } else {
+        throw new Error(res.error || 'AI tidak mengembalikan butir soal pengganti.');
+      }
+    } catch (err) {
+      console.error('Batch regeneration error:', err);
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = `<i class="fas fa-wand-magic-sparkles"></i> <span>Regenerate ${selectedList.length} Soal Baru</span>`;
+      showToast(err.message || 'Gagal meregenerasi butir soal.', 'error');
+    }
+  });
 }
 
 /**

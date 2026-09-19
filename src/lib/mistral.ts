@@ -285,6 +285,28 @@ INSTRUKSI PENTING:
 8. JANGAN gunakan markdown formatting (bold/italic) karena akan menjadi plain text. Gunakan huruf kapital untuk penekanan jika perlu.`;
 }
 
+export function buildSppdLhpPrompt(input: {
+   agenda: string;
+   tanggal_kegiatan: string;
+   tempat_kegiatan: string;
+   daftar_guru_str: string;
+   sekolah_asal_nama: string;
+}): string {
+   return `Anda adalah asisten administrasi pendidikan profesional. Buatlah uraian "HASIL PELAKSANAAN TUGAS" untuk Laporan Hasil Pekerjaan (LHP) kedinasan guru SD setelah mengikuti kegiatan Kelompok Kerja Guru (KKG).
+
+Konteks Kegiatan:
+- Nama Agenda / Topik Kegiatan: ${input.agenda}
+- Tempat Pelaksanaan: ${input.tempat_kegiatan}
+- Tanggal Pelaksanaan: ${input.tanggal_kegiatan}
+- Guru Pelapor: ${input.daftar_guru_str} dari ${input.sekolah_asal_nama}
+
+Instruksi:
+1. Buat 3 sampai 5 butir ringkasan hasil kegiatan yang konkret, substansial, dan realistis sesuai topik/agenda di atas (materi inti yang dipelajari, hasil diskusi atau penyusunan dokumen kurikulum/pembelajaran, serta kesepakatan tindak lanjut di sekolah masing-masing).
+2. Sajikan dalam bentuk butir bernomor (1., 2., 3., dst) yang rapi, padat, dan bernilai kedinasan.
+3. Gunakan bahasa Indonesia baku yang formal.
+4. JANGAN tulis kop surat, kepala laporan, ataupun tanda tangan penutup (karena bagian tersebut sudah digenerate secara otomatis oleh sistem dokumen). Cukup tulis butir-butir hasil kegiatan saja.`;
+}
+
 export function buildProkerPrompt(input: {
    tahun_ajaran: string;
    visi: string;

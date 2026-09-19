@@ -93,6 +93,42 @@ export const generateSuratSchema = z.object({
     lampiran: z.string().max(200).optional().nullable(),
 }).passthrough();
 
+export const guruSppdItemSchema = z.object({
+    nama: z.string().min(1, 'Nama guru harus diisi'),
+    nip: z.string().optional().default('-'),
+    pangkat_golongan: z.string().optional().default('-'),
+    jabatan: z.string().optional().default('Guru Kelas'),
+});
+
+export const generateSppdSchema = z.object({
+    sekolah_asal_id: z.union([z.number(), z.string()]).optional().nullable(),
+    sekolah_asal_nama: z.string().min(1, 'Nama sekolah asal harus diisi'),
+    kepala_sekolah_asal: z.string().min(1, 'Nama kepala sekolah asal harus diisi'),
+    nip_kepala_sekolah_asal: z.string().optional().default('-'),
+    alamat_sekolah_asal: z.string().optional().default(''),
+    nomor_surat_tugas: z.string().optional().default(''),
+    nomor_sppd: z.string().optional().default(''),
+    kop_surat_url: z.string().optional().nullable(),
+    sekolah_tujuan_nama: z.string().min(1, 'Lokasi/sekolah tujuan harus diisi'),
+    kepala_sekolah_tujuan: z.string().optional().default(''),
+    nip_kepala_sekolah_tujuan: z.string().optional().default(''),
+    daftar_guru: z.array(guruSppdItemSchema).min(1, 'Minimal satu guru harus diisi'),
+    tanggal_kegiatan: z.string().min(1, 'Tanggal kegiatan harus diisi'),
+    waktu_kegiatan: z.string().optional().default('08.00 s.d Selesai'),
+    tempat_kegiatan: z.string().min(1, 'Tempat kegiatan harus diisi'),
+    agenda: z.string().min(1, 'Maksud tugas / agenda harus diisi'),
+    alat_angkut: z.string().optional().default('Sepeda Motor'),
+    tingkat_biaya: z.string().optional().default('Biaya Transport Lokal'),
+    biaya_transport: z.string().optional().default('Rp 20.000'),
+    mata_anggaran: z.string().optional().default('Dana BOS'),
+    lama_hari: z.string().optional().default('1 (satu) hari'),
+    tanggal_lhp: z.string().optional(),
+    dasar_surat: z.string().optional().default('Surat Undangan Ketua KKG Gugus 3 Wanayasa'),
+    isi_lhp: z.string().optional(),
+    model: z.string().max(100).optional().default('vertex'),
+    aiProvider: z.string().max(100).optional(),
+}).passthrough();
+
 // ============================================
 // Proker Schemas
 // ============================================

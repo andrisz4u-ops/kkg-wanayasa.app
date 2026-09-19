@@ -4,7 +4,7 @@ import { AIService } from '../services/ai';
 import { buildSuratPrompt } from '../lib/prompts';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
-import { validate, validateId, generateSuratSchema } from '../lib/validation';
+import { validate, validateId, generateSuratSchema, generateSppdSchema } from '../lib/validation';
 import { logger } from '../lib/logger';
 import type { SuratUndangan } from '../types';
 
@@ -199,6 +199,150 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 });
 
 // ============================================
+// Generate Surat Tugas & SPPD (AI + Auto-Fill)
+// ============================================
+surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  try {
+    const body = await c.req.json();
+
+    // Validate with Zod
+    const validation = validate(generateSppdSchema, body);
+    if (!validation.success) {
+      return c.json({
+        success: false,
+        error: {
+          code: ErrorCodes.VALIDATION_ERROR,
+          message: 'Data SPPD tidak valid',
+          details: validation.errors
+        }
+      }, 400);
+    }
+
+    const data = validation.data;
+    const currentYear = new Date().getFullYear();
+    const currentMonthNum = new Date().getMonth() + 1;
+    const romawiBulan = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][currentMonthNum - 1] || 'IX';
+
+    const count: any = await c.env.DB.prepare(
+      'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
+    ).bind(String(currentYear)).first();
+
+    const sequenceNum = String((count?.cnt || 0) + 1).padStart(3, '0');
+    const cleanKodeSekolah = (data.sekolah_asal_nama || 'SDN')
+      .replace(/SD NEGERI/i, 'SDN')
+      .replace(/[^a-zA-Z0-9]/g, '');
+
+    const nomorSPT = data.nomor_surat_tugas || `421.2 / ${sequenceNum} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`;
+    const nomorSPPD = data.nomor_sppd || `090 / ${sequenceNum} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`;
+
+    // Auto-calculate H+1 date for LHP if not provided
+    const { hitungHPlus1 } = await import('../lib/docx/sppd');
+    const tanggalLHP = data.tanggal_lhp || hitungHPlus1(data.tanggal_kegiatan);
+
+    // Prepare guru string for prompt and storage
+    const daftarGuruStr = data.daftar_guru.map((g: any) => `${g.nama} (${g.jabatan || 'Guru'}, NIP: ${g.nip || '-'})`).join(', ');
+
+    // Call AI to generate LHP if not provided
+    let isiLhp = data.isi_lhp || '';
+    if (!isiLhp.trim()) {
+      try {
+        const { buildSppdLhpPrompt } = await import('../lib/prompts');
+        const prompt = buildSppdLhpPrompt({
+          agenda: data.agenda,
+          tanggal_kegiatan: data.tanggal_kegiatan,
+          tempat_kegiatan: data.tempat_kegiatan,
+          daftar_guru_str: daftarGuruStr,
+          sekolah_asal_nama: data.sekolah_asal_nama
+        });
+
+        const selectedModel = data.aiProvider || data.model || 'vertex';
+        const aiService = new AIService(c.env, selectedModel);
+        isiLhp = await aiService.generateText(prompt, {
+          userId: user.id,
+          featureType: 'surat_sppd'
+        });
+      } catch (aiError: any) {
+        logger.warn('AI LHP generation failed, using fallback points', { error: aiError.message });
+        isiLhp = `1. Telah mengikuti seluruh rangkaian kegiatan KKG Gugus 3 Wanayasa dengan materi "${data.agenda}" secara aktif dan tuntas.\n2. Memahami dan menguasai langkah-langkah implementasi materi pembelajaran serta berpartisipasi dalam penyusunan instrumen perangkat pembelajaran bersama guru-guru gugus.\n3. Berdiskusi dan memecahkan kendala teknis kurikulum di satuan pendidikan masing-masing bersama narasumber dan pengurus KKG.\n4. Menyusun rencana tindak lanjut untuk mengimbaskan hasil kegiatan kepada rekan pendidik dan menerapkannya pada proses belajar mengajar di ${data.sekolah_asal_nama}.`;
+      }
+    }
+
+    // Resolve kop_surat_url from input or database for sekolah_asal
+    let kopSuratUrl = (data as any).kop_surat_url;
+    if (!kopSuratUrl && data.sekolah_asal_nama) {
+      const sekolahRow: any = await c.env.DB.prepare(
+        'SELECT kop_surat_url FROM sekolah WHERE nama = ? LIMIT 1'
+      ).bind(data.sekolah_asal_nama).first();
+      if (sekolahRow?.kop_surat_url) {
+        kopSuratUrl = sekolahRow.kop_surat_url;
+      } else if (user.kop_surat_url) {
+        kopSuratUrl = user.kop_surat_url;
+      }
+    }
+
+    // Complete metadata payload
+    const metadataPayload = {
+      ...data,
+      kop_surat_url: kopSuratUrl || null,
+      nomor_surat_tugas: nomorSPT,
+      nomor_sppd: nomorSPPD,
+      tanggal_lhp: tanggalLHP,
+      isi_lhp: isiLhp
+    };
+
+    // Save to database
+    const result = await c.env.DB.prepare(`
+      INSERT INTO surat_undangan 
+      (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+       tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final', 'sppd', ?)
+    `).bind(
+      user.id,
+      nomorSPT,
+      `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
+      data.tanggal_kegiatan,
+      data.waktu_kegiatan || '08.00 s.d Selesai',
+      data.tempat_kegiatan,
+      data.agenda,
+      JSON.stringify(data.daftar_guru),
+      data.kepala_sekolah_asal,
+      isiLhp,
+      JSON.stringify(metadataPayload)
+    ).run();
+
+    logger.info('Surat Tugas & SPPD created', {
+      userId: user.id,
+      suratId: result.meta.last_row_id,
+      nomorSurat: nomorSPT
+    });
+
+    return successResponse(c, {
+      id: result.meta.last_row_id,
+      nomor_surat: nomorSPT,
+      nomor_sppd: nomorSPPD,
+      tipe_surat: 'sppd',
+      jenis_kegiatan: `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
+      tanggal_kegiatan: data.tanggal_kegiatan,
+      tanggal_lhp: tanggalLHP,
+      isi_lhp: isiLhp,
+      metadata: metadataPayload,
+      created_at: new Date().toISOString()
+    }, 'Paket Surat Tugas & SPPD berhasil dibuat', 201);
+
+  } catch (e: any) {
+    logger.error('Generate SPPD error', e, { userId: user.id });
+    return Errors.internal(c);
+  }
+});
+
+// ============================================
 // Get Surat History
 // ============================================
 surat.get('/history', async (c) => {
@@ -217,7 +361,7 @@ surat.get('/history', async (c) => {
     const [results, countResult] = await Promise.all([
       c.env.DB.prepare(`
         SELECT id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, 
-               tempat_kegiatan, status, created_at 
+               tempat_kegiatan, status, created_at, tipe_surat, metadata 
         FROM surat_undangan 
         WHERE user_id = ? 
         ORDER BY created_at DESC
@@ -277,6 +421,13 @@ surat.get('/:id', async (c) => {
     if (result.peserta) {
       try {
         result.peserta = JSON.parse(result.peserta);
+      } catch { }
+    }
+
+    // Parse metadata JSON
+    if (result.metadata) {
+      try {
+        result.metadata = JSON.parse(result.metadata);
       } catch { }
     }
 
@@ -421,7 +572,57 @@ surat.get('/:id/download', async (c) => {
       } catch { }
     }
 
-    // Import and generate DOCX
+    // Check if tipe_surat === 'sppd'
+    if (result.tipe_surat === 'sppd') {
+      let meta: any = {};
+      try {
+        meta = JSON.parse(result.metadata || '{}');
+      } catch { }
+
+      const { generateSppdBuffer } = await import('../lib/docx');
+      const buffer = await generateSppdBuffer({
+        sekolah_asal_id: meta.sekolah_asal_id,
+        sekolah_asal_nama: meta.sekolah_asal_nama || 'SD Negeri',
+        kepala_sekolah_asal: meta.kepala_sekolah_asal || result.penanggung_jawab || 'Kepala Sekolah',
+        nip_kepala_sekolah_asal: meta.nip_kepala_sekolah_asal || '-',
+        alamat_sekolah_asal: meta.alamat_sekolah_asal || '',
+        kop_surat_url: meta.kop_surat_url || null,
+        nomor_surat_tugas: meta.nomor_surat_tugas || result.nomor_surat,
+        nomor_sppd: meta.nomor_sppd,
+        sekolah_tujuan_nama: meta.sekolah_tujuan_nama || result.tempat_kegiatan,
+        kepala_sekolah_tujuan: meta.kepala_sekolah_tujuan || '',
+        nip_kepala_sekolah_tujuan: meta.nip_kepala_sekolah_tujuan || '',
+        daftar_guru: meta.daftar_guru || peserta || [],
+        tanggal_kegiatan: meta.tanggal_kegiatan || result.tanggal_kegiatan,
+        waktu_kegiatan: meta.waktu_kegiatan || result.waktu_kegiatan,
+        tempat_kegiatan: meta.tempat_kegiatan || result.tempat_kegiatan,
+        agenda: meta.agenda || result.agenda,
+        alat_angkut: meta.alat_angkut,
+        tingkat_biaya: meta.tingkat_biaya,
+        biaya_transport: meta.biaya_transport,
+        mata_anggaran: meta.mata_anggaran,
+        lama_hari: meta.lama_hari,
+        tanggal_lhp: meta.tanggal_lhp,
+        dasar_surat: meta.dasar_surat,
+        isi_lhp: meta.isi_lhp || result.isi_surat,
+      }, settings);
+
+      const safeSekolah = (meta.sekolah_asal_nama || 'Sekolah').replace(/[^a-zA-Z0-9]/g, '_');
+      const safeNomor = (result.nomor_surat || 'SPT').replace(/[^a-zA-Z0-9]/g, '-');
+      const filename = `Paket_SPT_SPPD_${safeSekolah}_${safeNomor}.docx`;
+
+      logger.info('SPPD downloaded', { userId: user.id, suratId: idValidation.id });
+
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-cache'
+        }
+      });
+    }
+
+    // Import and generate DOCX for Undangan
     const { generateSuratBuffer } = await import('../lib/docx-generator');
 
     const buffer = await generateSuratBuffer({

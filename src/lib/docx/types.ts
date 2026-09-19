@@ -128,4 +128,37 @@ export interface RppContentData {
     asesmen?: { formatif?: string; sumatif?: string };
 }
 
-// Helper: create bordered table cell for RPP
+export interface GuruSppd {
+    nama: string;
+    nip?: string;
+    pangkat_golongan?: string;
+    jabatan?: string;
+}
+
+export interface SppdData {
+    sekolah_asal_id?: number | string | null;
+    sekolah_asal_nama: string;
+    kepala_sekolah_asal: string;
+    nip_kepala_sekolah_asal?: string;
+    alamat_sekolah_asal?: string;
+    kop_surat_url?: string | null;
+    nomor_surat_tugas?: string;
+    nomor_sppd?: string;
+    sekolah_tujuan_nama: string;
+    kepala_sekolah_tujuan?: string;
+    nip_kepala_sekolah_tujuan?: string;
+    daftar_guru: GuruSppd[];
+    tanggal_kegiatan: string;
+    waktu_kegiatan?: string;
+    tempat_kegiatan: string;
+    agenda: string;
+    alat_angkut?: string;
+    tingkat_biaya?: string;
+    biaya_transport?: string;
+    mata_anggaran?: string;
+    lama_hari?: string;
+    tanggal_lhp?: string;
+    dasar_surat?: string;
+    isi_lhp?: string;
+    created_at?: string;
+}

@@ -5,13 +5,13 @@ export function renderHTML(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Digital KKG Gugus 3 Wanayasa</title>
-  <meta name="description" content="Portal Digital Kelompok Kerja Guru (KKG) Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta">
+  <title>Portal Digital KKG</title>
+  <meta name="description" content="Portal Digital Kelompok Kerja Guru (KKG)">
   <meta name="theme-color" content="#269494">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="KKG Wanayasa">
+  <meta name="apple-mobile-web-app-title" content="Portal KKG">
 
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
@@ -39,7 +39,7 @@ export function renderHTML(): string {
             <div class="w-8 h-8 bg-gradient-to-br from-[#269494] to-[#1a7474] rounded-xl animate-pulse"></div>
         </div>
       </div>
-      <h2 class="text-2xl font-display font-extrabold text-slate-900 tracking-tight mb-2">KKG Gugus 3</h2>
+      <h2 class="text-2xl font-display font-extrabold text-slate-900 tracking-tight mb-2" id="splash-title">Portal Digital KKG</h2>
       <p id="loading-status" class="text-sm text-slate-400 font-medium animate-pulse">Memuat Aplikasi...</p>
     </div>
   </div>

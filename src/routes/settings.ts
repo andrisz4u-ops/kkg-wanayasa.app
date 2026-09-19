@@ -10,7 +10,11 @@ const settings = new Hono<{ Bindings: Bindings }>();
 settings.get('/public', async (c) => {
     try {
         const keys = [
-            'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten', 'tahun_ajaran', 'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk'
+            'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten', 'provinsi', 'tahun_ajaran', 
+            'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk',
+            'nama_ketua', 'nama_sekretaris', 'nama_bendahara', 'email_kkg', 'telepon_kkg', 'website_kkg',
+            'hero_title', 'hero_deskripsi', 'visi', 'misi', 'visi_misi',
+            'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua'
         ];
 
         const placeholders = keys.map(() => '?').join(',');

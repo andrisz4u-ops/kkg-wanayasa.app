@@ -30,6 +30,7 @@ backup/
 *.bak
 *.tar.gz
 *.zip
+backup_*.sql
 
 # OS files
 .DS_Store

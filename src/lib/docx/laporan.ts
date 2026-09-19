@@ -67,7 +67,7 @@ export function generateLaporanDocx(data: LaporanData, settings: KKGSettings): D
     };
 
     return new Document({
-        creator: 'Portal Digital KKG Gugus 3 Wanayasa',
+        creator: `Portal Digital ${settings.nama_kkg || 'KKG'}`,
         title: data.judul_laporan,
         styles: {
             default: {
@@ -97,9 +97,9 @@ export function generateLaporanDocx(data: LaporanData, settings: KKGSettings): D
                 createParagraph(`Periode: ${data.periode || '-'}`, { alignment: AlignmentType.CENTER, fontSize: 28, bold: true, spacing: { after: 720 } }),
 
                 new Paragraph({ spacing: { before: 720 } }),
-                createParagraph('KELOMPOK KERJA GURU (KKG) GUGUS 3', { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
-                createParagraph('KECAMATAN WANAYASA', { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
-                createParagraph('KABUPATEN PURWAKARTA', { alignment: AlignmentType.CENTER, fontSize: 44, bold: true, spacing: { after: 480 } }),
+                createParagraph((settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase(), { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
+                createParagraph(`KECAMATAN ${(settings.kecamatan || 'Wanayasa').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
+                createParagraph(`KABUPATEN ${(settings.kabupaten || 'Purwakarta').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true, spacing: { after: 480 } }),
 
                 // BAB I
                 ...createChapterTitle('BAB I', 'PENDAHULUAN'),

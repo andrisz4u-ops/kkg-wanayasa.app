@@ -220,7 +220,7 @@ window.downloadProkerPDF = function () {
   const content = document.getElementById('proker-content').value;
   const win = window.open('', '_blank');
   win.document.write(`
-    <html><head><title>Program Kerja KKG Gugus 3 Wanayasa</title>
+    <html><head><title>Program Kerja ${escapeHtml(state.settings?.nama_kkg || 'KKG')}</title>
     <style>body{font-family:'Times New Roman',serif;font-size:12pt;line-height:1.8;padding:40px;max-width:210mm;margin:auto;}@media print{body{padding:20mm;}}</style></head>
     <body><pre style="white-space:pre-wrap;font-family:'Times New Roman',serif;">${escapeHtml(content)}</pre>
     <script>window.print();</script></body></html>

@@ -42,7 +42,7 @@ export function getPasswordResetEmailTemplate(resetUrl: string, userName: string
                 📚 Portal Digital KKG
               </h1>
               <p style="margin: 8px 0 0; color: #bfdbfe; font-size: 14px;">
-                Gugus 3 Kecamatan Wanayasa
+                Platform Kolaborasi & Profesionalisme Guru
               </p>
             </td>
           </tr>
@@ -92,8 +92,8 @@ export function getPasswordResetEmailTemplate(resetUrl: string, userName: string
           <tr>
             <td style="padding: 20px 40px; text-align: center; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
               <p style="margin: 0; color: #64748b; font-size: 12px;">
-                © ${new Date().getFullYear()} Portal Digital KKG Gugus 3 Wanayasa<br>
-                Kabupaten Purwakarta, Jawa Barat
+                © ${new Date().getFullYear()} Portal Digital KKG<br>
+                Komunitas Guru Berkualitas
               </p>
             </td>
           </tr>
@@ -118,8 +118,8 @@ Link ini akan kadaluarsa dalam 1 jam.
 Jika Anda tidak meminta reset password, abaikan email ini.
 
 ---
-Portal Digital KKG Gugus 3 Wanayasa
-Kabupaten Purwakarta, Jawa Barat
+Portal Digital KKG
+Komunitas Guru Berkualitas
   `;
 
     return { html, text };
@@ -152,7 +152,7 @@ export function getWelcomeEmailTemplate(userName: string, loginUrl: string): { h
                 Halo, ${userName}! 👋
               </h2>
               <p style="margin: 0 0 20px; color: #475569; font-size: 16px; line-height: 1.6;">
-                Selamat bergabung dengan Portal Digital KKG Gugus 3 Wanayasa!
+                Selamat bergabung dengan Portal Digital KKG!
               </p>
               <p style="margin: 0 0 20px; color: #475569; font-size: 16px; line-height: 1.6;">
                 Anda sekarang dapat mengakses berbagai fitur menarik seperti:
@@ -178,7 +178,7 @@ export function getWelcomeEmailTemplate(userName: string, loginUrl: string): { h
           <tr>
             <td style="padding: 20px 40px; text-align: center; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
               <p style="margin: 0; color: #64748b; font-size: 12px;">
-                © ${new Date().getFullYear()} Portal Digital KKG Gugus 3 Wanayasa
+                © ${new Date().getFullYear()} Portal Digital KKG
               </p>
             </td>
           </tr>
@@ -193,7 +193,7 @@ export function getWelcomeEmailTemplate(userName: string, loginUrl: string): { h
     const text = `
 Halo, ${userName}!
 
-Selamat bergabung dengan Portal Digital KKG Gugus 3 Wanayasa!
+Selamat bergabung dengan Portal Digital KKG!
 
 Anda sekarang dapat mengakses berbagai fitur menarik seperti:
 - Generator Surat Undangan dengan AI
@@ -205,7 +205,7 @@ Anda sekarang dapat mengakses berbagai fitur menarik seperti:
 Mulai menggunakan portal: ${loginUrl}
 
 ---
-Portal Digital KKG Gugus 3 Wanayasa
+Portal Digital KKG
   `;
 
     return { html, text };

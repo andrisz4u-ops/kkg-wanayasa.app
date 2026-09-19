@@ -27,6 +27,16 @@ window.loadAdminSettings = async function loadAdminSettings() {
     setVal('profil-struktur_organisasi', s.struktur_organisasi);
     setVal('profil-visi_misi', s.visi_misi);
 
+    // Landing Page Customization
+    setVal('profil-hero_title', s.hero_title);
+    setVal('profil-hero_deskripsi', s.hero_deskripsi);
+    setVal('profil-visi', s.visi);
+    setVal('profil-misi', s.misi);
+    setVal('profil-pengawas_nama', s.pengawas_nama);
+    setVal('profil-pengawas_instansi', s.pengawas_instansi);
+    setVal('profil-kutipan_pengawas', s.kutipan_pengawas);
+    setVal('profil-kutipan_ketua', s.kutipan_ketua);
+
     setVal('settings-mistral_api_key', s.mistral_api_key || '');
     setVal('settings-z_ai_api_key', s.z_ai_api_key || '');
     setVal('settings-gemini_api_key', s.gemini_api_key || '');
@@ -88,6 +98,14 @@ window.saveProfilKKG = async function () {
       website_kkg: document.getElementById('profil-website_kkg').value,
       struktur_organisasi: document.getElementById('profil-struktur_organisasi')?.value || '',
       visi_misi: document.getElementById('profil-visi_misi')?.value || '',
+      hero_title: document.getElementById('profil-hero_title')?.value || '',
+      hero_deskripsi: document.getElementById('profil-hero_deskripsi')?.value || '',
+      visi: document.getElementById('profil-visi')?.value || '',
+      misi: document.getElementById('profil-misi')?.value || '',
+      pengawas_nama: document.getElementById('profil-pengawas_nama')?.value || '',
+      pengawas_instansi: document.getElementById('profil-pengawas_instansi')?.value || '',
+      kutipan_pengawas: document.getElementById('profil-kutipan_pengawas')?.value || '',
+      kutipan_ketua: document.getElementById('profil-kutipan_ketua')?.value || '',
       supabase_url: document.getElementById('settings-supabase_url')?.value || '',
       supabase_key: document.getElementById('settings-supabase_key')?.value || '',
       supabase_bucket: document.getElementById('settings-supabase_bucket')?.value || '',

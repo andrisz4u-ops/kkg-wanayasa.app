@@ -218,15 +218,20 @@ export function buildSuratPrompt(input: {
    peserta: string;
    penanggung_jawab: string;
    nomor_surat?: string;
+   settings?: any;
 }): string {
-   return `Tulis surat undangan resmi untuk kegiatan KKG Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta dengan detail berikut:
+   const s = input.settings || {};
+   const namaOrg = s.nama_kkg || s.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
+   const kec = s.kecamatan || '';
+   const kab = s.kabupaten || 'Purwakarta';
+
+   return `Tulis surat undangan resmi untuk kegiatan ${namaOrg} ${kec ? `Kecamatan ${kec}, ` : ''}Kabupaten ${kab} dengan detail berikut:
 
 - Jenis Kegiatan: ${input.jenis_kegiatan}
 - Hari/Tanggal: ${input.tanggal_kegiatan}
 - Waktu: ${input.waktu_kegiatan} WIB
 - Tempat: ${input.tempat_kegiatan}
 - Agenda/Acara: ${input.agenda}
-- Peserta yang Diundang: ${input.peserta}
 - Penanggung Jawab: ${input.penanggung_jawab}
 ${input.nomor_surat ? `- Nomor Surat: ${input.nomor_surat}` : '- Nomor Surat: (buat format nomor surat yang sesuai)'}
 
@@ -256,15 +261,16 @@ export function buildProkerPrompt(input: {
    sekolah_list?: string[];
    settings?: any;
 }): string {
+   const s = input.settings || {};
+   const namaOrg = s.nama_kkg || s.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
+   const kec = s.kecamatan || 'Kecamatan';
+   const kab = s.kabupaten || 'Purwakarta';
+
    const sekolahInfo = input.sekolah_list && input.sekolah_list.length > 0
-      ? `\n\nDAFTAR SEKOLAH ANGGOTA KKG GUGUS 3 WANAYASA:\n${input.sekolah_list.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nPENTING: Gunakan HANYA nama-nama sekolah di atas. JANGAN gunakan nama sekolah lain yang tidak ada di daftar.`
+      ? `\n\nDAFTAR SEKOLAH ANGGOTA ${namaOrg.toUpperCase()}:\n${input.sekolah_list.map((sc, i) => `${i + 1}. ${sc}`).join('\n')}\n\nPENTING: Gunakan HANYA nama-nama sekolah di atas. JANGAN gunakan nama sekolah lain yang tidak ada di daftar.`
       : '';
 
-
-
-   const s = input.settings || {};
-
-   return `Anda adalah ahli penyusunan dokumen administrasi pendidikan Indonesia. Susun PROGRAM KERJA TAHUNAN yang LENGKAP dan PROFESIONAL untuk KKG Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta, Tahun Ajaran ${input.tahun_ajaran}.
+   return `Anda adalah ahli penyusunan dokumen administrasi pendidikan Indonesia. Susun PROGRAM KERJA TAHUNAN yang LENGKAP dan PROFESIONAL untuk ${namaOrg} Kecamatan ${kec}, Kabupaten ${kab}, Tahun Ajaran ${input.tahun_ajaran}.
 
 === DATA INPUT ===
 
@@ -295,7 +301,7 @@ Tulis 2-3 paragraf yang berisi:
 - Ucapan syukur
 - Penjelasan singkat tentang program kerja
 - Harapan dan manfaat dokumen
-- Akhiri dengan tempat, tanggal, dan "Ketua KKG Gugus 3 Wanayasa"
+- Akhiri dengan tempat, tanggal, dan "Ketua ${namaOrg}"
 
 ---
 DAFTAR ISI
@@ -310,7 +316,7 @@ BAB I PENDAHULUAN ............................................. 1
     C. Tujuan .............................................................. 3
     D. Sasaran ............................................................ 4
     E. Hasil yang Diharapkan ..................................... 4
-BAB II PROFIL KKG GUGUS 3 WANAYASA ............... 5
+BAB II PROFIL ${namaOrg.toUpperCase()} ............... 5
     A. Identitas KKG ................................................... 5
     B. Struktur Organisasi .......................................... 5
     C. Daftar Sekolah Anggota ................................... 6
@@ -341,7 +347,7 @@ Tulis 3-4 paragraf yang menjelaskan:
 - Pentingnya pengembangan kompetensi guru SD
 - Peran KKG dalam pembinaan profesional guru
 - Urgensi penyusunan program kerja yang terencana
-- Kondisi pendidikan di Kecamatan Wanayasa
+- Kondisi pendidikan di Kecamatan ${kec}
 
 B. Dasar Hukum
 Tulis 1 paragraf pengantar yang menyatakan landasan hukum penyusunan program kerja, baru kemudian buat daftar nomor:
@@ -351,13 +357,13 @@ Tulis 1 paragraf pengantar yang menyatakan landasan hukum penyusunan program ker
 4. Peraturan Menteri Pendidikan Nasional Nomor 16 Tahun 2007 tentang Standar Kualifikasi Akademik dan Kompetensi Guru
 5. Peraturan Menteri Pendidikan dan Kebudayaan Nomor 22 Tahun 2020 tentang Rencana Strategis Kemendikbud
 6. Surat Edaran Dirjen GTK tentang Pembinaan Guru melalui KKG/MGMP
-7. Peraturan Daerah Kabupaten Purwakarta tentang Penyelenggaraan Pendidikan
+7. Peraturan Daerah Kabupaten ${kab} tentang Penyelenggaraan Pendidikan
 
 C. Tujuan
 Tulis 1 paragraf narasi pengantar mengenai arah strategis KKG, baru kemudian rincian menggunakan format nomor (1, 2) dan huruf (a, b):
 
 1. Tujuan Umum
-   a. Meningkatkan kompetensi profesional guru SD di Gugus 3 Wanayasa
+   a. Meningkatkan kompetensi profesional guru SD di ${namaOrg}
    b. (lanjutkan poin berikutnya)
 
 2. Tujuan Khusus
@@ -371,10 +377,10 @@ D. Sasaran
 Tulis 1 paragraf deskriptif mengenai siapa target audiens program ini secara kualitatif, baru kemudian poin kuantitatif jika ada (gunakan format 1, 2, 3).
 
 E. Hasil yang Diharapkan
-Tulis deskripsi naratif tentang dampak jangka panjang (outcome) yang diharapkan bagi pendidikan di Gugus 3.
+Tulis deskripsi naratif tentang dampak jangka panjang (outcome) yang diharapkan bagi pendidikan di lingkungan ${namaOrg}.
 
 ---
-BAB II PROFIL KKG GUGUS 3 WANAYASA
+BAB II PROFIL ${namaOrg.toUpperCase()}
 ---
 
 A. Identitas KKG
@@ -383,7 +389,7 @@ Setelah narasi, sajikan identitas dalam bentuk TABEL berikut:
 
 | Uraian | Keterangan |
 |--------|------------|
-| Nama Organisasi | ${s.nama_kkg || 'KKG Gugus 3 Kecamatan Wanayasa'} |
+| Nama Organisasi | ${s.nama_kkg || 'KKG Kecamatan ' + kec} |
 | Alamat Sekretariat | ${s.alamat_sekretariat || '[sebutkan alamat]'} |
 | Kecamatan | ${s.kecamatan || 'Wanayasa'} |
 | Kabupaten | ${s.kabupaten || 'Purwakarta'} |
@@ -393,32 +399,32 @@ Setelah narasi, sajikan identitas dalam bentuk TABEL berikut:
 B. Struktur Organisasi
 Tulis 1 paragraf narasi pengantar mengenai struktur organisasi KKG.
 
-1. Struktur Inti KKG Gugus 3 Wanayasa
+1. Struktur Inti ${namaOrg}
    Sajikan dalam bentuk TABEL PRESISI:
 
 | Jabatan | Nama Pejabat | Asal Sekolah |
 |---------|--------------|--------------|
-| Pembina | ${s.nama_pembina || 'Wahid, S.Pd, M.Pd'} | Pengawas Sekolah |
-| Ketua Gugus 3 | ${s.nama_ketua_gugus || 'H. Ujang Ma\'mun, S.Pd.I'} | - |
-| Ketua KKG Gugus | ${s.nama_ketua || 'Maman Rukman, S.Pd'} | ${s.sekolah_ketua || '-'} |
-| Sekretaris | ${s.nama_sekretaris || 'Andris Hadiansyah, S.Pd'} | ${s.sekolah_sekretaris || 'SDN 1 Cibuntu'} |
-| Bendahara | ${s.nama_bendahara || 'Reny Srimulyani A, S.Pd'} | ${s.sekolah_bendahara || '-'} |
-| Sarana Prasarana | ${s.nama_sarpras || 'Ulfa Laiza Ul\'ul, S.Pd'} | ${s.sekolah_sarpras || '-'} |
-| Humas | ${s.nama_humas || 'Harun, S.Pd'} | ${s.sekolah_humas || '-'} |
+| Pembina | ${s.nama_pembina || s.pengawas_nama || 'Pengawas Pembina'} | ${s.pengawas_instansi || 'Pengawas Sekolah'} |
+| Ketua Gugus | ${s.nama_ketua_gugus || 'Ketua Gugus'} | - |
+| Ketua KKG | ${s.nama_ketua || 'Ketua KKG'} | ${s.sekolah_ketua || '-'} |
+| Sekretaris | ${s.nama_sekretaris || 'Sekretaris'} | ${s.sekolah_sekretaris || '-'} |
+| Bendahara | ${s.nama_bendahara || 'Bendahara'} | ${s.sekolah_bendahara || '-'} |
+| Sarana Prasarana | ${s.nama_sarpras || 'Sarana Prasarana'} | ${s.sekolah_sarpras || '-'} |
+| Humas | ${s.nama_humas || 'Humas'} | ${s.sekolah_humas || '-'} |
 
 2. Struktur Guru Pendamping Kelas
    Sajikan dalam bentuk TABEL PRESISI:
 
 | Kelas/Bidang | Nama Guru Pendamping | Asal Sekolah |
 |--------------|----------------------|--------------|
-| Kelas 1 | ${s.guru_kelas_1 || 'Lena Marlina, S.Pd'} | ${s.sekolah_kelas_1 || 'SDN Nagrog'} |
-| Kelas 2 | ${s.guru_kelas_2 || 'Ade Setiawati, S.Pd'} | ${s.sekolah_kelas_2 || 'SDN 2 Nangerang'} |
-| Kelas 3 | ${s.guru_kelas_3 || 'Tuti Sutiawati, S.Pd'} | ${s.sekolah_kelas_3 || 'SDIT Al-Qalam'} |
-| Kelas 4 | ${s.guru_kelas_4 || 'Nur'} | ${s.sekolah_kelas_4 || 'SDN 2 Cibuntu'} |
-| Kelas 5 | ${s.guru_kelas_5 || 'Ujang Aip, S.Pd'} | ${s.sekolah_kelas_5 || 'SDN Sakambang'} |
-| Kelas 6 | ${s.guru_kelas_6 || 'Eti Sumiati, S.Pd'} | ${s.sekolah_kelas_6 || 'SDN 1 Cibuntu'} |
-| PAI (KKGA) | ${s.guru_pai || 'Soleh Muslim'} | ${s.sekolah_pai || 'SDN 1 Cibuntu'} |
-| PJOK (KKGO) | ${s.guru_pjok || 'Ahmad'} | ${s.sekolah_pjok || 'SDN 1 Nangerang'} |
+| Kelas 1 | ${s.guru_kelas_1 || 'Guru Pendamping Kelas 1'} | ${s.sekolah_kelas_1 || '-'} |
+| Kelas 2 | ${s.guru_kelas_2 || 'Guru Pendamping Kelas 2'} | ${s.sekolah_kelas_2 || '-'} |
+| Kelas 3 | ${s.guru_kelas_3 || 'Guru Pendamping Kelas 3'} | ${s.sekolah_kelas_3 || '-'} |
+| Kelas 4 | ${s.guru_kelas_4 || 'Guru Pendamping Kelas 4'} | ${s.sekolah_kelas_4 || '-'} |
+| Kelas 5 | ${s.guru_kelas_5 || 'Guru Pendamping Kelas 5'} | ${s.sekolah_kelas_5 || '-'} |
+| Kelas 6 | ${s.guru_kelas_6 || 'Guru Pendamping Kelas 6'} | ${s.sekolah_kelas_6 || '-'} |
+| PAI (KKGA) | ${s.guru_pai || 'Guru Pendamping PAI'} | ${s.sekolah_pai || '-'} |
+| PJOK (KKGO) | ${s.guru_pjok || 'Guru Pendamping PJOK'} | ${s.sekolah_pjok || '-'} |
 
 C. Daftar Sekolah Anggota
 Tulis 1 paragraf pengantar mengenai cakupan wilayah gugus.
@@ -437,7 +443,7 @@ BAB III ANALISIS KONDISI DAN SWOT
 ---
 
 A. Analisis Kondisi Saat Ini
-Tulis 2-3 paragraf naratif yang menganalisis secara objektif kondisi pendidikan guru, murid, dan sarana prasarana di Gugus 3 saat ini. Gunakan data Visi dan Misi sebagai acuan standar ideal.
+Tulis 2-3 paragraf naratif yang menganalisis secara objektif kondisi pendidikan guru, murid, dan sarana prasarana di lingkungan ${namaOrg} saat ini. Gunakan data Visi dan Misi sebagai acuan standar ideal.
 
 B. Analisis SWOT
 Lakukan analisis SWOT mendalam berdasarkan Visi Misi dan kondisi umum pendidikan.
@@ -529,7 +535,7 @@ B. Harapan
 Tulis harapan pelaksanaan program kerja
 
 C. Penutup
-"Demikian Program Kerja KKG Gugus 3 Kecamatan Wanayasa Tahun Ajaran ${input.tahun_ajaran} ini disusun..."
+"Demikian Program Kerja ${namaOrg} Kecamatan ${kec} Tahun Ajaran ${input.tahun_ajaran} ini disusun..."
 
 ---
 LEMBAR PENGESAHAN
@@ -558,15 +564,15 @@ JANGAN berhenti di tengah jalan!
 
 | No | Bulan | Minggu | Kegiatan | Tempat | Keterangan |
 |----|-------|--------|----------|--------|------------|
-| 1 | Juli | Minggu 2 | Rapat Koordinasi Awal Tahun | SDN Wanayasa 1 | Pembahasan program kerja |
-| 2 | Agustus | Minggu 1 | Workshop Kurikulum Merdeka | SDN Wanayasa 2 | Narasumber dari UPT |
+| 1 | Juli | Minggu 2 | Rapat Koordinasi Awal Tahun | Sekretariat KKG | Pembahasan program kerja |
+| 2 | Agustus | Minggu 1 | Workshop Pembelajaran Guru | Sekolah Anggota | Narasumber dari Dinas/Pengawas |
 (dan seterusnya sampai bulan Desember)
 
 JADWAL PELAKSANAAN KEGIATAN SEMESTER 2 (JANUARI - JUNI ${input.tahun_ajaran.split('/')[1]}):
 
 | No | Bulan | Minggu | Kegiatan | Tempat | Keterangan |
 |----|-------|--------|----------|--------|------------|
-| 1 | Januari | Minggu 2 | Pertemuan Rutin | SDN Wanayasa 3 | Evaluasi semester 1 |
+| 1 | Januari | Minggu 2 | Pertemuan Rutin KKG | Sekolah Anggota | Evaluasi semester 1 |
 (dan seterusnya sampai bulan Juni)
 
 ---
@@ -599,19 +605,19 @@ B. Harapan
 Tulis harapan pelaksanaan program kerja
 
 C. Penutup
-"Demikian Program Kerja KKG Gugus 3 Kecamatan Wanayasa Tahun Ajaran ${input.tahun_ajaran} ini disusun sebagai pedoman pelaksanaan kegiatan. Semoga dapat dilaksanakan dengan baik dan memberikan manfaat bagi peningkatan mutu pendidikan."
+"Demikian Program Kerja ${namaOrg} Kecamatan ${kec} Tahun Ajaran ${input.tahun_ajaran} ini disusun sebagai pedoman pelaksanaan kegiatan. Semoga dapat dilaksanakan dengan baik dan memberikan manfaat bagi peningkatan mutu pendidikan."
 
 ---
 LEMBAR PENGESAHAN
 ---
 Tulis format lembar pengesahan dengan 3 kolom tanda tangan:
 
-                              Disahkan di: Wanayasa
+                              Disahkan di: ${kec}
                               Pada tanggal: [tanggal hari ini]
 
 Mengetahui,
-Kepala UPT Pendidikan          Pengawas Sekolah              Ketua KKG Gugus 3
-Kec. Wanayasa
+Kepala UPT Pendidikan          Pengawas Sekolah              Ketua ${namaOrg}
+Kec. ${kec}
 
 
 
@@ -654,8 +660,9 @@ export function buildLaporanPrompt(input: {
    settings?: any;
 }): string {
    const s = input.settings || {};
+   const namaOrg = s.nama_kkg || s.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
 
-   return `Anda adalah sekretaris profesional KKG (Kelompok Kerja Guru) Gugus 3 Wanayasa yang berdedikasi tinggi. Tugas Anda adalah menyusun LAPORAN KEGIATAN KKG yang FAKTUAL, ANALITIS, dan PROFESIONAL.
+   return `Anda adalah sekretaris profesional ${namaOrg} yang berdedikasi tinggi. Tugas Anda adalah menyusun LAPORAN KEGIATAN KKG yang FAKTUAL, ANALITIS, dan PROFESIONAL.
 
 *** DATA INPUT ***
 JUDUL KEGIATAN: ${input.judul_laporan.toUpperCase()}
@@ -685,7 +692,7 @@ B. Materi Kegiatan
    Uraikan inti materi yang dibahas secara substansial${input.tema ? ` sesuai dengan tema "${input.tema}"` : ''}. Jika Workshop, jelaskan produk yang dihasilkan. Jika Rapat, jelaskan agenda utamanya.
 C. Narasumber dan Peserta
    Narasumber: ${input.narasumber || '[Sebutkan peran narasumber yang relevan, misal Pengawas atau Fasilitator]'}.
-   Peserta: Seluruh guru kelas/mapel anggota KKG Gugus 3 Wanayasa.
+   Peserta: Seluruh guru kelas/mapel anggota ${namaOrg}.
 
 BAB III: HASIL KEGIATAN
 A. Uraian Jalannya Kegiatan
@@ -693,7 +700,7 @@ A. Uraian Jalannya Kegiatan
 B. Tindak Lanjut
    Jelaskan rencana aksi pasca-kegiatan (misal: implementasi di kelas, diseminasi ke rekan sejawat, atau monitoring oleh Kepala Sekolah).
 C. Dampak
-   Analisis dampak positif jangka pendek maupun panjang terhadap kualitas pembelajaran di Gugus 3.
+   Analisis dampak positif jangka pendek maupun panjang terhadap kualitas pembelajaran di lingkungan ${namaOrg}.
 
 BAB IV: PENUTUP
 A. Simpulan

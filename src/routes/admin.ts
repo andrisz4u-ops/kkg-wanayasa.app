@@ -417,13 +417,16 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
     // All updatable settings
     const allowedKeys = [
       'nama_ketua', 'nip_ketua', 'tahun_ajaran', 'alamat_sekretariat',
-      'nama_kkg', 'gugus', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
+      'nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
       'email_kkg', 'telepon_kkg', 'website_kkg',
       'logo_url', 'kop_surat_url',
       'nama_sekretaris', 'nama_bendahara',
       'struktur_organisasi', 'visi_misi',
       'npsn_sekolah_induk', 'nama_sekolah_induk',
-      'supabase_url', 'supabase_bucket'
+      'supabase_url', 'supabase_bucket',
+      // Landing page customization
+      'hero_title', 'hero_deskripsi', 'visi', 'misi',
+      'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua'
     ];
 
     const updates: { key: string; value: string }[] = [];

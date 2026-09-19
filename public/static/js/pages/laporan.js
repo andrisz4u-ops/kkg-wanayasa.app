@@ -41,8 +41,8 @@ export async function renderLaporan() {
     }
 
     const currentYear = getActiveTahunAjaran();
-    const namaOrg = state.settings?.nama_organisasi || 'KKG Gugus 3 Wanayasa';
-    const namaKetua = state.settings?.nama_ketua || 'Admin KKG Gugus 3';
+    const namaOrg = state.settings?.nama_kkg || state.settings?.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
+    const namaKetua = state.settings?.nama_ketua || 'Ketua KKG';
     const nipKetua = state.settings?.nip_ketua || '-';
 
     const content = `
@@ -132,7 +132,7 @@ export async function renderLaporan() {
                                 Judul Laporan Kegiatan <span class="text-rose-500">*</span>
                             </label>
                             <input type="text" id="input-judul_laporan" required
-                                placeholder="Contoh: Laporan Kegiatan Workshop Pembelajaran Mendalam Berbasis AI Guru Gugus 3"
+                                placeholder="Contoh: Laporan Kegiatan Workshop Pembelajaran Mendalam Berbasis AI"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
 
@@ -147,10 +147,10 @@ export async function renderLaporan() {
 
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Tema / Fokus Kegiatan
+                                Waktu Pelaksanaan
                             </label>
-                            <input type="text" id="input-tema"
-                                placeholder="Contoh: Penguatan Literasi Digital dan Pemanfaatan AI untuk Guru SD"
+                            <input type="text" id="input-waktu"
+                                placeholder="Contoh: 08.30 - 12.00 WIB"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
 
@@ -159,7 +159,7 @@ export async function renderLaporan() {
                                 Tempat / Lokasi Kegiatan
                             </label>
                             <input type="text" id="input-tempat"
-                                placeholder="Contoh: Gedung Pertemuan SDN 1 Wanayasa"
+                                placeholder="Contoh: Gedung Pertemuan KKG"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
 
@@ -332,13 +332,13 @@ export async function renderLaporan() {
                     <div class="border-b-4 border-double border-gray-900 pb-3 flex items-center gap-6">
                         <img src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}" alt="Logo KKG" class="w-20 h-20 object-contain shrink-0" onerror="this.src='/static/img/logo-kkg.png'">
                         <div class="flex-1 text-center font-sans">
-                            <h4 class="text-xs uppercase tracking-widest font-semibold text-gray-600">PEMERINTAH KABUPATEN PURWAKARTA</h4>
+                            <h4 class="text-xs uppercase tracking-widest font-semibold text-gray-600">PEMERINTAH KABUPATEN ${escapeHtml((state.settings?.kabupaten || 'Purwakarta').toUpperCase())}</h4>
                             <h3 class="text-sm font-bold uppercase text-gray-800">DINAS PENDIDIKAN</h3>
                             <h2 class="text-base sm:text-lg font-black uppercase text-gray-900 tracking-wide">
-                                KELOMPOK KERJA GURU (KKG) GUGUS 3 WANAYASA
+                                ${escapeHtml((state.settings?.nama_kkg || state.settings?.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase())}
                             </h2>
                             <p class="text-[11px] text-gray-600 leading-tight mt-0.5">
-                                ${escapeHtml(state.settings?.alamat_sekretariat || 'Sekretariat: SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta 41174')}
+                                ${escapeHtml(state.settings?.alamat_sekretariat || `Kecamatan ${state.settings?.kecamatan || ''}`)}
                             </p>
                         </div>
                     </div>
@@ -464,7 +464,7 @@ export async function renderLaporan() {
                     <!-- LEMBAR PENGESAHAN TANDA TANGAN -->
                     <div class="pt-8 font-sans text-xs sm:text-sm break-inside-avoid">
                         <div class="text-right mb-4">
-                            Wanayasa, <span id="preview-tanggal-pengesahan">........................ 2026</span>
+                            ${escapeHtml(state.settings?.kecamatan || 'Tempat')}, <span id="preview-tanggal-pengesahan">........................ 2026</span>
                         </div>
                         
                         <div class="grid grid-cols-2 text-center gap-8">
@@ -477,7 +477,7 @@ export async function renderLaporan() {
 
                             <div>
                                 <p class="text-gray-700">Mengetahui,</p>
-                                <p class="text-gray-700">Ketua KKG Gugus 3 Wanayasa,</p>
+                                <p class="text-gray-700">Ketua ${escapeHtml(state.settings?.nama_kkg || 'KKG')},</p>
                                 <div class="h-16 flex items-center justify-center text-gray-300 italic text-xs">( Tanda Tangan & Cap )</div>
                                 <p class="font-bold text-gray-950 underline">${escapeHtml(namaKetua)}</p>
                                 <p class="text-gray-500 text-xs">NIP. ${escapeHtml(nipKetua)}</p>

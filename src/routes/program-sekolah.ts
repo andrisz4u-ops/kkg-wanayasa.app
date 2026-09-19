@@ -149,7 +149,7 @@ Tugas Anda adalah menyusun Dokumen Program Kerja Sekolah Resmi yang komprehensif
 
 IDENTITAS PROGRAM:
 - Jenis Dokumen: Program Kerja Sekolah Resmi Berstruktur BAB Ilmiah
-- Nama Satuan Pendidikan: ${identitas.namaSekolah || 'SD Negeri Gugus 3 Wanayasa'}
+- Nama Satuan Pendidikan: ${identitas.namaSekolah || 'SD Negeri Binaan'}
 - Tahun Ajaran: ${identitas.tahunAjaran || '2025/2026'}
 - Jenjang: ${identitas.jenjang || 'Sekolah Dasar (SD)'}
 - Sasaran Fase/Kelas: ${identitas.faseKelas || 'Fase A, B, dan C (Kelas 1 - 6)'}
@@ -430,7 +430,7 @@ export function buildSectionPrompt(
 Tugas Anda adalah menyusun salah satu bab spesifik dari Dokumen Program Kerja Sekolah Resmi secara sangat komprehensif, kaya narasi ilmiah, dan sangat operasional.
 
 IDENTITAS PROGRAM:
-- Nama Satuan Pendidikan: ${identitas.namaSekolah || 'SD Negeri Gugus 3 Wanayasa'}
+- Nama Satuan Pendidikan: ${identitas.namaSekolah || 'SD Negeri Binaan'}
 - Tahun Ajaran: ${identitas.tahunAjaran || '2025/2026'}
 - Jenjang: ${identitas.jenjang || 'Sekolah Dasar (SD)'}
 - Sasaran: ${identitas.faseKelas || 'Fase A, B, dan C (Kelas 1 - 6)'}

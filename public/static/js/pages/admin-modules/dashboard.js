@@ -501,8 +501,18 @@ window.exportLeaderboardCsv = function() {
   const list = data.leaderboard || [];
   const monthLabel = data.selected_month === 'all' ? 'Semua Periode' : data.selected_month;
 
+  const settings = window.state?.settings || {};
+  const namaKkg = settings.nama_kkg || 'KKG';
+  const kec = settings.kecamatan || '';
+  const kab = settings.kabupaten || '';
+  const namaKetua = settings.nama_ketua || 'Ketua KKG';
+  const nipKetua = settings.nip_ketua || '-';
+  const pengawasNama = settings.pengawas_nama || '.....................................................';
+  const pengawasNip = settings.pengawas_nip || '.............................................';
+  const pengawasInstansi = settings.pengawas_instansi || `Pengawas Pembina SD`;
+
   let csv = '\uFEFF'; // UTF-8 BOM for Excel
-  csv += `"LAPORAN REKAPITULASI PEMANFAATAN AI SEKOLAH - KKG WANAYASA"\n`;
+  csv += `"LAPORAN REKAPITULASI PEMANFAATAN AI SEKOLAH - ${namaKkg.toUpperCase()}"\n`;
   csv += `"Periode: ${monthLabel}"\n`;
   csv += `"Dicetak Pada: ${new Date().toLocaleString('id-ID')}"\n\n`;
 
@@ -547,6 +557,17 @@ window.printLeaderboardReport = function() {
   const monthText = monthSelect ? monthSelect.options[monthSelect.selectedIndex]?.text : (data.selected_month || 'Periode Berjalan');
   const summary = data.summary || {};
 
+  const settings = window.state?.settings || {};
+  const namaKkg = settings.nama_kkg || 'Kelompok Kerja Guru';
+  const kec = settings.kecamatan || '';
+  const kab = settings.kabupaten || '';
+  const alamat = settings.alamat_sekretariat || [kec ? `Kecamatan ${kec}` : '', kab ? `Kabupaten ${kab}` : ''].filter(Boolean).join(', ');
+  const namaKetua = settings.nama_ketua || 'Ketua KKG';
+  const nipKetua = settings.nip_ketua || '.............................................';
+  const pengawasNama = settings.pengawas_nama || '.....................................................';
+  const pengawasNip = settings.pengawas_nip || '.............................................';
+  const pengawasInstansi = settings.pengawas_instansi || 'Pengawas Pembina SD';
+
   const existing = document.getElementById('print-leaderboard-modal');
   if (existing) existing.remove();
 
@@ -583,9 +604,9 @@ window.printLeaderboardReport = function() {
         
         <!-- Header / Kop -->
         <div class="text-center pb-4 mb-6 border-b-2 border-double border-slate-900">
-          <h2 class="text-base sm:text-lg font-bold uppercase tracking-wider mb-0.5">KELOMPOK KERJA GURU (KKG) KECAMATAN WANAYASA</h2>
+          <h2 class="text-base sm:text-lg font-bold uppercase tracking-wider mb-0.5">${escapeHtml(namaKkg.toUpperCase())}</h2>
           <h3 class="text-sm sm:text-base font-bold uppercase text-slate-800 mb-1">PUSAT PENGEMBANGAN PROFESI GURU &amp; TRANSFORMASI DIGITAL</h3>
-          <p class="text-xs text-slate-600 italic">Kecamatan Wanayasa, Kabupaten Purwakarta, Jawa Barat</p>
+          <p class="text-xs text-slate-600 italic">${escapeHtml(alamat)}</p>
         </div>
 
         <!-- Title -->
@@ -634,15 +655,15 @@ window.printLeaderboardReport = function() {
         <div class="grid grid-cols-2 gap-8 text-center text-xs font-sans pt-6 border-t border-slate-200">
           <div>
             <p class="mb-1 text-slate-500">Mengetahui,</p>
-            <p class="font-bold text-slate-900 mb-16">Pengawas Pembina SD Wanayasa</p>
-            <p class="font-bold underline text-slate-900">.....................................................</p>
-            <p class="text-slate-500">NIP. .............................................</p>
+            <p class="font-bold text-slate-900 mb-16">${escapeHtml(pengawasInstansi)}</p>
+            <p class="font-bold underline text-slate-900">${escapeHtml(pengawasNama)}</p>
+            <p class="text-slate-500">NIP. ${escapeHtml(pengawasNip)}</p>
           </div>
           <div>
-            <p class="mb-1 text-slate-500">Wanayasa, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            <p class="font-bold text-slate-900 mb-16">Ketua KKG Kecamatan Wanayasa</p>
-            <p class="font-bold underline text-slate-900">.....................................................</p>
-            <p class="text-slate-500">NIP. .............................................</p>
+            <p class="mb-1 text-slate-500">${escapeHtml(kec || 'Sekretariat')}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p class="font-bold text-slate-900 mb-16">Ketua ${escapeHtml(namaKkg)}</p>
+            <p class="font-bold underline text-slate-900">${escapeHtml(namaKetua)}</p>
+            <p class="text-slate-500">NIP. ${escapeHtml(nipKetua)}</p>
           </div>
         </div>
 

@@ -923,7 +923,7 @@ export function initSnakeLadder() {
   const copyBtn = document.getElementById('btn-snake-copy-summary');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      const text = `🏆 Rekap Ular Tangga Kelas (KKG Wanayasa)\nJuara: ${gameState.teams[gameState.currentTurn].name}\nJenjang: ${selectedFase.toUpperCase()}\nJumlah Tim: ${gameState.teamCount}`;
+      const text = `🏆 Rekap Ular Tangga Kelas (${window.state?.settings?.nama_kkg || 'Portal KKG'})\nJuara: ${gameState.teams[gameState.currentTurn].name}\nJenjang: ${selectedFase.toUpperCase()}\nJumlah Tim: ${gameState.teamCount}`;
       navigator.clipboard.writeText(text);
       copyBtn.innerHTML = '<i class="fas fa-check text-emerald-400 mr-1.5"></i> Tersalin!';
       setTimeout(() => {

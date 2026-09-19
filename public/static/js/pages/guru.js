@@ -19,7 +19,7 @@ export async function renderGuru() {
         <h1 class="text-3xl font-display font-bold text-[var(--color-text-primary)]">
           <i class="fas fa-users text-primary-500 mr-3"></i>Direktori Guru
         </h1>
-        <p class="text-[var(--color-text-secondary)] mt-2">Daftar lengkap anggota KKG Gugus 3 Wanayasa</p>
+        <p class="text-[var(--color-text-secondary)] mt-2">Daftar lengkap anggota ${escapeHtml(state.settings?.nama_kkg || 'KKG')}</p>
       </div>
     </div>
 

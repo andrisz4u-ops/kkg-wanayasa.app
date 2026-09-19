@@ -38,7 +38,7 @@ export async function generateSuratDocx(data: SuratData, settings: KKGSettings):
     const header = await getHeaderWithLogo(settings);
 
     const doc = new Document({
-        creator: 'Portal Digital KKG Gugus 3 Wanayasa',
+        creator: `Portal Digital ${settings.nama_kkg || 'KKG'}`,
         title: `Surat Undangan - ${data.jenis_kegiatan}`,
         description: `Surat undangan untuk ${data.jenis_kegiatan}`,
         styles: {

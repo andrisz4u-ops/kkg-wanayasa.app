@@ -3904,7 +3904,7 @@ async function openBankSoalDrawer(initialFilters = {}) {
           <div>
             <div class="flex items-center gap-2">
               <h3 class="font-bold text-base sm:text-lg text-white font-display">Bank Soal Kolaboratif</h3>
-              <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-violet-500/30 text-violet-200 border border-violet-400/30">KKG Gugus 3</span>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-violet-500/30 text-violet-200 border border-violet-400/30">${escapeHtml(state.settings?.nama_kkg || 'Portal KKG')}</span>
             </div>
             <p class="text-xs text-violet-200/80" id="bs-header-subtitle">${stats.total_soal} paket soal · ${stats.my_soal} milik Anda</p>
           </div>
@@ -4170,7 +4170,7 @@ async function openBankSoalDrawer(initialFilters = {}) {
         } else {
           paginationContainer.innerHTML = `
             <span class="text-[11px] sm:text-xs text-slate-400">Menampilkan seluruh ${pagination.total} paket soal</span>
-            <span class="text-[10px] text-slate-400">KKG Gugus 3 Wanayasa</span>
+            <span class="text-[10px] text-slate-400">${escapeHtml(state.settings?.nama_kkg || 'Portal KKG')}</span>
           `;
         }
       }

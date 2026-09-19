@@ -44,7 +44,15 @@ export interface KKGSettings {
     alamat_sekretariat?: string;
     tahun_ajaran?: string;
     nama_organisasi?: string;
+    nama_kkg?: string;
+    kabupaten?: string;
+    kecamatan?: string;
+    gugus?: string;
+    pengawas_nama?: string;
+    pengawas_instansi?: string;
     kop_surat_url?: string;
+    logo_url?: string;
+    [key: string]: any;
 }
 
 // Assuming Kegiatan type is defined elsewhere or implicitly 'any'

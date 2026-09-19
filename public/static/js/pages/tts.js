@@ -12,7 +12,7 @@ export function renderTts() {
   if (!state.user) {
     return renderLockedFeature(
       'Teka-Teki Silang Pembelajaran (TTS)',
-      'Maaf, fitur TTS Studio khusus untuk anggota guru terdaftar Gugus 3 Wanayasa. Silakan masuk / login akun pendidik Anda untuk merancang TTS Kurikulum Merdeka secara otomatis dengan AI atau menyusun kata kustom.',
+      `Maaf, fitur TTS Studio khusus untuk anggota guru terdaftar ${state.settings?.nama_kkg || 'KKG'}. Silakan masuk / login akun pendidik Anda untuk merancang TTS Kurikulum Merdeka secara otomatis dengan AI atau menyusun kata kustom.`,
       [
         'Generator TTS Kurikulum Merdeka Berbasis AI Cepat',
         'Mode Interaktif Layar Sentuh Proyektor & Smart Board',
@@ -670,7 +670,7 @@ function renderTtsResult(data, formData) {
             <p>NIP. ${escapeHtml(formData.nipKepalaSekolah || '..............................')}</p>
           </td>
           <td style="width:50%; vertical-align:bottom;">
-            <p>Wanayasa, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <p>${escapeHtml(state.settings?.kecamatan || 'Tempat')}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <p>Guru Pengampu</p>
             <br><br><br><br>
             <p style="text-decoration:underline; font-weight:bold">${escapeHtml(formData.namaGuru || '..............................')}</p>

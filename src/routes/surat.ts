@@ -32,12 +32,12 @@ surat.get('/settings', async (c) => {
 
     // Defaults
     const defaults = {
-      nama_ketua: 'Admin KKG Gugus 3', // Fallback
-      nip_ketua: '198501012010011001',
-      alamat_sekretariat: 'SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta',
+      nama_ketua: 'Ketua KKG',
+      nip_ketua: '-',
+      alamat_sekretariat: '',
       kabupaten: 'Purwakarta',
-      kecamatan: 'Wanayasa',
-      gugus: '03'
+      kecamatan: '',
+      gugus: ''
     };
 
     return successResponse(c, { ...defaults, ...savedSettings });
@@ -94,7 +94,14 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
     ).bind(String(currentYear)).first();
 
-    const nomorSurat = `${String((count?.cnt || 0) + 1).padStart(3, '0')}/KKG-G3/UND/${currentMonth}/${currentYear}`;
+    const settingsRows = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten')"
+    ).all();
+    const settingsMap: any = {};
+    settingsRows.results?.forEach((r: any) => { settingsMap[r.key] = r.value; });
+
+    const gugusCode = settingsMap.gugus ? `KKG-G${settingsMap.gugus}` : 'KKG';
+    const nomorSurat = `${String((count?.cnt || 0) + 1).padStart(3, '0')}/${gugusCode}/UND/${currentMonth}/${currentYear}`;
 
     // Build prompt
     const prompt = buildSuratPrompt({
@@ -103,9 +110,10 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       waktu_kegiatan,
       tempat_kegiatan,
       agenda,
-      peserta: typeof peserta === 'string' ? peserta : (Array.isArray(peserta) ? peserta.join(', ') : 'Seluruh anggota KKG Gugus 3 Wanayasa'),
+      peserta: typeof peserta === 'string' ? peserta : (Array.isArray(peserta) ? peserta.join(', ') : 'Seluruh anggota KKG'),
       penanggung_jawab: penanggung_jawab || user.nama,
       nomor_surat: nomorSurat,
+      settings: settingsMap,
     });
 
     // Call AI using AIService
@@ -392,7 +400,7 @@ surat.get('/:id/download', async (c) => {
 
     // Get KKG settings
     const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('nama_ketua', 'nip_ketua', 'alamat_sekretariat', 'kop_surat_url', 'nama_organisasi', 'tahun_ajaran')"
+      "SELECT key, value FROM settings"
     ).all();
 
     const settings: any = {};

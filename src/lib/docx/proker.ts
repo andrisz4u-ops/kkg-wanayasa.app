@@ -41,9 +41,9 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
     const lembarPengesahan = createLembarPengesahan(settings, data.created_at);
 
     const doc = new Document({
-        creator: 'Portal Digital KKG Gugus 3 Wanayasa',
+        creator: `Portal Digital ${settings.nama_kkg || 'KKG'}`,
         title: `Program Kerja KKG - Tahun Ajaran ${data.tahun_ajaran}`,
-        description: `Program Kerja Tahunan KKG Gugus 3 Wanayasa`,
+        description: `Program Kerja Tahunan ${settings.nama_kkg || 'KKG'}`,
         styles: {
             default: {
                 document: {
@@ -91,7 +91,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         spacing: { after: 120 },
                         children: [
                             new TextRun({
-                                text: 'KELOMPOK KERJA GURU (KKG)',
+                                text: (settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase(),
                                 font: FONT_FAMILY,
                                 size: 44, // 22pt
                                 bold: true,
@@ -103,7 +103,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         spacing: { after: 120 },
                         children: [
                             new TextRun({
-                                text: 'GUGUS 3 KECAMATAN WANAYASA',
+                                text: `KECAMATAN ${(settings.kecamatan || 'Wanayasa').toUpperCase()}`,
                                 font: FONT_FAMILY,
                                 size: 44,
                                 bold: true,
@@ -115,7 +115,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         spacing: { after: 480 },
                         children: [
                             new TextRun({
-                                text: 'KABUPATEN PURWAKARTA',
+                                text: `KABUPATEN ${(settings.kabupaten || 'Purwakarta').toUpperCase()}`,
                                 font: FONT_FAMILY,
                                 size: 44,
                                 bold: true,
@@ -215,7 +215,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                                 alignment: AlignmentType.CENTER,
                                 children: [
                                     new TextRun({
-                                        text: 'Program Kerja KKG Gugus 3 Wanayasa - Halaman ',
+                                        text: `Program Kerja ${settings.nama_kkg || 'KKG'} - Halaman `,
                                         font: FONT_FAMILY,
                                         size: 20,
                                     }),

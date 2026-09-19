@@ -373,10 +373,37 @@ export const updateSettingsSchema = z.object({
     supabase_url: z.string().max(255).optional(),
     supabase_key: z.string().max(500).optional(),
     supabase_bucket: z.string().max(100).optional(),
+    nama_kkg: z.string().max(200).optional(),
+    nama_organisasi: z.string().max(200).optional(),
     nama_ketua: z.string().max(100).optional(),
+    nip_ketua: z.string().max(30).optional(),
+    nama_sekretaris: z.string().max(100).optional(),
+    nama_bendahara: z.string().max(100).optional(),
     tahun_ajaran: z.string().max(20).optional(),
     alamat_sekretariat: z.string().max(500).optional(),
-});
+    kecamatan: z.string().max(100).optional(),
+    kabupaten: z.string().max(100).optional(),
+    provinsi: z.string().max(100).optional(),
+    kode_pos: z.string().max(20).optional(),
+    email_kkg: z.string().max(100).optional(),
+    telepon_kkg: z.string().max(50).optional(),
+    website_kkg: z.string().max(200).optional(),
+    logo_url: z.string().max(500).optional(),
+    kop_surat_url: z.string().max(500).optional(),
+    npsn_sekolah_induk: z.string().max(20).optional(),
+    nama_sekolah_induk: z.string().max(100).optional(),
+    struktur_organisasi: z.string().max(5000).optional(),
+    visi_misi: z.string().max(5000).optional(),
+    // Landing page customization
+    hero_title: z.string().max(200).optional(),
+    hero_deskripsi: z.string().max(2000).optional(),
+    visi: z.string().max(2000).optional(),
+    misi: z.string().max(5000).optional(),
+    pengawas_nama: z.string().max(150).optional(),
+    pengawas_instansi: z.string().max(150).optional(),
+    kutipan_pengawas: z.string().max(2000).optional(),
+    kutipan_ketua: z.string().max(2000).optional(),
+}).passthrough();
 
 // Extended admin schemas for better validation
 export const createUserAdminSchema = z.object({

@@ -1,7 +1,7 @@
 {
-    "name": "Portal KKG Gugus 3 Wanayasa",
-    "short_name": "KKG Portal",
-    "description": "Platform digital untuk koordinasi dan kolaborasi guru KKG Gugus 3 Kecamatan Wanayasa",
+    "name": "Portal Digital KKG",
+    "short_name": "Portal KKG",
+    "description": "Platform digital untuk koordinasi, administrasi, dan kolaborasi guru KKG",
     "start_url": "/",
     "display": "standalone",
     "orientation": "portrait-primary",

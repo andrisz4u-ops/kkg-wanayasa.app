@@ -398,7 +398,7 @@ export async function renderAdmin() {
           <div class="flex-1 grid gap-6">
             <div>
               <label class="label">Nama Organisasi (KKG)</label>
-              <input type="text" id="profil-nama_kkg" class="input-field" placeholder="KKG Gugus 3 Kecamatan Wanayasa">
+              <input type="text" id="profil-nama_kkg" class="input-field" placeholder="Contoh: KKG Gugus 1">
             </div>
             <div class="grid grid-cols-2 gap-6">
               <div>
@@ -412,7 +412,7 @@ export async function renderAdmin() {
             </div>
             <div>
               <label class="label">Nama Sekolah Induk</label>
-              <input type="text" id="profil-nama_sekolah_induk" class="input-field" placeholder="SDN 1 Wanayasa">
+              <input type="text" id="profil-nama_sekolah_induk" class="input-field" placeholder="Contoh: SDN 1 Binaan">
             </div>
           </div>
         </div>
@@ -427,15 +427,15 @@ export async function renderAdmin() {
         <div class="grid md:grid-cols-2 gap-6">
           <div class="md:col-span-2">
             <label class="label">Alamat Lengkap</label>
-            <input type="text" id="profil-alamat_sekretariat" class="input-field" placeholder="Jl. Raya Wanayasa No. 1">
+            <input type="text" id="profil-alamat_sekretariat" class="input-field" placeholder="Contoh: Jl. Pendidikan No. 1">
           </div>
           <div>
             <label class="label">Kecamatan</label>
-            <input type="text" id="profil-kecamatan" class="input-field" placeholder="Wanayasa">
+            <input type="text" id="profil-kecamatan" class="input-field" placeholder="Contoh: Nama Kecamatan">
           </div>
           <div>
             <label class="label">Kabupaten/Kota</label>
-            <input type="text" id="profil-kabupaten" class="input-field" placeholder="Purwakarta">
+            <input type="text" id="profil-kabupaten" class="input-field" placeholder="Contoh: Nama Kabupaten">
           </div>
           <div>
             <label class="label">Provinsi</label>
@@ -492,6 +492,64 @@ export async function renderAdmin() {
           </div>
       </div>
       
+      <!-- Kustomisasi Landing Page & Beranda -->
+      <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
+        <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200/60">
+          <div>
+            <h2 class="font-display text-2xl font-semibold text-slate-900 flex items-center gap-4 tracking-tighter">
+              <span class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-sm shadow-sm border border-teal-100"><i class="fas fa-desktop"></i></span>
+              Kustomisasi Beranda & Landing Page
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">Sesuaikan teks tampilan publik beranda agar sesuai dengan identitas gugus Anda tanpa perlu merubah kode program.</p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="label">Judul Utama Hero (Kosongkan untuk otomatis)</label>
+              <input type="text" id="profil-hero_title" class="input-field" placeholder="Contoh: Portal Digital KKG Gugus 1">
+            </div>
+            <div>
+              <label class="label">Tagline / Deskripsi Singkat Hero</label>
+              <textarea id="profil-hero_deskripsi" rows="2" class="input-field" placeholder="Pusat ekosistem digital Kelompok Kerja Guru..."></textarea>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="label">Visi Bersama</label>
+              <textarea id="profil-visi" rows="3" class="input-field" placeholder="Mewujudkan guru-guru yang profesional, kompeten..."></textarea>
+            </div>
+            <div>
+              <label class="label">Misi Strategis (Tulis 1 butir per baris)</label>
+              <textarea id="profil-misi" rows="3" class="input-field" placeholder="Meningkatkan kompetensi pedagogik&#10;Memfasilitasi pertukaran materi&#10;Mengembangkan media berbasis AI"></textarea>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200/60">
+            <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <i class="fas fa-comments text-teal-600"></i> Kutipan Sambutan / Testimoni Beranda
+            </h3>
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="space-y-3">
+                <label class="label font-bold text-slate-800">Kutipan Pengawas Pembina</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <input type="text" id="profil-pengawas_nama" class="input-field" placeholder="Nama / Jabatan Pengawas">
+                  <input type="text" id="profil-pengawas_instansi" class="input-field" placeholder="Instansi (misal: Pengawas Pembina SD)">
+                </div>
+                <textarea id="profil-kutipan_pengawas" rows="3" class="input-field" placeholder="Inisiatif portal digital ini adalah terobosan riil bagi mutu pembelajaran..."></textarea>
+              </div>
+              <div class="space-y-3">
+                <label class="label font-bold text-slate-800">Pesan / Sambutan Ketua KKG</label>
+                <p class="text-[11px] text-slate-500">Nama ketua dan sekolah induk otomatis mengikuti tab Identitas & Struktur di atas.</p>
+                <textarea id="profil-kutipan_ketua" rows="4" class="input-field" placeholder="Melalui portal terpadu ini, seluruh sekolah anggota kini memiliki standar mutu yang setara..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
        <!-- Centralized AI Provider Banner & Storage -->
        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] relative overflow-hidden">
           <div class="absolute top-0 right-0 w-64 h-64 bg-slate-100/50 backdrop-blur-md rounded-bl-full pointer-events-none opacity-50"></div>
@@ -952,7 +1010,7 @@ export async function renderAdmin() {
                   <input type="hidden" name="id_sekolah">
                   <div>
                     <label class="label">Nama Sekolah <span class="text-red-500">*</span></label>
-                    <input type="text" name="nama" placeholder="Contoh: SDN 1 Wanayasa" class="input-field" required>
+                    <input type="text" name="nama" placeholder="Contoh: SDN 1 Binaan" class="input-field" required>
                   </div>
                   
                   <div>

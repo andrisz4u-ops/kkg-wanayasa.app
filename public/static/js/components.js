@@ -43,7 +43,7 @@ export function renderNavbar() {
             </div>
             <div class="hidden sm:block">
               <div class="font-display font-bold text-[var(--color-text-primary)]">Portal KKG</div>
-              <div class="text-[var(--color-text-tertiary)] text-xs">Gugus 3 Wanayasa</div>
+              <div class="text-[var(--color-text-tertiary)] text-xs truncate max-w-[160px]">${escapeHtml(state.settings?.nama_kkg || 'Portal Digital')}</div>
             </div>
           </a>
 
@@ -150,8 +150,8 @@ export function renderFooter() {
                 <i class="fas fa-graduation-cap text-sm"></i>
               </div>
               <div>
-                <div class="font-display font-extrabold text-slate-900 tracking-tight">KKG Gugus 3 Wanayasa</div>
-                <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Kecamatan Wanayasa</div>
+                <div class="font-display font-extrabold text-slate-900 tracking-tight">${escapeHtml(state.settings?.nama_kkg || 'Portal Digital KKG')}</div>
+                <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">${state.settings?.kecamatan ? `Kecamatan ${escapeHtml(state.settings.kecamatan)}` : 'Pusat Kegiatan Guru'}</div>
               </div>
             </div>
             <p class="text-slate-500 text-sm leading-relaxed max-w-md">
@@ -162,11 +162,11 @@ export function renderFooter() {
           <div class="md:text-right">
             <ul class="space-y-3 text-sm text-slate-500">
               <li class="flex md:justify-end items-start gap-3">
-                <span>${escapeHtml(state.settings?.alamat_sekretariat || 'Kp.Peuntas Rt 08/03 Ds.Nangerang, Kec. Wanayasa, Kab. Purwakarta')}</span>
+                <span>${escapeHtml(state.settings?.alamat_sekretariat || 'Sekretariat KKG')}</span>
                 <i class="fas fa-map-marker-alt mt-1 text-teal-500"></i>
               </li>
               <li class="flex md:justify-end items-center gap-3">
-                <span>${escapeHtml(state.settings?.email || 'admin@kkg-wanayasa.id')}</span>
+                <span>${escapeHtml(state.settings?.email_kkg || state.settings?.email || 'admin@portal-kkg.id')}</span>
                 <i class="fas fa-envelope text-teal-500"></i>
               </li>
             </ul>
@@ -174,7 +174,7 @@ export function renderFooter() {
         </div>
 
         <div class="border-t border-slate-100 mt-10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-400">
-          <p>&copy; ${new Date().getFullYear()} KKG Gugus 3 Wanayasa. All rights reserved.</p>
+          <p>&copy; ${new Date().getFullYear()} ${escapeHtml(state.settings?.nama_kkg || 'Portal Digital KKG')}. All rights reserved.</p>
           <div class="flex items-center gap-1 mt-3 md:mt-0">
              <span>Dibuat dengan</span>
              <i class="fas fa-heart text-teal-500 animate-pulse text-[10px]"></i>

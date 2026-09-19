@@ -282,7 +282,7 @@ export function initProgramSekolah() {
 
   // Prefill default identity fields
   const elSekolah = document.getElementById('inp-nama-sekolah');
-  if (elSekolah) elSekolah.value = user.sekolah || settings.nama_organisasi || 'SD Negeri Gugus 3 Wanayasa';
+  if (elSekolah) elSekolah.value = user.sekolah || settings.nama_organisasi || settings.nama_kkg || 'SD Negeri Binaan';
 
   const elPenyusun = document.getElementById('inp-penyusun');
   if (elPenyusun) elPenyusun.value = user.nama || 'Tim Pengembang Kurikulum';

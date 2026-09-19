@@ -521,7 +521,7 @@ export function initTugOfWar() {
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       const winner = ropePosition < 0 ? 'Tim Merah' : 'Tim Biru';
-      const text = `🏆 Rekap Tarik Tambang Cerdas Cermat (KKG Wanayasa)\nJuara: ${winner}\nJenjang: ${selectedFase.toUpperCase()}\nMode: ${gameMode === 'sync' ? 'Ronde Serempak' : 'Adu Cepat'}`;
+      const text = `🏆 Rekap Tarik Tambang Cerdas Cermat (${window.state?.settings?.nama_kkg || 'Portal KKG'})\nJuara: ${winner}\nJenjang: ${selectedFase.toUpperCase()}\nMode: ${gameMode === 'sync' ? 'Ronde Serempak' : 'Adu Cepat'}`;
       navigator.clipboard.writeText(text);
       copyBtn.innerHTML = '<i class="fas fa-check text-emerald-400 mr-1.5"></i> Tersalin!';
       setTimeout(() => {

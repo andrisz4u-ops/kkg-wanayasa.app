@@ -94,7 +94,7 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
           success: false,
           error: {
             code: ErrorCodes.FORBIDDEN,
-            message: 'Akun Anda sedang menunggu persetujuan Admin. Silakan hubungi Sekretaris atau Ketua Gugus 3 Wanayasa.'
+            message: 'Akun Anda sedang menunggu persetujuan Admin. Silakan hubungi Sekretaris atau Ketua KKG.'
           }
         }, 403);
       }
@@ -277,7 +277,7 @@ auth.post('/register', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
         role: 'user',
       },
       requireApproval: true
-    }, 'Registrasi berhasil. Akun Anda sedang menunggu persetujuan Admin. Silakan hubungi Sekretaris atau Ketua Gugus 3 Wanayasa.', 201);
+    }, 'Registrasi berhasil. Akun Anda sedang menunggu persetujuan Admin. Silakan hubungi Sekretaris atau Ketua KKG.', 201);
   } catch (e: any) {
     logger.error('Register error', e);
     return Errors.internal(c);
@@ -511,7 +511,7 @@ auth.post('/forgot-password', rateLimitMiddleware(RATE_LIMITS.auth), async (c) =
         },
         {
           to: user.email,
-          subject: 'Reset Password - Portal KKG Gugus 3 Wanayasa',
+          subject: `Reset Password - Portal Digital ${settings.nama_kkg || 'KKG'}`,
           html: emailTemplate.html,
           text: emailTemplate.text
         }

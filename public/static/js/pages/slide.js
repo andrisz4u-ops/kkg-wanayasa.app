@@ -829,7 +829,7 @@ function generateSlideHTML(slide, index, colorScheme) {
           <p contenteditable="true" data-field="message" class="sg-editable text-xl opacity-90 max-w-xl mb-8 focus:outline-none rounded px-2">${escapeHtml(slide.message || 'Semoga pembelajaran hari ini membawa inspirasi dan ilmu yang bermanfaat.')}</p>
           <div class="flex items-center gap-6 text-sm opacity-80">
             <span><i class="fas fa-user-tie mr-1.5"></i>${escapeHtml(slide.teacher || state.user?.nama || 'Guru Pengampu')}</span>
-            <span><i class="fas fa-school mr-1.5"></i>${escapeHtml(slide.school || state.user?.sekolah || 'KKG Gugus 3 Wanayasa')}</span>
+            <span><i class="fas fa-school mr-1.5"></i>${escapeHtml(slide.school || state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG')}</span>
           </div>
         </div>
       `;
@@ -1692,7 +1692,7 @@ async function exportToPPTX() {
     pptx.layout = 'LAYOUT_16x9';
     pptx.title = s.slides[0]?.title || s.config.topik || 'Presentasi Pembelajaran';
     pptx.author = state.user?.nama || 'Guru Pengampu';
-    pptx.company = state.user?.sekolah || 'KKG Gugus 3 Wanayasa';
+    pptx.company = state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG';
 
     const tpl = slideTemplates[s.template] || slideTemplates['minimalist-dark'];
     const colorScheme = tpl.colorScheme;
@@ -1743,7 +1743,7 @@ async function exportToPPTX() {
           fontSize: 28, bold: true, color: cleanPrimary, ...baseAutoFit
         });
         // Footer Stamp
-        pptSlide.addText(`${s.config.mataPelajaran || 'Materi'} · ${state.user?.sekolah || 'KKG Wanayasa'} | Hal. ${i + 1}`, {
+        pptSlide.addText(`${s.config.mataPelajaran || 'Materi'} · ${state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG'} | Hal. ${i + 1}`, {
           x: 0.8, y: 6.9, w: 11.5, h: 0.3,
           fontSize: 10, color: '888888', align: 'right'
         });

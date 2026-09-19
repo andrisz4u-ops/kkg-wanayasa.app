@@ -839,7 +839,7 @@ function copyMatchRecap() {
 🔵 Skor Tim Biru: ${gameState.blueScore} Poin
 🥇 Pemenang: ${winnerStr}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Pusat Game Edukasi KKG Gugus 3 Wanayasa`;
+Pusat Game Edukasi ${window.state?.settings?.nama_kkg || 'Portal KKG'}`;
 
   navigator.clipboard.writeText(text).then(() => {
     try { sfx.playCorrect(); } catch (_) {}

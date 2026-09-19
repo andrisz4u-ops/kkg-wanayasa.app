@@ -94,15 +94,13 @@ export function renderSurat() {
             <label class="block text-sm font-bold text-[var(--color-text-secondary)] mb-2">Tempat Kegiatan <span class="text-red-500">*</span></label>
             <div class="relative">
               <select id="tempat_kegiatan" name="tempat_kegiatan" required class="w-full px-4 py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] rounded-xl focus:ring-2 focus:ring-primary-500 text-[var(--color-text-primary)] appearance-none transition">
-                <option value="SDN 2 Nangerang" selected>SDN 2 Nangerang</option>
-                <option value="SDN 1 Nangerang">SDN 1 Nangerang</option>
-                <option value="SDN 1 Cibuntu">SDN 1 Cibuntu</option>
-                <option value="SDN 2 Cibuntu">SDN 2 Cibuntu</option>
-                <option value="SDN Nagrog">SDN Nagrog</option>
-                <option value="SDN Sakambang">SDN Sakambang</option>
-                <option value="SDIT Al-Qalam">SDIT Al-Qalam</option>
-                <option value="SDN 1 Wanayasa">SDN 1 Wanayasa</option>
-                <option value="SDN 2 Wanayasa">SDN 2 Wanayasa</option>
+                ${(state.sekolahList && state.sekolahList.length > 0)
+                  ? state.sekolahList.map((s, idx) => `<option value="${escapeHtml(s.nama)}" ${idx === 0 ? 'selected' : ''}>${escapeHtml(s.nama)}</option>`).join('')
+                  : `
+                    <option value="Sekretariat KKG" selected>Sekretariat KKG</option>
+                    <option value="Gedung Pertemuan">Gedung Pertemuan</option>
+                  `
+                }
               </select>
                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-text-tertiary)]">
                 <i class="fas fa-chevron-down text-xs"></i>
@@ -130,7 +128,7 @@ export function renderSurat() {
 
         <div class="mt-6">
           <label class="block text-sm font-bold text-[var(--color-text-secondary)] mb-2">Peserta yang Diundang</label>
-          <textarea id="peserta" name="peserta" rows="2" placeholder="Contoh: Seluruh anggota KKG Gugus 3 Wanayasa, Kepala Sekolah se-Gugus 3..."
+          <textarea id="peserta" name="peserta" rows="2" placeholder="Contoh: Seluruh anggota ${escapeHtml(state.settings?.nama_kkg || 'KKG')}, Kepala Sekolah mitra..."
             class="w-full px-4 py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] rounded-xl focus:ring-2 focus:ring-primary-500 text-[var(--color-text-primary)] transition resize-none"></textarea>
         </div>
 
@@ -324,7 +322,7 @@ window.downloadSuratPDF = function () {
   win.document.write(`
     < !DOCTYPE html >
       <html><head>
-        <title>Surat Undangan KKG Gugus 3 Wanayasa</title>
+        <title>Surat Undangan - ${escapeHtml(state.settings?.nama_kkg || 'Portal KKG')}</title>
         <style>
           @page {size: A4; margin: 2.5cm 2cm 2cm 2.5cm; }
           body {
@@ -699,12 +697,12 @@ async function fetchLetterSettings() {
     console.error('Fetch settings error:', e);
     // Fallback defaults
     letterSettings = {
-      nama_ketua: 'Admin KKG Gugus 3',
-      nip_ketua: '-',
-      alamat_sekretariat: 'Wanayasa',
-      kabupaten: 'Purwakarta',
-      kecamatan: 'Wanayasa',
-      gugus: '03'
+      nama_ketua: state.settings?.nama_ketua || 'Ketua KKG',
+      nip_ketua: state.settings?.nip_ketua || '-',
+      alamat_sekretariat: state.settings?.alamat_sekretariat || '',
+      kabupaten: state.settings?.kabupaten || 'Purwakarta',
+      kecamatan: state.settings?.kecamatan || '',
+      gugus: state.settings?.gugus || '01'
     };
   }
 }

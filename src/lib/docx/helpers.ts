@@ -335,6 +335,11 @@ export function createLembarPengesahan(settings: KKGSettings, createdAt: string)
         year: 'numeric'
     });
 
+    const namaKkg = (settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase();
+    const kec = (settings.kecamatan || 'Wanayasa').toUpperCase();
+    const kab = (settings.kabupaten || 'Purwakarta').toUpperCase();
+    const kecTitle = settings.kecamatan || 'Wanayasa';
+
     return [
         new Paragraph({ children: [new PageBreak()] }),
         new Paragraph({ spacing: { before: 480 } }),
@@ -350,20 +355,20 @@ export function createLembarPengesahan(settings: KKGSettings, createdAt: string)
             fontSize: FONT_SIZE_HEADER,
             spacing: { after: 120 }
         }),
-        createParagraph('KELOMPOK KERJA GURU (KKG) GUGUS 3', {
+        createParagraph(namaKkg, {
             bold: true,
             alignment: AlignmentType.CENTER,
             fontSize: FONT_SIZE_HEADER,
             spacing: { after: 120 }
         }),
-        createParagraph('KECAMATAN WANAYASA KABUPATEN PURWAKARTA', {
+        createParagraph(`KECAMATAN ${kec} KABUPATEN ${kab}`, {
             bold: true,
             alignment: AlignmentType.CENTER,
             fontSize: FONT_SIZE_HEADER,
             spacing: { after: 480 }
         }),
         new Paragraph({ spacing: { after: 240 } }),
-        createParagraph(`Disahkan di Wanayasa, pada tanggal ${dateStr}`, {
+        createParagraph(`Disahkan di ${kecTitle}, pada tanggal ${dateStr}`, {
             alignment: AlignmentType.CENTER,
             spacing: { after: 480 }
         }),
@@ -381,9 +386,9 @@ export function createLembarPengesahan(settings: KKGSettings, createdAt: string)
             rows: [
                 new TableRow({
                     children: [
-                        createSignatureCell('Mengetahui,\nKepala UPT Pendidikan\nKec. Wanayasa'),
-                        createSignatureCell('Pembina,\nPengawas Sekolah'),
-                        createSignatureCell('Ketua KKG Gugus 3\nWanayasa'),
+                        createSignatureCell(`Mengetahui,\nKepala UPT Pendidikan\nKec. ${kecTitle}`),
+                        createSignatureCell(`Pembina,\n${settings.pengawas_instansi || 'Pengawas Pembina'}`),
+                        createSignatureCell(`Ketua ${settings.nama_kkg || 'KKG'}`),
                     ],
                 }),
                 new TableRow({
@@ -463,10 +468,10 @@ export function parseContentToParagraphs(content: string, kegiatan: Kegiatan[] =
             trimmed === 'PROGRAM KERJA' ||
             trimmed === 'PROGRAM KERJA TAHUNAN' ||
             trimmed.startsWith('KELOMPOK KERJA GURU') ||
-            trimmed.startsWith('KKG GUGUS') ||
-            trimmed.startsWith('GUGUS 3') ||
-            trimmed.startsWith('KECAMATAN WANAYASA') ||
-            trimmed.startsWith('KABUPATEN PURWAKARTA') ||
+            trimmed.startsWith('KKG') ||
+            trimmed.startsWith('GUGUS') ||
+            trimmed.startsWith('KECAMATAN') ||
+            trimmed.startsWith('KABUPATEN') ||
             trimmed.match(/^TAHUN\s+(AJARAN|PELAJARAN)/i) !== null ||
             trimmed.match(/^\d{4}\/\d{4}$/) !== null ||
             trimmed === 'DINAS PENDIDIKAN'
@@ -768,7 +773,7 @@ export function createLampiranStruktur(settings: KKGSettings): (Paragraph | Tabl
         fontSize: FONT_SIZE_HEADER,
         spacing: { after: 120 }
     }));
-    elements.push(createParagraph('STRUKTUR ORGANISASI KKG GUGUS 3 WANAYASA', {
+    elements.push(createParagraph(`STRUKTUR ORGANISASI ${(settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU').toUpperCase()}`, {
         bold: true,
         alignment: AlignmentType.CENTER,
         fontSize: FONT_SIZE_TITLE,
@@ -784,12 +789,11 @@ export function createLampiranStruktur(settings: KKGSettings): (Paragraph | Tabl
     }));
 
     const intiData = [
-        // Pembina & Ketua Gugus 3 removed as requested
-        ['Ketua KKG Gugus', 'Maman Rukman, S.Pd'],
-        ['Sekretaris', 'Andris Hadiansyah, S.Pd'],
-        ['Bendahara', 'Reny Srimulyani A, S.Pd'],
-        ['Sarana Prasarana', "Ulfa Laiza Ul'ul, S.Pd"],
-        ['Humas', 'Harun, S.Pd'],
+        ['Ketua KKG', settings.nama_ketua || '_______________________'],
+        ['Sekretaris', settings.nama_sekretaris || '_______________________'],
+        ['Bendahara', settings.nama_bendahara || '_______________________'],
+        ['Sarana Prasarana', settings.nama_sarpras || '_______________________'],
+        ['Humas', settings.nama_humas || '_______________________'],
     ];
 
     const intiRows = intiData.map(row =>
@@ -809,9 +813,6 @@ export function createLampiranStruktur(settings: KKGSettings): (Paragraph | Tabl
             ],
         })
     );
-
-    // Unsafe modification removed. Bold applied directly above.
-
 
     elements.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -837,14 +838,14 @@ export function createLampiranStruktur(settings: KKGSettings): (Paragraph | Tabl
     }));
 
     const pendampingData = [
-        ['1', 'Kelas 1', 'Lena Marlina, S.Pd', 'SDN Nagrog'],
-        ['2', 'Kelas 2', 'Ade Setiawati, S.Pd', 'SDN 2 Nangerang'],
-        ['3', 'Kelas 3', 'Tuti Sutiawati, S.Pd', 'SDIT Al-Qalam'],
-        ['4', 'Kelas 4', 'Nur', 'SDN 2 Cibuntu'],
-        ['5', 'Kelas 5', 'Ujang Aip, S.Pd', 'SDN Sakambang'],
-        ['6', 'Kelas 6', 'Eti Sumiati, S.Pd', 'SDN 1 Cibuntu'],
-        ['7', 'KKGA', 'Soleh Muslim, S.Pd.I', 'SDN 1 Cibuntu'],
-        ['8', 'KKGO', 'Ahmad, S.Pd', 'SDN 1 Nangerang'],
+        ['1', 'Kelas 1', settings.guru_kelas_1 || 'Guru Pendamping Kelas 1', settings.sekolah_kelas_1 || '-'],
+        ['2', 'Kelas 2', settings.guru_kelas_2 || 'Guru Pendamping Kelas 2', settings.sekolah_kelas_2 || '-'],
+        ['3', 'Kelas 3', settings.guru_kelas_3 || 'Guru Pendamping Kelas 3', settings.sekolah_kelas_3 || '-'],
+        ['4', 'Kelas 4', settings.guru_kelas_4 || 'Guru Pendamping Kelas 4', settings.sekolah_kelas_4 || '-'],
+        ['5', 'Kelas 5', settings.guru_kelas_5 || 'Guru Pendamping Kelas 5', settings.sekolah_kelas_5 || '-'],
+        ['6', 'Kelas 6', settings.guru_kelas_6 || 'Guru Pendamping Kelas 6', settings.sekolah_kelas_6 || '-'],
+        ['7', 'PAI (KKGA)', settings.guru_pai || 'Guru Pendamping PAI', settings.sekolah_pai || '-'],
+        ['8', 'PJOK (KKGO)', settings.guru_pjok || 'Guru Pendamping PJOK', settings.sekolah_pjok || '-'],
     ];
 
     const pendampingRows = [
@@ -923,12 +924,16 @@ export async function getHeaderWithLogo(settings: KKGSettings): Promise<Header> 
     }
 
     // 2. Prepare Header Text
+    const kab = (settings.kabupaten || 'Purwakarta').toUpperCase();
+    const kec = (settings.kecamatan || 'Wanayasa').toUpperCase();
+    const namaKkg = (settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase();
+
     const titleText = [
-        { text: 'PEMERINTAH KABUPATEN PURWAKARTA', size: 24, bold: true }, // 12pt
+        { text: `PEMERINTAH KABUPATEN ${kab}`, size: 24, bold: true }, // 12pt
         { text: 'DINAS PENDIDIKAN', size: 28, bold: true }, // 14pt (Main Title)
-        { text: 'KELOMPOK KERJA GURU (KKG) GUGUS 3', size: 24, bold: true }, // 12pt
-        { text: 'KECAMATAN WANAYASA', size: 24, bold: true }, // 12pt
-        { text: settings.alamat_sekretariat || 'Kp peuntas Rt 08/03 Desa Nangerang, Kec. Wanayasa, Kab. Purwakarta', size: 22, bold: false, italic: true }, // 11pt
+        { text: namaKkg, size: 24, bold: true }, // 12pt
+        { text: `KECAMATAN ${kec}`, size: 24, bold: true }, // 12pt
+        { text: settings.alamat_sekretariat || `Kecamatan ${kec}, Kabupaten ${kab}`, size: 22, bold: false, italic: true }, // 11pt
     ];
 
     const imageSize = { width: 70, height: 80 };
@@ -1088,7 +1093,7 @@ export function createSignatureBlock(data: SuratData, settings: KKGSettings): (P
                                 new Paragraph({
                                     alignment: AlignmentType.CENTER,
                                     children: [
-                                        new TextRun({ text: 'Ketua KKG Gugus 3 Wanayasa', font: FONT_FAMILY, size: FONT_SIZE_NORMAL }),
+                                        new TextRun({ text: `Ketua ${settings.nama_kkg || 'KKG'}`, font: FONT_FAMILY, size: FONT_SIZE_NORMAL }),
                                     ],
                                 }),
                                 new Paragraph({
@@ -1096,7 +1101,7 @@ export function createSignatureBlock(data: SuratData, settings: KKGSettings): (P
                                     spacing: { before: 720 }, // Reduced space
                                     children: [
                                         new TextRun({
-                                            text: settings.nama_ketua || data.penanggung_jawab || 'H. UJANG MA\'MUN, S.Pd.I',
+                                            text: settings.nama_ketua || data.penanggung_jawab || 'Ketua KKG',
                                             font: FONT_FAMILY,
                                             size: FONT_SIZE_NORMAL,
                                             bold: true,
@@ -1126,10 +1131,10 @@ export function createSignatureBlock(data: SuratData, settings: KKGSettings): (P
             children: [new TextRun({ text: 'Tembusan:', font: FONT_FAMILY, size: FONT_SIZE_SMALL, underline: {} })],
         }),
         new Paragraph({
-            children: [new TextRun({ text: '1. Pengawas Pembina Gugus 3', font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
+            children: [new TextRun({ text: `1. Pengawas Pembina ${settings.nama_kkg || 'Gugus'}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
         }),
         new Paragraph({
-            children: [new TextRun({ text: '2. Ketua Gugus 3', font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
+            children: [new TextRun({ text: `2. Ketua ${settings.nama_kkg || 'Gugus'}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })],
         }),
     ];
 }

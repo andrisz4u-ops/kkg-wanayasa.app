@@ -469,7 +469,7 @@ export function initPuzzleRace() {
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       const winner = teamState.red.placed.size >= teamState.blue.placed.size ? 'Tim Merah' : 'Tim Biru';
-      const text = `🏆 Rekap Balap Puzzle & Peta (KKG Wanayasa)\nJuara: ${winner}\nTema: ${PUZZLE_SETS[currentTheme].title}\nJumlah Bagian: ${PUZZLE_SETS[currentTheme].slots.length}`;
+      const text = `🏆 Rekap Balap Puzzle & Peta (${window.state?.settings?.nama_kkg || 'Portal KKG'})\nJuara: ${winner}\nTema: ${PUZZLE_SETS[currentTheme].title}\nJumlah Bagian: ${PUZZLE_SETS[currentTheme].slots.length}`;
       navigator.clipboard.writeText(text);
       copyBtn.innerHTML = '<i class="fas fa-check text-emerald-400 mr-1.5"></i> Tersalin!';
       setTimeout(() => {

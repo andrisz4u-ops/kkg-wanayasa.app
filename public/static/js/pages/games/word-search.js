@@ -373,7 +373,7 @@ export function initWordSearch() {
     copyBtn.dataset.listenerAttached = 'true';
     copyBtn.addEventListener('click', () => {
       const winner = teamData.red.foundWords.size >= teamData.blue.foundWords.size ? 'Tim Merah' : 'Tim Biru';
-      const text = `🏆 Rekap Cari Kata Raksasa (KKG Wanayasa)\nJuara: ${winner}\nJenjang: ${selectedFase.toUpperCase()}\nMateri: ${currentSet.topic}`;
+      const text = `🏆 Rekap Cari Kata Raksasa (${window.state?.settings?.nama_kkg || 'Portal KKG'})\nJuara: ${winner}\nJenjang: ${selectedFase.toUpperCase()}\nMateri: ${currentSet.topic}`;
       navigator.clipboard.writeText(text);
       copyBtn.innerHTML = '<i class="fas fa-check text-emerald-400 mr-1.5"></i> Tersalin!';
       setTimeout(() => {

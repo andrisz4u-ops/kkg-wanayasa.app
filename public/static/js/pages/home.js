@@ -62,8 +62,10 @@ async function renderEducatorDashboard() {
   }
 
   // Teacher metadata
+  const namaKkg = state.settings?.nama_kkg || state.tenant?.nama || 'KKG';
+  const kecamatan = state.settings?.kecamatan || 'Kecamatan';
   const userName = user.nama || 'Pendidik Hebat';
-  const userSchool = user.sekolah || 'SDN di Gugus 3 Wanayasa';
+  const userSchool = user.sekolah || `SDN Anggota ${namaKkg}`;
   const userMapel = user.mata_pelajaran || 'Guru Kelas';
   const userNip = user.nip ? `NIP. ${user.nip}` : 'Pendidik Terdaftar';
   const isAdmin = ['super_admin', 'admin', 'operator'].includes(user.role);
@@ -191,7 +193,7 @@ async function renderEducatorDashboard() {
                 <span class="text-slate-300">Status Keaktifan</span>
                 <span class="font-bold text-emerald-300 flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Aktif Gugus 3
+                  Aktif ${escapeHtml(namaKkg)}
                 </span>
               </div>
               <div class="flex items-center justify-between text-xs">
@@ -310,7 +312,7 @@ async function renderEducatorDashboard() {
             <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-teal-500/10 text-xs font-semibold text-teal-800">
               <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-teal-500"></i> Berbasis Capaian Pembelajaran (CP)</span>
               <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-teal-500"></i> Ekspor Docx / Cetak Langsung</span>
-              <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-teal-500"></i> Sesuai Karakteristik Gugus 3</span>
+              <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-teal-500"></i> Sesuai Karakteristik Gugus & Sekolah</span>
             </div>
           </div>
 
@@ -436,7 +438,7 @@ async function renderEducatorDashboard() {
                 Bank Materi & Modul Ajar
               </h3>
               <p class="text-slate-500 text-xs sm:text-sm leading-relaxed mb-6">
-                Akses ribuan modul pembelajaran, silabus, kisi-kisi, dan video referensi karya guru hebat se-Kecamatan Wanayasa.
+                Akses ribuan modul pembelajaran, silabus, kisi-kisi, dan video referensi karya guru hebat se-${escapeHtml(kecamatan)}.
               </p>
             </div>
             <span class="text-xs font-bold text-rose-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
@@ -463,7 +465,7 @@ async function renderEducatorDashboard() {
                   Generator Surat Undangan
                 </h3>
                 <p class="text-slate-500 text-xs sm:text-sm leading-relaxed mb-6">
-                  Buat dan cetak surat dinas resmi KKG Gugus 3 ber-KOP dan nomor surat otomatis siap tanda tangan.
+                  Buat dan cetak surat dinas resmi ${escapeHtml(namaKkg)} ber-KOP dan nomor surat otomatis siap tanda tangan.
                 </p>
               </div>
               <span class="text-xs font-bold text-purple-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
@@ -513,7 +515,7 @@ async function renderEducatorDashboard() {
               </span>
               <div>
                 <h3 class="text-xl font-bold text-slate-900 tracking-tight">Agenda Kegiatan Terdekat</h3>
-                <p class="text-xs text-slate-500">Jadwal kegiatan Kelompok Kerja Guru Gugus 3</p>
+                <p class="text-xs text-slate-500">Jadwal kegiatan ${escapeHtml(namaKkg)}</p>
               </div>
             </div>
             <button onclick="navigate('kalender')" class="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1">
@@ -544,7 +546,7 @@ async function renderEducatorDashboard() {
                           <i class="far fa-clock text-teal-600"></i> ${escapeHtml(k.waktu_mulai || '08:00')} - ${escapeHtml(k.waktu_selesai || 'Selesai')}
                         </span>
                         <span class="flex items-center gap-1">
-                          <i class="fas fa-map-marker-alt text-rose-500"></i> ${escapeHtml(k.tempat || 'SDN 1 Wanayasa')}
+                          <i class="fas fa-map-marker-alt text-rose-500"></i> ${escapeHtml(k.tempat || (state.sekolahList?.[0]?.nama || 'Sekretariat KKG'))}
                         </span>
                       </div>
                       ${k.deskripsi ? `<p class="text-xs text-slate-500 mt-1 line-clamp-1">${escapeHtml(k.deskripsi)}</p>` : ''}
@@ -585,7 +587,7 @@ async function renderEducatorDashboard() {
               </span>
               <div>
                 <h3 class="text-xl font-bold text-slate-900 tracking-tight">Pengumuman Terkini</h3>
-                <p class="text-xs text-slate-500">Warta resmi KKG Gugus 3</p>
+                <p class="text-xs text-slate-500">Warta resmi ${escapeHtml(namaKkg)}</p>
               </div>
             </div>
             <button onclick="navigate('pengumuman')" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
@@ -632,7 +634,7 @@ async function renderEducatorDashboard() {
             </div>
             <h4 class="font-extrabold text-base text-white mb-2">Punya Pertanyaan Pembelajaran?</h4>
             <p class="text-xs text-slate-300 leading-relaxed mb-4">
-              Diskusikan kesulitan modul ajar, asesmen kelas, atau berbagi ide praktik baik bersama seluruh rekan guru se-Gugus 3.
+              Diskusikan kesulitan modul ajar, asesmen kelas, atau berbagi ide praktik baik bersama seluruh rekan guru anggota ${escapeHtml(namaKkg)}.
             </p>
             <button 
               onclick="navigate('forum')" 
@@ -729,37 +731,38 @@ async function renderPublicHome() {
     console.log('Public data not loaded quickly, rendering with defaults');
   }
 
+  const namaKkg = state.settings?.nama_kkg || state.tenant?.nama || 'Portal Digital KKG';
+  const kecamatan = state.settings?.kecamatan || '';
+  const kabupaten = state.settings?.kabupaten || '';
+
+  const schools = (state.sekolahList && state.sekolahList.length > 0)
+    ? state.sekolahList.map(s => s.nama)
+    : ['Sekolah Binaan 1', 'Sekolah Binaan 2'];
+  const totalSchoolsCount = schools.length;
+
   const bentoFeatures = [
     {
       id: 'rpp',
-      icon: 'fa-magic',
-      title: 'AI RPP & Modul Ajar',
-      desc: 'Buat rencana pembelajaran otomatis berbasis Kurikulum Merdeka berdiferensiasi hanya dalam hitungan detik.',
-      size: 'large',
+      icon: 'fa-wand-magic-sparkles',
+      title: 'Generator Modul Ajar AI',
+      desc: 'Rancang RPP Berdiferensiasi & Modul Ajar lengkap berstandar BSKAP Kemendikbudristek dalam hitungan detik.',
       style: 'primary',
+      size: 'large',
       isAi: true,
     },
     {
-      id: 'materi',
-      icon: 'fa-book-open',
-      title: 'Bank Materi Terpadu',
-      desc: 'Akses ratusan modul ajar, materi presentasi, dan LKPD dari guru-guru berprestasi di seluruh gugus.',
-      style: 'white',
-      isAi: false,
+      id: 'analisis-cp',
+      icon: 'fa-chart-pie',
+      title: 'Analisis CP, TP & ATP',
+      desc: 'Uraikan Capaian Pembelajaran Fase A-F menjadi Tujuan & Alur Pembelajaran yang terstruktur sistematis.',
+      style: 'dark',
+      isAi: true,
     },
     {
       id: 'kisi',
-      icon: 'fa-clipboard-check',
-      title: 'Asesmen & Kisi-Kisi HOTS',
-      desc: 'Rancang kisi-kisi asesmen, stimulus AKM, dan soal HOTS otomatis selaras capaian pembelajaran.',
-      style: 'white',
-      isAi: true,
-    },
-    {
-      id: 'tts',
-      icon: 'fa-puzzle-piece',
-      title: 'Teka-Teki Silang (TTS)',
-      desc: 'Game edukasi interaktif kelas & LKPD cetak teka-teki silang otomatis untuk pengayaan siswa.',
+      icon: 'fa-list-check',
+      title: 'Kisi-Kisi HOTS Otomatis',
+      desc: 'Susun kisi-kisi soal, rubrik asesmen, dan kartu soal kurikulum merdeka siap cetak.',
       style: 'white',
       isAi: true,
     },
@@ -767,32 +770,26 @@ async function renderPublicHome() {
       id: 'slide',
       icon: 'fa-file-powerpoint',
       title: 'Slide Studio AI',
-      desc: 'Rancang media presentasi materi ajar interaktif dengan struktur visual yang memikat murid.',
+      desc: 'Buat presentasi materi pembelajaran interaktif langsung diekspor ke format PowerPoint .pptx.',
       style: 'white',
       isAi: true,
     },
     {
-      id: 'forum',
-      icon: 'fa-comments',
-      title: 'Forum Kolaborasi Guru',
-      desc: 'Diskusikan tantangan mengajar dan bertukar inspirasi dengan rekan sejawat secara real-time.',
-      style: 'dark',
+      id: 'materi',
+      icon: 'fa-book-open',
+      title: 'Bank Modul & Aset',
+      desc: 'Akses ratusan modul ajar terverifikasi, LKPD, dan buku teks digital kurikulum nasional.',
+      style: 'white',
       isAi: false,
     },
     {
       id: 'guru',
       icon: 'fa-users',
       title: 'Direktori Pendidik',
-      desc: 'Terhubung dengan guru profesional 9 sekolah dalam satu jaringan gugus terpadu.',
+      desc: `Terhubung dengan guru profesional ${totalSchoolsCount} sekolah dalam satu jaringan gugus terpadu.`,
       style: 'white',
       isAi: false,
     },
-  ];
-
-  const schools = [
-    'SDN 2 Nangerang', 'SDN 1 Nangerang', 'SDN Nagrog',
-    'SDN Raharja', 'SDN 1 Cibuntu', 'SDN 2 Cibuntu',
-    'SDN Sumurugul', 'SDN Sakambang', 'SDIT Al-Qalam'
   ];
 
   const avatarGradients = [
@@ -831,6 +828,9 @@ async function renderPublicHome() {
     ? `${guruSummary.total}`
     : 'Aktif';
 
+  const heroTitle = state.settings?.hero_title || `Portal ${namaKkg}`;
+  const heroDeskripsi = state.settings?.hero_deskripsi || `Pusat ekosistem digital ${namaKkg} Kecamatan ${kecamatan}. Membantu guru menyusun administrasi Kurikulum Merdeka berdiferensiasi secara cepat, akurat, dan selaras standar BSKAP Kemendikbudristek.`;
+
   return `
     <div class="home-organic relative overflow-x-hidden">
       
@@ -867,14 +867,11 @@ async function renderPublicHome() {
           </div>
           
           <h2 class="text-4xl lg:text-6xl xl:text-7xl font-extrabold text-slate-900 leading-[1.1] mb-6 tracking-tight font-display">
-            Portal KKG<br>Gugus
-            <span class="text-teal-600"> 3 Wanayasa</span>
+            ${escapeHtml(heroTitle)}
           </h2>
           
           <p class="text-base sm:text-lg lg:text-xl text-slate-600 leading-relaxed max-w-xl mb-8">
-            Pusat ekosistem digital Kelompok Kerja Guru Gugus 3 Kecamatan Wanayasa. 
-            Membantu guru menyusun administrasi Kurikulum Merdeka berdiferensiasi secara cepat, 
-            akurat, dan selaras standar BSKAP Kemendikbudristek.
+            ${escapeHtml(heroDeskripsi)}
           </p>
           
           <!-- Hero Action Buttons -->
@@ -922,7 +919,7 @@ async function renderPublicHome() {
             </div>
             <div>
               <div class="font-black text-slate-900 leading-tight text-sm sm:text-base">${totalMembersLabel} Pendidik Terdaftar</div>
-              <div class="text-[10.5px] text-teal-700 font-bold uppercase tracking-wide">9 Sekolah Anggota Gugus 3</div>
+              <div class="text-[10.5px] text-teal-700 font-bold uppercase tracking-wide">${totalSchoolsCount} Sekolah Anggota ${escapeHtml(namaKkg)}</div>
             </div>
           </div>
         </div>
@@ -1068,7 +1065,7 @@ async function renderPublicHome() {
               </div>
               <h3 class="text-2xl font-bold text-slate-900 mb-4 tracking-tight">Visi Bersama</h3>
               <p class="text-slate-600 text-lg leading-relaxed font-medium italic">
-                "Mewujudkan guru-guru yang profesional, kompeten, dan berdaya saing tinggi di Gugus 3 Kecamatan Wanayasa melalui kolaborasi, inovasi teknologi, dan pengembangan berkelanjutan."
+                "${escapeHtml(state.settings?.visi || `Mewujudkan guru-guru yang profesional, kompeten, dan berdaya saing tinggi di ${namaKkg} melalui kolaborasi, inovasi teknologi, dan pengembangan berkelanjutan.`)}"
               </p>
             </div>
 
@@ -1079,24 +1076,21 @@ async function renderPublicHome() {
               </div>
               <h3 class="text-2xl font-bold mb-4 tracking-tight">Misi Strategis</h3>
               <ul class="space-y-4 text-teal-50 text-base leading-relaxed">
-                <li class="flex items-start gap-3">
-                  <div class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                    <i class="fas fa-check text-[10px] text-white"></i>
-                  </div>
-                  <span>Meningkatkan kompetensi pedagogik & profesional guru melalui pelatihan berkala.</span>
-                </li>
-                <li class="flex items-start gap-3">
-                  <div class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                    <i class="fas fa-check text-[10px] text-white"></i>
-                  </div>
-                  <span>Memfasilitasi pertukaran materi & praktik baik antar 9 sekolah dasar anggota.</span>
-                </li>
-                <li class="flex items-start gap-3">
-                  <div class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-1">
-                    <i class="fas fa-check text-[10px] text-white"></i>
-                  </div>
-                  <span>Mengembangkan media pembelajaran berdiferensiasi dan asesmen berbasis AI.</span>
-                </li>
+                ${(state.settings?.misi
+                  ? state.settings.misi.split('\n').map(m => m.trim()).filter(Boolean)
+                  : [
+                      'Meningkatkan kompetensi pedagogik & profesional guru melalui pelatihan berkala.',
+                      `Memfasilitasi pertukaran materi & praktik baik antar ${totalSchoolsCount} sekolah dasar anggota.`,
+                      'Mengembangkan media pembelajaran berdiferensiasi dan asesmen berbasis AI.'
+                    ]
+                ).map(item => `
+                  <li class="flex items-start gap-3">
+                    <div class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-1">
+                      <i class="fas fa-check text-[10px] text-white"></i>
+                    </div>
+                    <span>${escapeHtml(item)}</span>
+                  </li>
+                `).join('')}
               </ul>
             </div>
           </div>
@@ -1181,15 +1175,15 @@ async function renderPublicHome() {
             <!-- Testimonial 1 -->
             <div class="p-8 rounded-[32px] bg-white border border-slate-200/80 shadow-xl shadow-slate-200/30 flex flex-col justify-between">
               <p class="text-slate-600 italic text-base leading-relaxed mb-6">
-                "Inisiatif Portal Digital KKG Gugus 3 Wanayasa adalah terobosan riil bagi mutu pembelajaran. Administrasi Kurikulum Merdeka yang biasanya menyita berjam-jam kini diselesaikan cepat tanpa kehilangan kedalaman pedagogik, sehingga energi guru tercurah penuh mendampingi murid."
+                "${escapeHtml(state.settings?.kutipan_pengawas || `Inisiatif Portal Digital ${namaKkg} adalah terobosan riil bagi mutu pembelajaran. Administrasi Kurikulum Merdeka yang biasanya menyita berjam-jam kini diselesaikan cepat tanpa kehilangan kedalaman pedagogik, sehingga energi guru tercurah penuh mendampingi murid.`)}"
               </p>
               <div class="flex items-center gap-4 pt-4 border-t border-slate-100">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-teal-600 to-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
                   <i class="fas fa-user-tie"></i>
                 </div>
                 <div>
-                  <h4 class="font-extrabold text-slate-900 text-sm leading-tight">Pengawas Pembina Gugus 3</h4>
-                  <p class="text-xs text-slate-400">Dinas Pendidikan Kec. Wanayasa</p>
+                  <h4 class="font-extrabold text-slate-900 text-sm leading-tight">${escapeHtml(state.settings?.pengawas_nama || 'Pengawas Pembina')}</h4>
+                  <p class="text-xs text-slate-400">${escapeHtml(state.settings?.pengawas_instansi || `Dinas Pendidikan Kec. ${kecamatan}`)}</p>
                 </div>
               </div>
             </div>
@@ -1197,15 +1191,15 @@ async function renderPublicHome() {
             <!-- Testimonial 2 -->
             <div class="p-8 rounded-[32px] bg-white border border-slate-200/80 shadow-xl shadow-slate-200/30 flex flex-col justify-between">
               <p class="text-slate-600 italic text-base leading-relaxed mb-6">
-                "Melalui portal terpadu ini, 9 sekolah dasar anggota di Wanayasa kini memiliki standar mutu bahan ajar yang setara. Sinkronisasi agenda rapat rutin, presensi QR, dan bank materi membuat koordinasi gugus jauh lebih akuntabel dan modern."
+                "${escapeHtml(state.settings?.kutipan_ketua || `Melalui portal terpadu ini, ${totalSchoolsCount} sekolah dasar anggota di ${kecamatan} kini memiliki standar mutu bahan ajar yang setara. Sinkronisasi agenda rapat rutin, presensi QR, dan bank materi membuat koordinasi gugus jauh lebih akuntabel dan modern.`)}"
               </p>
               <div class="flex items-center gap-4 pt-4 border-t border-slate-100">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
                   <i class="fas fa-school-flag"></i>
                 </div>
                 <div>
-                  <h4 class="font-extrabold text-slate-900 text-sm leading-tight">Ketua KKG Gugus 3 Wanayasa</h4>
-                  <p class="text-xs text-slate-400">SDN Inti Wanayasa</p>
+                  <h4 class="font-extrabold text-slate-900 text-sm leading-tight">${escapeHtml(state.settings?.nama_ketua || `Ketua ${namaKkg}`)}</h4>
+                  <p class="text-xs text-slate-400">${escapeHtml(state.settings?.nama_sekolah_induk || `SDN Inti ${kecamatan}`)}</p>
                 </div>
               </div>
             </div>
@@ -1216,11 +1210,11 @@ async function renderPublicHome() {
       <!-- ============ SEKOLAH ANGGOTA ============ -->
       <section class="py-14 bg-white">
         <div class="max-w-7xl mx-auto px-6 md:px-10 lg:px-16 text-center">
-          <p class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-6">9 Satuan Pendidikan Anggota Gugus 3 Wanayasa</p>
+          <p class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-6">${totalSchoolsCount} Satuan Pendidikan Anggota ${escapeHtml(namaKkg)}</p>
           <div class="flex flex-wrap items-center justify-center gap-3 md:gap-4">
             ${schools.map(s => `
               <span class="px-5 py-2.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-700 text-xs md:text-sm font-semibold hover:border-teal-500 hover:text-teal-600 transition-colors shadow-2xs">
-                <i class="fas fa-school mr-2 text-teal-600"></i>${s}
+                <i class="fas fa-school mr-2 text-teal-600"></i>${escapeHtml(s)}
               </span>
             `).join('')}
           </div>
@@ -1331,11 +1325,11 @@ async function renderPublicHome() {
             <!-- FAQ 5 -->
             <div class="rounded-2xl border border-slate-200/80 overflow-hidden bg-slate-50/50">
               <button onclick="window.toggleLandingFaq(5)" class="w-full text-left px-6 py-4 flex items-center justify-between font-bold text-sm sm:text-base text-slate-900 cursor-pointer">
-                <span>Bagaimana cara guru mendapatkan akun di Portal KKG Gugus 3?</span>
+                <span>Bagaimana cara guru mendapatkan akun di Portal ${escapeHtml(namaKkg)}?</span>
                 <i id="faq-icon-5" class="fas fa-chevron-down text-xs text-slate-400 transition-transform"></i>
               </button>
               <div id="faq-ans-5" class="hidden px-6 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-white">
-                Pendidik yang bertugas di 9 sekolah anggota Gugus 3 Wanayasa dapat melakukan pendaftaran mandiri melalui tombol Masuk / Daftar Akun, atau menghubungi Operator Gugus/Sekolah masing-masing untuk aktivasi akun kedinasan.
+                Pendidik yang bertugas di ${totalSchoolsCount} sekolah anggota ${escapeHtml(namaKkg)} dapat melakukan pendaftaran mandiri melalui tombol Masuk / Daftar Akun, atau menghubungi Operator Gugus/Sekolah masing-masing untuk aktivasi akun kedinasan.
               </div>
             </div>
           </div>
@@ -1350,8 +1344,8 @@ async function renderPublicHome() {
               <i class="fas fa-graduation-cap text-white text-sm"></i>
             </div>
             <div>
-              <div class="text-sm font-extrabold text-slate-900 tracking-tight">KKG Gugus 3 Wanayasa</div>
-              <p class="text-[11px] text-slate-400 font-medium">Kecamatan Wanayasa, Kabupaten Purwakarta &copy; ${new Date().getFullYear()}</p>
+              <div class="text-sm font-extrabold text-slate-900 tracking-tight">${escapeHtml(namaKkg)}</div>
+              <p class="text-[11px] text-slate-400 font-medium">Kecamatan ${escapeHtml(kecamatan)}, Kabupaten ${escapeHtml(kabupaten)} &copy; ${new Date().getFullYear()}</p>
             </div>
           </div>
           <div class="flex items-center gap-4 text-xs font-semibold text-slate-500">

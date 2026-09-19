@@ -366,7 +366,7 @@ function endGame(winnerTeam) {
     const btnCopy = document.getElementById('btn-math-copy-summary');
     if (btnCopy) {
       btnCopy.onclick = () => {
-        const text = `🏆 Rekap Si Jago Berhitung IFP (KKG Wanayasa)\nJuara: ${isRed ? 'Tim Merah' : 'Tim Biru'}\nOperasi: ${opLabel}\nTingkat: ${diffLabel}\nTarget Skor: ${gameState.targetScore} Poin`;
+        const text = `🏆 Rekap Si Jago Berhitung IFP (${window.state?.settings?.nama_kkg || 'Portal KKG'})\nJuara: ${isRed ? 'Tim Merah' : 'Tim Biru'}\nOperasi: ${opLabel}\nTingkat: ${diffLabel}\nTarget Skor: ${gameState.targetScore} Poin`;
         navigator.clipboard.writeText(text);
         btnCopy.innerHTML = '<i class="fas fa-check text-emerald-400 mr-1.5"></i> Tersalin!';
         setTimeout(() => {

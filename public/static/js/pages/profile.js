@@ -79,7 +79,7 @@ export async function renderProfile() {
                         <div class="border-t border-slate-100 pt-5 text-left space-y-3.5 text-xs">
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-400 font-medium">Sekolah Induk</span>
-                                <span class="font-bold text-slate-800 text-right truncate max-w-[170px]">${escapeHtml(profile.sekolah || 'Gugus 3')}</span>
+                                <span class="font-bold text-slate-800 text-right truncate max-w-[170px]">${escapeHtml(profile.sekolah || 'Sekolah Mitra')}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-400 font-medium">Jabatan / Mapel</span>

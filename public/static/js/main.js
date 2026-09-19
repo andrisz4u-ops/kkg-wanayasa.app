@@ -195,7 +195,7 @@ window.openPwaGuideModal = function() {
         <img src="/static/icons/icon-96x96.png" class="w-12 h-12 rounded-2xl shadow-md border border-teal-500/20" alt="Logo KKG">
         <div>
           <h3 class="text-base font-black text-slate-900 dark:text-white">Pasang di Layar Utama HP</h3>
-          <p class="text-xs text-teal-600 dark:text-teal-400 font-bold">Portal KKG Gugus 3 Wanayasa</p>
+          <p class="text-xs text-teal-600 dark:text-teal-400 font-bold">${escapeHtml(state.settings?.nama_kkg || 'Portal Digital KKG')}</p>
         </div>
       </div>
 
@@ -886,18 +886,28 @@ async function render() {
   const isAuthPage = page === 'login' || page === 'reset-password';
   const isCustomLayout = customLayoutPages.includes(page);
 
+  const namaKkg = state.settings?.nama_kkg || state.tenant?.nama || 'Portal Digital KKG';
+  const kecamatan = state.settings?.kecamatan || '';
+
   const pageMetadata = {
-    home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : 'Beranda Utama', icon: 'fa-home', category: 'Dasbor' },
+    home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : `Beranda ${namaKkg}`, icon: 'fa-home', category: 'Utama' },
     'analisis-cp': { title: 'Analisis CP, TP & ATP (BSKAP 046/2025)', icon: 'fa-book-bookmark', category: 'Asisten AI' },
     'program-sekolah': { title: 'Program Kerja & Pembiasaan Sekolah (AI)', icon: 'fa-file-lines', category: 'Asisten AI' },
-    rpp: { title: 'AI RPP & Modul Ajar Generator', icon: 'fa-magic', category: 'Asisten AI' },
-    kisi: { title: 'Asesmen & Kisi-Kisi HOTS/AKM', icon: 'fa-list-check', category: 'Asisten AI' },
+    rpp: { title: 'Generator Modul Ajar AI', icon: 'fa-wand-magic-sparkles', category: 'Asisten AI' },
+    analisis: { title: 'Analisis CP & Capaian', icon: 'fa-chart-pie', category: 'Asisten AI' },
+    kktp: { title: 'Kriteria Ketuntasan (KKTP)', icon: 'fa-bullseye', category: 'Asisten AI' },
+    prota: { title: 'Program Tahunan (Prota)', icon: 'fa-calendar-alt', category: 'Asisten AI' },
+    promes: { title: 'Program Semester (Promes)', icon: 'fa-calendar-check', category: 'Asisten AI' },
+    atp: { title: 'Alur Tujuan Pembelajaran', icon: 'fa-project-diagram', category: 'Asisten AI' },
+    kisi: { title: 'Kisi-Kisi & Asesmen Pintar', icon: 'fa-list-check', category: 'Asisten AI' },
+    lkpd: { title: 'Lembar Kerja Peserta Didik', icon: 'fa-file-signature', category: 'Asisten AI' },
+    rubrik: { title: 'Rubrik Penilaian Berjenjang', icon: 'fa-tasks', category: 'Asisten AI' },
     slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },
     games: { title: 'Pusat Game Edukasi Interaktif IFP', icon: 'fa-gamepad', category: 'Asisten AI' },
     tts: { title: 'Teka-Teki Silang Edukatif', icon: 'fa-puzzle-piece', category: 'Asisten AI' },
     absensi: { title: 'Presensi & Absensi Kegiatan', icon: 'fa-clipboard-check', category: 'Kegiatan' },
     materi: { title: 'Bank Materi & Modul Ajar', icon: 'fa-book-open', category: 'Akademik' },
-    guru: { title: 'Direktori Pendidik Gugus 3', icon: 'fa-users', category: 'Komunitas' },
+    guru: { title: 'Direktori Pendidik', icon: 'fa-users', category: 'Komunitas' },
     forum: { title: 'Forum Kolaborasi Guru', icon: 'fa-comments', category: 'Komunitas' },
     pengumuman: { title: 'Papan Pengumuman Resmi', icon: 'fa-bullhorn', category: 'Warta' },
     kalender: { title: 'Kalender Kegiatan KKG', icon: 'fa-calendar-alt', category: 'Agenda' },
@@ -910,7 +920,7 @@ async function render() {
     'reset-password': { title: 'Atur Ulang Password', icon: 'fa-key', category: 'Akun' },
     login: { title: 'Masuk Portal', icon: 'fa-sign-in-alt', category: 'Autentikasi' },
   };
-  const currentMeta = pageMetadata[page] || { title: 'Portal KKG Gugus 3', icon: 'fa-graduation-cap', category: 'Aplikasi' };
+  const currentMeta = pageMetadata[page] || { title: `Portal ${namaKkg}`, icon: 'fa-graduation-cap', category: 'Aplikasi' };
 
   if (isAuthPage || isCustomLayout) {
     // Auth pages and Admin pages handle their own full layout
@@ -928,14 +938,15 @@ async function render() {
           <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
              <div class="w-10 h-10 flex items-center justify-center transition-transform duration-300 hover:scale-105 shrink-0">
                 <img 
-                  src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" 
+                  src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" 
                   alt="Logo KKG" 
                   class="w-full h-full object-contain drop-shadow-xs"
+                  onerror="this.src='/static/img/logo-kkg.png'"
                 >
              </div>
              <div class="min-w-0">
-                <h1 class="text-[13px] font-black text-teal-600 uppercase tracking-tight leading-tight">KKG Gugus 3</h1>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block leading-tight">Wanayasa</span>
+                <h1 class="text-[13px] font-black text-teal-600 uppercase tracking-tight leading-tight truncate max-w-[150px]">${escapeHtml(namaKkg)}</h1>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block leading-tight truncate max-w-[150px]">${escapeHtml(kecamatan)}</span>
              </div>
           </div>
 
@@ -953,7 +964,7 @@ async function render() {
                       <i class="fas fa-school"></i>
                     </span>
                     <div class="min-w-0 flex-1">
-                      <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight truncate">${escapeHtml(state.user?.sekolah || 'Gugus 3 Wanayasa')}</p>
+                      <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight truncate">${escapeHtml(state.user?.sekolah || namaKkg)}</p>
                       <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Pendidik Terdaftar</p>
                     </div>
                   </div>
@@ -976,7 +987,7 @@ async function render() {
                       <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Standar BSKAP 2025</p>
                     </div>
                   </div>
-                  <p class="text-[11px] text-slate-500 leading-relaxed font-normal mb-2.5">Platform resmi KKG Gugus 3 Kecamatan Wanayasa.</p>
+                  <p class="text-[11px] text-slate-500 leading-relaxed font-normal mb-2.5">Platform resmi ${escapeHtml(namaKkg)}.</p>
                   <button 
                     onclick="window.openShowcaseModal ? window.openShowcaseModal('rpp') : navigate('home')" 
                     class="w-full py-2 px-3 rounded-xl bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200/80 hover:border-teal-200 text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
@@ -994,7 +1005,7 @@ async function render() {
               <div class="flex items-center justify-between px-1 text-slate-400">
                 <div class="flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs"></span>
-                  <span class="text-xs font-bold text-slate-600 tracking-tight">${escapeHtml(state.tenant?.nama || 'KKG Gugus 3')}</span>
+                  <span class="text-xs font-bold text-slate-600 tracking-tight truncate max-w-[140px]">${escapeHtml(namaKkg)}</span>
                 </div>
                 <span class="text-[10px] font-mono text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded">v2.6</span>
               </div>
@@ -1020,7 +1031,7 @@ async function render() {
                 <div class="flex items-center gap-2">
                   <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">${currentMeta.category}</span>
                   <span class="text-slate-300">•</span>
-                  <span class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">KKG Gugus 3 Wanayasa</span>
+                  <span class="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">${escapeHtml(namaKkg)}</span>
                 </div>
                 <h2 class="text-base font-black text-slate-900 tracking-tight leading-tight">${currentMeta.title}</h2>
               </div>
@@ -1147,11 +1158,11 @@ async function render() {
           <header id="app-mobile-header" class="md:hidden sticky top-0 left-0 right-0 z-30 px-4 py-2.5 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between shadow-2xs pt-[max(0.6rem,env(safe-area-inset-top))]">
              <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigate('home')">
                 <div class="w-8 h-8 flex items-center justify-center shrink-0">
-                   <img src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" class="w-full h-full object-contain drop-shadow-2xs" alt="Logo">
+                   <img src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" class="w-full h-full object-contain drop-shadow-2xs" alt="Logo" onerror="this.src='/static/img/logo-kkg.png'">
                 </div>
                 <div>
-                   <h1 class="text-xs font-black text-teal-600 uppercase tracking-tight leading-none">KKG Gugus 3</h1>
-                   <span class="text-[9px] font-bold text-slate-400 leading-none block truncate max-w-[140px] mt-0.5">${currentMeta.title}</span>
+                   <h1 class="text-xs font-black text-teal-600 uppercase tracking-tight leading-none truncate max-w-[130px]">${escapeHtml(namaKkg)}</h1>
+                   <span class="text-[9px] font-bold text-slate-400 leading-none block truncate max-w-[130px] mt-0.5">${currentMeta.title}</span>
                 </div>
              </div>
              <div class="flex items-center gap-2">
@@ -1195,9 +1206,9 @@ async function render() {
             <div class="flex justify-between items-center mb-12">
               <div class="flex items-center gap-3">
                  <div class="w-12 h-12 flex items-center justify-center">
-                    <img src="/static/img/logo-kkg.png?v=${window.__APP_VERSION__}" class="w-full h-full object-contain">
+                    <img src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" class="w-full h-full object-contain" onerror="this.src='/static/img/logo-kkg.png'">
                  </div>
-                 <h1 class="text-sm font-black text-teal-500 uppercase tracking-tighter">KKG Gugus 3</h1>
+                 <h1 class="text-sm font-black text-teal-500 uppercase tracking-tighter truncate max-w-[150px]">${escapeHtml(namaKkg)}</h1>
               </div>
               <button onclick="document.getElementById('mobile-menu').classList.add('hidden')" class="p-2 text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xl"></i></button>
             </div>
@@ -1408,6 +1419,17 @@ async function init() {
       console.warn('ℹ️ Tenant fallback active');
     });
 
+  const sekolahPromise = api('/sekolah', { timeout: 4000 })
+    .then((resSekolah) => {
+      if (resSekolah.success && Array.isArray(resSekolah.data)) {
+        state.sekolahList = resSekolah.data;
+        console.log(`✅ Loaded ${resSekolah.data.length} schools`);
+      }
+    })
+    .catch(() => {
+      console.warn('ℹ️ Schools fallback active');
+    });
+
   const csrfPromise = (async () => {
     const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('csrf_token='));
     if (csrfCookie) return;
@@ -1420,7 +1442,11 @@ async function init() {
   // Wait for all critical background data before first render
   // This prevents the "3x spinner" flicker
   updateStatus('Memuat konten...');
-  await Promise.allSettled([sessionPromise, settingsPromise, tenantPromise, csrfPromise]);
+  await Promise.allSettled([sessionPromise, settingsPromise, tenantPromise, sekolahPromise, csrfPromise]);
+
+  // Set dynamic browser page title
+  const activeOrgName = state.settings?.nama_kkg || state.tenant?.nama || 'KKG';
+  document.title = `Portal Digital ${activeOrgName}`;
 
   // Finally, render once with all data ready
   await render();

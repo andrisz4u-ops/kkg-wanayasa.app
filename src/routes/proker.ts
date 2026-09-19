@@ -265,7 +265,7 @@ proker.get('/:id/download', async (c) => {
 
     // Get KKG settings
     const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('nama_ketua', 'nip_ketua', 'alamat_sekretariat', 'kop_surat_url', 'nama_organisasi', 'tahun_ajaran')"
+      "SELECT key, value FROM settings"
     ).all();
 
     const settings: any = {};

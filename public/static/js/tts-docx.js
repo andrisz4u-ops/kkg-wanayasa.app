@@ -356,7 +356,7 @@ export async function generateTtsDocx(data, formData, kopSuratUrl) {
             width: { size: 50, type: WidthType.PERCENTAGE },
             borders: NO_BORDERS,
             children: [
-              makePara(`Wanayasa, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, { align: AlignmentType.CENTER, size: 20 }),
+              makePara(`${window.state?.settings?.kecamatan || 'Tempat'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, { align: AlignmentType.CENTER, size: 20 }),
               makePara('Guru Pengampu', { align: AlignmentType.CENTER, size: 20 }),
               makePara('', { spaceAfter: 36 }),
               makePara(formData.namaGuru || '............................................', { bold: true, underline: true, align: AlignmentType.CENTER, size: 20 }),
@@ -380,7 +380,7 @@ export async function generateTtsDocx(data, formData, kopSuratUrl) {
         default: new Header({
           children: [new Paragraph({
             alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: 'Lembar Kerja Siswa (LKPD) TTS • KKG Wanayasa', font: FONT_LATIN, size: 16, italic: true })]
+            children: [new TextRun({ text: `Lembar Kerja Siswa (LKPD) TTS • ${window.state?.settings?.nama_kkg || 'KKG'}`, font: FONT_LATIN, size: 16, italic: true })]
           })]
         })
       },

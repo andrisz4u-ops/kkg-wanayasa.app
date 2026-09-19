@@ -183,7 +183,7 @@ export function renderGames(opts = {}) {
   if (!state.user) {
     return renderLockedFeature(
       'Pusat Game Edukasi Interaktif IFP',
-      'Maaf, fitur Game Edukasi khusus untuk anggota guru terdaftar Gugus 3 Wanayasa. Silakan masuk / login akun pendidik Anda terlebih dahulu untuk mengakses katalog dan memainkan seluruh 7 game edukatif kelas.',
+      `Maaf, fitur Game Edukasi khusus untuk anggota guru terdaftar ${state.settings?.nama_kkg || 'KKG'}. Silakan masuk / login akun pendidik Anda terlebih dahulu untuk mengakses katalog dan memainkan seluruh 7 game edukatif kelas.`,
       [
         '7 Permainan Edukasi Kurikulum Merdeka (TTS, Berhitung, Ular Tangga, Pinisi, dll)',
         'Mode Layar Sentuh Besar IFP & Smart Board Interaktif Kelas',

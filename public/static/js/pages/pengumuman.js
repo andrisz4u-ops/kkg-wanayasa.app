@@ -99,7 +99,7 @@ export async function renderPengumuman() {
           <h1 class="text-3xl font-display font-black text-teal-950 md:text-5xl tracking-tight">
             <i class="fas fa-bullhorn text-teal-500 mr-4"></i>Pengumuman
           </h1>
-          <p class="text-slate-600 mt-3 text-lg">Informasi terkini, agenda, dan berita seputar KKG Gugus 3.</p>
+          <p class="text-slate-600 mt-3 text-lg">Informasi terkini, agenda, dan berita seputar ${escapeHtml(state.settings?.nama_kkg || 'KKG')}.</p>
         </div>
         ${state.user?.role === 'admin' ? `
           <button onclick="showAddPengumuman()" class="px-8 py-4 bg-teal-500 text-white rounded-full font-bold text-sm shadow-xl shadow-teal-500/20 hover:-translate-y-1 hover:shadow-2xl hover:shadow-teal-500/30 transition-all duration-300 focus:outline-none">

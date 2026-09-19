@@ -1261,7 +1261,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
   const LINE_SPACING_115 = 276;
 
   const doc = new Document({
-    creator: 'KKG Gugus 3 Wanayasa',
+    creator: window.state?.settings?.nama_kkg || 'Portal Digital KKG',
     description: `Asesmen ${formData.mataPelajaran || ''} ${formData.jenjangKelas || ''}`,
     styles: {
       default: {

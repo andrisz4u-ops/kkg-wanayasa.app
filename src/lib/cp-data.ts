@@ -627,8 +627,28 @@ export async function seedDefaultCPToDatabase(db: any): Promise<number> {
       return countCheck.count; // Sudah ada data
     }
   } catch (e) {
-    console.warn('[seedDefaultCPToDatabase] Table might not exist yet:', e);
-    return 0;
+    console.warn('[seedDefaultCPToDatabase] Table might not exist yet, attempting creation:', e);
+    try {
+      const createStmt = db.prepare(`
+        CREATE TABLE IF NOT EXISTS capaian_pembelajaran (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mata_pelajaran TEXT NOT NULL,
+            fase TEXT NOT NULL,
+            teks_cp TEXT NOT NULL,
+            elemen_json TEXT NOT NULL,
+            regulasi TEXT DEFAULT 'BSKAP No. 046 Tahun 2025',
+            updated_by INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(mata_pelajaran, fase)
+        )
+      `);
+      if (createStmt && typeof createStmt.run === 'function') {
+        await createStmt.run();
+      }
+    } catch (createErr) {
+      console.warn('[seedDefaultCPToDatabase] Table creation error:', createErr);
+    }
   }
 
   const phases = ['Fase A', 'Fase B', 'Fase C'];

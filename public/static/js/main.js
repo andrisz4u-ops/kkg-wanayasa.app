@@ -10,6 +10,7 @@ import { renderNavbar, renderFooter, toggleMobileMenu } from './components.js';
 
 // Theme & Accessibility
 import { initTheme, toggleTheme, renderThemeToggle } from './theme.js';
+import { applyThemeColor } from './theme-color.js';
 import { initA11y, announce, renderSkipLinks } from './a11y.js';
 import { fetchUnreadCount, renderNotificationBell } from './notifications.js';
 
@@ -22,6 +23,7 @@ window.toggleMobileMenu = toggleMobileMenu;
 window.showToast = showToast;
 window.confirm = confirm;
 window.toggleTheme = toggleTheme;
+window.applyThemeColor = applyThemeColor;
 window.state = state; // Expose state for inline onclick handlers
 
 // User Profile Dropdown Menu Handlers
@@ -1370,8 +1372,13 @@ async function init() {
 
   // Initialize Theme, Accessibility, and PWA
   initTheme();
+  applyThemeColor(state.settings?.theme_color || 'teal');
   initA11y();
   registerServiceWorker();
+
+  document.addEventListener('settings-updated', (e) => {
+    if (e.detail?.theme_color) applyThemeColor(e.detail.theme_color);
+  });
 
   // Parse initial URL
   const path = window.location.pathname.slice(1);
@@ -1401,6 +1408,9 @@ async function init() {
     .then((resSettings) => {
       if (resSettings.success && resSettings.data) {
         state.settings = { ...state.settings, ...resSettings.data };
+        if (state.settings.theme_color) {
+          applyThemeColor(state.settings.theme_color);
+        }
         console.log('✅ Settings loaded');
       }
     })

@@ -1,6 +1,7 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml } from '../../utils.js';
+import { THEME_PRESETS, renderThemeCards, applyThemeColor } from '../../theme-color.js';
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 
 // Load Settings Data
@@ -50,6 +51,18 @@ window.loadAdminSettings = async function loadAdminSettings() {
     const logoContainer = document.getElementById('logo-preview');
     if (logoContainer && s.logo_url) {
       logoContainer.innerHTML = `<img src="${s.logo_url}" alt="Logo KKG" class="w-full h-full object-contain">`;
+    }
+
+    // Theme Color Presets
+    const themeGrid = document.getElementById('theme-selector-grid');
+    if (themeGrid) {
+      const currentTheme = s.theme_color || 'teal';
+      themeGrid.innerHTML = renderThemeCards(currentTheme);
+      setVal('profil-theme_color', currentTheme);
+      const labelEl = document.getElementById('current-theme-label');
+      if (labelEl && THEME_PRESETS[currentTheme]) {
+        labelEl.textContent = THEME_PRESETS[currentTheme].name;
+      }
     }
 
   } catch (e) { console.error('Failed to load settings:', e); }
@@ -106,6 +119,7 @@ window.saveProfilKKG = async function () {
       pengawas_instansi: document.getElementById('profil-pengawas_instansi')?.value || '',
       kutipan_pengawas: document.getElementById('profil-kutipan_pengawas')?.value || '',
       kutipan_ketua: document.getElementById('profil-kutipan_ketua')?.value || '',
+      theme_color: document.getElementById('profil-theme_color')?.value || 'teal',
       supabase_url: document.getElementById('settings-supabase_url')?.value || '',
       supabase_key: document.getElementById('settings-supabase_key')?.value || '',
       supabase_bucket: document.getElementById('settings-supabase_bucket')?.value || '',
@@ -116,6 +130,9 @@ window.saveProfilKKG = async function () {
     // Update global state and dispatch settings-updated event
     if (window.state) {
       window.state.settings = { ...window.state.settings, ...data };
+    }
+    if (data.theme_color) {
+      applyThemeColor(data.theme_color);
     }
     document.dispatchEvent(new CustomEvent('settings-updated', { detail: data }));
 

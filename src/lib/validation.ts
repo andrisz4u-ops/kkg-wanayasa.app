@@ -403,6 +403,7 @@ export const updateSettingsSchema = z.object({
     pengawas_instansi: z.string().max(150).optional(),
     kutipan_pengawas: z.string().max(2000).optional(),
     kutipan_ketua: z.string().max(2000).optional(),
+    theme_color: z.string().max(50).optional(),
 }).passthrough();
 
 // Extended admin schemas for better validation

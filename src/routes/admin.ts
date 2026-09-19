@@ -330,7 +330,8 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
       'logo_url', 'kop_surat_url',
       'nama_sekretaris', 'nama_bendahara',
       'struktur_organisasi', 'visi_misi',
-      'npsn_sekolah_induk', 'nama_sekolah_induk'
+      'npsn_sekolah_induk', 'nama_sekolah_induk',
+      'theme_color'
     ];
 
     const placeholders = settingsKeys.map(() => '?').join(',');
@@ -426,7 +427,8 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       'supabase_url', 'supabase_bucket',
       // Landing page customization
       'hero_title', 'hero_deskripsi', 'visi', 'misi',
-      'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua'
+      'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
+      'theme_color'
     ];
 
     const updates: { key: string; value: string }[] = [];

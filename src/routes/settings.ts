@@ -14,7 +14,8 @@ settings.get('/public', async (c) => {
             'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk',
             'nama_ketua', 'nama_sekretaris', 'nama_bendahara', 'email_kkg', 'telepon_kkg', 'website_kkg',
             'hero_title', 'hero_deskripsi', 'visi', 'misi', 'visi_misi',
-            'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua'
+            'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
+            'theme_color'
         ];
 
         const placeholders = keys.map(() => '?').join(',');

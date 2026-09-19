@@ -418,6 +418,31 @@ export async function renderAdmin() {
         </div>
       </div>
 
+      <!-- Theme Color Section -->
+      <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="font-display text-2xl font-semibold text-slate-900 flex items-center gap-4 tracking-tighter">
+              <span class="w-10 h-10 rounded-2xl bg-slate-100/50 backdrop-blur-md border border-slate-200/70 text-slate-900 flex items-center justify-center text-sm shadow-sm shadow-slate-200/50">
+                <i class="fas fa-palette"></i>
+              </span>
+              Tema & Warna Dasar Portal
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">Pilih template warna identitas khas KKG Gugus Anda. Seluruh tombol, badge, gradasi hero, dan elemen aksen website akan otomatis mengikuti tema terpilih.</p>
+          </div>
+          <span id="theme-active-badge" class="px-3.5 py-1.5 rounded-full text-xs font-bold border border-slate-200 bg-slate-50 text-slate-700 shrink-0 self-start sm:self-auto flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-900 animate-pulse"></span>
+            Tema Aktif: <span id="current-theme-label" class="font-extrabold text-slate-900">Teal Emerald</span>
+          </span>
+        </div>
+
+        <input type="hidden" id="profil-theme_color" value="teal">
+        
+        <div id="theme-selector-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically by renderThemeCards() in settings.js -->
+        </div>
+      </div>
+
       <!-- Alamat Section -->
       <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
         <h2 class="font-display text-2xl font-semibold text-slate-900 mb-8 flex items-center gap-4 tracking-tighter">

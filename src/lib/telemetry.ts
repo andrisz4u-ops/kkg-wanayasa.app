@@ -32,7 +32,7 @@ export async function recordAIGeneration(db: D1Database, opts: LogAIOptions): Pr
         `).bind(
             opts.user_id || 1,
             opts.user_nama || 'Guru',
-            opts.sekolah || 'SDN 2 Nangerang',
+            opts.sekolah || 'SD Negeri Binaan',
             safeFeature,
             opts.mata_pelajaran || null,
             safeTopic,

@@ -600,7 +600,7 @@ KEMBALIKAN HANYA DALAM FORMAT JSON VALID:
             await recordAIGeneration(c.env.DB, {
                 user_id: user?.id || 1,
                 user_nama: user?.nama || 'Guru',
-                sekolah: user?.sekolah || 'SDN 2 Nangerang',
+                sekolah: user?.sekolah || 'SD Negeri Binaan',
                 feature_type: 'SLIDE',
                 mata_pelajaran: mataPelajaran,
                 topik: topik,

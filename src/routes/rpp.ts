@@ -241,7 +241,7 @@ rpp.post('/generate', async (c) => {
       await recordAIGeneration(c.env.DB, {
         user_id: user?.id || 1,
         user_nama: user?.nama || (namaGuru || 'Guru'),
-        sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
+        sekolah: user?.sekolah || (namaSekolah || 'SD Negeri Binaan'),
         feature_type: 'RPP',
         mata_pelajaran: mataPelajaran,
         topik: topik,
@@ -350,7 +350,7 @@ rpp.post('/generate-stream', async (c) => {
           await recordAIGeneration(c.env.DB, {
             user_id: user?.id || 1,
             user_nama: user?.nama || (namaGuru || 'Guru'),
-            sekolah: user?.sekolah || (namaSekolah || 'SDN 2 Nangerang'),
+            sekolah: user?.sekolah || (namaSekolah || 'SD Negeri Binaan'),
             feature_type: 'RPP',
             mata_pelajaran: mataPelajaran,
             topik: topik,

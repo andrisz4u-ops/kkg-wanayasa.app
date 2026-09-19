@@ -462,14 +462,19 @@ window.showAddUserModal = function () {
 
 // Helper: Populate School Select
 async function populateSekolahSelect(selectEl, selectedValue = '') {
-  const fallbackSchools = [
-    "SDN 2 Nangerang", "SDN 1 Nangerang", "SDN Nagrog", "SDN Raharja",
-    "SDN 1 Cibuntu", "SDN 2 Cibuntu", "SDN Sumurugul", "SDN Sakambang", "SDIT Al-Qalam"
-  ];
-
+  let schools = [];
   try {
     const res = await api('/sekolah');
-    const schools = (res.data && res.data.length > 0) ? res.data : fallbackSchools.map(n => ({ nama: n, tipe: n.includes('Al-Qalam') ? 'swasta' : 'negeri', is_sekretariat: n.includes('SDN 2 Nangerang') }));
+    if (res.data && res.data.length > 0) {
+      schools = res.data;
+    } else if (window.state?.sekolahList && window.state.sekolahList.length > 0) {
+      schools = window.state.sekolahList;
+    }
+  } catch (e) {
+    if (window.state?.sekolahList && window.state.sekolahList.length > 0) {
+      schools = window.state.sekolahList;
+    }
+  }
 
     selectEl.innerHTML = '<option value="">-- Pilih Sekolah --</option>' +
       schools.map(s => {

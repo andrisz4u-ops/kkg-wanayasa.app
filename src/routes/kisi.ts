@@ -1218,7 +1218,7 @@ async function saveAssessmentTelemetryAndBankSoal(
         await recordAIGeneration(db, {
             user_id: user?.id || 1,
             user_nama: user?.nama || (validated.namaGuru || 'Guru'),
-            sekolah: user?.sekolah || (validated.namaSekolah || 'SDN 2 Nangerang'),
+            sekolah: user?.sekolah || (validated.namaSekolah || 'SD Negeri Binaan'),
             feature_type: 'ASESMEN',
             mata_pelajaran: validated.mataPelajaran,
             topik: validated.topik,

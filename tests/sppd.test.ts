@@ -174,6 +174,52 @@ describe('Paket Surat Tugas & SPPD Unit Tests', () => {
             expect(buffer[2]).toBe(0x03);
             expect(buffer[3]).toBe(0x04);
         });
+
+        it('should handle complex structured multi-level LHP text from AI without error', async () => {
+            const complexLhpText = `1. Peningkatan Kompetensi Teknis Pembuatan Media Pembelajaran:
+- Para peserta berhasil menguasai teknik pembuatan media pembelajaran interaktif sederhana menggunakan aplikasi presentasi dan platform digital.
+- Telah dibuat contoh media pembelajaran berbasis multimedia untuk mata pelajaran Matematika dan Bahasa Indonesia.
+2. Penyusunan dan Revisi Perangkat Pembelajaran:
+- Terjadi diskusi dan penyempurnaan Rencana Pelaksanaan Pembelajaran (RPP) satu lembar dengan mengintegrasikan multimedia.
+- Hasilnya berupa draft RPP terbaru yang memuat langkah-langkah kegiatan berbantuan multimedia.
+3. Kesepakatan Tindak Lanjut di Tingkat Sekolah (SDN 2 Nangerang):
+- Guru peserta bersepakat untuk mengimplementasikan minimal satu media pembelajaran multimedia.
+- Berkomitmen untuk berbagi praktik baik dan hasil implementasi dalam forum KKG wilayah.`;
+
+            const sppdInput = {
+                sekolah_asal_nama: 'SD Negeri 2 Nangerang',
+                kepala_sekolah_asal: "H. Ujang Ma'mun, S.Pd.I",
+                nip_kepala_sekolah_asal: '196912122007011021',
+                alamat_sekolah_asal: 'Kp. Peuntas Rt 08/03 Desa Nangerang',
+                sekolah_tujuan_nama: 'Gedung Guru PGRI Cabang Wanayasa',
+                kepala_sekolah_tujuan: 'Ketua PGRI Cabang Wanayasa',
+                daftar_guru: [
+                    {
+                        nama: 'Andris Hadiansyah, S.Pd',
+                        nip: '198911062024211020',
+                        pangkat_golongan: 'Penata Muda / IX',
+                        jabatan: 'Guru Kelas'
+                    },
+                    {
+                        nama: 'Niken Fatmawati',
+                        nip: '198911062019211020',
+                        pangkat_golongan: 'Penata Muda / IX',
+                        jabatan: 'Guru Kelas'
+                    }
+                ],
+                tanggal_kegiatan: '2026-09-17',
+                waktu_kegiatan: '07.30 s.d Selesai',
+                tempat_kegiatan: 'Gedung Guru PGRI Cabang Wanayasa',
+                agenda: 'Pelatihan pembelajaran berbasis multimedia',
+                isi_lhp: complexLhpText
+            };
+
+            const buffer = await generateSppdBuffer(sppdInput);
+            expect(buffer).toBeDefined();
+            expect(buffer.length).toBeGreaterThan(2000);
+            expect(buffer[0]).toBe(0x50);
+            expect(buffer[1]).toBe(0x4B);
+        });
     });
 
     describe('Schema Auto-Healing & Legacy Resilience', () => {

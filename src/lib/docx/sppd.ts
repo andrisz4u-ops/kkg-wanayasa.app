@@ -208,12 +208,42 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
     const nomorSPT = data.nomor_surat_tugas || `421.2 / 058 / ${data.sekolah_asal_nama.replace(/\s+/g, '')} / IX / 2026`;
     const nomorSPPD = data.nomor_sppd || `090 / 058 / ${data.sekolah_asal_nama.replace(/\s+/g, '')} / IX / 2026`;
 
-    // Standard Page margins (1 inch top, bottom, right; 1.25 inch left)
+    // Standard Page margins (0.8 inch top, bottom, right; 1 inch left for official binding)
     const pageMargins = {
         top: convertInchesToTwip(0.8),
         right: convertInchesToTwip(0.8),
         bottom: convertInchesToTwip(0.8),
         left: convertInchesToTwip(1),
+    };
+
+    // Compact page margins for LHP to comfortably fit comprehensive AI reports and signature on 1 page
+    const lhpPageMargins = {
+        top: convertInchesToTwip(0.55),
+        right: convertInchesToTwip(0.8),
+        bottom: convertInchesToTwip(0.55),
+        left: convertInchesToTwip(0.85),
+    };
+
+    // Reusable cell padding definitions (in twips)
+    const cellPaddingStandard = {
+        top: 100,
+        bottom: 100,
+        left: 140,
+        right: 140,
+    };
+
+    const cellPaddingSpd = {
+        top: 110,
+        bottom: 110,
+        left: 140,
+        right: 140,
+    };
+
+    const cellPaddingVisum = {
+        top: 120,
+        bottom: 120,
+        left: 140,
+        right: 140,
     };
 
     // Prepare KOP Surat (custom image from school account or dynamic table kop)
@@ -241,10 +271,10 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
         properties: { page: { margin: pageMargins } },
         children: [
             ...kopSection1,
-            new Paragraph({ spacing: { before: 180, after: 40 }, alignment: AlignmentType.CENTER, children: [
+            new Paragraph({ spacing: { before: 200, after: 40 }, alignment: AlignmentType.CENTER, children: [
                 new TextRun({ text: 'SURAT PERINTAH TUGAS', bold: true, underline: {}, size: 26, font: FONT_FAMILY })
             ]}),
-            new Paragraph({ spacing: { after: 160 }, alignment: AlignmentType.CENTER, children: [
+            new Paragraph({ spacing: { after: 180 }, alignment: AlignmentType.CENTER, children: [
                 new TextRun({ text: `Nomor : ${nomorSPT}`, size: 22, font: FONT_FAMILY })
             ]}),
 
@@ -257,29 +287,32 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                         children: [
                             new TableCell({
                                 width: { size: 15, type: WidthType.PERCENTAGE },
+                                margins: { top: 60, bottom: 60, left: 60, right: 60 },
                                 borders: tableBorderNone,
-                                children: [new Paragraph({ children: [new TextRun({ text: 'Dasar', bold: true, font: FONT_FAMILY, size: FONT_SIZE_SMALL })] })],
+                                children: [new Paragraph({ children: [new TextRun({ text: 'Dasar', bold: true, font: FONT_FAMILY, size: 22 })] })],
                             }),
                             new TableCell({
                                 width: { size: 3, type: WidthType.PERCENTAGE },
+                                margins: { top: 60, bottom: 60, left: 60, right: 60 },
                                 borders: tableBorderNone,
-                                children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: FONT_SIZE_SMALL })] })],
+                                children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 22 })] })],
                             }),
                             new TableCell({
                                 width: { size: 82, type: WidthType.PERCENTAGE },
+                                margins: { top: 60, bottom: 60, left: 60, right: 60 },
                                 borders: tableBorderNone,
-                                children: [new Paragraph({ children: [new TextRun({ text: data.dasar_surat || 'Surat Undangan dari Pengurus Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa', font: FONT_FAMILY, size: FONT_SIZE_SMALL })] })],
+                                children: [new Paragraph({ spacing: { line: 260 }, children: [new TextRun({ text: data.dasar_surat || 'Surat Undangan dari Pengurus Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa', font: FONT_FAMILY, size: 22 })] })],
                             }),
                         ],
                     }),
                 ],
             }),
 
-            new Paragraph({ spacing: { before: 140, after: 80 }, children: [
-                new TextRun({ text: 'MEMERINTAHKAN :', bold: true, font: FONT_FAMILY, size: FONT_SIZE_SMALL })
+            new Paragraph({ spacing: { before: 180, after: 80 }, children: [
+                new TextRun({ text: 'MEMERINTAHKAN :', bold: true, font: FONT_FAMILY, size: 22 })
             ]}),
-            new Paragraph({ spacing: { after: 80 }, children: [
-                new TextRun({ text: `Kepala ${data.sekolah_asal_nama} Kecamatan Wanayasa Kabupaten Purwakarta menugaskan kepada:`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })
+            new Paragraph({ spacing: { after: 100 }, children: [
+                new TextRun({ text: `Kepala ${data.sekolah_asal_nama} Kecamatan Wanayasa Kabupaten Purwakarta menugaskan kepada:`, font: FONT_FAMILY, size: 22 })
             ]}),
 
             // Tabel Daftar Guru
@@ -288,59 +321,61 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 borders: tableBorderThin,
                 rows: [
                     new TableRow({
+                        cantSplit: true,
                         children: [
-                            new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama', bold: true, font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'NIP', bold: true, font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pangkat / Gol', bold: true, font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jabatan', bold: true, font: FONT_FAMILY, size: 20 })] })] }),
+                            new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama', bold: true, font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'NIP', bold: true, font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pangkat / Gol', bold: true, font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jabatan', bold: true, font: FONT_FAMILY, size: 22 })] })] }),
                         ],
                     }),
                     ...guruList.map((g, idx) => new TableRow({
+                        cantSplit: true,
                         children: [
-                            new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx + 1), font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.nama, bold: true, font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.nip || '-', font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.pangkat_golongan || '-', font: FONT_FAMILY, size: 20 })] })] }),
-                            new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.jabatan || 'Guru', font: FONT_FAMILY, size: 20 })] })] }),
+                            new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx + 1), font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.nama, bold: true, font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 26, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.nip || '-', font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.pangkat_golongan || '-', font: FONT_FAMILY, size: 22 })] })] }),
+                            new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, margins: cellPaddingStandard, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: g.jabatan || 'Guru', font: FONT_FAMILY, size: 22 })] })] }),
                         ],
                     })),
                 ],
             }),
 
             // Untuk
-            new Paragraph({ spacing: { before: 140, after: 60 }, children: [
-                new TextRun({ text: `Untuk : Mengikuti kegiatan Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa, yang akan dilaksanakan pada:`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })
+            new Paragraph({ spacing: { before: 180, after: 80 }, children: [
+                new TextRun({ text: `Untuk : Mengikuti kegiatan Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa, yang akan dilaksanakan pada:`, font: FONT_FAMILY, size: 22 })
             ]}),
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 borders: tableBorderNone,
                 rows: [
                     new TableRow({ children: [
-                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Hari / Tanggal', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: hariTglIndo, bold: true, font: FONT_FAMILY, size: 20 })] })] }),
+                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Hari / Tanggal', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: hariTglIndo, bold: true, font: FONT_FAMILY, size: 22 })] })] }),
                     ]}),
                     new TableRow({ children: [
-                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Waktu', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: `${data.waktu_kegiatan || '08.00 WIB s.d Selesai'}`, font: FONT_FAMILY, size: 20 })] })] }),
+                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Waktu', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: `${data.waktu_kegiatan || '08.00 WIB s.d Selesai'}`, font: FONT_FAMILY, size: 22 })] })] }),
                     ]}),
                     new TableRow({ children: [
-                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Tempat', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: data.tempat_kegiatan, font: FONT_FAMILY, size: 20 })] })] }),
+                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Tempat', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: data.tempat_kegiatan, font: FONT_FAMILY, size: 22 })] })] }),
                     ]}),
                     new TableRow({ children: [
-                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Keperluan / Acara', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 20 })] })] }),
-                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: data.agenda, bold: true, font: FONT_FAMILY, size: 20 })] })] }),
+                        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: 'Keperluan / Acara', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 3, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: ':', font: FONT_FAMILY, size: 22 })] })] }),
+                        new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, margins: { top: 50, bottom: 50, left: 60, right: 60 }, borders: tableBorderNone, children: [new Paragraph({ children: [new TextRun({ text: data.agenda, bold: true, font: FONT_FAMILY, size: 22 })] })] }),
                     ]}),
                 ],
             }),
 
-            new Paragraph({ spacing: { before: 120, after: 120 }, children: [
-                new TextRun({ text: 'Demikian Surat Perintah Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab dan melaporkan hasilnya setelah kegiatan selesai.', font: FONT_FAMILY, size: FONT_SIZE_SMALL })
+            new Paragraph({ spacing: { before: 180, after: 200 }, children: [
+                new TextRun({ text: 'Demikian Surat Perintah Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab dan melaporkan hasilnya setelah kegiatan selesai.', font: FONT_FAMILY, size: 22 })
             ]}),
 
             // Tanda Tangan KS Asal
@@ -349,18 +384,19 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 borders: tableBorderNone,
                 rows: [
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
                             new TableCell({
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : Wanayasa`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 480 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 22 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${settings?.kecamatan || 'Wanayasa'}`, font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ spacing: { after: 720 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 24 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 22 })] }),
                                 ],
                             }),
                         ],
@@ -388,9 +424,9 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 width: { size: 40, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: 'Lembar Ke : I', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: 'Kode No    : -', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: `Nomor       : ${nomorSPPD}`, font: FONT_FAMILY, size: 18 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Lembar Ke : I', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kode No    : -', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: `Nomor       : ${nomorSPPD}`, font: FONT_FAMILY, size: 20 })] }),
                                 ],
                             }),
                         ],
@@ -398,11 +434,11 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 ],
             }),
 
-            new Paragraph({ spacing: { after: 40 }, alignment: AlignmentType.CENTER, children: [
+            new Paragraph({ spacing: { after: 50 }, alignment: AlignmentType.CENTER, children: [
                 new TextRun({ text: 'SURAT PERJALANAN DINAS (SPD)', bold: true, underline: {}, size: 26, font: FONT_FAMILY })
             ]}),
-            new Paragraph({ spacing: { after: 120 }, alignment: AlignmentType.CENTER, children: [
-                new TextRun({ text: `Nomor : ${nomorSPPD}`, size: 20, font: FONT_FAMILY })
+            new Paragraph({ spacing: { after: 160 }, alignment: AlignmentType.CENTER, children: [
+                new TextRun({ text: `Nomor : ${nomorSPPD}`, size: 22, font: FONT_FAMILY })
             ]}),
 
             // Tabel 10 Poin Standar SPPD
@@ -411,120 +447,121 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 borders: tableBorderThin,
                 rows: [
                     // 1
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '1.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Pejabat Pembuat Komitmen / Pejabat yang memberi perintah', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: `Kepala ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 19 })] })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '1.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Pejabat Pembuat Komitmen / Pejabat yang memberi perintah', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: `Kepala ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 21 })] })] }),
                     ]}),
                     // 2
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '2.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Nama Pegawai yang diperintahkan', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: guruUtama.nama, bold: true, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `NIP. ${guruUtama.nip || '-'}`, font: FONT_FAMILY, size: 18 })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '2.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Nama Pegawai yang diperintahkan', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: guruUtama.nama, bold: true, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: `NIP. ${guruUtama.nip || '-'}`, font: FONT_FAMILY, size: 20 })] }),
                         ]}),
                     ]}),
                     // 3
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '3.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: 'a. Pangkat dan Golongan ruang gaji', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'b. Jabatan / Instansi', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'c. Tingkat Biaya Perjalanan Dinas', font: FONT_FAMILY, size: 19 })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '3.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'a. Pangkat dan Golongan ruang gaji', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'b. Jabatan / Instansi', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: 'c. Tingkat Biaya Perjalanan Dinas', font: FONT_FAMILY, size: 21 })] }),
                         ]}),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: `a. ${guruUtama.pangkat_golongan || '-'}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `b. ${guruUtama.jabatan || 'Guru'} / ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `c. ${data.tingkat_biaya || 'Tingkat C / Biaya Transport Lokal'}`, font: FONT_FAMILY, size: 19 })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `a. ${guruUtama.pangkat_golongan || '-'}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `b. ${guruUtama.jabatan || 'Guru'} / ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: `c. ${data.tingkat_biaya || 'Tingkat C / Biaya Transport Lokal'}`, font: FONT_FAMILY, size: 21 })] }),
                         ]}),
                     ]}),
                     // 4
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '4.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Maksud Perjalanan Dinas', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: data.agenda, font: FONT_FAMILY, size: 19 })] })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '4.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Maksud Perjalanan Dinas', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: data.agenda, font: FONT_FAMILY, size: 21 })] })] }),
                     ]}),
                     // 5
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '5.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Alat angkut yang dipergunakan', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: data.alat_angkut || 'Kendaraan Pribadi / Sepeda Motor', font: FONT_FAMILY, size: 19 })] })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '5.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Alat angkut yang dipergunakan', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: data.alat_angkut || 'Kendaraan Pribadi / Sepeda Motor', font: FONT_FAMILY, size: 21 })] })] }),
                     ]}),
                     // 6
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '6.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: 'a. Tempat berangkat', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'b. Tempat tujuan', font: FONT_FAMILY, size: 19 })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '6.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'a. Tempat berangkat', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: 'b. Tempat tujuan', font: FONT_FAMILY, size: 21 })] }),
                         ]}),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: `a. ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `b. ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 19 })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `a. ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: `b. ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 21 })] }),
                         ]}),
                     ]}),
                     // 7
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '7.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: 'a. Lamanya Perjalanan Dinas', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'b. Tanggal berangkat', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'c. Tanggal harus kembali/tiba', font: FONT_FAMILY, size: 19 })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '7.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'a. Lamanya Perjalanan Dinas', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'b. Tanggal berangkat', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: 'c. Tanggal harus kembali/tiba', font: FONT_FAMILY, size: 21 })] }),
                         ]}),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: `a. ${data.lama_hari || '1 (satu) hari'}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `b. ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `c. ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 19 })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `a. ${data.lama_hari || '1 (satu) hari'}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `b. ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: `c. ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 21 })] }),
                         ]}),
                     ]}),
                     // 8
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '8.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Pengikut : Nama', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: pengikutStr, font: FONT_FAMILY, size: 19 })] })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '8.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Pengikut : Nama', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: pengikutStr, font: FONT_FAMILY, size: 21 })] })] }),
                     ]}),
                     // 9
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '9.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: 'Pembebanan Anggaran:', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'a. Instansi', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: 'b. Akun / Mata Anggaran', font: FONT_FAMILY, size: 19 })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '9.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Pembebanan Anggaran:', bold: true, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'a. Instansi', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: 'b. Akun / Mata Anggaran', font: FONT_FAMILY, size: 21 })] }),
                         ]}),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [
-                            new Paragraph({ children: [new TextRun({ text: '', font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `a. ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 19 })] }),
-                            new Paragraph({ children: [new TextRun({ text: `b. ${data.mata_anggaran || 'Dana BOS'}`, font: FONT_FAMILY, size: 19 })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `a. ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 21 })] }),
+                            new Paragraph({ children: [new TextRun({ text: `b. ${data.mata_anggaran || 'Dana BOS'}`, font: FONT_FAMILY, size: 21 })] }),
                         ]}),
                     ]}),
                     // 10
-                    new TableRow({ children: [
-                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '10.', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Keterangan lain-lain', font: FONT_FAMILY, size: 19 })] })] }),
-                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: '-', font: FONT_FAMILY, size: 19 })] })] }),
+                    new TableRow({ cantSplit: true, children: [
+                        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, verticalAlign: VerticalAlign.CENTER, borders: tableBorderThin, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '10.', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 44, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: 'Keterangan lain-lain', font: FONT_FAMILY, size: 21 })] })] }),
+                        new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, margins: cellPaddingSpd, borders: tableBorderThin, children: [new Paragraph({ children: [new TextRun({ text: '-', font: FONT_FAMILY, size: 21 })] })] }),
                     ]}),
                 ],
             }),
 
             // Tanda Tangan SPPD Lembar 1
-            new Paragraph({ spacing: { before: 120 }, children: [] }),
+            new Paragraph({ spacing: { before: 180 }, children: [] }),
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 borders: tableBorderNone,
                 rows: [
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
                             new TableCell({
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${settings?.kecamatan || 'Wanayasa'}`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 460 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 22 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${settings?.kecamatan || 'Wanayasa'}`, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 680 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 24 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 21 })] }),
                                 ],
                             }),
                         ],
@@ -546,20 +583,21 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 borders: tableBorderNone,
                 rows: [
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({
                                 width: { size: 55, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `SPPD No : ${nomorSPPD}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Berangkat dari : ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `(Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Ke : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ spacing: { after: 440 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 18 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `SPPD No : ${nomorSPPD}`, bold: true, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Berangkat dari : ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `(Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Ke : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 560 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 20 })] }),
                                 ],
                             }),
                             new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
@@ -577,59 +615,65 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 rows: [
                     // Row 1: Kedatangan & Keberangkatan di Tempat Tujuan
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({
                                 width: { size: 50, type: WidthType.PERCENTAGE },
+                                margins: cellPaddingVisum,
                                 borders: tableBorderThin,
                                 children: [
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: `I. Tiba di : ${data.tempat_kegiatan}`, bold: true, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `   Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah / Pejabat di Tempat Tujuan,`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_tujuan || '(..................................................)', bold: true, underline: {}, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_tujuan || '........................................'}`, font: FONT_FAMILY, size: 17 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `I. Tiba di : ${data.tempat_kegiatan}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `   Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah / Pejabat di Tempat Tujuan,`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_tujuan || '(..................................................)', bold: true, underline: {}, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_tujuan || '........................................'}`, font: FONT_FAMILY, size: 19 })] }),
                                 ],
                             }),
                             new TableCell({
                                 width: { size: 50, type: WidthType.PERCENTAGE },
+                                margins: cellPaddingVisum,
                                 borders: tableBorderThin,
                                 children: [
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: `Berangkat dari : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: `Ke : ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah / Pejabat di Tempat Tujuan,`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_tujuan || '(..................................................)', bold: true, underline: {}, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_tujuan || '........................................'}`, font: FONT_FAMILY, size: 17 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Berangkat dari : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Ke : ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah / Pejabat di Tempat Tujuan,`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_tujuan || '(..................................................)', bold: true, underline: {}, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_tujuan || '........................................'}`, font: FONT_FAMILY, size: 19 })] }),
                                 ],
                             }),
                         ],
                     }),
                     // Row 2: Kedatangan Kembali di Sekolah Asal & Pemeriksaan
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({
                                 width: { size: 50, type: WidthType.PERCENTAGE },
+                                margins: cellPaddingVisum,
                                 borders: tableBorderThin,
                                 children: [
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: `II. Tiba di : ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: `    (Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 17 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `    Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah Asal,`, font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 17 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `II. Tiba di : ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `    (Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `    Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah Asal,`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 19 })] }),
                                 ],
                             }),
                             new TableCell({
                                 width: { size: 50, type: WidthType.PERCENTAGE },
+                                margins: cellPaddingVisum,
                                 borders: tableBorderThin,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.', italic: true, font: FONT_FAMILY, size: 17 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 18 })] }),
-                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 19 })] }),
-                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 17 })] }),
+                                    new Paragraph({ spacing: { after: 20, line: 240 }, children: [new TextRun({ text: 'Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.', italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ children: [new TextRun({ text: `NIP. ${data.nip_kepala_sekolah_asal || '-'}`, font: FONT_FAMILY, size: 19 })] }),
                                 ],
                             }),
                         ],
@@ -638,11 +682,11 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
             }),
 
             // Klausul Keuangan Negara
-            new Paragraph({ spacing: { before: 100, after: 30 }, children: [
-                new TextRun({ text: 'III. CATATAN LAIN-LAIN / PERHATIAN:', bold: true, font: FONT_FAMILY, size: 18 })
+            new Paragraph({ spacing: { before: 120, after: 30 }, children: [
+                new TextRun({ text: 'III. CATATAN LAIN-LAIN / PERHATIAN:', bold: true, font: FONT_FAMILY, size: 20 })
             ]}),
-            new Paragraph({ spacing: { after: 40 }, children: [
-                new TextRun({ text: 'PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan, kelalaian, dan kealpaannya.', italic: true, font: FONT_FAMILY, size: 17 })
+            new Paragraph({ spacing: { after: 40, line: 240 }, children: [
+                new TextRun({ text: 'PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan, kelalaian, dan kealpaannya.', italic: true, font: FONT_FAMILY, size: 19 })
             ]}),
         ],
     };
@@ -657,16 +701,44 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
         `Menyepakati tindak lanjut kegiatan untuk diterapkan secara langsung pada pembelajaran di kelas dan didesiminasikan kepada pendidik lainnya di ${data.sekolah_asal_nama}.`
     ];
 
+    // Smart parsing for LHP content: handles structured subheaders and bullet points elegantly
     let lhpParagraphs: Paragraph[] = [];
     if (data.isi_lhp && data.isi_lhp.trim().length > 0) {
         const rawLines = data.isi_lhp.split('\n').map(l => l.trim()).filter(Boolean);
-        lhpParagraphs = rawLines.map(line => new Paragraph({
-            spacing: { after: 40 },
-            children: [new TextRun({ text: line, font: FONT_FAMILY, size: 20 })]
-        }));
+        lhpParagraphs = rawLines.map(line => {
+            const numberedSubMatch = line.match(/^(\d+[\.\)]\s*)(.*)$/);
+            const bulletSubMatch = line.match(/^([•\-\*]\s*)(.*)$/);
+
+            if (numberedSubMatch) {
+                return new Paragraph({
+                    spacing: { before: 40, after: 15, line: 240 },
+                    indent: { left: 280 },
+                    children: [
+                        new TextRun({ text: numberedSubMatch[1], bold: true, font: FONT_FAMILY, size: 20 }),
+                        new TextRun({ text: numberedSubMatch[2], bold: true, font: FONT_FAMILY, size: 20 }),
+                    ],
+                });
+            } else if (bulletSubMatch) {
+                return new Paragraph({
+                    spacing: { after: 15, line: 240 },
+                    indent: { left: 460 },
+                    children: [
+                        new TextRun({ text: '- ', font: FONT_FAMILY, size: 20 }),
+                        new TextRun({ text: bulletSubMatch[2], font: FONT_FAMILY, size: 20 }),
+                    ],
+                });
+            } else {
+                return new Paragraph({
+                    spacing: { after: 20, line: 240 },
+                    indent: { left: 280 },
+                    children: [new TextRun({ text: line, font: FONT_FAMILY, size: 20 })]
+                });
+            }
+        });
     } else {
         lhpParagraphs = defaultLhpPoints.map((pt, i) => new Paragraph({
-            spacing: { after: 40 },
+            spacing: { after: 20, line: 240 },
+            indent: { left: 280 },
             children: [
                 new TextRun({ text: `${i + 1}. `, bold: true, font: FONT_FAMILY, size: 20 }),
                 new TextRun({ text: pt, font: FONT_FAMILY, size: 20 })
@@ -675,85 +747,83 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
     }
 
     const sectionLHP = {
-        properties: { page: { margin: pageMargins } },
+        properties: { page: { margin: lhpPageMargins } },
         children: [
             ...kopSection4,
-            new Paragraph({ spacing: { before: 140, after: 40 }, alignment: AlignmentType.CENTER, children: [
+            new Paragraph({ spacing: { before: 100, after: 30 }, alignment: AlignmentType.CENTER, children: [
                 new TextRun({ text: 'LAPORAN HASIL PEKERJAAN', bold: true, underline: {}, size: 26, font: FONT_FAMILY })
             ]}),
-            new Paragraph({ spacing: { after: 120 }, alignment: AlignmentType.CENTER, children: [
+            new Paragraph({ spacing: { after: 80 }, alignment: AlignmentType.CENTER, children: [
                 new TextRun({ text: `Kegiatan Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa`, size: 20, font: FONT_FAMILY })
             ]}),
 
             // Kepada Yth
-            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepada Yth.', font: FONT_FAMILY, size: 20 })] }),
-            new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
-            new Paragraph({ spacing: { after: 100 }, children: [new TextRun({ text: 'di Tempat', font: FONT_FAMILY, size: 20 })] }),
+            new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: 'Kepada Yth.', font: FONT_FAMILY, size: 20 })] }),
+            new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Kepala ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
+            new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'di Tempat', font: FONT_FAMILY, size: 20 })] }),
 
             // Poin-poin LHP
-            new Paragraph({ spacing: { after: 30 }, children: [
-                new TextRun({ text: '1. Dasar Penugasan:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { after: 20 }, children: [
+                new TextRun({ text: '1. Dasar Penugasan:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            new Paragraph({ spacing: { after: 60, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 40, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: `Surat Perintah Tugas Nomor: ${nomorSPT} tertanggal ${tglKegiatanIndo}.`, font: FONT_FAMILY, size: 20 })
             ]}),
 
-            new Paragraph({ spacing: { after: 30 }, children: [
-                new TextRun({ text: '2. Waktu dan Tempat Pelaksanaan:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { after: 20 }, children: [
+                new TextRun({ text: '2. Waktu dan Tempat Pelaksanaan:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            new Paragraph({ spacing: { after: 20, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 15, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: `- Hari / Tanggal : ${hariTglIndo}`, font: FONT_FAMILY, size: 20 })
             ]}),
-            new Paragraph({ spacing: { after: 20, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 15, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: `- Waktu           : ${data.waktu_kegiatan || '08.00 WIB s.d Selesai'}`, font: FONT_FAMILY, size: 20 })
             ]}),
-            new Paragraph({ spacing: { after: 60, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 40, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: `- Tempat          : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 20 })
             ]}),
 
-            new Paragraph({ spacing: { after: 30 }, children: [
-                new TextRun({ text: '3. Maksud dan Tujuan:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { after: 20 }, children: [
+                new TextRun({ text: '3. Maksud dan Tujuan:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            new Paragraph({ spacing: { after: 60, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 40, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: data.agenda, font: FONT_FAMILY, size: 20 })
             ]}),
 
-            new Paragraph({ spacing: { after: 30 }, children: [
-                new TextRun({ text: '4. Hasil Pelaksanaan Tugas:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { after: 20 }, children: [
+                new TextRun({ text: '4. Hasil Pelaksanaan Tugas:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            ...lhpParagraphs.map(p => {
-                p.spacing = { ...p.spacing, left: 360 };
-                return p;
-            }),
+            ...lhpParagraphs,
 
-            new Paragraph({ spacing: { before: 40, after: 30 }, children: [
-                new TextRun({ text: '5. Tindak Lanjut:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { before: 30, after: 20 }, children: [
+                new TextRun({ text: '5. Tindak Lanjut:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            new Paragraph({ spacing: { after: 60, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 40, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: `Mengimplementasikan hasil kegiatan dalam kegiatan pembelajaran di kelas serta mengimbaskan kepada rekan guru di ${data.sekolah_asal_nama}.`, font: FONT_FAMILY, size: 20 })
             ]}),
 
-            new Paragraph({ spacing: { after: 30 }, children: [
-                new TextRun({ text: '6. Penutup:', bold: true, font: FONT_FAMILY, size: 20 })
+            new Paragraph({ spacing: { before: 30, after: 20 }, children: [
+                new TextRun({ text: '6. Penutup:', bold: true, font: FONT_FAMILY, size: 21 })
             ]}),
-            new Paragraph({ spacing: { after: 120, left: 360 }, children: [
+            new Paragraph({ spacing: { after: 60, line: 240 }, indent: { left: 280 }, children: [
                 new TextRun({ text: 'Demikian laporan hasil pekerjaan ini disampaikan sebagai bentuk pertanggungjawaban atas penugasan yang telah dilaksanakan dengan penuh tanggung jawab.', font: FONT_FAMILY, size: 20 })
             ]}),
 
-            // Tanda Tangan LHP (Wajib H+1 !)
+            // Tanda Tangan LHP (Wajib H+1 !) - cantSplit prevents splitting across pages
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 borders: tableBorderNone,
                 rows: [
                     new TableRow({
+                        cantSplit: true,
                         children: [
                             new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
                             new TableCell({
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Wanayasa, ${tglLhpIndo}`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Pegawai yang Melaporkan,', font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Wanayasa, ${tglLhpIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: 'Pegawai yang Melaporkan,', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 440 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: guruUtama.nama, bold: true, underline: {}, font: FONT_FAMILY, size: 22 })] }),
                                     new Paragraph({ children: [new TextRun({ text: `NIP. ${guruUtama.nip || '-'}`, font: FONT_FAMILY, size: 20 })] }),

@@ -476,17 +476,13 @@ async function populateSekolahSelect(selectEl, selectedValue = '') {
     }
   }
 
-    selectEl.innerHTML = '<option value="">-- Pilih Sekolah --</option>' +
-      schools.map(s => {
-        let label = escapeHtml(s.nama);
-        if (s.is_sekretariat) label += ' (Sekretariat)';
-        if (s.tipe === 'swasta') label += ' (Swasta)';
-        return `<option value="${escapeHtml(s.nama)}" ${s.nama === selectedValue ? 'selected' : ''}>${label}</option>`;
-      }).join('');
-  } catch (e) {
-    selectEl.innerHTML = '<option value="">-- Pilih Sekolah --</option>' +
-      fallbackSchools.map(n => `<option value="${n}" ${n === selectedValue ? 'selected' : ''}>${n}</option>`).join('');
-  }
+  selectEl.innerHTML = '<option value="">-- Pilih Sekolah --</option>' +
+    schools.map(s => {
+      let label = escapeHtml(s.nama);
+      if (s.is_sekretariat) label += ' (Sekretariat)';
+      if (s.tipe === 'swasta') label += ' (Swasta)';
+      return `<option value="${escapeHtml(s.nama)}" ${s.nama === selectedValue ? 'selected' : ''}>${label}</option>`;
+    }).join('');
 }
 
 window.saveNewUser = async function (e) {

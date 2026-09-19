@@ -604,11 +604,28 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             expect(shouldEnableVisualStimulusForTopic('Pendidikan Pancasila', 'Simbol Garuda Pancasila', true)).toBe(true);
         });
 
+        it('should allow visual images for Bahasa Inggris communicative and vocabulary topics (foods, drinks, tastes, animals)', async () => {
+            const { shouldEnableVisualStimulusForTopic, calculateAdaptiveVisualQuota } = await import('../src/routes/kisi');
+
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Inggris', 'Rasa Makanan dan Minuman', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Inggris', 'Foods and Drinks', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Inggris', 'Animals and Pets', true)).toBe(true);
+            expect(shouldEnableVisualStimulusForTopic('English', 'Tastes and Flavors', true)).toBe(true);
+
+            // Quota test: 10 PG -> 2 images, 15 PG -> 3 images
+            const quota10 = calculateAdaptiveVisualQuota('Bahasa Inggris', 'Rasa Makanan dan Minuman', 10);
+            expect(quota10.exactImages).toBe(2);
+
+            const quota15 = calculateAdaptiveVisualQuota('Bahasa Inggris', 'Rasa Makanan dan Minuman', 15);
+            expect(quota15.exactImages).toBe(3);
+        });
+
         it('should return false if user toggle flag is false regardless of subject', async () => {
             const { shouldEnableVisualStimulusForTopic } = await import('../src/routes/kisi');
 
             expect(shouldEnableVisualStimulusForTopic('IPAS', 'Sistem Pencernaan', false)).toBe(false);
             expect(shouldEnableVisualStimulusForTopic('Matematika', 'Pecahan', false)).toBe(false);
+            expect(shouldEnableVisualStimulusForTopic('Bahasa Inggris', 'Rasa Makanan dan Minuman', false)).toBe(false);
         });
     });
 

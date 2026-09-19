@@ -1887,13 +1887,35 @@ CRITICAL JSON RULES:
         const testExtraBody = { ...(provider.extra_body || {}) };
         delete testExtraBody.thinking;
 
+        const isImageModel = /z-image|image|flux|diffusion/i.test(provider.model || '') || /vultr/i.test(provider.slug || '');
+
+        const pingKey = async (apiKey: string) => {
+            if (isImageModel) {
+                let cleanBaseUrl = (provider.base_url || 'https://api.vultrinference.com/v1').replace(/\/+$/, '');
+                const modelsUrl = cleanBaseUrl.endsWith('/models') ? cleanBaseUrl : `${cleanBaseUrl}/models`;
+                const res = await fetch(modelsUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Accept': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(20000)
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${errText.substring(0, 200)}`);
+                }
+                return;
+            }
+            const singleP: DBProvider = { ...provider, api_key: apiKey, max_tokens: 16, extra_body: testExtraBody };
+            await this.callProvider(singleP, 'Hi', false, 35000);
+        };
+
         // If multiple keys in pool, test all keys concurrently in parallel
         if (keys.length > 1 && provider.api_type !== 'custom_proxy') {
             const checkPromises = keys.map(async (k, i) => {
-                const singleP: DBProvider = { ...provider, api_key: k, max_tokens: 16, extra_body: testExtraBody };
                 const keyStart = Date.now();
                 try {
-                    await this.callProvider(singleP, 'Hi', false, 35000);
+                    await pingKey(k);
                     const keyLat = Date.now() - keyStart;
                     return {
                         index: i + 1,
@@ -1957,9 +1979,8 @@ CRITICAL JSON RULES:
         } else {
             const singleKey = keys[0] || '';
             const keyStart = Date.now();
-            const singleTestP: DBProvider = { ...provider, max_tokens: 16, extra_body: testExtraBody };
             try {
-                await this.callProvider(singleTestP, 'Hi', false, 35000);
+                await pingKey(singleKey);
                 validKeys = 1;
                 keysDetail.push({
                     index: 1,

@@ -242,15 +242,15 @@ export async function renderKisi() {
           </div>
 
           <div class="flex gap-2 sm:gap-2.5 flex-wrap justify-end">
-            <button id="btn-toggle-edit-mode" class="px-3.5 py-2 rounded-full text-xs font-semibold border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-pencil-alt text-blue-500"></i>Edit: <span id="edit-mode-status" class="font-bold text-emerald-600">Aktif</span></button>
+            <button id="btn-toggle-edit-mode" class="px-3.5 py-2 rounded-full text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1.5" title="Klik untuk mengaktifkan mode edit butir soal"><i class="fas fa-pencil-alt text-slate-400"></i>Edit: <span id="edit-mode-status" class="font-bold text-slate-500 dark:text-slate-400">Nonaktif</span></button>
             <button id="btn-kisi-history" class="px-3.5 py-2 rounded-full text-xs font-semibold border border-cyan-500/20 bg-cyan-50/50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 transition-colors cursor-pointer"><i class="fas fa-folder-open mr-1 text-amber-500"></i>Riwayat</button>
             <button id="btn-download-doc" class="px-4 py-2 rounded-full text-xs font-bold border border-[#10b981]/20 bg-[#f8f9fa] text-[#10b981] hover:bg-[#10b981] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"><i class="fas fa-download"></i>Unduh .docx</button>
             <button id="btn-print" class="px-4 py-2 bg-[#111111] text-white rounded-full font-bold text-xs shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer flex items-center gap-1.5"><i class="fas fa-print"></i>Cetak / PDF</button>
           </div>
         </div>
 
-        <!-- Informative Live Edit Banner -->
-        <div class="asesmen-edit-banner max-w-[210mm] mx-auto mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-teal-500/10 border border-blue-500/20 text-[var(--color-text-primary)] flex items-center justify-between shadow-sm text-xs font-medium print:hidden">
+        <!-- Informative Live Edit Banner (Muncul saat Mode Edit diaktifkan) -->
+        <div class="asesmen-edit-banner hidden max-w-[210mm] mx-auto mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-teal-500/10 border border-blue-500/20 text-[var(--color-text-primary)] flex items-center justify-between shadow-sm text-xs font-medium print:hidden">
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
               <i class="fas fa-pencil-alt text-xs"></i>
@@ -266,7 +266,7 @@ export async function renderKisi() {
         </div>
 
         <!-- A4 Canvas -->
-        <div id="asesmen-canvas" class="asesmen-a4">
+        <div id="asesmen-canvas" class="asesmen-a4 preview-only">
           <!-- Content will be rendered here -->
         </div>
 
@@ -523,10 +523,31 @@ export async function renderKisi() {
       #asesmen-canvas.preview-only .soal-actions {
         display: none !important;
       }
+      #asesmen-canvas.preview-only .soal-batch-checkbox {
+        display: none !important;
+      }
+      #asesmen-canvas.preview-only .image-hover-actions {
+        display: none !important;
+      }
+      #asesmen-canvas.preview-only .soal-text {
+        padding-right: 0 !important;
+      }
+      #asesmen-canvas.preview-only .soal-item-wrapper {
+        padding: 3px 0 !important;
+        margin-bottom: 8px !important;
+        border-color: transparent !important;
+      }
       #asesmen-canvas.preview-only .soal-item-wrapper:hover {
         background: transparent !important;
         border-color: transparent !important;
         box-shadow: none !important;
+      }
+      /* Quality Gate tidak ditampilkan di canvas sesuai preferensi */
+      #asesmen-canvas .soal-audit-tag,
+      #asesmen-canvas .quality-gate-banner,
+      .soal-audit-tag,
+      .quality-gate-banner {
+        display: none !important;
       }
       .soal-actions button {
         display: inline-flex;
@@ -905,6 +926,41 @@ let _lastFormData = {};
 let _lastGeneratedData = {};
 let _currentActiveTab = 'soal';
 let _selectedBatchItems = new Map();
+let _editModeActive = false; // Default: mode edit non-aktif pada canvas
+
+// Helper sinkronisasi UI mode edit
+function syncEditModeUI() {
+  const canvas = document.getElementById('asesmen-canvas');
+  const statusText = document.getElementById('edit-mode-status');
+  const toggleBtn = document.getElementById('btn-toggle-edit-mode');
+  const banner = document.querySelector('.asesmen-edit-banner');
+
+  if (_editModeActive) {
+    canvas?.classList.remove('preview-only');
+    if (statusText) {
+      statusText.textContent = 'Aktif';
+      statusText.className = 'font-bold text-emerald-600 dark:text-emerald-400';
+    }
+    if (toggleBtn) {
+      toggleBtn.className = 'px-3.5 py-2 rounded-full text-xs font-semibold border border-blue-500/30 bg-blue-50/80 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5';
+      const icon = toggleBtn.querySelector('i');
+      if (icon) icon.className = 'fas fa-pencil-alt text-blue-500';
+    }
+    banner?.classList.remove('hidden');
+  } else {
+    canvas?.classList.add('preview-only');
+    if (statusText) {
+      statusText.textContent = 'Nonaktif';
+      statusText.className = 'font-bold text-slate-500 dark:text-slate-400';
+    }
+    if (toggleBtn) {
+      toggleBtn.className = 'px-3.5 py-2 rounded-full text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer flex items-center gap-1.5';
+      const icon = toggleBtn.querySelector('i');
+      if (icon) icon.className = 'fas fa-pencil-alt text-slate-400';
+    }
+    banner?.classList.add('hidden');
+  }
+}
 
 // Helper: pastikan setiap butir soal memiliki metadata kisi-kisi (CP, Materi, Indikator, Level L1/L2/L3, Bentuk)
 function ensureClientKisiMetadata(data, formData = {}) {
@@ -1422,6 +1478,7 @@ export function initKisi() {
 
         if (finalResultData) {
           monitor.complete(() => {
+            _editModeActive = false;
             renderResult(finalResultData, data);
             const modelInfo = finalResultData?._meta?.model ? ` (${finalResultData._meta.model})` : '';
 
@@ -1459,6 +1516,7 @@ export function initKisi() {
         });
 
         if (result.success) {
+          _editModeActive = false;
           renderResult(result.data, data);
           const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
 
@@ -1493,6 +1551,7 @@ export function initKisi() {
       module: 'kisi',
       moduleName: 'Asesmen & Soal',
       onSelect: (item) => {
+        _editModeActive = false;
         renderResult(item.content, item.inputData);
         showToast(`Membuka riwayat: ${item.title}`, 'info');
       },
@@ -1612,24 +1671,12 @@ export function initKisi() {
   });
 
   // Toggle Edit Mode in Result View
-  let _editModeActive = true;
   document.getElementById('btn-toggle-edit-mode')?.addEventListener('click', () => {
     _editModeActive = !_editModeActive;
-    const canvas = document.getElementById('asesmen-canvas');
-    const statusText = document.getElementById('edit-mode-status');
+    syncEditModeUI();
     if (_editModeActive) {
-      canvas?.classList.remove('preview-only');
-      if (statusText) {
-        statusText.textContent = 'Aktif';
-        statusText.className = 'font-bold text-emerald-600';
-      }
-      showToast('Mode Edit Aktif: Tombol edit muncul pada soal.', 'info');
+      showToast('Mode Edit Aktif: Tombol ganti, edit & hapus soal dimunculkan.', 'info');
     } else {
-      canvas?.classList.add('preview-only');
-      if (statusText) {
-        statusText.textContent = 'Nonaktif';
-        statusText.className = 'font-bold text-slate-500';
-      }
       showToast('Mode Pratinjau Bersih: Tombol edit disembunyikan.', 'info');
     }
   });
@@ -1768,33 +1815,7 @@ function renderResult(data, formData) {
   // -------------------------------------------------------------
   let htmlSoal = `<div id="section-soal-view" class="asesmen-view-section">`;
 
-  // Quality Gate Executive Audit Banner (Screen only, hidden when printing)
-  if (data._audit) {
-    htmlSoal += `
-      <div class="quality-gate-banner print:hidden mb-5 p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-300 dark:bg-slate-800 dark:border-emerald-700 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-200">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-            <i class="fas fa-shield-halved text-base"></i>
-          </div>
-          <div>
-            <div class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              Terverifikasi AI Quality Gate (Standar Puspendik)
-              <span class="px-2 py-0.5 bg-emerald-600 text-white rounded-full text-[10px] font-extrabold shadow-2xs">Skor Mutu: ${data._audit.overall_quality_score}/100</span>
-            </div>
-            <div class="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
-              ${data._audit.total_reviewed} Butir Diuji Forensik • ${data._audit.repaired_count > 0 ? `${data._audit.repaired_count} butir disempurnakan otomatis • ` : ''}Kunci Jawaban Valid & Distraktor Homogen
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-white/90 dark:bg-slate-700 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-600">
-            <i class="fas fa-check-circle text-emerald-600"></i>
-            <span>Lolos Uji Mutu BSKAP 046/2025</span>
-          </span>
-        </div>
-      </div>
-    `;
-  }
+  // Catatan: Quality Gate Audit Banner tidak ditampilkan di lembar canvas agar naskah soal tetap rapi
 
   htmlSoal += `
       <div style="text-align:center; margin-bottom: 20px;">
@@ -1878,12 +1899,8 @@ function renderResult(data, formData) {
         <button type="button" class="btn-delete-soal" data-type="pg" data-index="${pgIdx}" title="Hapus Soal No. ${q.no}"><i class="fas fa-trash-alt"></i></button>
       </div>`;
 
-      const auditBadgeHTML = q.audit ? `
-        <div class="soal-audit-tag print:hidden inline-flex items-center gap-1 px-2 py-0.5 mb-1.5 rounded-md text-[10px] font-bold ${q.audit.status === 'repaired' ? 'bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700' : 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'}" title="${escapeHtml(q.audit.notes || '')}">
-          <i class="fas ${q.audit.status === 'repaired' ? 'fa-wand-magic-sparkles text-amber-600' : 'fa-shield-halved text-emerald-600'}"></i>
-          <span>${q.audit.status === 'repaired' ? 'Quality Gate: Auto-Healed' : 'Quality Gate: Verified'} (${q.audit.quality_score}%)</span>
-        </div>
-      ` : '';
+      // Quality Gate badge tidak ditampilkan di canvas butir soal
+      const auditBadgeHTML = '';
 
       if (q.gambar && q.gambar.url) {
         htmlSoal += `
@@ -2299,6 +2316,9 @@ function renderResult(data, formData) {
     canvasEl.classList.remove('view-tab-soal', 'view-tab-kisi', 'view-tab-kunci', 'view-tab-all');
     canvasEl.classList.add(`view-tab-${_currentActiveTab || 'soal'}`);
   }
+
+  // Sinkronisasi status mode edit (default Nonaktif pada canvas)
+  syncEditModeUI();
 
   // Attach quick remove image listener
   canvas.querySelectorAll('.btn-remove-soal-image').forEach(btn => {
@@ -3836,6 +3856,7 @@ async function applyBankSoalPackage(id) {
     document.getElementById('banksoal-detail-modal')?.remove();
 
     // Render into result view
+    _editModeActive = false;
     renderResult(soal.content, formData);
     showToast(`Paket soal "${soal.topik}" berhasil dimuat! Siap dicetak atau diekspor ke Word.`, 'success');
   } catch (err) {

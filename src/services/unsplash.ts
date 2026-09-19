@@ -1,7 +1,15 @@
+import { decrypt, isEncrypted } from '../lib/crypto';
+import { parseKeyPool } from './ai';
+
 type UnsplashEnv = {
     UNSPLASH_ACCESS_KEY?: string;
     UNSPLASH_API_KEY?: string;
+    VULTR_API_KEY?: string;
+    VULTR_BASE_URL?: string;
+    VULTR_IMAGE_MODEL?: string;
     AI?: any;
+    DB?: any;
+    [key: string]: any;
 };
 
 type UnsplashSearchResponse = {
@@ -22,7 +30,7 @@ type UnsplashSearchResponse = {
 };
 
 export interface UnsplashImagePayload {
-    source: 'unsplash' | 'cloudflare-ai';
+    source: 'unsplash' | 'cloudflare-ai' | 'vultr-ai';
     url: string;
     alt: string;
     query: string;
@@ -121,17 +129,185 @@ async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): P
     return null;
 }
 
+/**
+ * Helper: Identifikasi apakah kata kunci merujuk pada pahlawan nasional, tokoh sejarah, atau situs bersejarah
+ */
+function isHistoricalFigureOrPlace(query: string, subjectContext?: string): boolean {
+    const text = `${query} ${subjectContext || ''}`.toLowerCase();
+    const heroTerms = [
+        'pahlawan', 'tokoh', 'bpupki', 'ppki', 'presiden', 'wakil presiden',
+        'soekarno', 'sukarno', 'hatta', 'yamin', 'soepomo', 'supomo',
+        'dewantara', 'kartini', 'sudirman', 'soedirman', 'diponegoro',
+        'hasyim', 'wahid hasyim', 'agus salim', 'syahrir', 'sjahrir',
+        'fatmawati', 'sayuti melik', 'latief hendraningrat', 'tan malaka',
+        'cut nyak', 'pattimura', 'imam bonjol', 'hasanuddin',
+        'raden ajeng', 'wr supratman', 'sam ratulangi', 'candi', 'borobudur',
+        'prambanan', 'monas', 'rengasdengklok'
+    ];
+    return heroTerms.some(term => text.includes(term));
+}
+
 export class UnsplashService {
     private accessKey?: string;
     private cfAi?: any;
+    private env: any;
+    private db?: any;
 
-    constructor(env: UnsplashEnv) {
-        this.accessKey = env.UNSPLASH_ACCESS_KEY || env.UNSPLASH_API_KEY;
-        this.cfAi = env.AI;
+    constructor(env: UnsplashEnv, db?: any) {
+        this.env = env || {};
+        this.accessKey = env?.UNSPLASH_ACCESS_KEY || env?.UNSPLASH_API_KEY;
+        this.cfAi = env?.AI;
+        this.db = db || env?.DB;
     }
 
     isConfigured(): boolean {
         return true;
+    }
+
+    /**
+     * Resolves Vultr Serverless Inference API config from environment, active ai_providers, or settings.
+     */
+    private async getVultrConfig(): Promise<{ apiKey: string; baseUrl: string; model: string } | null> {
+        // 1. Direct environment variable
+        if (this.env?.VULTR_API_KEY) {
+            return {
+                apiKey: this.env.VULTR_API_KEY.trim(),
+                baseUrl: this.env.VULTR_BASE_URL || 'https://api.vultrinference.com/v1',
+                model: this.env.VULTR_IMAGE_MODEL || 'z-image-turbo'
+            };
+        }
+
+        if (this.db) {
+            // 2. Check active provider in ai_providers table (from Admin Provider UI)
+            try {
+                const row: any = await this.db.prepare(
+                    `SELECT * FROM ai_providers WHERE (slug LIKE '%vultr%' OR model LIKE '%z-image%' OR name LIKE '%vultr%') AND is_active = 1 ORDER BY priority ASC LIMIT 1`
+                ).first();
+
+                if (row?.api_key) {
+                    let key = row.api_key;
+                    if (isEncrypted(key)) {
+                        try {
+                            key = await decrypt(key, this.env);
+                        } catch (e) {
+                            console.warn('[VULTR-IMAGE] Decrypt failed:', e);
+                        }
+                    }
+                    const keys = parseKeyPool(key);
+                    if (keys.length > 0 && keys[0]) {
+                        return {
+                            apiKey: keys[0],
+                            baseUrl: row.base_url || 'https://api.vultrinference.com/v1',
+                            model: row.model || 'z-image-turbo'
+                        };
+                    }
+                }
+            } catch (dbErr) {
+                console.warn('[VULTR-IMAGE] ai_providers lookup note:', dbErr);
+            }
+
+            // 3. Check settings table
+            try {
+                const settingRow: any = await this.db.prepare(
+                    `SELECT value FROM settings WHERE key = 'vultr_api_key' LIMIT 1`
+                ).first();
+                if (settingRow?.value) {
+                    let key = settingRow.value;
+                    if (isEncrypted(key)) {
+                        try {
+                            key = await decrypt(key, this.env);
+                        } catch {}
+                    }
+                    const keys = parseKeyPool(key);
+                    if (keys.length > 0 && keys[0]) {
+                        return {
+                            apiKey: keys[0],
+                            baseUrl: 'https://api.vultrinference.com/v1',
+                            model: 'z-image-turbo'
+                        };
+                    }
+                }
+            } catch (setErr) {
+                console.warn('[VULTR-IMAGE] settings lookup note:', setErr);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Generates an educational stimulus image via Vultr Serverless Inference (Z-Image Turbo)
+     */
+    private async generateVultrImage(
+        cleanQuery: string,
+        visualPrompt: string,
+        fallbackAlt: string,
+        excludeUrls?: Set<string>
+    ): Promise<UnsplashImagePayload | null> {
+        const config = await this.getVultrConfig();
+        if (!config || !config.apiKey) return null;
+
+        try {
+            const cleanBaseUrl = config.baseUrl.replace(/\/+$/, '');
+            const endpoint = cleanBaseUrl.endsWith('/images/generations')
+                ? cleanBaseUrl
+                : `${cleanBaseUrl}/images/generations`;
+
+            const promptText = (visualPrompt && visualPrompt.length > 10)
+                ? `${visualPrompt}, educational textbook illustration, clean white background, 2D vector style, high contrast, sharp details, for school exam, no blur`
+                : `clear 2d educational textbook illustration of ${cleanQuery}, labeled science illustration, clean white background, simple vector art, high contrast, sharp details, for school exam, no blur`;
+
+            const startTime = Date.now();
+            console.log(`[VULTR-AI] Mengirim permintaan generate gambar ke Vultr Serverless (${config.model || 'z-image-turbo'}) untuk: "${cleanQuery}"...`);
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.apiKey}`
+                },
+                body: JSON.stringify({
+                    prompt: promptText.slice(0, 1500),
+                    model: config.model || 'z-image-turbo',
+                    size: '512x512',
+                    response_format: 'b64_json'
+                }),
+                signal: AbortSignal.timeout(25000)
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                console.warn(`[VULTR-IMAGE] Error ${res.status}: ${errText.substring(0, 200)}`);
+                return null;
+            }
+
+            const data: any = await res.json();
+            const imgItem = data?.data?.[0];
+            let finalUrl: string | null = null;
+
+            if (imgItem?.b64_json) {
+                finalUrl = `data:image/jpeg;base64,${imgItem.b64_json}`;
+            } else if (imgItem?.url) {
+                finalUrl = imgItem.url;
+            }
+
+            const durationMs = Date.now() - startTime;
+            if (finalUrl && (!excludeUrls || !excludeUrls.has(finalUrl))) {
+                console.log(`[VULTR-AI] ✓ Berhasil generate stimulus gambar (${config.model}) dalam ${durationMs}ms`);
+                return {
+                    source: 'vultr-ai',
+                    url: finalUrl,
+                    alt: fallbackAlt || cleanQuery,
+                    query: cleanQuery,
+                    creditName: `Vultr Serverless (${config.model || 'Z-Image Turbo'})`,
+                    creditUrl: 'https://www.vultr.com/products/serverless-inference/',
+                    unsplashId: `vultr_${Date.now()}`
+                };
+            }
+        } catch (e) {
+            console.warn('[VULTR-IMAGE] Exception:', e);
+        }
+        return null;
     }
 
     async searchImage(
@@ -156,7 +332,35 @@ export class UnsplashService {
             return null;
         }
 
-        // 1. Prioritas Utama: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi untuk semua materi)
+        const visualPrompt = (englishVisualPrompt && englishVisualPrompt.trim().length > 10)
+            ? `${englishVisualPrompt.replace(/[^\w\s-,.]/g, '').trim()}, educational textbook style, clean white background, 2D scientific vector diagram, high contrast, sharp details, no blur`
+            : `clear 2d educational textbook diagram of ${cleanQuery}, labeled science illustration, clean white background, simple vector art, high contrast, sharp details, for school exam, no blur`;
+
+        const isHistoryOrHero = isHistoricalFigureOrPlace(cleanQuery, subjectContext);
+
+        // Jika pahlawan/tokoh sejarah/candi: utamakan foto arsip otentik Wikimedia agar wajah tokoh 100% akurat & tidak terdistorsi AI generatif
+        if (isHistoryOrHero) {
+            const wikiImg = await searchWikimediaImage(cleanQuery, excludeUrls);
+            if (wikiImg) {
+                return {
+                    source: 'unsplash',
+                    url: wikiImg.url,
+                    alt: fallbackAlt || cleanQuery,
+                    query: cleanQuery,
+                    creditName: wikiImg.creditName,
+                    creditUrl: 'https://commons.wikimedia.org',
+                    unsplashId: `wiki_${Date.now()}`
+                };
+            }
+        }
+
+        // 1. Prioritas Utama: Generasi AI Vultr Serverless (Z-Image Turbo) jika aktif (sangat cocok untuk sains, situasi sosial, ilustrasi tematik)
+        const vultrImg = await this.generateVultrImage(cleanQuery, visualPrompt, fallbackAlt, excludeUrls);
+        if (vultrImg) {
+            return vultrImg;
+        }
+
+        // 2. Prioritas Kedua: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi jika Vultr tidak aktif)
         const wikiImg = await searchWikimediaImage(cleanQuery, excludeUrls);
         if (wikiImg) {
             return {
@@ -170,10 +374,7 @@ export class UnsplashService {
             };
         }
 
-        // 2. Prioritas Kedua: Generasi AI Diagram Presisi (FLUX / Cloudflare AI) dengan Prompt Bahasa Inggris Terstruktur
-        const visualPrompt = (englishVisualPrompt && englishVisualPrompt.trim().length > 10)
-            ? `${englishVisualPrompt.replace(/[^\w\s-,.]/g, '').trim()}, educational textbook style, clean white background, 2D scientific vector diagram, high contrast, sharp details, no blur`
-            : `clear 2d educational textbook diagram of ${cleanQuery}, labeled science illustration, clean white background, simple vector art, high contrast, sharp details, for school exam, no blur`;
+        // 3. Prioritas Ketiga: Cloudflare Workers AI (FLUX / SDXL)
 
         if (this.cfAi && typeof this.cfAi.run === 'function') {
             try {

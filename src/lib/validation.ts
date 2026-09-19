@@ -408,6 +408,7 @@ export const updateSettingsSchema = z.object({
     bedrock_api_key: z.string().max(500).optional(),
     vertex_api_key: z.string().max(200).optional(),
     vertex_project_id: z.string().max(100).optional(),
+    vultr_api_key: z.string().max(300).optional(),
     supabase_url: z.string().max(255).optional(),
     supabase_key: z.string().max(500).optional(),
     supabase_bucket: z.string().max(100).optional(),

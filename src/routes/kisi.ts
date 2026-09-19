@@ -331,12 +331,35 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
           * "gambar_keyword": Istilah olahraga/gerakan (contoh: "Volleyball underhand pass", "Football kicking technique", "Floor gymnastics posture", "Badminton grip").
           * "gambar_prompt_en": "2D clean vector illustration demonstrating the physical movement posture of [sport technique], side view, sports education diagram, white background, athletic anatomy"`;
     }
-    if (m.includes('inggris') || m.includes('bahasa indonesia')) {
-        return `PANDUAN VISUAL MAPEL BAHASA:
+    if (m.includes('inggris') || m.includes('english')) {
+        return `PANDUAN VISUAL MAPEL BAHASA INGGRIS (ENGLISH FOR YOUNG LEARNERS):
+          * SANGAT PENTING: Pembelajaran Bahasa Inggris di SD/SMP berorientasi komunikatif dan visual konkret (Flashcards & Situasi Nyata)!
+          * Prioritas Topik Bergambar (Wajib menggunakan Z-Image Turbo):
+            1. Makanan, Minuman, & Rasa (Foods, Drinks & Tastes):
+               - Sweet (manis): es krim (ice cream cone), madu (honey), cokelat (chocolate), kue (cake).
+               - Sour (asam): irisan lemon segar (fresh sliced yellow lemon with juice splash), jeruk nipis (lime).
+               - Spicy / Hot (pedas): semangkuk sup/mie cabai merah beruap (steaming bowl of spicy red chili soup/ramen), cabai merah (red chili).
+               - Salty (asin): keripik kentang gurih (crispy salted potato chips), garam (salt shaker).
+               - Bitter (pahit): secangkir kopi hitam tanpa gula (cup of hot black coffee), pare (bitter melon).
+            2. Jam Analog (Telling Time): "visual_stimulus": { "type": "jam_analog", "params": { "jam": 8, "menit": 15 } }
+            3. Hewan (Animals & Pets): kucing (cat), kelinci (rabbit), gajah (elephant), monyet (monkey), jerapah (giraffe).
+            4. Pakaian & Aksesori (Clothes): t-shirt, dress, shoes, hat, jacket, school uniform.
+            5. Aktivitas & Hobi (Daily Activities): swimming, cooking, riding a bicycle, reading books, playing football.
+            6. Profesi (Jobs & Occupations): doctor, teacher, chef, police officer, firefighter, pilot.
+            7. Benda Kelas / Rumah (Classroom & Household Objects): pencil, ruler, whiteboard, refrigerator, dining table.
+            8. Preposisi Tempat (Prepositions of Place): "the cat is under the chair", "the book is on the table".
+          * PANDUAN PROMPT Z-IMAGE TURBO (gambar_prompt_en):
+            - WAJIB menuliskan deskripsi visual bahasa Inggris yang cerah, jelas, gaya ilustrasi buku ajar 2D berlatar putih bersih (2D educational textbook vector art, clean white background, vibrant colors).
+            - Contoh untuk rasa: "clear 2d educational textbook illustration of a fresh yellow lemon sliced in half with sour lemon juice splash, colorful vector art, clean white background, sharp details"
+            - Contoh untuk makanan: "clear 2d educational textbook illustration of a sweet strawberry ice cream cone with colorful sprinkles, clean white background, vibrant vector art"
+          * "gambar_keyword": Nama objek/makanan bahasa Inggris yang spesifik (contoh: "lemon sour", "ice cream cone", "spicy chili", "black coffee bitter")`;
+    }
+    if (m.includes('bahasa indonesia')) {
+        return `PANDUAN VISUAL MAPEL BAHASA INDONESIA:
           * Untuk pertanyaan jam dinding (telling time), gunakan: "visual_stimulus": { "type": "jam_analog", "params": { "jam": 8, "menit": 15 } }
-          * Prioritas: Benda konkret, hewan, profesi/pekerjaan, aktivitas sehari-hari, rambu lalu lintas, atau fasilitas umum.
-          * "gambar_keyword": Nama objek/hewan/profesi (contoh: "Dentist profession", "Traffic sign", "Zebra animal", "Public library").
-          * "gambar_prompt_en": "clear photograph of [object/profession/animal], isolated on clean white background, educational textbook style"`;
+          * Prioritas: Rambu lalu lintas, denah/peta arah, iklan, poster, atau fasilitas umum.
+          * "gambar_keyword": Nama objek/rambu/iklan (contoh: "Rambu Lalu Lintas", "Denah Lokasi", "Iklan Layanan Masyarakat").
+          * "gambar_prompt_en": "clear photograph of [object/sign/poster], isolated on clean white background, educational textbook style"`;
     }
     if (m.includes('koding') || m.includes('kecerdasan') || m.includes('ai') || m.includes('informatika')) {
         return `PANDUAN VISUAL MAPEL KODING & AI:
@@ -818,6 +841,15 @@ export const resolveQuestionVisualStimulus = async (
         ]);
         let searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
         if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+            // Jika soal secara eksplisit menanyakan identitas objek/tokoh/rasa pada gambar, ambil dari kunci jawaban
+            if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|picture|image)|siapakah|nama\s+tokoh|nama\s+benda|tokoh\s+pada\s+gambar|what\s+is\s+the\s+(?:taste|name|food|drink|animal|object)/i.test(soalTextLower) && q.kunci && q.opsi && q.opsi[q.kunci]) {
+                const answerText = String(q.opsi[q.kunci]).trim();
+                if (answerText.length >= 3) {
+                    searchKeyword = answerText;
+                }
+            }
+        }
+        if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
             searchKeyword = topik || '';
         }
 
@@ -828,7 +860,7 @@ export const resolveQuestionVisualStimulus = async (
             return;
         }
 
-        const promptEn = q.gambar_prompt_en || bracketHint || `${searchKeyword} authentic educational photo, clean white background`;
+        const promptEn = q.gambar_prompt_en || bracketHint || `${searchKeyword}, educational textbook illustration, clean white background, 2D art`;
         const subjectContext = `${mataPelajaran} ${topik}`;
 
         try {
@@ -853,7 +885,7 @@ export const resolveQuestionVisualStimulus = async (
                 q.gambar = {
                     url: img.url,
                     credit: img.creditName,
-                    type: img.source === 'cloudflare-ai' ? 'ai' : 'photo'
+                    type: (img.source === 'cloudflare-ai' || (img.source as string) === 'vultr-ai') ? 'ai' : 'photo'
                 };
             } else {
                 delete q.gambar;
@@ -872,10 +904,19 @@ export const shouldEnableVisualStimulusForTopic = (mataPelajaran: string, topik:
     if (!useGambarFlag) return false;
     const m = String(mataPelajaran || '').toLowerCase();
     const t = String(topik || '').toLowerCase();
-    const isLanguageSubject = /bahasa|indonesia|inggris|sunda|jawa/i.test(m);
+
+    // Mapel Bahasa Inggris di SD/SMP berorientasi komunikatif visual (Flashcard vocabulary, foods & drinks, tastes, animals, professions, etc.)
+    const isEnglish = /inggris|english/i.test(m);
+    if (isEnglish) {
+        // Izinkan seluruh topik visual Bahasa Inggris kecuali tata bahasa abstrak murni
+        const isPureAbstractGrammar = /tenses|passive voice|reported speech|conditional sentence|relative clause|gerund/i.test(t);
+        return !isPureAbstractGrammar;
+    }
+
+    const isLanguageSubject = /bahasa|indonesia|sunda|jawa/i.test(m);
     if (!isLanguageSubject) return true;
 
-    // Untuk mapel bahasa (Indonesia/Sunda/Jawa/Inggris):
+    // Untuk mapel bahasa Indonesia / daerah (Sunda/Jawa):
     // Gambar HANYA diaktifkan jika topiknya eksplisit membutuhkan visual konkret (rambu, iklan, denah, dll)
     const isExplicitVisual = /rambu|denah|peta|iklan|poster|slogan|komik|cerita\s*bergambar|grafik|tabel|simbol|lambang|gambar/i.test(t);
     return isExplicitVisual;
@@ -889,6 +930,7 @@ export interface AdaptiveVisualQuota {
 }
 
 // Helper: perhitungan kuota stimulus visual adaptif berdasarkan karakteristik mata pelajaran, topik materi, & jenjang kelas
+// Diperketat sesuai kebijakan efisiensi: 10 PG -> maks 2 gambar, 15 PG -> maks 3 gambar (rasio maksimal 20%)
 export const calculateAdaptiveVisualQuota = (
     mataPelajaran: string,
     topik: string,
@@ -904,67 +946,72 @@ export const calculateAdaptiveVisualQuota = (
     const k = String(jenjangKelas || '').toLowerCase();
     const combined = `${m} ${t}`;
 
-    // 1. Kategori Tinggi (High Visual: 35% -> 3 s.d. 4 butir per 10 soal PG)
-    // Mencakup: Sains / IPAS, Geometri/Bangun Ruang/Data Statistika Matematika, Koding/Informatika/Robotika, TDBA, atau Fase Fondasi/Rendah (Kelas 1-2 SD)
+    // Batas Maksimal Ketat (Maksimal 20% / 1 gambar per 5 butir soal):
+    // 10 soal PG -> maksimal 2 gambar
+    // 15 soal PG -> maksimal 3 gambar
+    // 20 soal PG -> maksimal 4 gambar
+    const strictMaxCap = Math.max(1, Math.floor(count * 0.20));
+
+    // 1. Kategori Tinggi (High Visual: Maks 20% -> tepat 2 butir per 10 PG, 3 butir per 15 PG)
+    // Mencakup: Sains / IPAS, Geometri/Bangun Ruang/Data Statistika Matematika, Koding/Informatika/Robotika, TDBA, Bahasa Inggris Komunikatif (Foods, Tastes, Animals), atau Fase Fondasi/Rendah (Kelas 1-2 SD)
     const isSains = /ipas|ipa|sains|science|fisika|biologi|kimia/i.test(m);
+    const isEnglish = /inggris|english/i.test(m);
     const isMathVisual = /matematika/i.test(m) && /geometri|bangun|ruang|datar|sudut|busur|pecahan|koordinat|kartesius|diagram|grafik|batang|lingkaran|trapesium|jajar|belah|layang|kubus|balok|tabung|kerucut|bola|prisma|limas|jaring|simetri|jam|waktu|pengukuran/i.test(combined);
     const isScienceVisualTopic = /organ|anatomi|pencernaan|pernapasan|darah|tata surya|planet|siklus air|metamorfosis|rantai makanan|ekosistem|bunga|tumbuhan|rangkaian listrik|listrik|magnet|cahaya|optik|bunyi|energi|wujud zat|kalor|suhu|termometer|pesawat sederhana|katrol/i.test(combined);
     const isTechAgri = /koding|coding|informatika|robot|scratch|komputer|tdba|hidroponik|pertanian/i.test(combined);
     const isEarlyGradeConcrete = /kelas\s*[12]\b|fase\s*a\b/i.test(k) && !/bahasa/i.test(m);
 
-    if (isSains || isMathVisual || isScienceVisualTopic || isTechAgri || isEarlyGradeConcrete) {
-        const ratio = 0.35;
-        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+    if (isSains || isEnglish || isMathVisual || isScienceVisualTopic || isTechAgri || isEarlyGradeConcrete) {
+        const ratio = 0.20;
+        const exactImages = Math.min(strictMaxCap, Math.max(1, Math.round(count * ratio)));
         return {
             exactImages,
             ratio,
             category: 'high',
-            categoryLabel: 'Sains & Spasial Geometris (Visual Kaya 35%)'
+            categoryLabel: isEnglish ? 'Bahasa Inggris - Komunikatif Konkret (Visual Flashcard Maks 20%)' : 'Sains & Spasial Geometris (Visual Esensial Maks 20%)'
         };
     }
 
     // 2a. Kategori Rendah Khusus Pancasila / PKn (Visual Minimal 10% -> 1 butir per 10 soal PG)
-    // Mayoritas materi Pancasila bersifat konseptual-normatif (nilai, sikap, hak & kewajiban),
-    // sehingga proporsi gambar harus sangat rendah agar tidak memaksa SVG yang tidak relevan.
+    // Mayoritas materi Pancasila bersifat konseptual-normatif (nilai, sikap, hak & kewajiban)
     const isPancasilaPkn = /pancasila|pkn|kewarganegaraan/i.test(m);
     if (isPancasilaPkn) {
-        // Cek apakah topik spesifik memiliki visual yang relevan (lambang, peta, struktur pemda)
         const hasVisualTopic = /lambang|simbol|perisai|garuda|peta|wilayah|provinsi|kabupaten|pemerintah|trias politika|lembaga negara/i.test(t);
-        const ratio = hasVisualTopic ? 0.20 : 0.10;
-        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+        const ratio = hasVisualTopic ? 0.15 : 0.10;
+        const exactImages = Math.min(strictMaxCap, Math.max(1, Math.round(count * ratio)));
         return {
             exactImages,
             ratio,
             category: 'low',
             categoryLabel: hasVisualTopic
-                ? 'Pancasila & PKn - Topik Visual (Lambang/Peta/Struktur 20%)'
+                ? 'Pancasila & PKn - Topik Visual (Lambang/Peta/Struktur 15%)'
                 : 'Pancasila & PKn - Konseptual Normatif (Visual Minimal 10%)'
         };
     }
 
-    // 2b. Kategori Sedang (Medium Visual: 25% -> 2 s.d. 3 butir per 10 soal PG)
+    // 2b. Kategori Sedang (Medium Visual: 15% -> 1 s.d. 2 butir per 10 soal PG, 2 butir per 15 soal PG)
     // Mencakup: IPS, Sejarah, Geografi, PJOK, Seni Budaya & Prakarya (SBdP), Kesenian Daerah
     const isSocialCulture = /ips|sejarah|geografi|pjok|jasmani|olahraga|seni|budaya|sbdp|musik|rupa|tari|batik/i.test(combined);
     if (isSocialCulture) {
-        const ratio = 0.25;
-        const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+        const ratio = 0.15;
+        const exactImages = Math.min(strictMaxCap, Math.max(1, Math.round(count * ratio)));
         return {
             exactImages,
             ratio,
             category: 'medium',
-            categoryLabel: 'Sosial, Budaya & Praktik (Visual Proporsional 25%)'
+            categoryLabel: 'Sosial, Budaya & Praktik (Visual Proporsional 15%)'
         };
     }
 
-    // 3. Kategori Standar / Moderat (Low Visual: 20% -> 2 butir per 10 soal PG)
-    // Mencakup: Matematika Aritmatika Murni, Agama / Budi Pekerti, Bahasa bertopik visual konkret khusus (rambu, dsb)
-    const ratio = 0.20;
-    const exactImages = Math.max(1, Math.min(count, Math.round(count * ratio)));
+    // 3. Kategori Standar / Moderat (Low Visual: 10% -> 1 butir per 10 soal PG)
+    // Mencakup: Matematika Aritmatika Murni, Agama / Budi Pekerti, Bahasa bertopik visual konkret khusus
+    const ratio = 0.10;
+    const exactImages = Math.min(strictMaxCap, Math.max(1, Math.round(count * ratio)));
     return {
         exactImages,
         ratio,
         category: 'low',
-        categoryLabel: 'Konseptual & Aritmatika (Visual Esensial 20%)'
+        categoryLabel: 'Konseptual & Aritmatika (Visual Minimal 10%)'
     };
 };
 
@@ -1071,7 +1118,7 @@ export const buildAssessmentPrompt = (params: {
     }
 
     const effectiveGambarEnabled = shouldEnableVisualStimulusForTopic(mataPelajaran, topik, isGambarEnabled);
-    const isLanguageSubject = /bahasa|indonesia|inggris|sunda|jawa/i.test(mataPelajaran);
+    const isLanguageSubject = /bahasa\s+(?:indonesia|sunda|jawa)|muatan\s+lokal/i.test(mataPelajaran);
 
     let gambarRule = '';
     if (isPG) {
@@ -1300,8 +1347,10 @@ export async function enrichAndNormalizePG(
             const soalText = String(q.soal || '').toLowerCase();
             if (q.visual_stimulus && q.visual_stimulus.type) score += 20;
             if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
-            if (soalText.includes('gambar') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta') || soalText.includes('tabel')) score += 5;
-            if (soalText.includes('perhatikan') || soalText.includes('berikut') || soalText.includes('amatilah')) score += 3;
+            // Prioritas tertinggi (+35): Soal yang naskahnya secara intrinsik merujuk pada gambar (wajib punya gambar agar bisa dijawab)
+            if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|foto|diagram|ilustrasi|picture|image)|(?:pada\s+gambar|in\s+the\s+picture|based\s+on\s+the\s+picture)|gambar\s+di\s+bawah/i.test(soalText)) score += 35;
+            if (soalText.includes('gambar') || soalText.includes('picture') || soalText.includes('image') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta') || soalText.includes('tabel')) score += 5;
+            if (soalText.includes('perhatikan') || soalText.includes('look at') || soalText.includes('berikut') || soalText.includes('amatilah')) score += 3;
             return { q, index, score };
         });
 
@@ -1358,8 +1407,13 @@ export async function enrichAndNormalizePG(
 
             if (!q.gambar && !q.visual_stimulus) {
                 q.soal = q.soal
-                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
+                    .replace(/^(?:(?:perhatikan|amatilah)\s+(?:the\s+)?(?:gambar|foto|diagram|ilustrasi)(?:\s+[a-z0-9_-]+)?\s+(?:berikut|di\s+bawah\s+ini)?|look\s+at\s+the\s+(?:picture|image|illustration)(?:\s+below)?)[\s!.,:]*/i, '')
+                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '')
+                    .replace(/tokoh\s+pada\s+gambar\s+tersebut/gi, 'Tokoh yang')
+                    .replace(/pada\s+gambar\s+tersebut/gi, 'tersebut')
+                    .replace(/in\s+the\s+picture/gi, '')
+                    .replace(/berdasarkan\s+gambar\s+tersebut,?\s*/gi, '')
+                    .trim();
                 if (q.soal.length > 0) {
                     q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
                 }

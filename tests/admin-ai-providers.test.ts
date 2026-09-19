@@ -227,5 +227,39 @@ describe('AI Providers Admin & Validation Tests', () => {
             expect(headers['X-Title']).toBe('Custom Title');
         });
     });
+
+    describe('Vultr Serverless Inference Integration', () => {
+        it('should validate Vultr provider creation with correct defaults', () => {
+            const vultrPayload = {
+                name: 'Vultr Serverless (Z-Image Turbo)',
+                slug: 'vultr-inference',
+                api_type: 'openai_compat',
+                base_url: 'https://api.vultrinference.com/v1',
+                model: 'z-image-turbo',
+                api_key: 'test-vultr-key-123',
+                max_tokens: 4096,
+                priority: 100,
+                is_active: 1
+            };
+
+            const parsed = createAiProviderSchema.safeParse(vultrPayload);
+            expect(parsed.success).toBe(true);
+            if (parsed.success) {
+                expect(parsed.data.slug).toBe('vultr-inference');
+                expect(parsed.data.model).toBe('z-image-turbo');
+                expect(parsed.data.base_url).toBe('https://api.vultrinference.com/v1');
+            }
+        });
+
+        it('should identify image models correctly in provider checks', () => {
+            const isImageModel = (model: string, slug: string) =>
+                /z-image|image|flux|diffusion/i.test(model || '') || /vultr/i.test(slug || '');
+
+            expect(isImageModel('z-image-turbo', 'vultr-inference')).toBe(true);
+            expect(isImageModel('flux.1-dev', 'custom-flux')).toBe(true);
+            expect(isImageModel('gpt-4o', 'openai-gpt4o')).toBe(false);
+            expect(isImageModel('gemini-2.0-flash', 'gemini-flash')).toBe(false);
+        });
+    });
 });
 

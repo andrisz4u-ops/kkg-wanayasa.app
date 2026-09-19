@@ -332,7 +332,8 @@ export function buildAuditPrompt(
         opsi: q.opsi || null,
         kunci: q.kunci,
         level: q.level || 'L1',
-        indikator: q.indikator || ''
+        indikator: q.indikator || '',
+        stimulus_visual: q.gambar?.desc || q.gambar_keyword || (q.svg ? 'Diagram SVG terlampir' : (q.gambar ? 'Gambar stimulus terlampir' : undefined))
     }));
 
     return `
@@ -362,6 +363,11 @@ STANDAR AUDIT MUTU (PUSPENDIK):
 
 4. KESESUAIAN JENJANG KELAS:
    - Kosakata dan tingkat kesulitan kalimat harus ramah anak sesuai ${context.jenjangKelas}.
+
+5. STIMULUS GAMBAR / DIAGRAM VISUAL (SANGAT PENTING):
+   - Butir soal dengan atribut "stimulus_visual" telah dilengkapi gambar ilustrasi / foto / diagram SVG otomatis oleh sistem pada lembar soal.
+   - DILARANG KERAS menolak soal atau mengganti teks soal dengan komplain seperti "soal tidak dapat diverifikasi tanpa gambar", "perlu gambar", atau "tidak lengkap"!
+   - Anggaplah gambar stimulus yang tertera di "stimulus_visual" sudah tampil sempurna di hadapan murid. Verifikasi bahwa pertanyaan dan kuncinya selaras dengan materi tersebut.
 
 DAFTAR BUTIR SOAL YANG DIAUDIT:
 ${JSON.stringify(itemsFormatted, null, 2)}
@@ -430,10 +436,16 @@ export function applyVerificationRepairs(
                 }
             }
 
-            // Terapkan koreksi redaksi soal jika ada
+            // Terapkan koreksi redaksi soal jika ada (abaikan jika berupa keluhan/penolakan meta)
             if (v.repaired_soal && typeof v.repaired_soal === 'string' && v.repaired_soal.trim().length > 10) {
-                copy.soal = v.repaired_soal.trim();
-                repairedFields.push('soal');
+                const trimmed = v.repaired_soal.trim();
+                const isMetaComplaint = /(?:tidak dapat diverifikasi|tanpa gambar|perlu disertai gambar|gambar tidak ditemukan|tidak ada gambar|tidak dapat dijawab tanpa|deskripsi verbal yang jelas|kurang informasi gambar)/i.test(trimmed);
+                if (!isMetaComplaint) {
+                    copy.soal = trimmed;
+                    repairedFields.push('soal');
+                } else {
+                    console.warn(`[QualityGate] Ignored meta-rejection in repaired_soal for Q#${copy.no || idx + 1}:`, trimmed);
+                }
             }
 
             // Terapkan koreksi opsi jika ada

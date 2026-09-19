@@ -47,6 +47,7 @@ window.loadAdminSettings = async function loadAdminSettings() {
     setVal('settings-supabase_url', s.supabase_url || '');
     setVal('settings-supabase_key', s.supabase_key || '');
     setVal('settings-supabase_bucket', s.supabase_bucket || '');
+    setVal('settings-vultr_api_key', s.vultr_api_key || '');
 
     const logoContainer = document.getElementById('logo-preview');
     if (logoContainer && s.logo_url) {
@@ -123,6 +124,7 @@ window.saveProfilKKG = async function () {
       supabase_url: document.getElementById('settings-supabase_url')?.value || '',
       supabase_key: document.getElementById('settings-supabase_key')?.value || '',
       supabase_bucket: document.getElementById('settings-supabase_bucket')?.value || '',
+      vultr_api_key: document.getElementById('settings-vultr_api_key')?.value || '',
     };
 
     await api('/admin/settings', { method: 'PUT', body: data });

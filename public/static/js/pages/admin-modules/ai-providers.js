@@ -199,14 +199,22 @@ function renderProviderCard(p, idx) {
         </div>
       </div>
 
-      <!-- Bottom action: Check Live -->
+      <!-- Bottom action: Check Live & Test Image -->
       <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
         <span class="text-[11px] text-slate-400">
           ${p.last_check_at ? `Uji: ${new Date(p.last_check_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : 'Belum pernah diuji'}
         </span>
-        <button id="check-btn-${p.id}" onclick="checkAiProviderLive(${p.id})" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer">
-          <i class="fas fa-bolt text-[10px]"></i> Check Live
-        </button>
+        <div class="flex items-center gap-1.5">
+          ${((p.slug && (p.slug.includes('vultr') || p.slug.includes('image') || p.slug.includes('flux'))) ||
+             (p.model && (p.model.includes('image') || p.model.includes('turbo') || p.model.includes('flux') || p.model.includes('sd')))) ? `
+            <button id="test-img-btn-${p.id}" onclick="testAiProviderImageGen(${p.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer" title="Uji generasi gambar langsung dengan Z-Image Turbo">
+              <i class="fas fa-image text-[10px]"></i> Tes Gambar
+            </button>
+          ` : ''}
+          <button id="check-btn-${p.id}" onclick="checkAiProviderLive(${p.id})" class="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer">
+            <i class="fas fa-bolt text-[10px]"></i> Check Live
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -344,6 +352,58 @@ window.showAiKeyDiagnostics = function showAiKeyDiagnostics(id, checkData) {
   }
 
   openAdminModal('ai-key-diagnostics-modal');
+};
+
+// ============================================
+// Test Image Generation (e.g. Z-Image Turbo)
+// ============================================
+
+window.testAiProviderImageGen = async function testAiProviderImageGen(id) {
+  const btn = document.getElementById(`test-img-btn-${id}`);
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[10px]"></i> Generating...';
+  }
+
+  try {
+    const res = await api(`/admin/ai-providers/${id}/test-image`, {
+      method: 'POST',
+      body: {
+        prompt: 'clear 2d educational textbook illustration of Indonesian founding father Mohammad Yamin, clean white background, vector art, sharp details'
+      }
+    });
+
+    const data = res.data || {};
+    if (data.url) {
+      const imgElem = document.getElementById('ai-img-test-result');
+      const latElem = document.getElementById('ai-img-test-latency');
+      const promptElem = document.getElementById('ai-img-test-prompt');
+      const subElem = document.getElementById('ai-img-test-subtitle');
+
+      if (imgElem) imgElem.src = data.url;
+      if (latElem) latElem.textContent = `Latency: ${data.latency_ms || 0}ms`;
+      if (promptElem) promptElem.textContent = data.prompt || '-';
+      if (subElem) subElem.textContent = `Model: ${data.model || 'z-image-turbo'}`;
+
+      if (typeof window.openAdminModal === 'function') {
+        window.openAdminModal('ai-image-test-modal');
+      } else {
+        const modal = document.getElementById('ai-image-test-modal');
+        if (modal) modal.classList.remove('hidden');
+      }
+      moduleToast('AI Provider', `Berhasil generate gambar Z-Image Turbo (${data.latency_ms}ms)!`, 'success');
+    } else {
+      moduleToast('AI Provider', res.message || 'Gagal menghasilkan gambar', 'error');
+    }
+  } catch (e) {
+    moduleToast('AI Provider', e.message || 'Gagal menguji generasi gambar', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
 };
 
 window.updateAiKeyCountPill = function updateAiKeyCountPill() {
@@ -707,6 +767,14 @@ const PRESETS = {
     base_url: 'https://openrouter.ai/api/v1',
     model: 'openai/gpt-4o',
     max_tokens: 8192,
+  },
+  vultr_inference: {
+    name: 'Vultr Serverless (Z-Image Turbo)',
+    slug: 'vultr-inference',
+    api_type: 'openai_compat',
+    base_url: 'https://api.vultrinference.com/v1',
+    model: 'z-image-turbo',
+    max_tokens: 4096,
   },
   ollama_local: {
     name: 'Ollama (Lokal)',

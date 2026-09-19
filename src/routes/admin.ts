@@ -321,7 +321,7 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
   try {
     // Get all relevant settings
     const settingsKeys = [
-      'mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key', 'vertex_project_id', 'nama_ketua', 'tahun_ajaran', 'alamat_sekretariat',
+      'mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key', 'vertex_project_id', 'vultr_api_key', 'nama_ketua', 'tahun_ajaran', 'alamat_sekretariat',
       // Supabase settings
       'supabase_url', 'supabase_key', 'supabase_bucket',
       // New KKG Profile fields
@@ -376,6 +376,13 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
     if (settings.vertex_api_key) {
       const key = settings.vertex_api_key;
       settings.vertex_api_key = key.length > 8
+        ? key.substring(0, 4) + '****' + key.substring(key.length - 4)
+        : '****';
+    }
+
+    if (settings.vultr_api_key) {
+      const key = settings.vultr_api_key;
+      settings.vultr_api_key = key.length > 8
         ? key.substring(0, 4) + '****' + key.substring(key.length - 4)
         : '****';
     }
@@ -463,6 +470,10 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
 
     if (validatedData.vertex_project_id) {
       updates.push({ key: 'vertex_project_id', value: validatedData.vertex_project_id });
+    }
+
+    if (validatedData.vultr_api_key && !validatedData.vultr_api_key.includes('****')) {
+      updates.push({ key: 'vultr_api_key', value: validatedData.vultr_api_key });
     }
 
     if (validatedData.supabase_key && !validatedData.supabase_key.includes('****')) {
@@ -1574,6 +1585,81 @@ admin.post('/ai-providers/:id/check', requireStrictAdmin, providerWriteLimit, as
   }
 });
 
+// POST /admin/ai-providers/:id/test-image — Live Image Generation Test
+admin.post('/ai-providers/:id/test-image', requireStrictAdmin, providerWriteLimit, async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
+
+    const row: any = await c.env.DB.prepare('SELECT * FROM ai_providers WHERE id = ?').bind(id).first();
+    if (!row) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
+
+    let rawApiKey = row.api_key || '';
+    if (isEncrypted(rawApiKey)) {
+      try {
+        rawApiKey = await decrypt(rawApiKey, c.env);
+      } catch (e) {
+        return c.json({ success: false, error: { code: 'DECRYPT_FAILED', message: 'Gagal mendekripsi API key' } }, 500);
+      }
+    }
+    const keyList = parseKeyPool(rawApiKey);
+    const apiKey = keyList[0] || '';
+    if (!apiKey) return c.json({ success: false, error: { code: 'NO_KEY', message: 'API key kosong' } }, 400);
+
+    let body: any = {};
+    try { body = await c.req.json(); } catch (_) {}
+    const prompt = (body?.prompt || 'clear 2d educational textbook illustration of Indonesian founding father Mohammad Yamin, clean white background, vector art, sharp details').trim();
+
+    const cleanBaseUrl = (row.base_url || 'https://api.vultrinference.com/v1').replace(/\/+$/, '');
+    const endpoint = cleanBaseUrl.endsWith('/images/generations') ? cleanBaseUrl : `${cleanBaseUrl}/images/generations`;
+
+    const start = Date.now();
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        prompt: prompt.slice(0, 1500),
+        model: row.model || 'z-image-turbo',
+        size: '512x512',
+        response_format: 'b64_json'
+      }),
+      signal: AbortSignal.timeout(30000)
+    });
+
+    const latency_ms = Date.now() - start;
+    if (!res.ok) {
+      const errTxt = await res.text();
+      return c.json({ success: false, error: { code: 'VULTR_API_ERROR', message: `HTTP ${res.status}: ${errTxt.substring(0, 300)}` } }, 400);
+    }
+
+    const data: any = await res.json();
+    const item = data?.data?.[0];
+    let url = '';
+    if (item?.b64_json) {
+      url = `data:image/jpeg;base64,${item.b64_json}`;
+    } else if (item?.url) {
+      url = item.url;
+    }
+
+    if (!url) {
+      return c.json({ success: false, error: { code: 'EMPTY_RESPONSE', message: 'Format respons gambar kosong dari provider' } }, 500);
+    }
+
+    return successResponse(c, {
+      url,
+      model: row.model || 'z-image-turbo',
+      latency_ms,
+      prompt
+    }, `Berhasil generate stimulus gambar (${latency_ms}ms)`);
+  } catch (e: any) {
+    console.error('Test image generation error:', e);
+    return c.json({ success: false, error: { code: 'GENERATION_FAILED', message: e.message } }, 500);
+  }
+});
+
 // POST /admin/ai-providers/fetch-models — Fetch live model list from provider's endpoint
 admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit, async (c) => {
   try {
@@ -1737,6 +1823,7 @@ admin.get('/ai-providers/presets', async (c) => {
     { name: 'Together AI', slug: 'together-ai', api_type: 'openai_compat', base_url: 'https://api.together.xyz/v1', model: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', max_tokens: 8192 },
     { name: 'DeepSeek V3', slug: 'deepseek-v3', api_type: 'openai_compat', base_url: 'https://api.deepseek.com/v1', model: 'deepseek-chat', max_tokens: 8192 },
     { name: 'GLM-4 Flash (Zhipu)', slug: 'glm4-flash', api_type: 'openai_compat', base_url: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash', max_tokens: 8192 },
+    { name: 'Vultr Serverless (Z-Image Turbo)', slug: 'vultr-inference', api_type: 'openai_compat', base_url: 'https://api.vultrinference.com/v1', model: 'z-image-turbo', max_tokens: 4096 },
     { name: 'Ollama (Local)', slug: 'ollama-local', api_type: 'openai_compat', base_url: 'http://localhost:11434/v1', model: 'llama3', max_tokens: 4096 },
   ];
 

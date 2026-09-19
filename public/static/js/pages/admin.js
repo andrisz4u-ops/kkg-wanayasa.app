@@ -636,6 +636,20 @@ export async function renderAdmin() {
                 </div>
                 <p class="text-[10px] text-slate-500 mt-3">Konfigurasi ini digunakan untuk menyimpan file materi dan logo. Jika dikosongkan, sistem akan menggunakan nilai dari environment server.</p>
              </div>
+
+              <!-- Vultr Serverless Inference (Z-Image Turbo) Settings -->
+              <div class="pt-8 border-t border-slate-200/70 mt-8 relative z-10">
+                 <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                   <i class="fas fa-image text-rose-600"></i> Generator Gambar AI (Vultr Serverless / Z-Image Turbo)
+                 </h3>
+                 <div class="space-y-4">
+                    <div>
+                       <label class="label">Vultr Serverless API Key</label>
+                       <input type="password" id="settings-vultr_api_key" class="input-field font-mono" placeholder="Masukkan API Key Vultr...">
+                    </div>
+                 </div>
+                 <p class="text-[10px] text-slate-500 mt-3">API Key Vultr Serverless untuk generasi stimulus visual soal ujian (Z-Image Turbo / FLUX). Dapat juga dikelola via menu tab <strong>Provider AI</strong>.</p>
+              </div>
              
               <div class="pt-8 border-t border-slate-200/70 mt-8 relative z-10">
                  <h3 class="font-bold text-slate-900 mb-5 text-xs uppercase tracking-widest">Zona Bahaya</h3>
@@ -707,6 +721,9 @@ export async function renderAdmin() {
             </button>
             <button type="button" onclick="showAddAiProviderModal('ollama_local')" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-medium rounded-lg border border-slate-200/70 shadow-2xs transition-all">
               + Ollama (Lokal)
+            </button>
+            <button type="button" onclick="showAddAiProviderModal('vultr_inference')" class="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-medium rounded-lg border border-rose-200/70 shadow-2xs transition-all">
+              + Vultr (Z-Image Turbo)
             </button>
           </div>
         </div>
@@ -1492,6 +1509,45 @@ export async function renderAdmin() {
               <i class="fas fa-pen"></i> Buka Form Edit Provider
             </button>
             <button type="button" onclick="closeAdminModal('ai-key-diagnostics-modal')" class="px-6 py-2.5 rounded-full text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Image Generation Test Modal -->
+    <div id="ai-image-test-modal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAdminModal('ai-image-test-modal')"></div>
+      <div class="bg-white/95 backdrop-blur-xl w-full max-w-md overflow-hidden rounded-3xl shadow-2xl relative z-10 animate-slide-up border border-slate-200/70">
+        <div class="px-6 py-5 border-b border-slate-200/70 bg-slate-50/80 flex justify-between items-center">
+          <div class="flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
+              <i class="fas fa-image"></i>
+            </span>
+            <div>
+              <h3 id="ai-img-test-title" class="font-display text-base font-bold text-slate-900">Uji Live Generasi Gambar</h3>
+              <p id="ai-img-test-subtitle" class="text-xs text-slate-500 font-mono">Vultr Serverless (z-image-turbo)</p>
+            </div>
+          </div>
+          <button type="button" onclick="closeAdminModal('ai-image-test-modal')" class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 shadow-sm cursor-pointer">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-between text-xs bg-slate-100 px-3.5 py-2 rounded-xl text-slate-700 font-mono">
+            <span>Status: <strong class="text-emerald-600">✓ 200 OK Live</strong></span>
+            <span id="ai-img-test-latency">Latency: -</span>
+          </div>
+          <div class="border border-slate-200/80 rounded-2xl p-2 bg-slate-50 flex items-center justify-center min-h-[240px]">
+            <img id="ai-img-test-result" src="" alt="Hasil Uji Coba Z-Image Turbo" class="max-h-64 object-contain rounded-xl shadow-sm border border-slate-200 bg-white">
+          </div>
+          <div class="bg-indigo-50/70 border border-indigo-200/60 rounded-xl p-3 text-xs text-indigo-900">
+            <p class="font-semibold mb-1">Prompt Uji Coba:</p>
+            <p id="ai-img-test-prompt" class="italic text-[11px] text-indigo-800 font-mono">clear 2d educational textbook illustration of Indonesian founding father Mohammad Yamin, clean white background, vector art, sharp details</p>
+          </div>
+          <div class="flex justify-end pt-2">
+            <button type="button" onclick="closeAdminModal('ai-image-test-modal')" class="px-6 py-2.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow cursor-pointer">
               Tutup
             </button>
           </div>

@@ -218,6 +218,21 @@ describe('Generate Surat Schema', () => {
             expect(result.errors.length).toBeGreaterThan(0);
         }
     });
+
+    it('should accept custom dynamic AI provider models like vultr or deepseek', () => {
+        const result = validate(generateSuratSchema, {
+            jenis_kegiatan: 'Pelatihan',
+            tanggal_kegiatan: '2026-09-22',
+            waktu_kegiatan: '07.30 - Selesai',
+            tempat_kegiatan: 'SDN 2 Nangerang',
+            agenda: 'Pelatihan Pembuatan Asesment Pembelajaran',
+            peserta: 'Mia Ratna Kartika, S.Pd',
+            penanggung_jawab: 'Maman Rukman, S.Pd',
+            model: 'vultr',
+            aiProvider: 'vultr'
+        });
+        expect(result.success).toBe(true);
+    });
 });
 
 describe('validateId Helper', () => {

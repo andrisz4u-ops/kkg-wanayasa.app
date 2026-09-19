@@ -225,6 +225,39 @@ export function buildSuratPrompt(input: {
    const kec = s.kecamatan || '';
    const kab = s.kabupaten || 'Purwakarta';
 
+   const isSuratTugas = /tugas|spt|penugasan/i.test(input.jenis_kegiatan) || /tugas|spt|penugasan/i.test(input.agenda);
+
+   if (isSuratTugas) {
+      return `Tulis SURAT TUGAS (SURAT PERINTAH TUGAS) resmi untuk kegiatan ${namaOrg} ${kec ? `Kecamatan ${kec}, ` : ''}Kabupaten ${kab} dengan detail berikut:
+
+- Jenis Surat: SURAT TUGAS
+- Hari/Tanggal: ${input.tanggal_kegiatan}
+- Waktu: ${input.waktu_kegiatan} WIB
+- Tempat: ${input.tempat_kegiatan}
+- Keperluan/Agenda Tugas: ${input.agenda}
+- Guru/Pegawai yang Ditugaskan: ${input.peserta}
+- Pemberi Tugas/Penanggung Jawab: ${input.penanggung_jawab}
+${input.nomor_surat ? `- Nomor Surat: ${input.nomor_surat}` : '- Nomor Surat: (buat format nomor surat yang sesuai)'}
+
+INSTRUKSI PENTING:
+1. FOKUS HANYA PADA ISI SURAT (BODY).
+2. JANGAN TULIS KOP SURAT (sudah otomatis).
+3. JANGAN TULIS TANGGAL & TANDA TANGAN (sudah otomatis).
+4. Susunan Format Surat Tugas:
+   - Dasar / Menimbang: Dalam rangka pelaksanaan ${input.agenda || input.jenis_kegiatan}...
+   - Memberikan Tugas Kepada:
+     Sebutkan peserta yang ditugaskan (${input.peserta}) dengan rapi (Nama, NIP, Unit Kerja).
+   - Untuk:
+     Melaksanakan/mengikuti kegiatan ${input.agenda} yang diselenggarakan pada:
+     * Hari/Tanggal : ${input.tanggal_kegiatan}
+     * Waktu        : ${input.waktu_kegiatan} WIB
+     * Tempat       : ${input.tempat_kegiatan}
+   - Penutup:
+     Demikian surat tugas ini dibuat untuk dapat dilaksanakan dengan penuh tanggung jawab dan melaporkan hasilnya setelah pelaksanaan kegiatan selesai.
+5. Gunakan bahasa Indonesia kedinasan yang baku, formal, dan bermartabat.
+6. JANGAN gunakan format markdown tebal (bintang **) karena akan diekspor langsung ke dokumen dinas.`;
+   }
+
    return `Tulis surat undangan resmi untuk kegiatan ${namaOrg} ${kec ? `Kecamatan ${kec}, ` : ''}Kabupaten ${kab} dengan detail berikut:
 
 - Jenis Kegiatan: ${input.jenis_kegiatan}

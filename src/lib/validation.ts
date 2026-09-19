@@ -83,13 +83,15 @@ export const changePasswordSchema = z.object({
 export const generateSuratSchema = z.object({
     jenis_kegiatan: z.string().min(1, 'Jenis kegiatan harus diisi').max(100),
     tanggal_kegiatan: dateSchema,
-    waktu_kegiatan: z.string().min(1, 'Waktu kegiatan harus diisi').max(50),
+    waktu_kegiatan: z.string().min(1, 'Waktu kegiatan harus diisi').max(100),
     tempat_kegiatan: z.string().min(1, 'Tempat kegiatan harus diisi').max(200),
-    agenda: z.string().min(1, 'Agenda harus diisi').max(2000),
+    agenda: z.string().min(1, 'Agenda harus diisi').max(3000),
     peserta: z.union([z.string(), z.array(z.string())]).optional().nullable(),
-    penanggung_jawab: z.string().max(100).optional().nullable(),
-    model: z.enum(['mistral', 'z_ai', 'gemini', 'bedrock', 'vertex']).optional().default('vertex'),
-});
+    penanggung_jawab: z.string().max(150).optional().nullable(),
+    model: z.string().max(100).optional().default('vertex'),
+    aiProvider: z.string().max(100).optional(),
+    lampiran: z.string().max(200).optional().nullable(),
+}).passthrough();
 
 // ============================================
 // Proker Schemas

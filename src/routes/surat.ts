@@ -84,8 +84,11 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       agenda,
       peserta,
       penanggung_jawab,
-      model = 'vertex'
+      model = 'vertex',
+      aiProvider
     } = validation.data;
+
+    const selectedModel = aiProvider || model || 'vertex';
 
     // Generate nomor surat
     const currentYear = new Date().getFullYear();
@@ -100,8 +103,10 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const settingsMap: any = {};
     settingsRows.results?.forEach((r: any) => { settingsMap[r.key] = r.value; });
 
+    const isTugas = /tugas|spt|penugasan/i.test(jenis_kegiatan) || /tugas|spt|penugasan/i.test(agenda);
+    const kodeSurat = isTugas ? 'ST' : 'UND';
     const gugusCode = settingsMap.gugus ? `KKG-G${settingsMap.gugus}` : 'KKG';
-    const nomorSurat = `${String((count?.cnt || 0) + 1).padStart(3, '0')}/${gugusCode}/UND/${currentMonth}/${currentYear}`;
+    const nomorSurat = `${String((count?.cnt || 0) + 1).padStart(3, '0')}/${gugusCode}/${kodeSurat}/${currentMonth}/${currentYear}`;
 
     // Build prompt
     const prompt = buildSuratPrompt({
@@ -130,7 +135,7 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
         mistral: 'mistral-large',
         z_ai: 'glm4-flash'
       };
-      const preferredSlug = slugMap[model] || model;
+      const preferredSlug = slugMap[selectedModel] || selectedModel;
       const aiResponse = await ai.generateText(prompt, preferredSlug);
       isiSurat = aiResponse.content;
 

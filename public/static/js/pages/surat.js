@@ -74,12 +74,15 @@ export function renderSurat() {
             <label class="block text-sm font-bold text-[var(--color-text-secondary)] mb-2">Jenis Kegiatan <span class="text-red-500">*</span></label>
             <div class="relative">
               <select id="jenis_kegiatan" name="jenis_kegiatan" required class="w-full px-4 py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border-default)] rounded-xl focus:ring-2 focus:ring-primary-500 text-[var(--color-text-primary)] appearance-none transition">
-                <option value="">-- Pilih Jenis Kegiatan --</option>
+                <option value="">-- Pilih Jenis Kegiatan / Surat --</option>
+                <option value="Surat Tugas Kegiatan">📋 Surat Tugas Kegiatan</option>
+                <option value="Surat Tugas / Penugasan Guru">📋 Surat Tugas / Penugasan Guru</option>
+                <option value="Pelatihan">Pelatihan</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Bimtek / Diklat">Bimtek / Diklat</option>
                 <option value="Rapat Rutin KKG">Rapat Rutin KKG</option>
                 <option value="Rapat Koordinasi">Rapat Koordinasi</option>
-                <option value="Workshop">Workshop</option>
                 <option value="Seminar">Seminar</option>
-                <option value="Pelatihan">Pelatihan</option>
                 <option value="Kegiatan Bersama">Kegiatan Bersama</option>
                 <option value="Sosialisasi">Sosialisasi</option>
                 <option value="Kunjungan Kerja">Kunjungan Kerja</option>
@@ -270,6 +273,8 @@ window.generateSurat = async function (e) {
       peserta: form.peserta.value,
       penanggung_jawab: form.penanggung_jawab.value,
       model: form.model.value,
+      aiProvider: form.model.value,
+      lampiran: form.lampiran?.value || '',
     };
 
     const res = await api('/surat/generate', {

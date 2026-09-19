@@ -75,31 +75,61 @@ files.get('/:key{.+}', async (c) => {
 
         // Priority 1: Cloudflare R2 (Direct Serve)
         if (c.env.STORAGE) {
-            const object = await (c.env.STORAGE as R2Bucket).get(key);
-            if (object) {
-                const headers = new Headers();
-                object.writeHttpMetadata(headers);
-                headers.set('etag', object.httpEtag);
-                return new Response(object.body, { headers });
+            try {
+                const object = await (c.env.STORAGE as R2Bucket).get(key);
+                if (object) {
+                    const headers = new Headers();
+                    try {
+                        object.writeHttpMetadata(headers);
+                    } catch {
+                        // In local dev proxy, passing Headers to ProxyStub throws DevalueError
+                        if (object.httpMetadata?.contentType) {
+                            headers.set('content-type', object.httpMetadata.contentType);
+                        }
+                    }
+                    if (!headers.get('content-type') && object.httpMetadata?.contentType) {
+                        headers.set('content-type', object.httpMetadata.contentType);
+                    }
+                    if (object.httpEtag) {
+                        headers.set('etag', object.httpEtag);
+                    }
+                    headers.set('cache-control', 'public, max-age=86400');
+                    return new Response(object.body, { headers });
+                }
+            } catch (r2Err: any) {
+                logger.warn('R2 get file failed or threw proxy error', { key, error: r2Err?.message });
             }
         }
 
         // Priority 2: Supabase (Legacy Fallback)
-        const { resolveStorageConfig } = await import('../lib/storage');
-        const storageEnv = await resolveStorageConfig(c.env.DB, c.env);
+        try {
+            const { resolveStorageConfig } = await import('../lib/storage');
+            const storageEnv = await resolveStorageConfig(c.env.DB, c.env);
 
-        if (storageEnv.SUPABASE_URL && storageEnv.SUPABASE_KEY) {
-            const { createClient } = await import('@supabase/supabase-js');
-            const supabase = createClient(storageEnv.SUPABASE_URL, storageEnv.SUPABASE_KEY);
-            const bucket = storageEnv.SUPABASE_BUCKET || 'materi-kkg';
-            const { data } = supabase.storage.from(bucket).getPublicUrl(key);
-            if (data?.publicUrl) return c.redirect(data.publicUrl);
+            if (storageEnv.SUPABASE_URL && storageEnv.SUPABASE_KEY) {
+                const { createClient } = await import('@supabase/supabase-js');
+                const supabase = createClient(storageEnv.SUPABASE_URL, storageEnv.SUPABASE_KEY);
+                const bucket = storageEnv.SUPABASE_BUCKET || 'materi-kkg';
+                const { data } = supabase.storage.from(bucket).getPublicUrl(key);
+                if (data?.publicUrl) return c.redirect(data.publicUrl);
+            }
+        } catch (supaErr: any) {
+            logger.warn('Supabase fallback error', { key, error: supaErr?.message });
+        }
+
+        // Graceful fallback for logo images if file is missing
+        if (key.startsWith('logos/') || key.includes('logo')) {
+            return c.redirect('/static/img/logo-kkg.png');
         }
 
         return Errors.notFound(c, 'File tidak ditemukan');
 
     } catch (e: any) {
         logger.error('Get file error', e);
+        const key = c.req.param('key');
+        if (key && (key.startsWith('logos/') || key.includes('logo'))) {
+            return c.redirect('/static/img/logo-kkg.png');
+        }
         return Errors.internal(c);
     }
 });

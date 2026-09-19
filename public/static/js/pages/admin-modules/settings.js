@@ -50,7 +50,7 @@ window.loadAdminSettings = async function loadAdminSettings() {
 
     const logoContainer = document.getElementById('logo-preview');
     if (logoContainer && s.logo_url) {
-      logoContainer.innerHTML = `<img src="${s.logo_url}" alt="Logo KKG" class="w-full h-full object-contain">`;
+      logoContainer.innerHTML = `<img src="${s.logo_url}" alt="Logo KKG" class="w-full h-full object-contain" onerror="this.src='/static/img/logo-kkg.png'">`;
     }
 
     // Theme Color Presets
@@ -190,7 +190,7 @@ window.uploadLogo = async function (input) {
       if (!data.success) throw new Error(data.message || 'Gagal upload logo');
 
       // Update preview
-      previewContainer.innerHTML = `< img src = "${data.data.logo_url}" alt = "Logo KKG" class="w-full h-full object-contain" > `;
+      previewContainer.innerHTML = `<img src="${data.data.logo_url}" alt="Logo KKG" class="w-full h-full object-contain" onerror="this.src='/static/img/logo-kkg.png'">`;
 
       // Update state
       if (window.state && window.state.settings) {

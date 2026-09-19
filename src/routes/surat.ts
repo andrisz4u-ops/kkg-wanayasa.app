@@ -1,12 +1,44 @@
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { AIService } from '../services/ai';
-import { buildSuratPrompt } from '../lib/prompts';
+import { buildSuratPrompt, buildSppdLhpPrompt } from '../lib/prompts';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
 import { validate, validateId, generateSuratSchema, generateSppdSchema } from '../lib/validation';
 import { logger } from '../lib/logger';
+import { hitungHPlus1, generateSppdBuffer } from '../lib/docx/sppd';
 import type { SuratUndangan } from '../types';
+
+let isSuratSchemaEnsured = false;
+
+export async function ensureSuratUndanganSchema(db: D1Database): Promise<void> {
+  if (isSuratSchemaEnsured) return;
+  try {
+    try {
+      await db.prepare('SELECT tipe_surat FROM surat_undangan LIMIT 1').first();
+    } catch {
+      try {
+        await db.prepare("ALTER TABLE surat_undangan ADD COLUMN tipe_surat TEXT DEFAULT 'undangan'").run();
+      } catch (_) {}
+    }
+
+    try {
+      await db.prepare('SELECT metadata FROM surat_undangan LIMIT 1').first();
+    } catch {
+      try {
+        await db.prepare("ALTER TABLE surat_undangan ADD COLUMN metadata TEXT").run();
+      } catch (_) {}
+    }
+
+    try {
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_surat_tipe ON surat_undangan(tipe_surat)").run();
+    } catch (_) {}
+
+    isSuratSchemaEnsured = true;
+  } catch (err) {
+    logger.warn('Failed to ensure surat_undangan schema', { error: (err as any)?.message });
+  }
+}
 
 type Bindings = { DB: D1Database; MISTRAL_API_KEY?: string; Z_AI_API_KEY?: string; GEMINI_API_KEY?: string; BEDROCK_API_KEY?: string; BEDROCK_REGION?: string; AI_BACKEND_KEY?: string };
 
@@ -230,11 +262,16 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const currentMonthNum = new Date().getMonth() + 1;
     const romawiBulan = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][currentMonthNum - 1] || 'IX';
 
-    const count: any = await c.env.DB.prepare(
-      'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
-    ).bind(String(currentYear)).first();
+    let sequenceNum = '001';
+    try {
+      const count: any = await c.env.DB.prepare(
+        'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
+      ).bind(String(currentYear)).first();
+      sequenceNum = String((count?.cnt || 0) + 1).padStart(3, '0');
+    } catch {
+      sequenceNum = String(Math.floor(Math.random() * 900) + 100);
+    }
 
-    const sequenceNum = String((count?.cnt || 0) + 1).padStart(3, '0');
     const cleanKodeSekolah = (data.sekolah_asal_nama || 'SDN')
       .replace(/SD NEGERI/i, 'SDN')
       .replace(/[^a-zA-Z0-9]/g, '');
@@ -243,7 +280,6 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const nomorSPPD = data.nomor_sppd || `090 / ${sequenceNum} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`;
 
     // Auto-calculate H+1 date for LHP if not provided
-    const { hitungHPlus1 } = await import('../lib/docx/sppd');
     const tanggalLHP = data.tanggal_lhp || hitungHPlus1(data.tanggal_kegiatan);
 
     // Prepare guru string for prompt and storage
@@ -253,7 +289,6 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     let isiLhp = data.isi_lhp || '';
     if (!isiLhp.trim()) {
       try {
-        const { buildSppdLhpPrompt } = await import('../lib/prompts');
         const prompt = buildSppdLhpPrompt({
           agenda: data.agenda,
           tanggal_kegiatan: data.tanggal_kegiatan,
@@ -263,27 +298,44 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
         });
 
         const selectedModel = data.aiProvider || data.model || 'vertex';
-        const aiService = new AIService(c.env, selectedModel);
-        isiLhp = await aiService.generateText(prompt, {
-          userId: user.id,
-          featureType: 'surat_sppd'
-        });
+        const aiService = new AIService(c.env);
+        await aiService.loadProviders(c.env.DB);
+
+        const slugMap: Record<string, string> = {
+          vertex: 'vertex-proxy',
+          gemini: 'gemini-flash',
+          bedrock: 'bedrock-claude',
+          mistral: 'mistral-large',
+          z_ai: 'glm4-flash'
+        };
+        const preferredSlug = slugMap[selectedModel] || selectedModel;
+        const aiResponse = await aiService.generateText(prompt, preferredSlug);
+        if (aiResponse && aiResponse.content) {
+          isiLhp = aiResponse.content.trim();
+        }
       } catch (aiError: any) {
         logger.warn('AI LHP generation failed, using fallback points', { error: aiError.message });
-        isiLhp = `1. Telah mengikuti seluruh rangkaian kegiatan KKG Gugus 3 Wanayasa dengan materi "${data.agenda}" secara aktif dan tuntas.\n2. Memahami dan menguasai langkah-langkah implementasi materi pembelajaran serta berpartisipasi dalam penyusunan instrumen perangkat pembelajaran bersama guru-guru gugus.\n3. Berdiskusi dan memecahkan kendala teknis kurikulum di satuan pendidikan masing-masing bersama narasumber dan pengurus KKG.\n4. Menyusun rencana tindak lanjut untuk mengimbaskan hasil kegiatan kepada rekan pendidik dan menerapkannya pada proses belajar mengajar di ${data.sekolah_asal_nama}.`;
       }
+    }
+
+    if (!isiLhp || isiLhp.trim().length < 10) {
+      isiLhp = `1. Telah mengikuti seluruh rangkaian kegiatan KKG Gugus 3 Wanayasa dengan materi "${data.agenda}" secara aktif dan tuntas.\n2. Memahami dan menguasai langkah-langkah implementasi materi pembelajaran serta berpartisipasi dalam penyusunan instrumen perangkat pembelajaran bersama guru-guru gugus.\n3. Berdiskusi dan memecahkan kendala teknis kurikulum di satuan pendidikan masing-masing bersama narasumber dan pengurus KKG.\n4. Menyusun rencana tindak lanjut untuk mengimbaskan hasil kegiatan kepada rekan pendidik dan menerapkannya pada proses belajar mengajar di ${data.sekolah_asal_nama}.`;
     }
 
     // Resolve kop_surat_url from input or database for sekolah_asal
     let kopSuratUrl = (data as any).kop_surat_url;
     if (!kopSuratUrl && data.sekolah_asal_nama) {
-      const sekolahRow: any = await c.env.DB.prepare(
-        'SELECT kop_surat_url FROM sekolah WHERE nama = ? LIMIT 1'
-      ).bind(data.sekolah_asal_nama).first();
-      if (sekolahRow?.kop_surat_url) {
-        kopSuratUrl = sekolahRow.kop_surat_url;
-      } else if (user.kop_surat_url) {
-        kopSuratUrl = user.kop_surat_url;
+      try {
+        const sekolahRow: any = await c.env.DB.prepare(
+          'SELECT kop_surat_url FROM sekolah WHERE nama = ? LIMIT 1'
+        ).bind(data.sekolah_asal_nama).first();
+        if (sekolahRow?.kop_surat_url) {
+          kopSuratUrl = sekolahRow.kop_surat_url;
+        } else if (user.kop_surat_url) {
+          kopSuratUrl = user.kop_surat_url;
+        }
+      } catch {
+        if (user.kop_surat_url) kopSuratUrl = user.kop_surat_url;
       }
     }
 
@@ -297,34 +349,91 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       isi_lhp: isiLhp
     };
 
-    // Save to database
-    const result = await c.env.DB.prepare(`
-      INSERT INTO surat_undangan 
-      (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
-       tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final', 'sppd', ?)
-    `).bind(
-      user.id,
-      nomorSPT,
-      `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
-      data.tanggal_kegiatan,
-      data.waktu_kegiatan || '08.00 s.d Selesai',
-      data.tempat_kegiatan,
-      data.agenda,
-      JSON.stringify(data.daftar_guru),
-      data.kepala_sekolah_asal,
-      isiLhp,
-      JSON.stringify(metadataPayload)
-    ).run();
+    // Ensure database schema columns exist
+    await ensureSuratUndanganSchema(c.env.DB);
+
+    let suratId: number;
+    try {
+      const result = await c.env.DB.prepare(`
+        INSERT INTO surat_undangan 
+        (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+         tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final', 'sppd', ?)
+      `).bind(
+        user.id,
+        nomorSPT,
+        `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
+        data.tanggal_kegiatan,
+        data.waktu_kegiatan || '08.00 s.d Selesai',
+        data.tempat_kegiatan,
+        data.agenda,
+        JSON.stringify(data.daftar_guru),
+        data.kepala_sekolah_asal,
+        isiLhp,
+        JSON.stringify(metadataPayload)
+      ).run();
+      suratId = result.meta.last_row_id;
+    } catch (insertErr: any) {
+      logger.warn('Primary SPPD insert failed, trying force alter and retry', { error: insertErr.message });
+      try {
+        await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN tipe_surat TEXT DEFAULT 'undangan'").run();
+      } catch (_) {}
+      try {
+        await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN metadata TEXT").run();
+      } catch (_) {}
+
+      try {
+        const retryResult = await c.env.DB.prepare(`
+          INSERT INTO surat_undangan 
+          (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+           tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final', 'sppd', ?)
+        `).bind(
+          user.id,
+          nomorSPT,
+          `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
+          data.tanggal_kegiatan,
+          data.waktu_kegiatan || '08.00 s.d Selesai',
+          data.tempat_kegiatan,
+          data.agenda,
+          JSON.stringify(data.daftar_guru),
+          data.kepala_sekolah_asal,
+          isiLhp,
+          JSON.stringify(metadataPayload)
+        ).run();
+        suratId = retryResult.meta.last_row_id;
+      } catch (retryErr: any) {
+        logger.error('Retry SPPD insert failed, falling back to legacy schema', retryErr);
+        const legacyPayload = `<!--SPPD_METADATA_JSON:${JSON.stringify(metadataPayload)}-->\n${isiLhp}`;
+        const fallbackResult = await c.env.DB.prepare(`
+          INSERT INTO surat_undangan 
+          (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+           tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final')
+        `).bind(
+          user.id,
+          nomorSPT,
+          `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
+          data.tanggal_kegiatan,
+          data.waktu_kegiatan || '08.00 s.d Selesai',
+          data.tempat_kegiatan,
+          data.agenda,
+          JSON.stringify(data.daftar_guru),
+          data.kepala_sekolah_asal,
+          legacyPayload
+        ).run();
+        suratId = fallbackResult.meta.last_row_id;
+      }
+    }
 
     logger.info('Surat Tugas & SPPD created', {
       userId: user.id,
-      suratId: result.meta.last_row_id,
+      suratId,
       nomorSurat: nomorSPT
     });
 
     return successResponse(c, {
-      id: result.meta.last_row_id,
+      id: suratId,
       nomor_surat: nomorSPT,
       nomor_sppd: nomorSPPD,
       tipe_surat: 'sppd',
@@ -338,7 +447,7 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 
   } catch (e: any) {
     logger.error('Generate SPPD error', e, { userId: user.id });
-    return Errors.internal(c);
+    return Errors.internal(c, e?.message || 'Terjadi kesalahan internal saat memproses dokumen SPPD');
   }
 });
 
@@ -358,22 +467,34 @@ surat.get('/history', async (c) => {
     const limit = Math.min(parseInt(c.req.query('limit') || '20'), 50);
     const offset = (page - 1) * limit;
 
-    const [results, countResult] = await Promise.all([
-      c.env.DB.prepare(`
+    await ensureSuratUndanganSchema(c.env.DB);
+
+    let results: any;
+    try {
+      results = await c.env.DB.prepare(`
         SELECT id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, 
                tempat_kegiatan, status, created_at, tipe_surat, metadata 
         FROM surat_undangan 
         WHERE user_id = ? 
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
-      `).bind(user.id, limit, offset).all(),
+      `).bind(user.id, limit, offset).all();
+    } catch {
+      results = await c.env.DB.prepare(`
+        SELECT id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, 
+               tempat_kegiatan, status, created_at, 'undangan' as tipe_surat, NULL as metadata 
+        FROM surat_undangan 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `).bind(user.id, limit, offset).all();
+    }
 
-      c.env.DB.prepare('SELECT COUNT(*) as total FROM surat_undangan WHERE user_id = ?')
-        .bind(user.id).first() as any
-    ]);
+    const countResult: any = await c.env.DB.prepare('SELECT COUNT(*) as total FROM surat_undangan WHERE user_id = ?')
+      .bind(user.id).first();
 
     return successResponse(c, {
-      items: results.results,
+      items: results?.results || [],
       pagination: {
         page,
         limit,
@@ -383,7 +504,7 @@ surat.get('/history', async (c) => {
     });
   } catch (e: any) {
     logger.error('Get surat history error', e, { userId: user.id });
-    return Errors.internal(c);
+    return Errors.internal(c, e?.message || 'Terjadi kesalahan internal saat mengambil riwayat surat');
   }
 });
 
@@ -429,12 +550,21 @@ surat.get('/:id', async (c) => {
       try {
         result.metadata = JSON.parse(result.metadata);
       } catch { }
+    } else if (result.isi_surat && typeof result.isi_surat === 'string' && result.isi_surat.includes('<!--SPPD_METADATA_JSON:')) {
+      const match = result.isi_surat.match(/<!--SPPD_METADATA_JSON:([\s\S]*?)-->/);
+      if (match) {
+        try {
+          result.metadata = JSON.parse(match[1]);
+          result.tipe_surat = 'sppd';
+          result.isi_surat = result.isi_surat.replace(/<!--SPPD_METADATA_JSON:[\s\S]*?-->\n?/, '');
+        } catch { }
+      }
     }
 
     return successResponse(c, result);
   } catch (e: any) {
     logger.error('Get surat detail error', e, { userId: user.id });
-    return Errors.internal(c);
+    return Errors.internal(c, e?.message || 'Terjadi kesalahan internal');
   }
 });
 
@@ -572,14 +702,25 @@ surat.get('/:id/download', async (c) => {
       } catch { }
     }
 
-    // Check if tipe_surat === 'sppd'
-    if (result.tipe_surat === 'sppd') {
-      let meta: any = {};
+    // Check if tipe_surat === 'sppd' or fallback legacy marker
+    let isSppd = result.tipe_surat === 'sppd';
+    let meta: any = {};
+    if (result.metadata) {
       try {
         meta = JSON.parse(result.metadata || '{}');
       } catch { }
+    } else if (result.isi_surat && typeof result.isi_surat === 'string' && result.isi_surat.includes('<!--SPPD_METADATA_JSON:')) {
+      const match = result.isi_surat.match(/<!--SPPD_METADATA_JSON:([\s\S]*?)-->/);
+      if (match) {
+        try {
+          meta = JSON.parse(match[1]);
+          isSppd = true;
+          result.isi_surat = result.isi_surat.replace(/<!--SPPD_METADATA_JSON:[\s\S]*?-->\n?/, '');
+        } catch { }
+      }
+    }
 
-      const { generateSppdBuffer } = await import('../lib/docx');
+    if (isSppd) {
       const buffer = await generateSppdBuffer({
         sekolah_asal_id: meta.sekolah_asal_id,
         sekolah_asal_nama: meta.sekolah_asal_nama || 'SD Negeri',

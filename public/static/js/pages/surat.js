@@ -730,35 +730,57 @@ window.generateSppd = async function (e) {
       throw new Error('Minimal harus mengisi 1 orang guru yang ditugaskan');
     }
 
-    const tglKegiatan = document.getElementById('sppd_tanggal_kegiatan').value;
-    const tglLhp = document.getElementById('sppd_tanggal_lhp').value;
+    const sekolahAsalNama = document.getElementById('sppd_sekolah_asal_select')?.value?.trim();
+    if (!sekolahAsalNama) {
+      throw new Error('Silakan pilih Sekolah Asal Guru terlebih dahulu');
+    }
+
+    const kepalaSekolahAsal = document.getElementById('sppd_kepala_sekolah_asal')?.value?.trim();
+    if (!kepalaSekolahAsal) {
+      throw new Error('Nama Kepala Sekolah Asal harus diisi');
+    }
+
+    const tglKegiatan = document.getElementById('sppd_tanggal_kegiatan')?.value;
+    if (!tglKegiatan) {
+      throw new Error('Tanggal Kegiatan harus diisi');
+    }
 
     const tempatTujuan = document.getElementById('sppd_tempat_kegiatan')?.value?.trim() || '';
+    if (!tempatTujuan) {
+      throw new Error('Lokasi / Tempat Tujuan harus diisi');
+    }
+
+    const agenda = document.getElementById('sppd_agenda')?.value?.trim();
+    if (!agenda) {
+      throw new Error('Maksud Penugasan / Agenda Kegiatan harus diisi');
+    }
+
+    const tglLhp = document.getElementById('sppd_tanggal_lhp')?.value;
     const kopSuratUrl = document.getElementById('sppd_kop_surat_url')?.value || null;
 
     const payload = {
-      sekolah_asal_nama: document.getElementById('sppd_sekolah_asal_select').value,
-      kepala_sekolah_asal: document.getElementById('sppd_kepala_sekolah_asal').value,
-      nip_kepala_sekolah_asal: document.getElementById('sppd_nip_kepala_sekolah_asal').value || '-',
-      alamat_sekolah_asal: document.getElementById('sppd_alamat_sekolah_asal').value || '',
+      sekolah_asal_nama: sekolahAsalNama,
+      kepala_sekolah_asal: kepalaSekolahAsal,
+      nip_kepala_sekolah_asal: document.getElementById('sppd_nip_kepala_sekolah_asal')?.value || '-',
+      alamat_sekolah_asal: document.getElementById('sppd_alamat_sekolah_asal')?.value || '',
       kop_surat_url: kopSuratUrl,
       sekolah_tujuan_nama: tempatTujuan,
       tempat_kegiatan: tempatTujuan,
-      kepala_sekolah_tujuan: document.getElementById('sppd_kepala_sekolah_tujuan').value || '',
-      nip_kepala_sekolah_tujuan: document.getElementById('sppd_nip_kepala_sekolah_tujuan').value || '',
+      kepala_sekolah_tujuan: document.getElementById('sppd_kepala_sekolah_tujuan')?.value || '',
+      nip_kepala_sekolah_tujuan: document.getElementById('sppd_nip_kepala_sekolah_tujuan')?.value || '',
       daftar_guru: daftar_guru,
       tanggal_kegiatan: tglKegiatan,
-      waktu_kegiatan: document.getElementById('sppd_waktu_kegiatan').value || '08.00 s.d Selesai',
-      agenda: document.getElementById('sppd_agenda').value,
-      dasar_surat: document.getElementById('sppd_dasar_surat').value,
-      alat_angkut: document.getElementById('sppd_alat_angkut').value,
-      tingkat_biaya: document.getElementById('sppd_tingkat_biaya').value,
-      biaya_transport: document.getElementById('sppd_biaya_transport').value,
-      mata_anggaran: document.getElementById('sppd_mata_anggaran').value,
+      waktu_kegiatan: document.getElementById('sppd_waktu_kegiatan')?.value || '08.00 s.d Selesai',
+      agenda: agenda,
+      dasar_surat: document.getElementById('sppd_dasar_surat')?.value || 'Surat Undangan Pengurus Kelompok Kerja Guru (KKG)',
+      alat_angkut: document.getElementById('sppd_alat_angkut')?.value || 'Kendaraan Pribadi / Sepeda Motor',
+      tingkat_biaya: document.getElementById('sppd_tingkat_biaya')?.value || 'Tingkat C / Biaya Transport Lokal',
+      biaya_transport: document.getElementById('sppd_biaya_transport')?.value || 'Rp 20.000',
+      mata_anggaran: document.getElementById('sppd_mata_anggaran')?.value || 'Dana BOS',
       lama_hari: '1 (satu) hari',
       tanggal_lhp: tglLhp,
-      model: document.getElementById('sppd_model').value,
-      aiProvider: document.getElementById('sppd_model').value,
+      model: document.getElementById('sppd_model')?.value || 'vertex',
+      aiProvider: document.getElementById('sppd_model')?.value || 'vertex',
     };
 
     const res = await api('/surat/generate-sppd', {

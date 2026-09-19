@@ -375,6 +375,7 @@ CREATE TABLE IF NOT EXISTS surat_undangan (
   jenis_kegiatan TEXT NOT NULL, tanggal_kegiatan TEXT NOT NULL, waktu_kegiatan TEXT NOT NULL,
   tempat_kegiatan TEXT NOT NULL, agenda TEXT NOT NULL, peserta TEXT, penutup TEXT, 
   penanggung_jawab TEXT, isi_surat TEXT, status TEXT DEFAULT 'draft',
+  tipe_surat TEXT DEFAULT 'undangan', metadata TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -600,6 +601,14 @@ CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
     } catch (e) { /* ignore if already exists */ }
     try {
       await c.env.DB.prepare("ALTER TABLE audit_logs ADD COLUMN tenant_id TEXT DEFAULT 'kkg-gugus-3-wanayasa'").run();
+    } catch (e) { /* ignore if already exists */ }
+
+    // Migration: Surat Tugas & SPPD columns
+    try {
+      await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN tipe_surat TEXT DEFAULT 'undangan'").run();
+    } catch (e) { /* ignore if already exists */ }
+    try {
+      await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN metadata TEXT").run();
     } catch (e) { /* ignore if already exists */ }
 
     // Seed default tenant (KKG Gugus 3 Wanayasa)

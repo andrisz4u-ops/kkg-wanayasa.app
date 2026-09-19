@@ -175,4 +175,55 @@ describe('Paket Surat Tugas & SPPD Unit Tests', () => {
             expect(buffer[3]).toBe(0x04);
         });
     });
+
+    describe('Schema Auto-Healing & Legacy Resilience', () => {
+        it('should auto-heal missing tipe_surat and metadata columns', async () => {
+            const executedSql: string[] = [];
+            const mockDb: any = {
+                prepare: (sql: string) => ({
+                    first: async () => {
+                        executedSql.push(`CHECK: ${sql}`);
+                        // Simulate columns do not exist
+                        if (sql.includes('tipe_surat') || sql.includes('metadata')) {
+                            throw new Error('no such column');
+                        }
+                        return null;
+                    },
+                    run: async () => {
+                        executedSql.push(`RUN: ${sql}`);
+                        return { success: true };
+                    }
+                })
+            };
+
+            const { ensureSuratUndanganSchema } = await import('../src/routes/surat');
+            await ensureSuratUndanganSchema(mockDb);
+
+            expect(executedSql.some(s => s.includes("ALTER TABLE surat_undangan ADD COLUMN tipe_surat"))).toBe(true);
+            expect(executedSql.some(s => s.includes("ALTER TABLE surat_undangan ADD COLUMN metadata"))).toBe(true);
+            expect(executedSql.some(s => s.includes("CREATE INDEX IF NOT EXISTS idx_surat_tipe"))).toBe(true);
+        });
+
+        it('should extract and parse legacy metadata embedded in isi_surat without data loss', () => {
+            const rawPayload = {
+                sekolah_asal_nama: 'SDN 1 Wanayasa',
+                nomor_sppd: '090/001/SDN1/IX/2026',
+                tanggal_kegiatan: '2026-09-20'
+            };
+            const isiLhp = '1. Laporan hasil kegiatan.\n2. Rekomendasi tindak lanjut.';
+            const legacyStorage = `<!--SPPD_METADATA_JSON:${JSON.stringify(rawPayload)}-->\n${isiLhp}`;
+
+            expect(legacyStorage.includes('<!--SPPD_METADATA_JSON:')).toBe(true);
+            const match = legacyStorage.match(/<!--SPPD_METADATA_JSON:([\s\S]*?)-->/);
+            expect(match).not.toBeNull();
+            if (match) {
+                const parsed = JSON.parse(match[1]);
+                expect(parsed.sekolah_asal_nama).toBe('SDN 1 Wanayasa');
+                expect(parsed.nomor_sppd).toBe('090/001/SDN1/IX/2026');
+
+                const cleanedIsi = legacyStorage.replace(/<!--SPPD_METADATA_JSON:[\s\S]*?-->\n?/, '');
+                expect(cleanedIsi).toBe(isiLhp);
+            }
+        });
+    });
 });

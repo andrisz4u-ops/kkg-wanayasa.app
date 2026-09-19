@@ -9,7 +9,8 @@ export const state = {
     settings: {
         alamat_sekretariat: 'Sekretariat KKG',
         nama_kkg: 'Portal Digital KKG',
-        email: 'admin@portal-kkg.id'
+        email: 'admin@portal-kkg.id',
+        theme_color: (typeof localStorage !== 'undefined' ? localStorage.getItem('kkg_theme_color') : null) || 'teal'
     },
     unreadNotifications: 0
 };

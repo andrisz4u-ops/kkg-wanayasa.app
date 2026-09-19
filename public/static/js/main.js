@@ -1372,12 +1372,13 @@ async function init() {
 
   // Initialize Theme, Accessibility, and PWA
   initTheme();
-  applyThemeColor(state.settings?.theme_color || 'teal');
+  const initialTheme = state.settings?.theme_color || (typeof localStorage !== 'undefined' ? localStorage.getItem('kkg_theme_color') : null) || document.documentElement.getAttribute('data-color-theme') || 'teal';
+  applyThemeColor(initialTheme);
   initA11y();
   registerServiceWorker();
 
   document.addEventListener('settings-updated', (e) => {
-    if (e.detail?.theme_color) applyThemeColor(e.detail.theme_color);
+    if (e.detail?.theme_color) applyThemeColor(e.detail.theme_color, true);
   });
 
   // Parse initial URL
@@ -1409,7 +1410,7 @@ async function init() {
       if (resSettings.success && resSettings.data) {
         state.settings = { ...state.settings, ...resSettings.data };
         if (state.settings.theme_color) {
-          applyThemeColor(state.settings.theme_color);
+          applyThemeColor(state.settings.theme_color, true);
         }
         console.log('✅ Settings loaded');
       }

@@ -85,11 +85,28 @@ export const THEME_PRESETS = {
 };
 
 /**
+ * Get stored theme color from localStorage
+ */
+export function getStoredThemeColor() {
+  try {
+    return localStorage.getItem('kkg_theme_color') || 'teal';
+  } catch (e) {
+    return 'teal';
+  }
+}
+
+/**
  * Apply selected theme color dynamically to document
  */
-export function applyThemeColor(themeKey = 'teal') {
+export function applyThemeColor(themeKey = 'teal', persist = true) {
   const t = THEME_PRESETS[themeKey] || THEME_PRESETS.teal;
   document.documentElement.setAttribute('data-color-theme', t.id);
+
+  if (persist) {
+    try {
+      localStorage.setItem('kkg_theme_color', t.id);
+    } catch (e) {}
+  }
 
   // Update root CSS Variables
   const root = document.documentElement;
@@ -232,9 +249,11 @@ export function renderThemeCards(currentTheme = 'teal') {
 // Expose to window for global access
 if (typeof window !== 'undefined') {
   window.THEME_PRESETS = THEME_PRESETS;
+  window.getStoredThemeColor = getStoredThemeColor;
   window.applyThemeColor = applyThemeColor;
   window.renderThemeCards = renderThemeCards;
-  window.selectThemeColor = function(themeId) {
+  
+  window.selectThemeColor = async function(themeId) {
     const hiddenInput = document.getElementById('profil-theme_color');
     if (hiddenInput) hiddenInput.value = themeId;
 
@@ -269,8 +288,49 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    // Live instant preview across the current viewport!
-    applyThemeColor(themeId);
-    window.showToast?.(`Pratinjau warna: ${THEME_PRESETS[themeId]?.name}`, 'info');
+    // Live instant preview + localStorage persistence across the current browser!
+    applyThemeColor(themeId, true);
+
+    // Auto-save to backend database if admin is authenticated
+    const isAdmin = window.state?.user && ['super_admin', 'admin', 'operator'].includes(window.state.user.role);
+    if (isAdmin && window.api) {
+      try {
+        await window.api('/admin/settings', {
+          method: 'PUT',
+          body: { theme_color: themeId }
+        });
+        if (window.state?.settings) {
+          window.state.settings.theme_color = themeId;
+        }
+        window.showToast?.(`✓ Tema "${THEME_PRESETS[themeId]?.name}" berhasil disimpan permanen!`, 'success');
+        document.dispatchEvent(new CustomEvent('settings-updated', { detail: { theme_color: themeId } }));
+      } catch (err) {
+        console.warn('Auto-save theme error:', err);
+        window.showToast?.(`Tema aktif di browser. Klik "Simpan Konfigurasi" di bawah untuk simpan permanen ke database.`, 'info');
+      }
+    } else {
+      window.showToast?.(`Tema warna: ${THEME_PRESETS[themeId]?.name}`, 'info');
+    }
+  };
+
+  window.quickSaveCurrentTheme = async function() {
+    const currentTheme = document.getElementById('profil-theme_color')?.value || getStoredThemeColor();
+    try {
+      if (window.api) {
+        await window.api('/admin/settings', {
+          method: 'PUT',
+          body: { theme_color: currentTheme }
+        });
+      }
+      if (window.state?.settings) {
+        window.state.settings.theme_color = currentTheme;
+      }
+      localStorage.setItem('kkg_theme_color', currentTheme);
+      window.showToast?.(`Tema warna "${THEME_PRESETS[currentTheme]?.name || currentTheme}" berhasil disimpan ke database!`, 'success');
+      document.dispatchEvent(new CustomEvent('settings-updated', { detail: { theme_color: currentTheme } }));
+    } catch (e) {
+      window.showToast?.(e.message || 'Gagal menyimpan tema warna', 'error');
+    }
   };
 }
+

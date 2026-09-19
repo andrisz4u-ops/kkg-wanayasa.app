@@ -56,7 +56,7 @@ window.loadAdminSettings = async function loadAdminSettings() {
     // Theme Color Presets
     const themeGrid = document.getElementById('theme-selector-grid');
     if (themeGrid) {
-      const currentTheme = s.theme_color || 'teal';
+      const currentTheme = s.theme_color || (typeof localStorage !== 'undefined' ? localStorage.getItem('kkg_theme_color') : null) || 'teal';
       themeGrid.innerHTML = renderThemeCards(currentTheme);
       setVal('profil-theme_color', currentTheme);
       const labelEl = document.getElementById('current-theme-label');
@@ -132,7 +132,7 @@ window.saveProfilKKG = async function () {
       window.state.settings = { ...window.state.settings, ...data };
     }
     if (data.theme_color) {
-      applyThemeColor(data.theme_color);
+      applyThemeColor(data.theme_color, true);
     }
     document.dispatchEvent(new CustomEvent('settings-updated', { detail: data }));
 

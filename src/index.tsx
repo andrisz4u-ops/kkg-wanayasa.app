@@ -789,11 +789,22 @@ Demikian permohonan ini kami sampaikan. Atas perhatian dan kesediaannya, kami uc
 });
 
 // Serve SPA for all other routes
-app.get('*', (c) => {
+app.get('*', async (c) => {
+  let serverTheme = 'teal';
+  try {
+    const row: any = await c.env.DB.prepare("SELECT value FROM settings WHERE key = 'theme_color'").first();
+    if (row?.value) {
+      serverTheme = row.value;
+    }
+  } catch (e) {
+    // Fallback to default
+  }
+
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   c.header('Pragma', 'no-cache');
   c.header('Expires', '0');
-  return c.html(renderHTML());
+  return c.html(renderHTML(serverTheme));
 });
+
 
 export default app;

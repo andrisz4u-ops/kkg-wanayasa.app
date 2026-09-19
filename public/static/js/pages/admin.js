@@ -441,6 +441,21 @@ export async function renderAdmin() {
         <div id="theme-selector-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- Populated dynamically by renderThemeCards() in settings.js -->
         </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/60 text-xs text-slate-600">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-check-circle text-emerald-500"></i>
+            <span>Setiap klik template warna langsung otomatis tersimpan ke database & browser.</span>
+          </div>
+          <button 
+            type="button" 
+            onclick="window.quickSaveCurrentTheme && window.quickSaveCurrentTheme()" 
+            class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+          >
+            <i class="fas fa-save text-xs"></i>
+            <span>Simpan Tema Warna Sekarang</span>
+          </button>
+        </div>
       </div>
 
       <!-- Alamat Section -->

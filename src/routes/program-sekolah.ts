@@ -12,6 +12,7 @@ import {
   OFFICIAL_KALDIK_EVENTS_2026_2027,
   type KaldikEventItem,
 } from '../lib/kaldik-calendar-engine';
+import { generateKaldikExcelBuffer } from '../lib/kaldik-excel-generator';
 import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings } from '../types/env';
 
@@ -1749,6 +1750,33 @@ programSekolah.post('/kaldik-matrix', async (c) => {
     const stats = calculateKaldikStats(grid, { sistemHariSekolah });
     return successResponse(c, { events: allEvents, grid, stats });
   } catch (e: any) {
+    return Errors.internal(c, e.message);
+  }
+});
+
+// ============================================
+// Endpoint 3d: Ekspor Kalender Pendidikan Satuan Pendidikan ke Microsoft Excel (.xlsx)
+// ============================================
+programSekolah.post('/kaldik-excel', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const data = body.data || body;
+    const buffer = await generateKaldikExcelBuffer(data);
+
+    const namaSekolah = (data.metadata?.nama_sekolah || 'Sekolah')
+      .replace(/[\\/?%*:|"<>]/g, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 30);
+    const tahun = (data.metadata?.tahun_ajaran || '2026-2027').replace('/', '-');
+    const filename = `Kalender_Pendidikan_${namaSekolah}_${tahun}.xlsx`;
+
+    c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    c.header('Content-Disposition', `attachment; filename="${filename}"`);
+    c.header('Content-Length', buffer.length.toString());
+
+    return c.body(buffer as any);
+  } catch (e: any) {
+    console.error('Program Sekolah Kaldik Excel Export Error:', e);
     return Errors.internal(c, e.message);
   }
 });

@@ -1434,6 +1434,41 @@ function renderTemplateSpecificLampiranHtml(templateId, meta) {
     `;
   } else if (templateId === 'kalender-sekolah') {
     return `
+      <!-- KARTU SHOWCASE TEMPLATE EXCEL RESMI KALENDER PENDIDIKAN -->
+      <div class="mb-10 no-print relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-6 sm:p-7 text-white shadow-xl border border-emerald-500/30">
+        <div class="absolute -right-8 -bottom-8 w-56 h-56 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute right-1/3 -top-10 w-44 h-44 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 backdrop-blur-xs">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i>
+              <span>Template Microsoft Excel Resmi (.xlsx)</span>
+              <span class="bg-emerald-500/30 text-[10px] px-1.5 py-0.5 rounded-full font-mono">3 Worksheet Lengkap</span>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-black tracking-tight text-white">
+              Kalender Pendidikan Format Spreadsheet Excel (.xlsx)
+            </h3>
+            <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+              Dokumen kalender pendidikan satuan pendidikan resmi berformat Microsoft Excel (.xlsx) siap pakai dengan desain rapi, palet warna elegan, dan panel beku (freeze panes). Terbagi menjadi 3 sheet: Matriks 12 Bulan (Juli–Juni) dengan penanda kode warna agenda, Rekapitulasi RPE 36 Pekan Efektif (Permendikdasmen No. 13/2025), serta Matriks Terpadu PHBI dan Karakter Purwakarta (7 Poé Atikan / TdBA).
+            </p>
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <span class="text-[11px] bg-white/10 text-emerald-200 px-2.5 py-1 rounded-lg border border-white/10"><i class="fa-solid fa-table-cells mr-1.5 text-emerald-400"></i>Sheet 1: Matriks 12 Bulan</span>
+              <span class="text-[11px] bg-white/10 text-emerald-200 px-2.5 py-1 rounded-lg border border-white/10"><i class="fa-solid fa-calculator mr-1.5 text-emerald-400"></i>Sheet 2: RPE 36 Pekan</span>
+              <span class="text-[11px] bg-white/10 text-emerald-200 px-2.5 py-1 rounded-lg border border-white/10"><i class="fa-solid fa-mosque mr-1.5 text-emerald-400"></i>Sheet 3: Jadwal PHBI &amp; TdBA</span>
+            </div>
+          </div>
+
+          <div class="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button type="button" onclick="window.downloadKaldikExcel &amp;&amp; window.downloadKaldikExcel()"
+                    class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 active:scale-95 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-emerald-950/50 transition-all cursor-pointer">
+              <i class="fa-solid fa-file-excel text-base text-emerald-950"></i>
+              <span>Unduh Kalender Excel (.xlsx)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan -->
       <div class="mb-10 bg-slate-50 p-6 rounded-xl border border-slate-200">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">

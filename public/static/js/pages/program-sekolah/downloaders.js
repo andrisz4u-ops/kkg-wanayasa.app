@@ -281,3 +281,60 @@ export async function downloadProgramLampiranOnlyDocx(programData) {
   }
 }
 
+/**
+ * Unduh Kalender Pendidikan Satuan Pendidikan (KPSP) Format Microsoft Excel (.xlsx)
+ */
+export async function downloadKaldikExcel(programData) {
+  if (!programData || !programData.metadata) {
+    showToast('Data kalender pendidikan tidak ditemukan', 'error');
+    return;
+  }
+
+  showLoading('Menyiapkan file spreadsheet Kalender Pendidikan (Excel .xlsx)...');
+
+  try {
+    const res = await fetch('/api/program-sekolah/kaldik-excel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: programData }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal mengekspor file Excel Kalender');
+    }
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = 'Kalender_Pendidikan_Sekolah.xlsx';
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    } else {
+      const safeTitle = (programData.metadata.nama_sekolah || 'Sekolah')
+        .replace(/[\\/?%*:|"<>]/g, '')
+        .replace(/\s+/g, '_')
+        .slice(0, 30);
+      filename = `Kalender_Pendidikan_${safeTitle}.xlsx`;
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    showToast('Kalender Pendidikan (Excel .xlsx) berhasil diunduh!', 'success');
+  } catch (err) {
+    console.error('Download Kaldik Excel Error:', err);
+    showToast(err.message || 'Terjadi kesalahan saat mengunduh Excel Kalender', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+

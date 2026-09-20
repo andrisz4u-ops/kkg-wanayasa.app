@@ -7,6 +7,8 @@ import programSekolah, {
   ensureProgramSekolahTables,
 } from '../src/routes/program-sekolah';
 import { generateProgramDocxBuffer, generateProgramLampiranOnlyDocxBuffer } from '../src/lib/docx/program-sekolah';
+import { generateKaldikExcelBuffer } from '../src/lib/kaldik-excel-generator';
+import JSZip from 'jszip';
 
 describe('Program Sekolah Universal (AI) Tests', () => {
   describe('Prompt Builder & Regulatory Foundations', () => {
@@ -466,6 +468,99 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       }, { DB: mockDbWithProviders } as any);
 
       expect(queryExecuted).toBe(true);
+    });
+  });
+
+  describe('Kalender Pendidikan Excel (.xlsx) Generation & Export Tests', () => {
+    it('should generate a valid 3-sheet OpenXML .xlsx buffer with professional formatting', async () => {
+      const buffer = await generateKaldikExcelBuffer({
+        metadata: {
+          nama_sekolah: 'SDN 1 Wanayasa',
+          tahun_ajaran: '2026/2027',
+          kepala_sekolah: 'Hj. Nenden Laila, M.Pd.',
+          nip_kepala_sekolah: '19760314 200501 2 006',
+          penyusun: 'Tim Pengembang Kurikulum',
+          kota: 'Purwakarta',
+        },
+        spesifik: {
+          sistemHariSekolah: '5 Hari Kerja (Senin s.d. Jumat)',
+        },
+      });
+
+      expect(buffer).toBeDefined();
+      expect(buffer.length).toBeGreaterThan(3000);
+
+      // Verify that it is a valid ZIP archive containing required OpenXML parts
+      const zip = await JSZip.loadAsync(buffer);
+      expect(zip.file('[Content_Types].xml')).not.toBeNull();
+      expect(zip.file('xl/workbook.xml')).not.toBeNull();
+      expect(zip.file('xl/styles.xml')).not.toBeNull();
+      expect(zip.file('xl/worksheets/sheet1.xml')).not.toBeNull();
+      expect(zip.file('xl/worksheets/sheet2.xml')).not.toBeNull();
+      expect(zip.file('xl/worksheets/sheet3.xml')).not.toBeNull();
+
+      // Verify workbook sheet names
+      const workbookXml = await zip.file('xl/workbook.xml')!.async('string');
+      expect(workbookXml).toContain('Matriks Kalender 12 Bulan');
+      expect(workbookXml).toContain('Rekapitulasi Alokasi (RPE)');
+      expect(workbookXml).toContain('Jadwal PHBI &amp; Daerah');
+
+      // Verify sheet 1 contents (KPSP title and school name)
+      const sheet1Xml = await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+      expect(sheet1Xml).toContain('SDN 1 WANAYASA');
+      expect(sheet1Xml).toContain('KALENDER PENDIDIKAN SATUAN PENDIDIKAN');
+      expect(sheet1Xml).toContain('MPLS');
+      expect(sheet1Xml).toContain('HJP');
+      expect(sheet1Xml).toContain('36 PEKAN');
+
+      // Verify sheet 2 contents (RPE and 36 weeks verification)
+      const sheet2Xml = await zip.file('xl/worksheets/sheet2.xml')!.async('string');
+      expect(sheet2Xml).toContain('RINCIAN PEKAN EFEKTIF');
+      expect(sheet2Xml).toContain('36 PEKAN');
+      expect(sheet2Xml).toContain('Permendikdasmen No. 13 Tahun 2025');
+
+      // Verify sheet 3 contents (PHBI events and 7 Poe Atikan / TdBA)
+      const sheet3Xml = await zip.file('xl/worksheets/sheet3.xml')!.async('string');
+      expect(sheet3Xml).toContain('PHBI');
+      expect(sheet3Xml).toContain('Maulid');
+    });
+
+    it('should serve .xlsx export via POST /api/program-sekolah/kaldik-excel with correct headers', async () => {
+      const mockDb: any = {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            first: vi.fn().mockResolvedValue({ id: 1, role: 'admin', nama: 'Admin Wanayasa' }),
+          }),
+        }),
+      };
+
+      const res = await programSekolah.request('/kaldik-excel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+        },
+        body: JSON.stringify({
+          data: {
+            metadata: {
+              nama_sekolah: 'SDN 1 Wanayasa',
+              tahun_ajaran: '2026/2027',
+              template_id: 'kalender-sekolah',
+            },
+          },
+        }),
+      }, { DB: mockDb } as any);
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      expect(res.headers.get('Content-Disposition')).toContain('Kalender_Pendidikan_SDN_1_Wanayasa_2026-2027.xlsx');
+
+      const arrayBuffer = await res.arrayBuffer();
+      expect(arrayBuffer.byteLength).toBeGreaterThan(3000);
+
+      // Ensure buffer can be read back by JSZip
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      expect(zip.file('xl/workbook.xml')).not.toBeNull();
     });
   });
 });

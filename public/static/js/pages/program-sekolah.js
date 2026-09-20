@@ -2,7 +2,7 @@ import { api } from '../api.js';
 import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
 import { PROGRAM_TEMPLATES } from './program-sekolah/templates.js';
 import { renderProgramCanvas, syncCanvasToProgramData } from './program-sekolah/renderers.js';
-import { downloadProgramDocx, downloadProgramLampiranOnlyDocx, saveProgramToArchive, openProgramArchiveDrawer } from './program-sekolah/downloaders.js';
+import { downloadProgramDocx, downloadProgramLampiranOnlyDocx, downloadKaldikExcel, saveProgramToArchive, openProgramArchiveDrawer } from './program-sekolah/downloaders.js';
 
 let currentProgramData = null;
 let currentProgramInput = null;
@@ -253,6 +253,14 @@ export function renderProgramSekolah() {
               <span>Cetak Refleksi & Rubrik (DOCX)</span>
             </button>
 
+            <!-- UNDUH KALENDER PENDIDIKAN EXCEL -->
+            <button type="button" id="btn-download-kaldik-excel"
+                    class="hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-xs active:scale-95 transition-all cursor-pointer"
+                    title="Unduh Kalender Pendidikan Satuan Pendidikan format Microsoft Excel (.xlsx) 3 Sheet lengkap">
+              <i class="fa-solid fa-file-excel text-emerald-600 text-sm"></i>
+              <span>Unduh Kalender (Excel)</span>
+            </button>
+
             <!-- PRIMARY DOWNLOAD DOCX BUTTON -->
             <button type="button" id="btn-download-docx"
                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-200 active:scale-95 transition-all cursor-pointer">
@@ -452,11 +460,30 @@ export function initProgramSekolah() {
     });
   }
 
+  const btnExcel = document.getElementById('btn-download-kaldik-excel');
+  if (btnExcel) {
+    btnExcel.addEventListener('click', async () => {
+      if (currentProgramData) {
+        syncCanvasToProgramData(currentProgramData);
+        await downloadKaldikExcel(currentProgramData);
+      }
+    });
+  }
+
   // Global window functions for Canvas Toolbar & Chapter buttons
   window.downloadProgramLampiranOnlyDocx = async () => {
     if (currentProgramData) {
       syncCanvasToProgramData(currentProgramData);
       await downloadProgramLampiranOnlyDocx(currentProgramData);
+    } else {
+      showToast('Dokumen belum disusun', 'warning');
+    }
+  };
+
+  window.downloadKaldikExcel = async () => {
+    if (currentProgramData) {
+      syncCanvasToProgramData(currentProgramData);
+      await downloadKaldikExcel(currentProgramData);
     } else {
       showToast('Dokumen belum disusun', 'warning');
     }
@@ -902,6 +929,16 @@ function showCanvasResult(data) {
   const resultSec = document.getElementById('program-result-section');
   const canvasEl = document.getElementById('program-canvas');
   if (!resultSec || !canvasEl) return;
+
+  const btnExcel = document.getElementById('btn-download-kaldik-excel');
+  if (btnExcel) {
+    const isKalender = data?.metadata?.template_id === 'kalender-sekolah' || selectedTemplateId === 'kalender-sekolah';
+    if (isKalender) {
+      btnExcel.classList.remove('hidden');
+    } else {
+      btnExcel.classList.add('hidden');
+    }
+  }
 
   resultSec.classList.remove('hidden');
   canvasEl.innerHTML = renderProgramCanvas(data, activeProgramTab);

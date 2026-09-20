@@ -112,6 +112,7 @@ export async function getStandardCurriculumChaptersFromDb(
       FROM curriculum_standard_chapters 
       WHERE (LOWER(mata_pelajaran) = LOWER(?) OR LOWER(mata_pelajaran) LIKE LOWER(?)) 
         AND (jenjang_kelas = ? OR jenjang_kelas = ?)
+      ORDER BY COALESCE(tahun_terbit, 2024) DESC, created_at DESC
       LIMIT 1
     `).bind(normMapel, `%${normMapel}%`, kelasKey, kelasMatch ? kelasMatch[0] : '5').first();
 
@@ -128,6 +129,93 @@ export async function getStandardCurriculumChaptersFromDb(
     // Graceful fallback to static database
   }
   return null;
+}
+
+// Helper mengambil seluruh profil buku yang tersedia untuk mapel dan kelas (DB + Preset Standar)
+export async function getAllBookProfiles(
+  db: D1Database | undefined,
+  mataPelajaran: string,
+  jenjangKelas: string
+): Promise<any[]> {
+  const normMapel = (mataPelajaran || '').trim();
+  const kelasMatch = (jenjangKelas || '').match(/\d+/);
+  const kelasKey = kelasMatch ? `Kelas ${kelasMatch[0]}` : 'Kelas 5';
+  const rawNum = kelasMatch ? kelasMatch[0] : '5';
+
+  const profiles: any[] = [];
+
+  // 1. Ambil dari DB jika koneksi D1 tersedia
+  if (db) {
+    try {
+      const rows: any = await db.prepare(`
+        SELECT id, mata_pelajaran, jenjang_kelas, buku_judul, tahun_terbit, penerbit, total_babs, chapters_json, created_at
+        FROM curriculum_standard_chapters
+        WHERE (LOWER(mata_pelajaran) = LOWER(?) OR LOWER(mata_pelajaran) LIKE LOWER(?))
+          AND (jenjang_kelas = ? OR jenjang_kelas = ?)
+        ORDER BY COALESCE(tahun_terbit, 2024) DESC, created_at DESC
+      `).bind(normMapel, `%${normMapel}%`, kelasKey, rawNum).all();
+
+      if (rows?.results && Array.isArray(rows.results)) {
+        for (const r of rows.results) {
+          try {
+            const chs = JSON.parse(r.chapters_json);
+            if (Array.isArray(chs) && chs.length > 0) {
+              let rowYear = r.tahun_terbit;
+              if (!rowYear) {
+                const ym = String(r.buku_judul || '').match(/\b(202[0-9])\b/);
+                rowYear = ym ? parseInt(ym[1], 10) : 2025;
+              }
+              profiles.push({
+                id: String(r.id),
+                buku_judul: r.buku_judul,
+                tahun_terbit: rowYear,
+                penerbit: r.penerbit || 'Kemendikbudristek / Guru Pengunggah',
+                total_babs: chs.length,
+                chapters: chs,
+                is_custom: true
+              });
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Sertakan preset standar resmi dari standardCurriculumDatabase
+  const staticPreset = getStandardCurriculumChapters(mataPelajaran, jenjangKelas);
+  if (staticPreset && Array.isArray(staticPreset.chapters)) {
+    let year = 2024;
+    const yearMatch = staticPreset.judul.match(/\b(202[0-9])\b/);
+    if (yearMatch) year = parseInt(yearMatch[1], 10);
+
+    const cleanStaticTitle = staticPreset.judul.toLowerCase().trim();
+    const alreadyExists = profiles.some(p => p.buku_judul.toLowerCase().trim() === cleanStaticTitle);
+
+    if (!alreadyExists) {
+      profiles.push({
+        id: `preset_${normMapel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${rawNum}`,
+        buku_judul: staticPreset.judul,
+        tahun_terbit: year,
+        penerbit: 'Kemendikbudristek',
+        total_babs: staticPreset.chapters.length,
+        chapters: staticPreset.chapters,
+        is_custom: false
+      });
+    }
+  }
+
+  // 3. Urutkan berdasarkan tahun terbit terbaru secara descending
+  profiles.sort((a, b) => (b.tahun_terbit || 0) - (a.tahun_terbit || 0));
+
+  // 4. Tandai buku tahun paling baru sebagai default
+  if (profiles.length > 0) {
+    profiles[0].is_default = true;
+    for (let i = 1; i < profiles.length; i++) {
+      profiles[i].is_default = false;
+    }
+  }
+
+  return profiles;
 }
 
 
@@ -252,6 +340,53 @@ export function buildAnalisisCpPrompt(params: {
 
   const quota = getAlokasiWaktuResmi(mataPelajaran, jenjangKelas);
 
+  const normMapel = (mataPelajaran || '').toLowerCase();
+  const isIpas = normMapel.includes('ipas') || normMapel.includes('ilmu pengetahuan alam') || normMapel.includes('sains');
+
+  const elemenRule = isIpas
+    ? `2. [KOLOM ELEMEN / CAPAIAN PEMBELAJARAN - WAJIB FORMAT DWI-ELEMEN UNTUK IPAS]:
+   Dalam Kurikulum Merdeka resmi Kemendikbudristek RI, mata pelajaran IPAS memiliki 2 Elemen yang SALING MELENGKAPI dan TIDAK BOLEH dipisahkan:
+   - Elemen 1: [Pemahaman IPAS] (konten sains alam dan sosial)
+   - Elemen 2: [Keterampilan Proses] (kerja ilmiah dan penyelidikan)
+   Setiap bab IPAS WAJIB mencantumkan KEDUA Elemen tersebut secara lengkap:
+
+   a. [Pemahaman IPAS]:
+      - Pilih dan petakan kalimat resmi CP Pemahaman IPAS yang SPESIFIK dan TEPAT menaungi materi bab ini!
+      - PERINGATAN KERAS: DILARANG KERAS MENYALIN ULANG KALIMAT CP YANG SAMA KE SEMUA BAB!
+        * Bab tentang Peta/Indonesia/Geografi -> Wajib gunakan kalimat tentang letak dan kondisi geografis Indonesia menggunakan peta.
+        * Bab tentang Kebutuhan/Kegiatan Ekonomi -> Wajib gunakan kalimat tentang kegiatan ekonomi masyarakat / pengelolaan keuangan.
+        * Bab tentang Ekosistem/Rantai Makanan/Harmoni Alam -> Wajib gunakan kalimat tentang hubungan biotik dan abiotik / ekosistem.
+        * Bab tentang Energi/Siklus Air/Mitigasi -> Wajib gunakan kalimat tentang penghematan energi, energi alternatif, mitigasi iklim, atau wujud zat.
+        * Bab tentang Organ Tubuh/Kesehatan -> Wajib gunakan kalimat tentang sistem organ tubuh manusia dan cara menjaga kesehatannya.
+        * Bab tentang Gelombang Bunyi/Cahaya -> Wajib gunakan kalimat tentang fenomena gelombang bunyi dan cahaya.
+        * Bab tentang Tata Surya/Bumi -> Wajib gunakan kalimat tentang sistem tata surya, rotasi dan revolusi bumi.
+        * Bab tentang Sejarah/Pahlawan -> Wajib gunakan kalimat tentang sejarah perjuangan para pahlawan lokal.
+
+   b. [Keterampilan Proses]:
+      - Cantumkan keterampilan proses ilmiah yang DILATIHKAN pada bab tersebut, dipilih relevan dari 6 pilar BSKAP:
+        (1) Mengamati, (2) Mempertanyakan & Memprediksi, (3) Merencanakan & Melakukan Penyelidikan,
+        (4) Memproses serta Menganalisis Data dan Informasi, (5) Mengevaluasi dan Refleksi, (6) Mengomunikasikan Hasil.
+
+   Contoh format Kolom Elemen/CP IPAS yang benar:
+   "[Pemahaman IPAS]
+   Menjelaskan letak dan kondisi geografis negara Indonesia dengan menggunakan peta konvensional/digital.
+
+   [Keterampilan Proses]
+   Mengamati fenomena geografis pada peta, memproses serta menyajikan data luas daratan/lautan dalam bentuk tabel, dan mengomunikasikan hasil analisis."`
+    : `2. [KOLOM ELEMEN / CAPAIAN PEMBELAJARAN]: Pilih dan petakan kalimat Capaian Pembelajaran RESMI pemerintah di atas yang paling selaras menaungi materi bab ini. Wajib awali dengan nama Elemen resminya secara jelas dalam tanda kurung siku [Nama Elemen], contoh:
+   "[Al-Qur’an Hadis] Murid mampu membaca, menghafal, menulis, dan memahami surah-surah pendek atau ayat Al-Qur'an serta hadis..."
+   "[Geometri] Mengkonstruksi dan mengurai bangun ruang dan mengenali visualisasi spasial..."
+   "[Akidah] Mengenal rukun iman dan mengimani sifat-sifat Allah SWT..."
+   DILARANG MENGARANG teks CP baru di luar substansi resmi pemerintah.`;
+
+  const tpRule = isIpas
+    ? `5. [KOLOM TP (TUJUAN PEMBELAJARAN)]:
+   Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson).
+   Khusus IPAS: Rumuskan TP yang memadukan penguasaan konsep esensial (Pemahaman IPAS) sekaligus melatih keterampilan kerja ilmiah (Keterampilan Proses, seperti mengamati objek/peta secara cermat, menyelidiki fenomena/bereksperimen, menganalisis data, atau merancang simulasi/kampanye pelestarian).`
+    : `5. [KOLOM TP (TUJUAN PEMBELAJARAN)]:
+   Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson: Mendesain, Menjelaskan, Mengidentifikasi, Menganalisis, Menyajikan, dll).
+   Contoh: "Mendesain percobaan sederhana untuk membuktikan sifat cahaya dan menjelaskan hasilnya."`;
+
   return `Anda adalah Pakar Analisis Kurikulum Merdeka Terverifikasi BSKAP Kemendikbudristek RI.
 Tugas Anda adalah menyusun dokumen resmi:
 \"ANALISIS CP, TP, DAN ATP\"
@@ -283,21 +418,15 @@ ${JSON.stringify(filteredChapters, null, 2)}
 
 PETUNJUK ANALISIS KEDINASAN (SANGAT KETAT):
 1. [KOLOM BAB]: Tuliskan nama bab secara lengkap sesuai data buku di atas.
-2. [KOLOM ELEMEN / CAPAIAN PEMBELAJARAN]: Pilih dan petakan kalimat Capaian Pembelajaran RESMI pemerintah di atas yang paling selaras menaungi materi bab ini. Wajib awali dengan nama Elemen resminya secara jelas dalam tanda kurung siku [Nama Elemen], contoh:
-   "[Al-Qur’an Hadis] Murid mampu membaca, menghafal, menulis, dan memahami surah-surah pendek atau ayat Al-Qur'an serta hadis..."
-   "[Pemahaman IPAS] Menjelaskan fenomena gelombang bunyi dan cahaya dalam kehidupan sehari-hari."
-   "[Akidah] Mengenal rukun iman dan mengimani sifat-sifat Allah SWT..."
-   DILARANG MENGARANG teks CP baru di luar substansi resmi pemerintah.
+${elemenRule}
 3. [KOLOM MATERI POKOK]: Rincikan 2 sampai 4 submateri/topik pokok penting dalam bab tersebut dengan nomor urut (contoh: \"1. Sifat Cahaya\", \"2. Indra Penglihatan (Mata)\", \"3. Sifat Bunyi\", \"4. Indra Pendengaran (Telinga)\").
 4. [KOLOM KODE TP]: Wajib menggunakan format kelas.nomor_urut.
    Untuk ${jenjangKelas} (Kelas ${kelasNum}):
    Gunakan: ${kelasNum}.1, ${kelasNum}.2, ${kelasNum}.3, ${kelasNum}.4, ${kelasNum}.5, dst secara berurutan dan TIDAK BOLEH reset/mengulang dari 1 di tiap bab baru. Urutan nomor terus berlanjut hingga akhir semester/tahun!
-5. [KOLOM TP (TUJUAN PEMBELAJARAN)]:
-   Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson: Mendesain, Menjelaskan, Mengidentifikasi, Menganalisis, Menyajikan, dll).
-   Contoh: \"Mendesain percobaan sederhana untuk membuktikan sifat cahaya dan menjelaskan hasilnya.\"
+${tpRule}
 6. [KOLOM ATP (ALUR TUJUAN PEMBELAJARAN)]:
    Rumuskan langkah kegiatan/alur konkret yang dijalani murid di kelas untuk mencapai TP tersebut.
-   Contoh: \"Murid melakukan percobaan menggunakan cermin, gelas berisi air, dan karton lubang untuk membuktikan sifat cahaya (merambat lurus, menembus benda bening, dipantulkan, dibiaskan).\"
+   Gunakan kegiatan nyata murid (contoh: murid mengamati fenomena, melakukan percobaan dengan alat sederhana, mengolah data tabel/grafik, berdiskusi kelompok, dan mempresentasikan hasil penyelidikan).
 7. [KOLOM ALOKASI WAKTU - PERMENDIKDASMEN 13/2025]:
    Cantumkan alokasi waktu Jam Pelajaran (JP) yang realistis per item/materi (contoh: \"2 JP\", \"3 JP\", \"4 JP\", atau \"5 JP\"). Total penjumlahan seluruh alokasi_waktu materi pada semester harus proporsional mendekati atau pas dengan kuota resmi intrakurikuler (${quota.intrakurikulerPerSemester} JP per semester).
 8. [PENGELOMPOKKAN SEMESTER]:
@@ -390,6 +519,45 @@ analisisCp.post('/extract-structure', async (c) => {
       result.chapters = distributeChaptersToSemesters(result.chapters, effectiveTarget);
     }
 
+    if (result && Array.isArray(result.chapters) && result.chapters.length > 0) {
+      let tahunTerbit = 2025;
+      const yearMatch = (result.buku_judul || '').match(/\b(202[0-9])\b/) || (text || '').slice(0, 1500).match(/\b(202[0-9])\b/);
+      if (yearMatch) {
+        tahunTerbit = parseInt(yearMatch[1], 10);
+      }
+      result.tahun_terbit = tahunTerbit;
+
+      if (c.env?.DB && result.buku_judul) {
+        try {
+          await ensureAnalisisCpTables(c.env.DB);
+          const fase = getFaseFromKelas(jenjangKelas) || 'Fase C';
+          const existing: any = await c.env.DB.prepare(
+            `SELECT id FROM curriculum_standard_chapters 
+             WHERE LOWER(TRIM(mata_pelajaran)) = LOWER(TRIM(?)) 
+               AND LOWER(TRIM(jenjang_kelas)) = LOWER(TRIM(?)) 
+               AND LOWER(TRIM(buku_judul)) = LOWER(TRIM(?))`
+          ).bind(mataPelajaran, jenjangKelas, result.buku_judul).first();
+
+          if (existing?.id) {
+            await c.env.DB.prepare(
+              `UPDATE curriculum_standard_chapters 
+               SET chapters_json = ?, total_babs = ?, tahun_terbit = ?, updated_at = CURRENT_TIMESTAMP 
+               WHERE id = ?`
+            ).bind(JSON.stringify(result.chapters), result.chapters.length, tahunTerbit, existing.id).run();
+            result.profile_id = String(existing.id);
+          } else {
+            const insRes = await c.env.DB.prepare(
+              `INSERT INTO curriculum_standard_chapters (mata_pelajaran, jenjang_kelas, fase, buku_judul, chapters_json, total_babs, tahun_terbit, penerbit) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(mataPelajaran, jenjangKelas, fase, result.buku_judul, JSON.stringify(result.chapters), result.chapters.length, tahunTerbit, 'Ekstraksi PDF / E-Book').run();
+            result.profile_id = String(insRes?.meta?.last_row_id);
+          }
+        } catch (dbErr) {
+          console.error('Auto-save extracted book profile error:', dbErr);
+        }
+      }
+    }
+
     // Selalu sertakan saran bab standar kurikulum jika tersedia
     if (standardData) {
       result.standard_preset = standardData;
@@ -436,6 +604,127 @@ analisisCp.get('/standard-chapters', async (c) => {
   });
 });
 
+// Endpoint untuk mengambil seluruh profil buku yang tersedia (Preset Resmi + DB Kustom)
+analisisCp.get('/book-profiles', async (c) => {
+  const mapel = c.req.query('mataPelajaran') || 'IPAS';
+  const kelas = c.req.query('jenjangKelas') || 'Kelas 5';
+  const targetSemester = c.req.query('targetSemester') || 'all';
+
+  if (c.env?.DB) {
+    try {
+      await ensureAnalisisCpTables(c.env.DB);
+    } catch (_) {}
+  }
+
+  const profiles = await getAllBookProfiles(c.env?.DB, mapel, kelas);
+
+  const formattedProfiles = profiles.map(p => {
+    const chapters = distributeChaptersToSemesters(p.chapters, targetSemester);
+    return {
+      ...p,
+      chapters,
+      total_babs: chapters.length
+    };
+  });
+
+  const defaultProfile = formattedProfiles.find(p => p.is_default) || formattedProfiles[0] || null;
+
+  return successResponse(c, {
+    profiles: formattedProfiles,
+    default_profile: defaultProfile,
+    total: formattedProfiles.length
+  });
+});
+
+// Endpoint untuk menyimpan profil struktur buku baru atau kustom
+analisisCp.post('/save-book-profile', async (c) => {
+  const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie');
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+  const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+  const user = await getCurrentUser(c.env.DB, sessionId);
+  if (!user) return Errors.unauthorized(c, 'Silakan login terlebih dahulu');
+
+  if (!c.env?.DB) {
+    return Errors.internal(c, 'Database tidak tersedia');
+  }
+
+  await ensureAnalisisCpTables(c.env.DB);
+
+  const body = await c.req.json();
+  const { mataPelajaran, jenjangKelas, bukuJudul, tahunTerbit, penerbit, chapters } = body;
+
+  if (!mataPelajaran || !jenjangKelas || !bukuJudul || !Array.isArray(chapters) || chapters.length === 0) {
+    return Errors.badRequest(c, 'Data buku tidak lengkap. Pastikan Mata Pelajaran, Kelas, Judul Buku, dan Daftar Bab terisi.');
+  }
+
+  let year = Number(tahunTerbit);
+  if (!year || isNaN(year)) {
+    const ym = String(bukuJudul).match(/\b(202[0-9])\b/);
+    year = ym ? parseInt(ym[1], 10) : new Date().getFullYear();
+  }
+
+  const fase = getFaseFromKelas(jenjangKelas) || 'Fase C';
+  const cleanPenerbit = (penerbit || 'Kemendikbudristek / Guru Pengunggah').trim();
+
+  // Cek apakah sudah ada buku dengan judul yang sama persis untuk mapel dan kelas ini
+  const existing: any = await c.env.DB.prepare(
+    `SELECT id FROM curriculum_standard_chapters 
+     WHERE LOWER(TRIM(mata_pelajaran)) = LOWER(TRIM(?)) 
+       AND LOWER(TRIM(jenjang_kelas)) = LOWER(TRIM(?)) 
+       AND LOWER(TRIM(buku_judul)) = LOWER(TRIM(?))`
+  ).bind(mataPelajaran, jenjangKelas, bukuJudul).first();
+
+  let savedId: number;
+  if (existing?.id) {
+    await c.env.DB.prepare(
+      `UPDATE curriculum_standard_chapters 
+       SET chapters_json = ?, total_babs = ?, tahun_terbit = ?, penerbit = ?, fase = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`
+    ).bind(JSON.stringify(chapters), chapters.length, year, cleanPenerbit, fase, existing.id).run();
+    savedId = existing.id;
+  } else {
+    const insertRes = await c.env.DB.prepare(
+      `INSERT INTO curriculum_standard_chapters (mata_pelajaran, jenjang_kelas, fase, buku_judul, chapters_json, total_babs, tahun_terbit, penerbit) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(mataPelajaran, jenjangKelas, fase, bukuJudul, JSON.stringify(chapters), chapters.length, year, cleanPenerbit).run();
+    savedId = Number(insertRes?.meta?.last_row_id);
+  }
+
+  return successResponse(c, {
+    id: String(savedId),
+    buku_judul: bukuJudul,
+    tahun_terbit: year,
+    penerbit: cleanPenerbit,
+    total_babs: chapters.length,
+    chapters,
+    is_custom: true,
+    message: 'Profil struktur buku berhasil disimpan dan siap digunakan guru lain.'
+  });
+});
+
+// Endpoint untuk menghapus profil buku kustom
+analisisCp.delete('/book-profiles/:id', async (c) => {
+  const cookieHeader = c.req.header('Cookie') || c.req.header('cookie') || c.req.raw?.headers?.get('cookie');
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+  const sessionId = getCookie(cookieHeader, 'session') || bearerToken;
+  const user = await getCurrentUser(c.env.DB, sessionId);
+  if (!user) return Errors.unauthorized(c, 'Silakan login terlebih dahulu');
+
+  const id = c.req.param('id');
+  if (!id || id.startsWith('preset_')) {
+    return Errors.badRequest(c, 'Profil standar kurikulum resmi tidak dapat dihapus');
+  }
+
+  if (!c.env?.DB) return Errors.internal(c, 'Database tidak tersedia');
+  await ensureAnalisisCpTables(c.env.DB);
+
+  await c.env.DB.prepare('DELETE FROM curriculum_standard_chapters WHERE id = ?').bind(Number(id)).run();
+
+  return successResponse(c, { success: true, message: 'Profil buku berhasil dihapus' });
+});
+
 // Helper resolve CP
 async function resolveOfficialCP(mataPelajaran: string, jenjangKelas: string, db?: any) {
   const official = db ? await getDynamicCP(db, mataPelajaran, jenjangKelas) : getOfficialCP(mataPelajaran, jenjangKelas);
@@ -467,6 +756,95 @@ async function resolveOfficialCP(mataPelajaran: string, jenjangKelas: string, db
   }
 
   return { officialCP: official, elementsCP: finalElements, faseCode, fase };
+}
+
+// Helper: Perbaikan dan Pengayaan Elemen IPAS (Pemahaman IPAS + Keterampilan Proses)
+export function repairAndEnrichIpasBabCp(bab: any, fase: string = 'C'): string {
+  let cpText = (bab?.cp || '').trim();
+  const babTitle = (bab?.bab || '').toLowerCase();
+  const allMateri = (Array.isArray(bab?.materi_list) ? bab.materi_list.join(' ') : '') + ' ' + (Array.isArray(bab?.items) ? bab.items.map((i: any) => (i.materi_pokok || '') + ' ' + (i.tp || '') + ' ' + (i.atp || '')).join(' ') : '');
+  const combinedContext = (babTitle + ' ' + allMateri).toLowerCase();
+
+  // 1. Tentukan kalimat Pemahaman IPAS yang akurat berdasarkan materi bab
+  let pemahamanContent = '';
+
+  if (combinedContext.includes('peta') || combinedContext.includes('geografis') || combinedContext.includes('daratan') || combinedContext.includes('lautan') || combinedContext.includes('indonesia berada') || combinedContext.includes('maritim') || combinedContext.includes('agraris') || combinedContext.includes('khatulistiwa') || combinedContext.includes('asia tenggara')) {
+    pemahamanContent = 'Menjelaskan letak dan kondisi geografis negara Indonesia dengan menggunakan peta konvensional/digital.';
+  } else if (combinedContext.includes('ekonomi') || combinedContext.includes('kebutuhan') || combinedContext.includes('pasar') || combinedContext.includes('jual beli') || combinedContext.includes('uang') || combinedContext.includes('keuangan') || combinedContext.includes('konsumsi') || combinedContext.includes('produksi') || combinedContext.includes('distribusi')) {
+    pemahamanContent = 'Menerapkan kegiatan ekonomi masyarakat di lingkungan sekitar dan menjelaskan pengelolaan keuangan/kebutuhan hidup secara bijak.';
+  } else if (combinedContext.includes('ekosistem') || combinedContext.includes('rantai makanan') || combinedContext.includes('jaring') || combinedContext.includes('biotik') || combinedContext.includes('abiotik') || combinedContext.includes('harmoni') || combinedContext.includes('habitat') || combinedContext.includes('populasi')) {
+    pemahamanContent = 'Menganalisis hubungan antar komponen biotik dan abiotik, serta pengaruhnya terhadap ekosistem.';
+  } else if (combinedContext.includes('organ') || combinedContext.includes('pernapasan') || combinedContext.includes('pencernaan') || combinedContext.includes('darah') || combinedContext.includes('tubuh manusia') || combinedContext.includes('tulang') || combinedContext.includes('otot')) {
+    pemahamanContent = 'Merefleksikan sistem organ tubuh manusia yang dikaitkan dengan cara menjaga kesehatan tubuhnya.';
+  } else if (combinedContext.includes('cahaya') || combinedContext.includes('bunyi') || combinedContext.includes('gelombang') || combinedContext.includes('penglihatan') || combinedContext.includes('pendengaran') || combinedContext.includes('mata') || combinedContext.includes('telinga')) {
+    pemahamanContent = 'Menjelaskan fenomena gelombang bunyi dan cahaya dalam kehidupan sehari-hari.';
+  } else if (combinedContext.includes('tata surya') || combinedContext.includes('planet') || combinedContext.includes('rotasi') || combinedContext.includes('revolusi') || combinedContext.includes('bumi') || combinedContext.includes('bulan') || combinedContext.includes('matahari')) {
+    pemahamanContent = 'Menjelaskan sistem tata surya, serta kaitannya dengan rotasi dan revolusi bumi.';
+  } else if (combinedContext.includes('sejarah') || combinedContext.includes('pahlawan') || combinedContext.includes('perjuangan') || combinedContext.includes('penjajahan') || combinedContext.includes('kemerdekaan')) {
+    pemahamanContent = 'Meninjau sejarah perjuangan para pahlawan di lingkungan sekitar tempat tinggalnya.';
+  } else if (combinedContext.includes('budaya') || combinedContext.includes('kearifan') || combinedContext.includes('adat') || combinedContext.includes('kebhinekaan') || combinedContext.includes('tradisi')) {
+    pemahamanContent = 'Menemukan keragaman budaya nasional dalam konteks kebhinekaan berdasarkan pemahaman terhadap nilai-nilai kearifan lokal yang berlaku di wilayah tempat tinggal.';
+  } else if (combinedContext.includes('air') || combinedContext.includes('energi') || combinedContext.includes('iklim') || combinedContext.includes('sampah') || combinedContext.includes('daur air') || combinedContext.includes('hidrologi') || combinedContext.includes('pelestarian') || combinedContext.includes('lingkungan')) {
+    pemahamanContent = 'Menghasilkan upaya penghematan energi, serta pemanfaatan sumber energi alternatif dari sumber daya yang ada di sekitarnya sebagai upaya mitigasi perubahan iklim.';
+  } else if (combinedContext.includes('pancaindra') || combinedContext.includes('indra')) {
+    pemahamanContent = 'Menjelaskan bentuk dan fungsi pancaindra dalam kehidupan sehari-hari.';
+  } else if (combinedContext.includes('gaya') || combinedContext.includes('gerak') || combinedContext.includes('magnet')) {
+    pemahamanContent = 'Membedakan jenis gaya dan pengaruhnya terhadap arah, gerak, dan bentuk benda.';
+  } else if (combinedContext.includes('wujud zat') || combinedContext.includes('perubahan wujud') || combinedContext.includes('padat') || combinedContext.includes('cair') || combinedContext.includes('gas')) {
+    pemahamanContent = 'Menyimpulkan proses perubahan wujud zat dalam kehidupan sehari-hari.';
+  }
+
+  // 2. Tentukan Keterampilan Proses yang relevan dengan aktivitas bab
+  let prosesContent = '';
+  if (combinedContext.includes('peta') || combinedContext.includes('geografis') || combinedContext.includes('daratan') || combinedContext.includes('lautan') || combinedContext.includes('indonesia')) {
+    prosesContent = 'Mengamati fenomena geografis pada peta konvensional/digital, mengidentifikasi pola wilayah daratan/lautan, memproses data tabel informasi, dan mengomunikasikan hasil analisis.';
+  } else if (combinedContext.includes('ekonomi') || combinedContext.includes('kebutuhan') || combinedContext.includes('pasar') || combinedContext.includes('jual beli')) {
+    prosesContent = 'Melakukan observasi dan wawancara sederhana aktivitas ekonomi di lingkungan sekitar, mengolah data kebutuhan dan keinginan, serta merefleksikan pengelolaan keuangan secara bijak.';
+  } else if (combinedContext.includes('ekosistem') || combinedContext.includes('rantai makanan') || combinedContext.includes('harmoni')) {
+    prosesContent = 'Mengamati interaksi antar komponen ekosistem di lingkungan sekitar, mempertanyakan dan memprediksi dampak perubahan rantai makanan, serta menyajikan hasil penyelidikan.';
+  } else if (combinedContext.includes('air') || combinedContext.includes('siklus') || combinedContext.includes('hidrologi') || combinedContext.includes('energi')) {
+    prosesContent = 'Merencanakan dan melakukan penyelidikan siklus air/energi menggunakan model percobaan sederhana, mencatat data observasi, dan mengomunikasikan kampanye pelestarian.';
+  } else if (combinedContext.includes('cahaya') || combinedContext.includes('bunyi') || combinedContext.includes('gaya') || combinedContext.includes('magnet')) {
+    prosesContent = 'Merencanakan dan melakukan penyelidikan ilmiah menggunakan alat bantu sederhana, membandingkan data pengamatan dengan prediksi, serta mengevaluasi hasil percobaan.';
+  } else if (combinedContext.includes('organ') || combinedContext.includes('tubuh') || combinedContext.includes('pancaindra')) {
+    prosesContent = 'Mengamati model/diagram struktur organ tubuh secara cermat, mencatat karakteristik fungsi organ, dan mengomunikasikan panduan pola hidup sehat.';
+  } else {
+    prosesContent = 'Menerapkan keterampilan proses sains: mengamati fenomena, membuat prediksi, merencanakan penyelidikan sederhana, mengolah data, dan mengomunikasikan hasil secara lisan maupun tertulis.';
+  }
+
+  // Cek apakah cpText yang ada sudah punya [Pemahaman IPAS] dan [Keterampilan Proses]
+  const hasPemahaman = /\[(Elemen\s*:\s*)?Pemahaman\s*IPAS\]/i.test(cpText) || /^Pemahaman\s*IPAS\s*:/i.test(cpText);
+  const hasProses = /\[(Elemen\s*:\s*)?Keterampilan\s*Proses\]/i.test(cpText) || /Keterampilan\s*Proses\s*:/i.test(cpText);
+
+  // Jika cpText memiliki anomali pengulangan penghematan energi pada bab non-energi:
+  const isRepetitiveEnergyBug = /penghematan\s+energi/i.test(cpText) && pemahamanContent && !pemahamanContent.includes('penghematan energi');
+
+  let finalPemahaman = '';
+  if (!hasPemahaman || isRepetitiveEnergyBug || !cpText) {
+    finalPemahaman = pemahamanContent || 'Memahami konsep esensial sains dan lingkungan dalam kehidupan sehari-hari.';
+  } else {
+    const match = cpText.match(/\[(?:Elemen\s*:\s*)?Pemahaman\s*IPAS\]\s*([\s\S]*?)(?=\[(?:Elemen\s*:\s*)?Keterampilan\s*Proses\]|$)/i);
+    if (match && match[1].trim()) {
+      finalPemahaman = match[1].trim();
+    } else {
+      const colonMatch = cpText.match(/^Pemahaman\s*IPAS\s*:\s*([\s\S]*?)(?=Keterampilan\s*Proses|$)/i);
+      finalPemahaman = (colonMatch && colonMatch[1].trim()) ? colonMatch[1].trim() : (pemahamanContent || cpText);
+    }
+  }
+
+  let finalProses = '';
+  if (hasProses) {
+    const matchProses = cpText.match(/\[(?:Elemen\s*:\s*)?Keterampilan\s*Proses\]\s*([\s\S]*?)$/i);
+    if (matchProses && matchProses[1].trim()) {
+      finalProses = matchProses[1].trim();
+    } else {
+      finalProses = prosesContent;
+    }
+  } else {
+    finalProses = prosesContent;
+  }
+
+  return `[Pemahaman IPAS]\n${finalPemahaman}\n\n[Keterampilan Proses]\n${finalProses}`;
 }
 
 // Helper: Validasi & Auto-Repair Output AI untuk Struktur Dokumen Kedinasan yang Presisi
@@ -607,6 +985,13 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
     sem.babs.sort((a: any, b: any) => (a.no || 0) - (b.no || 0));
 
     for (const bab of sem.babs) {
+      // Auto-Repair & Enrich IPAS Elements (Pemahaman IPAS + Keterampilan Proses)
+      const mapelStr = (meta?.mataPelajaran || result.metadata?.mata_pelajaran || '').toLowerCase();
+      const isIpasSubject = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
+      if (isIpasSubject) {
+        bab.cp = repairAndEnrichIpasBabCp(bab, result.metadata?.fase || meta?.fase || 'C');
+      }
+
       if (!Array.isArray(bab.items) || bab.items.length === 0) {
         bab.items = [
           {
@@ -1167,13 +1552,37 @@ export async function ensureAnalisisCpTables(db: D1Database): Promise<void> {
           buku_judul TEXT NOT NULL,
           chapters_json TEXT NOT NULL,
           total_babs INTEGER NOT NULL DEFAULT 0,
+          tahun_terbit INTEGER DEFAULT 2024,
+          penerbit TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`),
-        db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_curr_mapel_kelas ON curriculum_standard_chapters(mata_pelajaran, jenjang_kelas)')
+        db.prepare('CREATE INDEX IF NOT EXISTS idx_curr_mapel_kelas ON curriculum_standard_chapters(mata_pelajaran, jenjang_kelas)')
       ]);
     } catch (_) {}
   }
+
+  // Gracefully ensure columns exist if created by earlier migrations
+  try {
+    await db.prepare('SELECT tahun_terbit FROM curriculum_standard_chapters LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE curriculum_standard_chapters ADD COLUMN tahun_terbit INTEGER DEFAULT 2024').run(); } catch (_) {}
+  }
+  try {
+    await db.prepare('SELECT penerbit FROM curriculum_standard_chapters LIMIT 1').first();
+  } catch {
+    try { await db.prepare('ALTER TABLE curriculum_standard_chapters ADD COLUMN penerbit TEXT').run(); } catch (_) {}
+  }
+  // Drop obsolete unique indexes so multiple books/editions can be saved per subject & grade
+  try {
+    await db.prepare('DROP INDEX IF EXISTS idx_curriculum_mapel_kelas').run();
+  } catch (_) {}
+  try {
+    await db.prepare('DROP INDEX IF EXISTS idx_curr_mapel_kelas').run();
+  } catch (_) {}
+  try {
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_curr_mapel_kelas ON curriculum_standard_chapters(mata_pelajaran, jenjang_kelas)').run();
+  } catch (_) {}
 }
 
 // 5. Simpan Hasil Analisis ke Database & CP Kolaboratif

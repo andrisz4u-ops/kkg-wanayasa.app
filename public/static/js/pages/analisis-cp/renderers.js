@@ -4,7 +4,41 @@ import { getAlokasiWaktuResmi, balanceSemesterJpItems } from './alokasi-waktu.js
 import { calculateRpe, KALDIK_PURWAKARTA_2026_2027 } from './kaldik-purwakarta.js';
 
 /**
- * Format teks Capaian Pembelajaran dengan badge/penanda Elemen yang jelas
+ * Ekstraksi blok-blok Elemen dari teks CP (mendukung multi-elemen seperti [Pemahaman IPAS] dan [Keterampilan Proses])
+ */
+export function parseCpElementBlocks(rawCp) {
+  if (!rawCp || typeof rawCp !== 'string') return [];
+  const text = rawCp.trim();
+  if (!text) return [];
+
+  // Match all [ElementName] or [Elemen: ElementName] followed by content up to the next bracket or end
+  const bracketRegex = /\[([^\]]+)\]\s*([\s\S]*?)(?=(?:\[[^\]]+\]|$))/g;
+  const matches = [...text.matchAll(bracketRegex)];
+
+  if (matches.length > 0) {
+    return matches.map(m => ({
+      element: m[1].replace(/^Elemen\s*:\s*/i, '').trim(),
+      content: m[2].trim()
+    })).filter(b => b.element || b.content);
+  }
+
+  // Fallback colon format: "Elemen: ..." or "Pemahaman IPAS: ..."
+  const colonMatch = text.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/is);
+  if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
+    return [{
+      element: colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim(),
+      content: colonMatch[2].trim()
+    }];
+  }
+
+  return [{
+    element: '',
+    content: text
+  }];
+}
+
+/**
+ * Format teks Capaian Pembelajaran dengan badge/penanda Elemen yang jelas (mendukung dwi-elemen IPAS)
  */
 export function formatCpContentHtml(cpText, babTitle = '') {
   if (!cpText) {
@@ -15,29 +49,31 @@ export function formatCpContentHtml(cpText, babTitle = '') {
     return '-';
   }
 
-  // Check if cpText starts with [Elemen] or [Elemen: ...]
-  const bracketMatch = cpText.match(/^\[([^\]]+)\]\s*(.*)$/s);
-  if (bracketMatch) {
-    const elName = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-    const rest = bracketMatch[2].trim();
-    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(elName)}]</div><div class="leading-relaxed">${escapeHtml(rest).replace(/\n/g, '<br>')}</div>`;
+  const blocks = parseCpElementBlocks(cpText);
+  if (blocks.length === 0) return escapeHtml(cpText).replace(/\n/g, '<br>');
+
+  if (blocks.length === 1 && !blocks[0].element) {
+    const titleMatch = (babTitle || '').match(/\[(.*?)\]/);
+    if (titleMatch) {
+      blocks[0].element = titleMatch[1];
+    }
   }
 
-  // Check if cpText starts with "Elemen: ..." or "Pemahaman IPAS: ..."
-  const colonMatch = cpText.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*(.*)$/is);
-  if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
-    const elName = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-    const rest = colonMatch[2].trim();
-    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(elName)}]</div><div class="leading-relaxed">${escapeHtml(rest).replace(/\n/g, '<br>')}</div>`;
-  }
+  return blocks.map((b, idx) => {
+    const elLower = (b.element || '').toLowerCase();
+    let badgeClass = 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200 border-indigo-200/80 dark:border-indigo-800/60';
+    if (elLower.includes('proses') || elLower.includes('keterampilan')) {
+      badgeClass = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 border-emerald-300/80 dark:border-emerald-800/60';
+    }
 
-  // If babTitle has [Elemen] and cpText doesn't have an element yet:
-  const titleMatch = (babTitle || '').match(/\[(.*?)\]/);
-  if (titleMatch) {
-    return `<div class="font-bold text-indigo-950 dark:text-indigo-200 mb-1 text-[10.5px] uppercase tracking-wide bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 px-1.5 py-0.5 rounded w-fit">[Elemen: ${escapeHtml(titleMatch[1])}]</div><div class="leading-relaxed">${escapeHtml(cpText).replace(/\n/g, '<br>')}</div>`;
-  }
+    const badgeHtml = b.element
+      ? `<div class="font-bold mb-1 text-[10.5px] uppercase tracking-wide border px-1.5 py-0.5 rounded w-fit ${badgeClass}">[Elemen: ${escapeHtml(b.element)}]</div>`
+      : '';
+    const contentHtml = b.content ? `<div class="leading-relaxed">${escapeHtml(b.content).replace(/\n/g, '<br>')}</div>` : '';
+    const divider = (blocks.length > 1 && idx < blocks.length - 1) ? '<div class="my-2 border-b border-dashed border-slate-300 dark:border-slate-700"></div>' : '';
 
-  return escapeHtml(cpText).replace(/\n/g, '<br>');
+    return `<div>${badgeHtml}${contentHtml}</div>${divider}`;
+  }).join('');
 }
 
 /**
@@ -51,50 +87,46 @@ export function extractSemesterCpItems(sem) {
     const rawCp = (bab?.cp || '').trim();
     if (!rawCp) return;
 
-    let element = '';
-    let cpText = rawCp;
+    const blocks = parseCpElementBlocks(rawCp);
+    blocks.forEach(b => {
+      let element = (b.element || '').replace(/^Elemen\s*:?\s*/i, '').trim();
+      let cpText = (b.content || '').trim();
 
-    const bracketMatch = rawCp.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
-    if (bracketMatch) {
-      element = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-      cpText = bracketMatch[2].trim();
-    } else {
-      const colonMatch = rawCp.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/i);
-      if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
-        element = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-        cpText = colonMatch[2].trim();
-      } else {
+      if (!element && !cpText) return;
+      if (!element) {
         const titleMatch = (bab.bab || '').match(/\[(.*?)\]/);
         if (titleMatch) {
           element = titleMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
         }
       }
-    }
 
-    element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
+      element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
 
-    // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
-    const existingIndex = items.findIndex(it => {
-      if (element && it.element) {
-        return it.element.toUpperCase() === element.toUpperCase();
-      }
-      return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
-    });
-
-    if (existingIndex >= 0) {
-      items[existingIndex].babIndices.push(babIdx);
-      if (cpText.length > items[existingIndex].cp.length) {
-        items[existingIndex].cp = cpText;
-        items[existingIndex].raw = rawCp;
-      }
-    } else {
-      items.push({
-        element,
-        cp: cpText || rawCp,
-        raw: rawCp,
-        babIndices: [babIdx]
+      // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
+      const existingIndex = items.findIndex(it => {
+        if (element && it.element) {
+          return it.element.toUpperCase() === element.toUpperCase();
+        }
+        return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
       });
-    }
+
+      if (existingIndex >= 0) {
+        if (!items[existingIndex].babIndices.includes(babIdx)) {
+          items[existingIndex].babIndices.push(babIdx);
+        }
+        if (cpText.length > items[existingIndex].cp.length) {
+          items[existingIndex].cp = cpText;
+          items[existingIndex].raw = element ? `[${element}] ${cpText}` : rawCp;
+        }
+      } else {
+        items.push({
+          element,
+          cp: cpText || rawCp,
+          raw: element ? `[${element}] ${cpText}` : rawCp,
+          babIndices: [babIdx]
+        });
+      }
+    });
   });
 
   if (items.length === 0) {

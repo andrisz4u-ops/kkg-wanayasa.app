@@ -4,9 +4,11 @@ import {
   buildStructurePrompt, 
   buildAnalisisCpPrompt, 
   getStandardCurriculumChapters,
+  getAllBookProfiles,
   validateAndRepairAnalysisResult,
   ensureAnalisisCpTables,
   replacePesertaDidik,
+  repairAndEnrichIpasBabCp,
   default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
@@ -525,5 +527,172 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
     expect(cleanData.atp).toBe('murid melakukan penyelidikan konkret.');
     expect(cleanData.lkpd).toBe('Lembar Kerja Murid (LKM)');
     expect(cleanData.nested[0].desc).toBe('Seluruh MURID mengikuti KBM.');
+  });
+
+  it('repairAndEnrichIpasBabCp correctly resolves dual elements [Pemahaman IPAS] and [Keterampilan Proses]', () => {
+    const babGeografi = {
+      no: 1,
+      bab: 'Bab 1: Di Mana Indonesia Berada?',
+      cp: '[ELEMEN: PEMAHAMAN IPAS] Menghasilkan upaya penghematan energi, serta pemanfaatan sumber energi alternatif dari sumber daya yang ada di sekitarnya sebagai upaya mitigasi perubahan iklim.',
+      materi_list: ['1. Daratan dan Lautan di Indonesia', '2. Indonesia, Zamrud di Khatulistiwa'],
+      items: [
+        { kode_tp: '5.1', materi_pokok: 'Daratan dan Lautan', tp: 'Mengidentifikasi batas wilayah', atp: 'Murid mengamati peta Asia Tenggara' }
+      ]
+    };
+
+    const repaired = repairAndEnrichIpasBabCp(babGeografi, 'C');
+    expect(repaired).toContain('[Pemahaman IPAS]');
+    expect(repaired).toContain('[Keterampilan Proses]');
+    // Should NOT have the repetitive energy bug on geography bab
+    expect(repaired).not.toContain('penghematan energi');
+    expect(repaired).toContain('letak dan kondisi geografis');
+    expect(repaired).toContain('Mengamati fenomena geografis pada peta');
+  });
+
+  it('validateAndRepairAnalysisResult ensures all IPAS chapters contain both Pemahaman IPAS and Keterampilan Proses', () => {
+    const rawResult = {
+      metadata: {
+        mata_pelajaran: 'IPAS',
+        kelas: '5'
+      },
+      semesters: [
+        {
+          semester: 1,
+          babs: [
+            {
+              no: 1,
+              bab: 'Bab 1: Di Mana Indonesia Berada?',
+              cp: '[Pemahaman IPAS] Menghasilkan upaya penghematan energi...',
+              items: [{ kode_tp: '5.1', materi_pokok: 'Peta', tp: 'Peta', atp: 'Peta' }]
+            },
+            {
+              no: 2,
+              bab: 'Bab 2: Majulah Daerahku!',
+              cp: '[Pemahaman IPAS] Menghasilkan upaya penghematan energi...',
+              items: [{ kode_tp: '5.2', materi_pokok: 'Ekonomi', tp: 'Ekonomi', atp: 'Ekonomi' }]
+            }
+          ]
+        }
+      ]
+    };
+
+    const res = validateAndRepairAnalysisResult(rawResult, [], {
+      mataPelajaran: 'IPAS',
+      jenjangKelas: 'Kelas 5'
+    });
+
+    const bab1 = res.semesters[0].babs[0];
+    const bab2 = res.semesters[0].babs[1];
+
+    expect(bab1.cp).toContain('[Pemahaman IPAS]');
+    expect(bab1.cp).toContain('[Keterampilan Proses]');
+    expect(bab1.cp).toContain('letak dan kondisi geografis');
+
+    expect(bab2.cp).toContain('[Pemahaman IPAS]');
+    expect(bab2.cp).toContain('[Keterampilan Proses]');
+    expect(bab2.cp).toContain('kegiatan ekonomi');
+  });
+
+  it('buildAnalisisCpPrompt contains specific dual-element instructions when mataPelajaran is IPAS', () => {
+    const prompt = buildAnalisisCpPrompt({
+      namaSekolah: 'SDN 1 Wanayasa',
+      mataPelajaran: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+      jenjangKelas: 'Kelas 5',
+      fase: 'C',
+      tahunAjaran: '2025/2026',
+      chapters: [],
+      targetSemester: 'all',
+      baseCP: 'CP Resmi',
+      elementsCP: {}
+    });
+
+    expect(prompt).toContain('FORMAT DWI-ELEMEN UNTUK IPAS');
+    expect(prompt).toContain('[Pemahaman IPAS]');
+    expect(prompt).toContain('[Keterampilan Proses]');
+  });
+
+  describe('Book Structure Profiles & Publication Year System', () => {
+    it('getAllBookProfiles returns official preset as default (is_default: true) when DB is empty', async () => {
+      const profiles = await getAllBookProfiles(undefined, 'Bahasa Indonesia', 'Kelas 5');
+      expect(profiles).toBeDefined();
+      expect(Array.isArray(profiles)).toBe(true);
+      expect(profiles.length).toBeGreaterThanOrEqual(1);
+
+      const defaultProfile = profiles.find(p => p.is_default);
+      expect(defaultProfile).toBeDefined();
+      expect(defaultProfile?.buku_judul).toContain('Bergerak Bersama');
+      expect(defaultProfile?.total_babs).toBe(8);
+      expect(defaultProfile?.is_custom).toBe(false);
+    });
+
+    it('getAllBookProfiles sorts books by publication year descending and marks highest year as default', async () => {
+      const mockDb: any = {
+        prepare: (sql: string) => ({
+          bind: (...args: any[]) => ({
+            all: async () => ({
+              results: [
+                {
+                  id: 101,
+                  mata_pelajaran: 'IPAS',
+                  jenjang_kelas: 'Kelas 5',
+                  buku_judul: 'Buku Guru IPAS Kurikulum Merdeka (Edisi 2023)',
+                  tahun_terbit: 2023,
+                  penerbit: 'Pusat Kurikulum',
+                  total_babs: 8,
+                  chapters_json: JSON.stringify([
+                    { no: 1, bab: 'Bab 1: Eksplorasi 2023', materi_pokok: ['Topik A'], semester: 1 }
+                  ]),
+                  created_at: '2025-01-01'
+                },
+                {
+                  id: 102,
+                  mata_pelajaran: 'IPAS',
+                  jenjang_kelas: 'Kelas 5',
+                  buku_judul: 'IPAS Terpadu SD Kelas V (Edisi Baru 2026)',
+                  tahun_terbit: 2026,
+                  penerbit: 'Penerbit Mandiri',
+                  total_babs: 8,
+                  chapters_json: JSON.stringify([
+                    { no: 1, bab: 'Bab 1: Cahaya Masa Depan 2026', materi_pokok: ['Topik Sains Modern'], semester: 1 }
+                  ]),
+                  created_at: '2026-03-01'
+                }
+              ]
+            })
+          })
+        })
+      };
+
+      const profiles = await getAllBookProfiles(mockDb, 'IPAS', 'Kelas 5');
+      expect(profiles.length).toBeGreaterThanOrEqual(3); // 2026 (custom), 2024 (official preset), 2023 (custom)
+
+      // Verify sorted strictly by tahun_terbit descending
+      for (let i = 0; i < profiles.length - 1; i++) {
+        expect(profiles[i].tahun_terbit).toBeGreaterThanOrEqual(profiles[i + 1].tahun_terbit);
+      }
+
+      // The 2026 edition MUST be marked as default
+      expect(profiles[0].tahun_terbit).toBe(2026);
+      expect(profiles[0].is_default).toBe(true);
+      expect(profiles[0].buku_judul).toContain('2026');
+
+      // Subsequent profiles MUST NOT be marked as default
+      for (let i = 1; i < profiles.length; i++) {
+        expect(profiles[i].is_default).toBe(false);
+      }
+    });
+
+    it('GET /book-profiles API endpoint returns HTTP 200 with profiles and default_profile', async () => {
+      const req = new Request('http://localhost/book-profiles?mataPelajaran=Bahasa%20Indonesia&jenjangKelas=Kelas%205');
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data.profiles)).toBe(true);
+      expect(body.data.default_profile).toBeDefined();
+      expect(body.data.default_profile.is_default).toBe(true);
+      expect(body.data.default_profile.chapters.length).toBe(8);
+    });
   });
 });

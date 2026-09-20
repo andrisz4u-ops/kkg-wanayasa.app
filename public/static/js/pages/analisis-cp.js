@@ -6,7 +6,7 @@ import { renderLockedFeature } from '../components.js';
 import { saveDocArchive } from '../storage-archive.js';
 
 // Modul Terpisah Analisis CP
-import { fetchStandardChapters, loadPdfJsScript, parseChaptersHeuristically } from './analisis-cp/helpers.js';
+import { fetchStandardChapters, fetchBookProfiles, saveBookProfile, deleteBookProfile, loadPdfJsScript, parseChaptersHeuristically } from './analisis-cp/helpers.js';
 import { validateAndRepairAnalysisData } from './analisis-cp/validator.js';
 import { renderAnalysisCanvas, syncCanvasToAnalysisData, applyPrintOrientation } from './analisis-cp/renderers.js';
 import { downloadDocx, downloadAllDocs, saveToDatabase, openAnalisisArchiveDrawer } from './analisis-cp/downloaders.js';
@@ -20,6 +20,8 @@ let isCustomPdfUploaded = false;
 let activeAnalysisTab = 'analisis'; // 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp'
 let activePromesSemester = 'all'; // 'all' | 1 | 2
 let lastLoadedUserId = null;
+let availableBookProfiles = [];
+let selectedBookProfileId = null;
 
 function handleSemesterChange(newSem) {
   activePromesSemester = newSem;
@@ -35,125 +37,10 @@ function getDraftStorageKey() {
 }
 
 export function saveDraftToStorage() {
-  try {
-    if (!state.user) return;
-    if (!currentAnalysisData && (!detectedChapters || detectedChapters.length === 0)) return;
-
-    const draft = {
-      timestamp: Date.now(),
-      inputData: currentInputData || {
-        namaSekolah: document.getElementById('input-nama-sekolah')?.value || '',
-        mataPelajaran: document.getElementById('select-mata-pelajaran')?.value || '',
-        jenjangKelas: document.getElementById('select-jenjang-kelas')?.value || '',
-        tahunAjaran: document.querySelector('select[name="tahunAjaran"]')?.value || '',
-        sumberBuku: document.getElementById('input-sumber-buku')?.value || '',
-        namaGuru: document.querySelector('input[name="namaGuru"]')?.value || '',
-        nipGuru: document.querySelector('input[name="nipGuru"]')?.value || '',
-        namaKepalaSekolah: document.querySelector('input[name="namaKepalaSekolah"]')?.value || '',
-        nipKepalaSekolah: document.querySelector('input[name="nipKepalaSekolah"]')?.value || ''
-      },
-      detectedChapters: detectedChapters || [],
-      analysisData: currentAnalysisData,
-      activeTab: activeAnalysisTab,
-      activeSemester: activePromesSemester
-    };
-
-    localStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
-  } catch (e) {
-    console.warn('Gagal menyimpan draf analisis:', e);
-  }
+  // No-op: fitur banner draf dinonaktifkan agar tidak mengganggu alur kerja pengguna
 }
 
-function checkAndShowDraftBanner() {
-  try {
-    const raw = localStorage.getItem(getDraftStorageKey());
-    if (!raw) return;
-    const draft = JSON.parse(raw);
-    if (!draft || (!draft.analysisData && (!draft.detectedChapters || draft.detectedChapters.length === 0))) return;
 
-    const banner = document.getElementById('analisis-draft-banner');
-    const restoreBtn = document.getElementById('btn-restore-draft');
-    const infoText = document.getElementById('analisis-draft-info');
-
-    if (banner) banner.classList.remove('hidden');
-    if (restoreBtn) restoreBtn.classList.remove('hidden');
-
-    const dateStr = draft.timestamp ? new Date(draft.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
-    const mapelName = draft.inputData?.mataPelajaran || 'Analisis CP';
-    const kelasName = draft.inputData?.jenjangKelas || '';
-
-    if (infoText) {
-      const hasContent = !!draft.analysisData;
-      infoText.innerText = `Draf tersimpan (${dateStr}): ${mapelName} ${kelasName} • ${hasContent ? 'Hasil Analisis Lengkap' : `${draft.detectedChapters?.length || 0} Bab Terstruktur`}`;
-    }
-  } catch (_) {}
-}
-
-function restoreDraft() {
-  try {
-    const raw = localStorage.getItem(getDraftStorageKey());
-    if (!raw) {
-      showToast('Tidak ada draf yang tersimpan.', 'info');
-      return;
-    }
-    const draft = JSON.parse(raw);
-
-    if (draft.inputData) {
-      currentInputData = draft.inputData;
-      const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el && val !== undefined) el.value = val;
-      };
-      const setByName = (name, val) => {
-        const el = document.querySelector(`[name="${name}"]`);
-        if (el && val !== undefined) el.value = val;
-      };
-
-      setVal('input-nama-sekolah', draft.inputData.namaSekolah);
-      setVal('select-mata-pelajaran', draft.inputData.mataPelajaran);
-      setVal('select-jenjang-kelas', draft.inputData.jenjangKelas);
-      setVal('input-sumber-buku', draft.inputData.sumberBuku);
-      setByName('tahunAjaran', draft.inputData.tahunAjaran);
-      setByName('namaGuru', draft.inputData.namaGuru);
-      setByName('nipGuru', draft.inputData.nipGuru);
-      setByName('namaKepalaSekolah', draft.inputData.namaKepalaSekolah);
-      setByName('nipKepalaSekolah', draft.inputData.nipKepalaSekolah);
-    }
-
-    if (Array.isArray(draft.detectedChapters) && draft.detectedChapters.length > 0) {
-      detectedChapters = draft.detectedChapters;
-      renderChaptersList();
-    }
-
-    if (draft.analysisData) {
-      currentAnalysisData = draft.analysisData;
-      activeAnalysisTab = draft.activeTab || 'analisis';
-      activePromesSemester = draft.activeSemester || 'all';
-
-      document.getElementById('analisis-form-view')?.classList.add('hidden');
-      document.getElementById('analisis-result-view')?.classList.remove('hidden');
-      renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
-      showToast('Draf analisis berhasil dipulihkan!', 'success');
-    } else {
-      showToast('Draf formulir dan daftar bab berhasil dipulihkan!', 'success');
-    }
-
-    document.getElementById('analisis-draft-banner')?.classList.add('hidden');
-    document.getElementById('btn-restore-draft')?.classList.add('hidden');
-  } catch (err) {
-    console.error('Gagal memulihkan draf:', err);
-    showToast('Gagal memulihkan draf.', 'error');
-  }
-}
-
-function dismissDraft() {
-  try {
-    localStorage.removeItem(getDraftStorageKey());
-    document.getElementById('analisis-draft-banner')?.classList.add('hidden');
-    document.getElementById('btn-restore-draft')?.classList.add('hidden');
-    showToast('Draf telah diabaikan.', 'info');
-  } catch (_) {}
-}
 
 
 export async function renderAnalisisCp() {
@@ -215,9 +102,6 @@ export async function renderAnalisisCp() {
             </div>
           </div>
           <div class="flex items-center gap-2.5">
-            <button type="button" id="btn-restore-draft" class="hidden px-3.5 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer" title="Pulihkan draf analisis terakhir">
-              <i class="fas fa-clock-rotate-left text-amber-400"></i> <span class="hidden sm:inline">Pulihkan Draf</span>
-            </button>
             <button type="button" id="btn-cp-kolaboratif" class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white border border-purple-400/30 text-xs font-black tracking-wide transition-all flex items-center gap-2 shadow-lg shadow-purple-600/25 cursor-pointer">
               <i class="fas fa-users text-amber-300"></i>
               <span>CP Kolaboratif</span>
@@ -225,30 +109,6 @@ export async function renderAnalisisCp() {
             </button>
             <button type="button" id="btn-analisis-archive" class="px-4 py-2.5 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
               <i class="fas fa-folder-open text-amber-400"></i> <span class="hidden sm:inline">Riwayat Saya</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Banner Pemulihan Draf Otomatis -->
-        <div id="analisis-draft-banner" class="hidden mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-amber-950/40 border border-amber-500/30 text-amber-200 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
-          <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 text-base shrink-0 shadow-inner">
-              <i class="fas fa-clock-rotate-left"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h4 class="text-xs font-black text-amber-300 uppercase tracking-wider">Draf Terakhir Ditemukan</h4>
-                <span class="px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 text-[10px] font-bold">Lokal</span>
-              </div>
-              <p id="analisis-draft-info" class="text-[11.5px] text-slate-300 mt-0.5">Tersedia dokumen analisis yang belum Anda simpan ke server.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-            <button type="button" id="btn-banner-restore-draft" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer">
-              <i class="fas fa-rotate-left text-slate-950"></i> Pulihkan Sekarang
-            </button>
-            <button type="button" id="btn-banner-dismiss-draft" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer">
-              Abaikan
             </button>
           </div>
         </div>
@@ -381,6 +241,29 @@ export async function renderAnalisisCp() {
                 </div>
               </div>
 
+              <!-- PROFIL STRUKTUR BUKU (DARI DATABASE & PRESET RESMI) -->
+              <div class="mb-3.5 p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-[11px] font-extrabold text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-book-bookmark text-indigo-600"></i> Profil Struktur Buku:
+                  </label>
+                  <div class="flex items-center gap-1">
+                    <button type="button" id="btn-refresh-book-profiles" class="p-1 px-1.5 rounded-lg text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs transition-all cursor-pointer" title="Segarkan Profil Buku">
+                      <i class="fas fa-rotate"></i>
+                    </button>
+                    <button type="button" id="btn-delete-book-profile" class="hidden p-1 px-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs transition-all cursor-pointer" title="Hapus Profil Buku Kustom Ini">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <select id="select-book-profile" class="w-full px-3 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <option value="">Memuat profil buku...</option>
+                </select>
+                <div id="book-profile-info-badge" class="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                  <span>Pilih profil buku kurikulum atau unggah buku baru</span>
+                </div>
+              </div>
+
               <!-- Opsi Cakupan Buku Ajar: 1 Tahun vs Semester 1 vs Semester 2 -->
               <div class="mb-3 p-2.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40">
                 <div class="flex items-center justify-between mb-1.5">
@@ -495,10 +378,15 @@ export async function renderAnalisisCp() {
               </div>
             </div>
 
-            <div class="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button type="button" id="btn-add-bab" class="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                <i class="fas fa-plus text-xs"></i> Tambah Bab Manual
-              </button>
+            <div class="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="btn-add-bab" class="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                  <i class="fas fa-plus text-xs"></i> Tambah Bab
+                </button>
+                <button type="button" id="btn-save-as-new-book" class="py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-200/60 dark:border-indigo-800/40" title="Simpan struktur bab ini sebagai profil buku baru di database">
+                  <i class="fas fa-bookmark text-indigo-600 text-xs"></i> Simpan Profil
+                </button>
+              </div>
 
               <button type="submit" id="btn-submit-generate" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer">
                 <i class="fas fa-bolt text-amber-400 text-base"></i> Susun Analisis CP, TP & ATP Sekarang
@@ -1012,13 +900,10 @@ export function initAnalisisCp() {
     showToast('Baris TP berhasil dihapus.', 'info');
   };
 
-  // Draft listeners
-  document.getElementById('btn-restore-draft')?.addEventListener('click', restoreDraft);
-  document.getElementById('btn-banner-restore-draft')?.addEventListener('click', restoreDraft);
-  document.getElementById('btn-banner-dismiss-draft')?.addEventListener('click', dismissDraft);
-
-  // Auto-check draft on load
-  checkAndShowDraftBanner();
+  // Bersihkan sisa draf lokal agar tidak meninggalkan banner/state yang mengganggu
+  try {
+    localStorage.removeItem(getDraftStorageKey());
+  } catch (_) {}
 
   // Autosave triggers on form and canvas changes
   let autosaveTimer = null;
@@ -1040,7 +925,7 @@ export function initAnalisisCp() {
     const mapel = e.target.value;
     const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
     isCustomPdfUploaded = false;
-    await seedDefaultChaptersForClass(kelas, mapel);
+    await loadBookProfilesForClass(kelas, mapel);
     showToast(`Struktur materi disesuaikan dengan ${mapel} (${kelas})`, 'info');
   });
 
@@ -1089,8 +974,155 @@ export function initAnalisisCp() {
     }
 
     isCustomPdfUploaded = false;
-    await seedDefaultChaptersForClass(kelas, mapel);
+    await loadBookProfilesForClass(kelas, mapel);
     showToast(`Struktur materi disesuaikan untuk ${kelas} (${mapel})`, 'info');
+  });
+
+  // Listener Pemilihan Profil Buku dari Dropdown
+  document.getElementById('select-book-profile')?.addEventListener('change', async (e) => {
+    const val = e.target.value;
+    if (val === '__custom_upload__') {
+      showToast('Silakan unggah PDF atau tempel teks daftar isi buku di bawah.', 'info');
+      document.getElementById('tab-view-pdf')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const mapel = document.getElementById('select-mata-pelajaran')?.value || 'IPAS';
+    const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+    const k = String(kelas).replace(/\D/g, '') || '5';
+    const storageKey = `kkg_book_profile_${mapel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${k}`;
+
+    const profile = availableBookProfiles.find(p => String(p.id) === String(val));
+    if (profile) {
+      selectedBookProfileId = String(profile.id);
+      localStorage.setItem(storageKey, selectedBookProfileId);
+
+      const cov = document.getElementById('input-book-coverage')?.value || 'all';
+      let chs = JSON.parse(JSON.stringify(profile.chapters));
+      if (cov === '1') {
+        const sem1Only = chs.filter(c => c.semester === 1);
+        chs = sem1Only.length > 0 ? sem1Only : chs.map(c => ({ ...c, semester: 1 }));
+      } else if (cov === '2') {
+        const sem2Only = chs.filter(c => c.semester === 2);
+        chs = sem2Only.length > 0 ? sem2Only : chs.map(c => ({ ...c, semester: 2 }));
+      }
+      detectedChapters = chs;
+
+      const titleInput = document.getElementById('input-sumber-buku');
+      if (titleInput) {
+        const suffix = cov === '1' ? ' (Semester 1)' : cov === '2' ? ' (Semester 2)' : '';
+        titleInput.value = (profile.buku_judul || `Buku Siswa ${mapel} Kelas ${k}`) + suffix;
+      }
+
+      const infoBadge = document.getElementById('book-profile-info-badge');
+      if (infoBadge) {
+        infoBadge.innerHTML = `
+          <span><i class="fas fa-calendar-alt text-indigo-500 mr-1"></i>Tahun: <strong>${profile.tahun_terbit || '-'}</strong> | Penerbit: <strong>${escapeHtml(profile.penerbit || 'Kemendikbudristek')}</strong></span>
+          <span><i class="fas fa-list-check text-sky-500 mr-1"></i><strong>${profile.total_babs}</strong> Bab</span>
+        `;
+      }
+
+      const deleteBtn = document.getElementById('btn-delete-book-profile');
+      if (deleteBtn) {
+        if (profile.is_custom) {
+          deleteBtn.classList.remove('hidden');
+        } else {
+          deleteBtn.classList.add('hidden');
+        }
+      }
+
+      redistributeSemesters(cov);
+      renderChaptersList();
+      showToast(`Struktur bab dialihkan ke: ${profile.buku_judul}`, 'success');
+    }
+  });
+
+  // Segarkan Profil Buku
+  document.getElementById('btn-refresh-book-profiles')?.addEventListener('click', async () => {
+    const mapel = document.getElementById('select-mata-pelajaran')?.value || 'IPAS';
+    const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+    await loadBookProfilesForClass(kelas, mapel);
+    showToast('Daftar profil buku berhasil disegarkan.', 'success');
+  });
+
+  // Hapus Profil Buku Kustom
+  document.getElementById('btn-delete-book-profile')?.addEventListener('click', async () => {
+    if (!selectedBookProfileId || selectedBookProfileId.startsWith('preset_')) {
+      showToast('Hanya buku kustom yang dapat dihapus.', 'warning');
+      return;
+    }
+    const profile = availableBookProfiles.find(p => String(p.id) === String(selectedBookProfileId));
+    const title = profile?.buku_judul || 'Buku ini';
+    if (!confirm(`Apakah Anda yakin ingin menghapus profil buku:\n"${title}"?`)) {
+      return;
+    }
+    try {
+      showLoading('Menghapus Profil...', 'Menghapus profil buku dari database');
+      await deleteBookProfile(selectedBookProfileId);
+      hideLoading();
+      showToast('Profil buku berhasil dihapus.', 'success');
+
+      const mapel = document.getElementById('select-mata-pelajaran')?.value || 'IPAS';
+      const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+      const k = String(kelas).replace(/\D/g, '') || '5';
+      const storageKey = `kkg_book_profile_${mapel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${k}`;
+      localStorage.removeItem(storageKey);
+
+      await loadBookProfilesForClass(kelas, mapel);
+    } catch (err) {
+      hideLoading();
+      showToast('Gagal menghapus profil buku: ' + (err.message || 'Terjadi kesalahan'), 'error');
+    }
+  });
+
+  // Simpan Struktur Bab Sebagai Profil Buku Baru
+  document.getElementById('btn-save-as-new-book')?.addEventListener('click', async () => {
+    if (!detectedChapters || detectedChapters.length === 0) {
+      showToast('Belum ada bab yang dimuat untuk disimpan sebagai profil buku.', 'warning');
+      return;
+    }
+
+    const currentTitle = document.getElementById('input-sumber-buku')?.value || '';
+    const mapel = document.getElementById('select-mata-pelajaran')?.value || 'IPAS';
+    const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
+
+    const inputTitle = prompt('Masukkan Judul / Nama Buku:', currentTitle);
+    if (!inputTitle || !inputTitle.trim()) return;
+
+    let defaultYear = 2025;
+    const yearMatch = inputTitle.match(/\b(202[0-9])\b/);
+    if (yearMatch) defaultYear = parseInt(yearMatch[1], 10);
+
+    const inputYearStr = prompt('Masukkan Tahun Terbit Buku (misal: 2025):', String(defaultYear));
+    if (!inputYearStr) return;
+    const inputYear = parseInt(inputYearStr.replace(/\D/g, ''), 10) || defaultYear;
+
+    const inputPenerbit = prompt('Masukkan Penerbit / Pengarang (misal: Kemendikbudristek / Erlangga / Yudhistira / Guru):', 'Kemendikbudristek');
+    if (inputPenerbit === null) return;
+
+    try {
+      showLoading('Menyimpan Profil Buku...', 'Menyimpan struktur bab ke database untuk digunakan bersama guru lain');
+      const res = await saveBookProfile({
+        mataPelajaran: mapel,
+        jenjangKelas: kelas,
+        bukuJudul: inputTitle.trim(),
+        tahunTerbit: inputYear,
+        penerbit: (inputPenerbit || 'Kemendikbudristek / Mandiri').trim(),
+        chapters: detectedChapters
+      });
+      hideLoading();
+
+      if (res && res.success) {
+        showToast('Profil struktur buku baru berhasil disimpan ke database!', 'success');
+        const newId = res.data?.id;
+        await loadBookProfilesForClass(kelas, mapel, newId);
+      } else {
+        throw new Error(res?.error || 'Gagal menyimpan profil');
+      }
+    } catch (err) {
+      hideLoading();
+      showToast('Gagal menyimpan profil buku: ' + (err.message || 'Terjadi kesalahan'), 'error');
+    }
   });
 
   // Global click handler for loading official presets button in Card 3
@@ -1100,7 +1132,7 @@ export function initAnalisisCp() {
       const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
       const mapel = document.getElementById('select-mata-pelajaran')?.value || 'Bahasa Indonesia';
       isCustomPdfUploaded = false;
-      await seedDefaultChaptersForClass(kelas, mapel);
+      await loadBookProfilesForClass(kelas, mapel);
       showToast(`Berhasil memuat struktur 8 BAB resmi Kemendikbudristek untuk ${mapel} (${kelas})!`, 'success');
     }
   });
@@ -1109,21 +1141,101 @@ export function initAnalisisCp() {
   const activeKelas = document.getElementById('select-jenjang-kelas')?.value || `Kelas ${detectUserDefaultKelas(state.user)}`;
   const activeMapel = document.getElementById('select-mata-pelajaran')?.value || detectUserDefaultMapel(state.user, detectUserDefaultKelas(state.user));
   if (detectedChapters.length === 0 || !currentAnalysisData) {
-    seedDefaultChaptersForClass(activeKelas, activeMapel);
+    loadBookProfilesForClass(activeKelas, activeMapel);
   }
 }
 
 /**
- * Seed default chapters sesuai mapel dan kelas menggunakan backend API (ter-cache client side)
+ * Memuat daftar profil buku yang tersedia (buku standar Kemendikbud & buku kustom yang pernah diunggah/dibuat guru)
+ * Otomatis memprioritaskan:
+ * 1. preferProfileId (jika baru saja diekstrak / disimpan)
+ * 2. Profil tersimpan di localStorage pengguna untuk mapel+kelas ini
+ * 3. Buku dengan tahun terbit terbaru (Default: is_default = true)
  */
-async function seedDefaultChaptersForClass(kelas, mapelName) {
+async function loadBookProfilesForClass(kelas, mapelName, preferProfileId = null) {
   const k = String(kelas || '5').replace(/\D/g, '') || '5';
   const normMapel = mapelName || document.getElementById('select-mata-pelajaran')?.value || 'Ilmu Pengetahuan Alam dan Sosial (IPAS)';
   const cov = document.getElementById('input-book-coverage')?.value || document.getElementById('select-target-semester')?.value || 'all';
 
-  const preset = await fetchStandardChapters(normMapel, `Kelas ${k}`);
-  if (preset && Array.isArray(preset.chapters) && preset.chapters.length > 0) {
-    let chs = JSON.parse(JSON.stringify(preset.chapters));
+  const selectEl = document.getElementById('select-book-profile');
+  const infoBadge = document.getElementById('book-profile-info-badge');
+  const deleteBtn = document.getElementById('btn-delete-book-profile');
+
+  if (selectEl) {
+    selectEl.innerHTML = '<option value="">Memuat daftar buku...</option>';
+  }
+
+  const data = await fetchBookProfiles(normMapel, `Kelas ${k}`, cov);
+  availableBookProfiles = data?.profiles || [];
+
+  // Jika profiles kosong, buat minimal 1 default preset
+  if (availableBookProfiles.length === 0) {
+    const fallbackPreset = await fetchStandardChapters(normMapel, `Kelas ${k}`);
+    availableBookProfiles = [{
+      id: `preset_${normMapel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${k}`,
+      buku_judul: fallbackPreset.buku_judul,
+      tahun_terbit: 2024,
+      penerbit: 'Kemendikbudristek',
+      total_babs: fallbackPreset.chapters.length,
+      chapters: fallbackPreset.chapters,
+      is_default: true,
+      is_custom: false
+    }];
+  }
+
+  // Tentukan profil mana yang harus dipilih
+  const storageKey = `kkg_book_profile_${normMapel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${k}`;
+  const savedProfileId = localStorage.getItem(storageKey);
+
+  let targetProfile = null;
+  if (preferProfileId) {
+    targetProfile = availableBookProfiles.find(p => String(p.id) === String(preferProfileId));
+  }
+  if (!targetProfile && savedProfileId) {
+    targetProfile = availableBookProfiles.find(p => String(p.id) === String(savedProfileId));
+  }
+  if (!targetProfile) {
+    targetProfile = availableBookProfiles.find(p => p.is_default) || availableBookProfiles[0];
+  }
+
+  selectedBookProfileId = targetProfile ? String(targetProfile.id) : null;
+
+  // Render options ke select dropdown
+  if (selectEl) {
+    let optionsHtml = '';
+    availableBookProfiles.forEach(p => {
+      const isSel = targetProfile && String(p.id) === String(targetProfile.id);
+      const isDef = p.is_default;
+      const yr = p.tahun_terbit ? `[${p.tahun_terbit}] ` : '';
+      const defBadge = isDef ? '★ ' : '';
+      const customTag = p.is_custom ? ' (Buku Kustom)' : ' (Resmi Kemendikbud)';
+      optionsHtml += `<option value="${p.id}" ${isSel ? 'selected' : ''}>${defBadge}${yr}${escapeHtml(p.buku_judul)} - ${p.total_babs} Bab${customTag}</option>`;
+    });
+
+    optionsHtml += `<option value="__custom_upload__">➕ Unggah E-Book PDF / Input Struktur Baru...</option>`;
+    selectEl.innerHTML = optionsHtml;
+  }
+
+  // Tampilkan/sembunyikan tombol hapus jika buku kustom
+  if (deleteBtn) {
+    if (targetProfile && targetProfile.is_custom) {
+      deleteBtn.classList.remove('hidden');
+    } else {
+      deleteBtn.classList.add('hidden');
+    }
+  }
+
+  // Update info badge
+  if (infoBadge && targetProfile) {
+    infoBadge.innerHTML = `
+      <span><i class="fas fa-calendar-alt text-indigo-500 mr-1"></i>Tahun: <strong>${targetProfile.tahun_terbit || '-'}</strong> | Penerbit: <strong>${escapeHtml(targetProfile.penerbit || 'Kemendikbudristek')}</strong></span>
+      <span><i class="fas fa-list-check text-sky-500 mr-1"></i><strong>${targetProfile.total_babs}</strong> Bab</span>
+    `;
+  }
+
+  // Terapkan chapters ke staging
+  if (targetProfile && Array.isArray(targetProfile.chapters)) {
+    let chs = JSON.parse(JSON.stringify(targetProfile.chapters));
     if (cov === '1') {
       const sem1Only = chs.filter(c => c.semester === 1);
       chs = sem1Only.length > 0 ? sem1Only : chs.map(c => ({ ...c, semester: 1 }));
@@ -1132,15 +1244,27 @@ async function seedDefaultChaptersForClass(kelas, mapelName) {
       chs = sem2Only.length > 0 ? sem2Only : chs.map(c => ({ ...c, semester: 2 }));
     }
     detectedChapters = chs;
+
     const titleInput = document.getElementById('input-sumber-buku');
     if (titleInput) {
       const suffix = cov === '1' ? ' (Semester 1)' : cov === '2' ? ' (Semester 2)' : '';
-      titleInput.value = (preset.buku_judul || `Buku Siswa ${normMapel} Kelas ${k}`) + suffix;
+      titleInput.value = (targetProfile.buku_judul || `Buku Siswa ${normMapel} Kelas ${k}`) + suffix;
+    }
+
+    if (selectedBookProfileId) {
+      localStorage.setItem(storageKey, selectedBookProfileId);
     }
   }
 
   redistributeSemesters(cov);
   renderChaptersList();
+}
+
+/**
+ * Seed default chapters sesuai mapel dan kelas menggunakan backend API (ter-cache client side)
+ */
+async function seedDefaultChaptersForClass(kelas, mapelName) {
+  return await loadBookProfilesForClass(kelas, mapelName);
 }
 
 /**
@@ -1343,10 +1467,13 @@ async function extractStructureFromText(rawText) {
       redistributeSemesters(coverage);
       renderChaptersList();
 
+      // Refresh profil buku dan otomatis pilih buku yang baru diekstrak ini
+      await loadBookProfilesForClass(kelas, mapel, res.data.profile_id || null);
+
       if (res.data.is_enriched) {
         showToast(`Struktur bab lengkap (${detectedChapters.length} BAB) berhasil disinkronkan dengan kurikulum resmi Kemendikbudristek!`, 'success');
       } else {
-        showToast(`Berhasil mengekstrak ${detectedChapters.length} BAB dari buku!`, 'success');
+        showToast(`Berhasil mengekstrak ${detectedChapters.length} BAB dan menyimpannya sebagai profil buku baru!`, 'success');
       }
       return;
     } else {
@@ -1360,9 +1487,30 @@ async function extractStructureFromText(rawText) {
       detectedChapters = heuristicChapters;
       redistributeSemesters(coverage);
       renderChaptersList();
+
+      const titleInput = document.getElementById('input-sumber-buku');
+      const bookTitle = titleInput?.value || `Buku Siswa ${mapel} ${kelas}`;
+      let year = 2025;
+      const ym = bookTitle.match(/\b(202[0-9])\b/);
+      if (ym) year = parseInt(ym[1], 10);
+
+      try {
+        const saveRes = await saveBookProfile({
+          mataPelajaran: mapel,
+          jenjangKelas: kelas,
+          bukuJudul: bookTitle,
+          tahunTerbit: year,
+          penerbit: 'Ekstraksi PDF / Guru Pengunggah',
+          chapters: detectedChapters
+        });
+        if (saveRes?.data?.id) {
+          await loadBookProfilesForClass(kelas, mapel, saveRes.data.id);
+        }
+      } catch (_) {}
+
       showToast(`Berhasil memuat ${detectedChapters.length} BAB langsung dari Daftar Isi file PDF!`, 'success');
     } else {
-      await seedDefaultChaptersForClass(kelas, mapel);
+      await loadBookProfilesForClass(kelas, mapel);
       showToast(`Koneksi AI sibuk. Struktur BAB standar resmi Kemendikbudristek untuk ${mapel} telah dimuat otomatis.`, 'info');
     }
   }

@@ -1907,6 +1907,10 @@ h1,
   min-height: 220px;
 }
 
+.min-h-\[240px\] {
+  min-height: 240px;
+}
+
 .min-h-\[320px\] {
   min-height: 320px;
 }
@@ -1949,10 +1953,6 @@ h1,
 
 .min-h-screen {
   min-height: 100vh;
-}
-
-.min-h-\[240px\] {
-  min-height: 240px;
 }
 
 .w-0 {
@@ -4189,6 +4189,10 @@ h1,
   border-color: rgb(253 224 71 / 0.6);
 }
 
+.border-emerald-300\/80 {
+  border-color: rgb(110 231 183 / 0.8);
+}
+
 .border-b-teal-500 {
   --tw-border-opacity: 1;
   border-bottom-color: rgb(38 148 148 / var(--tw-border-opacity, 1));
@@ -4425,10 +4429,6 @@ h1,
 
 .bg-blue-50\/40 {
   background-color: rgb(239 246 255 / 0.4);
-}
-
-.bg-blue-50\/50 {
-  background-color: rgb(239 246 255 / 0.5);
 }
 
 .bg-blue-50\/70 {
@@ -5976,10 +5976,6 @@ h1,
 
 .to-blue-950\/50 {
   --tw-gradient-to: rgb(23 37 84 / 0.5) var(--tw-gradient-to-position);
-}
-
-.to-cyan-50 {
-  --tw-gradient-to: #ecfeff var(--tw-gradient-to-position);
 }
 
 .to-cyan-600 {
@@ -10986,11 +10982,6 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   border-color: rgb(21 94 117 / var(--tw-border-opacity, 1));
 }
 
-.dark\:border-emerald-600:is(.dark *) {
-  --tw-border-opacity: 1;
-  border-color: rgb(5 150 105 / var(--tw-border-opacity, 1));
-}
-
 .dark\:border-emerald-700:is(.dark *) {
   --tw-border-opacity: 1;
   border-color: rgb(4 120 87 / var(--tw-border-opacity, 1));
@@ -11241,10 +11232,6 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
   background-color: rgb(69 26 3 / 0.6);
 }
 
-.dark\:bg-amber-950\/80:is(.dark *) {
-  background-color: rgb(69 26 3 / 0.8);
-}
-
 .dark\:bg-background-dark:is(.dark *) {
   --tw-bg-opacity: 1;
   background-color: rgb(10 20 20 / var(--tw-bg-opacity, 1));
@@ -11272,10 +11259,6 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 
 .dark\:bg-blue-900\/60:is(.dark *) {
   background-color: rgb(30 58 138 / 0.6);
-}
-
-.dark\:bg-blue-950\/30:is(.dark *) {
-  background-color: rgb(23 37 84 / 0.3);
 }
 
 .dark\:bg-blue-950\/50:is(.dark *) {
@@ -11333,10 +11316,6 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 
 .dark\:bg-emerald-950\/60:is(.dark *) {
   background-color: rgb(2 44 34 / 0.6);
-}
-
-.dark\:bg-emerald-950\/80:is(.dark *) {
-  background-color: rgb(2 44 34 / 0.8);
 }
 
 .dark\:bg-gray-600:is(.dark *) {
@@ -12193,6 +12172,14 @@ body.is-ifp-fullscreen #ifp-game-stage #game-active-container {
 
 .dark\:hover\:bg-violet-900\/50:hover:is(.dark *) {
   background-color: rgb(76 29 149 / 0.5);
+}
+
+.dark\:hover\:bg-indigo-900\/60:hover:is(.dark *) {
+  background-color: rgb(49 46 129 / 0.6);
+}
+
+.dark\:hover\:bg-rose-950\/60:hover:is(.dark *) {
+  background-color: rgb(76 5 25 / 0.6);
 }
 
 .dark\:hover\:text-blue-100:hover:is(.dark *) {

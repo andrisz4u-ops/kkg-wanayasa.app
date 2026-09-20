@@ -49,6 +49,62 @@ export async function fetchStandardChapters(mataPelajaran, jenjangKelas) {
 }
 
 /**
+ * Mengambil seluruh profil buku yang tersedia untuk mapel & kelas
+ * @param {string} mataPelajaran 
+ * @param {string} jenjangKelas 
+ * @param {string} targetSemester
+ * @returns {Promise<{profiles: Array, default_profile: object, total: number}>}
+ */
+export async function fetchBookProfiles(mataPelajaran, jenjangKelas, targetSemester = 'all') {
+  const normMapel = (mataPelajaran || 'IPAS').trim();
+  const normKelas = (jenjangKelas || 'Kelas 5').trim();
+  try {
+    const res = await api(`/analisis-cp/book-profiles?mataPelajaran=${encodeURIComponent(normMapel)}&jenjangKelas=${encodeURIComponent(normKelas)}&targetSemester=${encodeURIComponent(targetSemester)}`);
+    if (res && res.success && res.data) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn(`[Analisis CP] Gagal memuat profil buku untuk ${normMapel} ${normKelas}:`, err.message);
+  }
+  return { profiles: [], default_profile: null, total: 0 };
+}
+
+/**
+ * Menyimpan profil buku baru ke database D1
+ * @param {object} payload 
+ * @returns {Promise<object>}
+ */
+export async function saveBookProfile(payload) {
+  try {
+    const res = await api('/analisis-cp/save-book-profile', {
+      method: 'POST',
+      body: payload
+    });
+    return res;
+  } catch (err) {
+    console.error('[Analisis CP] Gagal menyimpan profil buku:', err);
+    throw err;
+  }
+}
+
+/**
+ * Menghapus profil buku kustom
+ * @param {string|number} id 
+ * @returns {Promise<object>}
+ */
+export async function deleteBookProfile(id) {
+  try {
+    const res = await api(`/analisis-cp/book-profiles/${id}`, {
+      method: 'DELETE'
+    });
+    return res;
+  } catch (err) {
+    console.error('[Analisis CP] Gagal menghapus profil buku:', err);
+    throw err;
+  }
+}
+
+/**
  * Memuat pustaka PDF.js secara on-demand jika belum ada di window
  */
 export async function loadPdfJsScript() {

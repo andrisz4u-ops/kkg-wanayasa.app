@@ -222,49 +222,62 @@ export async function generateAnalisisCpDocxBuffer(data: AnalisisCpDocxInput): P
 
           // Elemen / Capaian Pembelajaran
           const cpRaw = sanitizeText(bab.cp || '');
-          const bracketMatch = cpRaw.match(/^\[([^\]]+)\]\s*(.*)$/s);
-          const colonMatch = !bracketMatch ? cpRaw.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*(.*)$/is) : null;
-
           let cpParagraphs: Paragraph[] = [];
-          if (bracketMatch) {
-            const elName = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-            const rest = bracketMatch[2].trim();
-            cpParagraphs.push(new Paragraph({
-              spacing: { before: 40, after: 30 },
-              children: [
-                new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
-              ]
-            }));
-            rest.split('\n').forEach(pText => {
-              if (pText.trim()) {
-                cpParagraphs.push(new Paragraph({
-                  spacing: { before: 20, after: 30 },
-                  children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
-                }));
-              }
-            });
-          } else if (colonMatch && !colonMatch[1].includes('http')) {
-            const elName = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-            const rest = colonMatch[2].trim();
-            cpParagraphs.push(new Paragraph({
-              spacing: { before: 40, after: 30 },
-              children: [
-                new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
-              ]
-            }));
-            rest.split('\n').forEach(pText => {
-              if (pText.trim()) {
-                cpParagraphs.push(new Paragraph({
-                  spacing: { before: 20, after: 30 },
-                  children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
-                }));
-              }
+
+          // Parse blocks matching [ElementName] Content (supports dual-elements e.g. [Pemahaman IPAS] and [Keterampilan Proses])
+          const blockRegex = /\[([^\]]+)\]\s*([\s\S]*?)(?=(?:\[[^\]]+\]|$))/g;
+          const matches = [...cpRaw.matchAll(blockRegex)];
+
+          if (matches.length > 0) {
+            matches.forEach((m, mIdx) => {
+              const elName = m[1].replace(/^Elemen\s*:\s*/i, '').trim();
+              const content = m[2].trim();
+
+              cpParagraphs.push(new Paragraph({
+                spacing: { before: mIdx === 0 ? 40 : 80, after: 30 },
+                children: [
+                  new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
+                ]
+              }));
+
+              content.split('\n').forEach(pText => {
+                if (pText.trim()) {
+                  cpParagraphs.push(new Paragraph({
+                    spacing: { before: 20, after: 30 },
+                    children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
+                  }));
+                }
+              });
             });
           } else {
-            cpParagraphs = cpRaw.split('\n').map(pText => new Paragraph({
-              spacing: { before: 40, after: 40 },
-              children: [new TextRun({ text: pText, size: 18, font: 'Times New Roman' })]
-            }));
+            const colonMatch = cpRaw.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*(.*)$/is);
+            if (colonMatch && !colonMatch[1].includes('http')) {
+              const elName = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
+              const rest = colonMatch[2].trim();
+              cpParagraphs.push(new Paragraph({
+                spacing: { before: 40, after: 30 },
+                children: [
+                  new TextRun({ text: `[Elemen: ${elName}]`, bold: true, size: 18, font: 'Times New Roman' })
+                ]
+              }));
+              rest.split('\n').forEach(pText => {
+                if (pText.trim()) {
+                  cpParagraphs.push(new Paragraph({
+                    spacing: { before: 20, after: 30 },
+                    children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
+                  }));
+                }
+              });
+            } else {
+              cpRaw.split('\n').forEach(pText => {
+                if (pText.trim()) {
+                  cpParagraphs.push(new Paragraph({
+                    spacing: { before: 40, after: 40 },
+                    children: [new TextRun({ text: pText.trim(), size: 18, font: 'Times New Roman' })]
+                  }));
+                }
+              });
+            }
           }
 
           cells.push(new TableCell({

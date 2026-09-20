@@ -27,6 +27,38 @@ export interface SemesterCpItem {
 }
 
 /**
+ * Ekstraksi blok-blok Elemen dari teks CP (mendukung multi-elemen seperti [Pemahaman IPAS] dan [Keterampilan Proses])
+ */
+export function parseCpElementBlocks(rawCp: string): { element: string; content: string }[] {
+  if (!rawCp || typeof rawCp !== 'string') return [];
+  const text = rawCp.trim();
+  if (!text) return [];
+
+  const bracketRegex = /\[([^\]]+)\]\s*([\s\S]*?)(?=(?:\[[^\]]+\]|$))/g;
+  const matches = [...text.matchAll(bracketRegex)];
+
+  if (matches.length > 0) {
+    return matches.map(m => ({
+      element: m[1].replace(/^Elemen\s*:\s*/i, '').trim(),
+      content: m[2].trim()
+    })).filter(b => b.element || b.content);
+  }
+
+  const colonMatch = text.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/is);
+  if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
+    return [{
+      element: colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim(),
+      content: colonMatch[2].trim()
+    }];
+  }
+
+  return [{
+    element: '',
+    content: text
+  }];
+}
+
+/**
  * Ekstraksi seluruh Capaian Pembelajaran (CP) dan Elemen unik yang diajarkan pada semester tertentu
  */
 export function extractSemesterCpItems(sem: { babs?: any[] }): SemesterCpItem[] {
@@ -37,50 +69,46 @@ export function extractSemesterCpItems(sem: { babs?: any[] }): SemesterCpItem[] 
     const rawCp = (bab?.cp || '').trim();
     if (!rawCp) return;
 
-    let element = '';
-    let cpText = rawCp;
+    const blocks = parseCpElementBlocks(rawCp);
+    blocks.forEach(b => {
+      let element = (b.element || '').replace(/^Elemen\s*:?\s*/i, '').trim();
+      let cpText = (b.content || '').trim();
 
-    const bracketMatch = rawCp.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
-    if (bracketMatch) {
-      element = bracketMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-      cpText = bracketMatch[2].trim();
-    } else {
-      const colonMatch = rawCp.match(/^(Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*([\s\S]*)$/i);
-      if (colonMatch && !colonMatch[1].includes('http') && !colonMatch[1].toLowerCase().includes('contoh')) {
-        element = colonMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
-        cpText = colonMatch[2].trim();
-      } else {
+      if (!element && !cpText) return;
+      if (!element) {
         const titleMatch = (bab.bab || '').match(/\[(.*?)\]/);
         if (titleMatch) {
           element = titleMatch[1].replace(/^Elemen\s*:\s*/i, '').trim();
         }
       }
-    }
 
-    element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
+      element = element.replace(/^Elemen\s*:?\s*/i, '').trim();
 
-    // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
-    const existingIndex = items.findIndex(it => {
-      if (element && it.element) {
-        return it.element.toUpperCase() === element.toUpperCase();
-      }
-      return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
-    });
-
-    if (existingIndex >= 0) {
-      items[existingIndex].babIndices.push(babIdx);
-      if (cpText.length > items[existingIndex].cp.length) {
-        items[existingIndex].cp = cpText;
-        items[existingIndex].raw = rawCp;
-      }
-    } else {
-      items.push({
-        element,
-        cp: cpText || rawCp,
-        raw: rawCp,
-        babIndices: [babIdx]
+      // Deduplikasi berdasarkan nama elemen (jika ada) atau kemiripan teks CP
+      const existingIndex = items.findIndex(it => {
+        if (element && it.element) {
+          return it.element.toUpperCase() === element.toUpperCase();
+        }
+        return it.cp.toLowerCase().replace(/\s+/g, ' ') === cpText.toLowerCase().replace(/\s+/g, ' ');
       });
-    }
+
+      if (existingIndex >= 0) {
+        if (!items[existingIndex].babIndices.includes(babIdx)) {
+          items[existingIndex].babIndices.push(babIdx);
+        }
+        if (cpText.length > items[existingIndex].cp.length) {
+          items[existingIndex].cp = cpText;
+          items[existingIndex].raw = element ? `[${element}] ${cpText}` : rawCp;
+        }
+      } else {
+        items.push({
+          element,
+          cp: cpText || rawCp,
+          raw: element ? `[${element}] ${cpText}` : rawCp,
+          babIndices: [babIdx]
+        });
+      }
+    });
   });
 
   if (items.length === 0) {

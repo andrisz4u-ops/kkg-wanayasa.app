@@ -499,39 +499,65 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       expect(zip.file('xl/worksheets/sheet2.xml')).not.toBeNull();
       expect(zip.file('xl/worksheets/sheet3.xml')).not.toBeNull();
 
-      // Verify workbook sheet names
+      // Verify workbook sheet names persis contoh Kaldik Pendis
       const workbookXml = await zip.file('xl/workbook.xml')!.async('string');
-      expect(workbookXml).toContain('Matriks Kalender 12 Bulan');
-      expect(workbookXml).toContain('Rekapitulasi Alokasi (RPE)');
-      expect(workbookXml).toContain('Jadwal PHBI &amp; Daerah');
+      expect(workbookXml).toContain('Tanggal Penting');
+      expect(workbookXml).toContain('Kalender Pendidikan');
+      expect(workbookXml).toContain('Kaldik Portrait');
 
-      // Verify sheet 1 contents (KPSP title and school name)
+      // Verify sheet 1 contents (Tanggal-tanggal Penting)
       const sheet1Xml = await zip.file('xl/worksheets/sheet1.xml')!.async('string');
+      expect(sheet1Xml).toContain('Tanggal-tanggal Penting');
+      expect(sheet1Xml).toContain('Semester Gasal');
+      expect(sheet1Xml).toContain('Semester Genap');
       expect(sheet1Xml).toContain('SDN 1 WANAYASA');
-      expect(sheet1Xml).toContain('KALENDER PENDIDIKAN SATUAN PENDIDIKAN');
-      expect(sheet1Xml).toContain('MPLS');
-      expect(sheet1Xml).toContain('HJP');
-      expect(sheet1Xml).toContain('36 PEKAN');
 
-      // Verify sheet 2 contents (RPE and 36 weeks verification)
+      // Verify sheet 2 contents (Kalender Pendidikan Landscape dengan KOP surat sekolah)
       const sheet2Xml = await zip.file('xl/worksheets/sheet2.xml')!.async('string');
-      expect(sheet2Xml).toContain('RINCIAN PEKAN EFEKTIF');
-      expect(sheet2Xml).toContain('36 PEKAN');
-      expect(sheet2Xml).toContain('Permendikdasmen No. 13 Tahun 2025');
+      expect(sheet2Xml).toContain('SDN 1 WANAYASA');
+      expect(sheet2Xml).toContain('PEDOMAN KALENDER PENDIDIKAN');
+      expect(sheet2Xml).toContain('JULI 2026');
+      expect(sheet2Xml).toContain('AGUSTUS 2026');
+      expect(sheet2Xml).toContain('KETERANGAN');
 
-      // Verify sheet 3 contents (PHBI events and 7 Poe Atikan / TdBA)
+      // Verify sheet 3 contents (Kaldik Portrait dengan HK & HE dan KOP sekolah)
       const sheet3Xml = await zip.file('xl/worksheets/sheet3.xml')!.async('string');
-      expect(sheet3Xml).toContain('PHBI');
-      expect(sheet3Xml).toContain('Maulid');
+      expect(sheet3Xml).toContain('SDN 1 WANAYASA');
+      expect(sheet3Xml).toContain('HK : 31');
+      expect(sheet3Xml).toContain('HE :');
+      expect(sheet3Xml).toContain('SEMESTER GENAP');
     });
 
-    it('should serve .xlsx export via POST /api/program-sekolah/kaldik-excel with correct headers', async () => {
+    it('should serve .xlsx export via POST /api/program-sekolah/kaldik-excel with correct headers and KOP', async () => {
       const mockDb: any = {
-        prepare: vi.fn().mockReturnValue({
+        prepare: vi.fn().mockImplementation((sql: string) => ({
           bind: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ id: 1, role: 'admin', nama: 'Admin Wanayasa' }),
+            first: vi.fn().mockResolvedValue({
+              id: 1,
+              role: 'admin',
+              nama: 'Admin Wanayasa',
+              sekolah: 'SDN 1 Wanayasa',
+              kepala_sekolah: 'Hj. Nenden Laila, M.Pd.',
+              nip_kepala_sekolah: '19760314 200501 2 006',
+              alamat: 'Jl. Raya Wanayasa No. 12',
+              npsn: '20205812',
+            }),
+            all: vi.fn().mockResolvedValue({ results: [{ key: 'kabupaten', value: 'Purwakarta' }] }),
+            run: vi.fn().mockResolvedValue({}),
           }),
-        }),
+          first: vi.fn().mockResolvedValue({
+            id: 1,
+            role: 'admin',
+            nama: 'Admin Wanayasa',
+            sekolah: 'SDN 1 Wanayasa',
+            kepala_sekolah: 'Hj. Nenden Laila, M.Pd.',
+            nip_kepala_sekolah: '19760314 200501 2 006',
+            alamat: 'Jl. Raya Wanayasa No. 12',
+            npsn: '20205812',
+          }),
+          all: vi.fn().mockResolvedValue({ results: [{ key: 'kabupaten', value: 'Purwakarta' }] }),
+          run: vi.fn().mockResolvedValue({}),
+        })),
       };
 
       const res = await programSekolah.request('/kaldik-excel', {
@@ -553,7 +579,7 @@ describe('Program Sekolah Universal (AI) Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers.get('Content-Type')).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      expect(res.headers.get('Content-Disposition')).toContain('Kalender_Pendidikan_SDN_1_Wanayasa_2026-2027.xlsx');
+      expect(res.headers.get('Content-Disposition')).toContain('Kaldik_SDN_1_Wanayasa_2026-2027.xlsx');
 
       const arrayBuffer = await res.arrayBuffer();
       expect(arrayBuffer.byteLength).toBeGreaterThan(3000);
@@ -561,6 +587,10 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       // Ensure buffer can be read back by JSZip
       const zip = await JSZip.loadAsync(arrayBuffer);
       expect(zip.file('xl/workbook.xml')).not.toBeNull();
+      const wbXml = await zip.file('xl/workbook.xml')!.async('string');
+      expect(wbXml).toContain('Tanggal Penting');
+      expect(wbXml).toContain('Kalender Pendidikan');
+      expect(wbXml).toContain('Kaldik Portrait');
     });
   });
 });

@@ -1,12 +1,14 @@
 /**
  * Kaldik Excel Generator (OpenXML SpreadsheetML .xlsx Builder)
  * Menghasilkan file Microsoft Excel (.xlsx) Kalender Pendidikan Satuan Pendidikan (KPSP)
- * yang rapi, terstruktur, profesional, dan berdesain premium.
+ * yang dimodelkan persis sesuai dengan "Kaldik Madrasah 2026-2027 Pendis.xlsx".
  * 
- * Acuan Regulasi:
- * - Pusat: Permendikdasmen No. 13 Tahun 2025 (Minimal 36 Pekan Efektif KBM)
- * - Daerah: Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026
- * - Budaya & Karakter: 7 Poé Atikan Purwakarta Istimewa & Tatanen di Bale Atikan (TdBA)
+ * Terdiri dari 3 Worksheet Resmi:
+ * 1. "Tanggal Penting" - Matriks ringkas tanggal-tanggal penting Semester Gasal & Semester Genap
+ * 2. "Kalender Pendidikan" - Matriks landscape 12 bulan (4 bulan x 3 baris) dengan KOP surat sekolah & legend warna
+ * 3. "Kaldik Portrait" - Format portrait 12 bulan dengan rincian HK (Hari Kalender), HE (Hari Efektif), agenda bulanan, dan jadwal semester
+ * 
+ * Dilengkapi dengan KOP Surat Resmi yang otomatis menyesuaikan dengan akun dan profil masing-masing sekolah.
  */
 
 import JSZip from 'jszip';
@@ -24,16 +26,20 @@ import {
 export interface KaldikExcelInput {
   metadata?: {
     nama_sekolah?: string;
+    npsn?: string;
     tahun_ajaran?: string;
     kepala_sekolah?: string;
     nip_kepala_sekolah?: string;
     penyusun?: string;
     nip_penyusun?: string;
+    kabupaten?: string;
+    kecamatan?: string;
     kota?: string;
     alamat_sekolah?: string;
+    instansi?: string;
   };
   spesifik?: {
-    sistemHariSekolah?: '5 Hari Kerja (Senin s.d. Jumat)' | '6 Hari Kerja (Senin s.d. Sabtu)';
+    sistemHariSekolah?: string;
     agendaKeagamaan?: string;
     agendaPurwakarta?: string;
     kegiatanKustomTambahan?: string;
@@ -63,28 +69,89 @@ function colToLetter(col: number): string {
   return letter;
 }
 
+interface EventRule {
+  start: string;
+  end: string;
+  title: string;
+  shortTitle: string;
+  styleId: number;
+  category: string;
+}
+
+// Aturan kalender resmi 2026/2027 sesuai SE Kadisdik Purwakarta & Kaldik Pendis
+const EVENT_RULES: EventRule[] = [
+  // Semester Gasal
+  { start: '2026-07-01', end: '2026-07-10', title: 'Libur Akhir Tahun Ajaran 2025/2026', shortTitle: 'Libur TP', styleId: 13, category: 'libur' },
+  { start: '2026-07-13', end: '2026-07-13', title: 'Awal Masuk Tahun Ajaran 2026/2027', shortTitle: 'Awal TP', styleId: 15, category: 'sekolah' },
+  { start: '2026-07-13', end: '2026-07-17', title: 'Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak', shortTitle: 'MPLS', styleId: 10, category: 'purwakarta' },
+  { start: '2026-07-20', end: '2026-07-20', title: 'Peringatan Hari Jadi Purwakarta (HJP ke-195)', shortTitle: 'HJP', styleId: 17, category: 'purwakarta' },
+  { start: '2026-08-14', end: '2026-08-14', title: 'Peringatan Hari Pramuka ke-65', shortTitle: 'Pramuka', styleId: 18, category: 'nasional' },
+  { start: '2026-08-17', end: '2026-08-17', title: 'HUT Proklamasi Kemerdekaan RI ke-81', shortTitle: 'HUT RI', styleId: 16, category: 'nasional' },
+  { start: '2026-08-25', end: '2026-08-25', title: 'Peringatan Maulid Nabi Muhammad saw. (12 Rabiul Awal 1448 H)', shortTitle: 'Maulid', styleId: 16, category: 'keagamaan' },
+  { start: '2026-09-07', end: '2026-09-07', title: 'Hari Udara Bersih Internasional (Gerakan TdBA)', shortTitle: 'Udara Bersih', styleId: 18, category: 'purwakarta' },
+  { start: '2026-09-18', end: '2026-09-18', title: 'Hari Bambu Sedunia (TdBA Purwakarta)', shortTitle: 'Hari Bambu', styleId: 18, category: 'purwakarta' },
+  { start: '2026-09-21', end: '2026-09-25', title: 'Rentang Asesmen Sumatif Tengah Semester (STS) Gasal', shortTitle: 'STS', styleId: 11, category: 'asesmen' },
+  { start: '2026-10-01', end: '2026-10-01', title: 'Hari Kesaktian Pancasila', shortTitle: 'Pancasila', styleId: 18, category: 'nasional' },
+  { start: '2026-10-28', end: '2026-10-28', title: 'Peringatan Hari Sumpah Pemuda', shortTitle: 'Sumpah Pemuda', styleId: 18, category: 'nasional' },
+  { start: '2026-11-10', end: '2026-11-10', title: 'Peringatan Hari Pahlawan Nasional', shortTitle: 'Hari Pahlawan', styleId: 18, category: 'nasional' },
+  { start: '2026-11-23', end: '2026-12-05', title: 'Rentang Asesmen Sumatif Akhir Semester (SAS / ASAS) Gasal', shortTitle: 'ASAS', styleId: 11, category: 'asesmen' },
+  { start: '2026-11-25', end: '2026-11-25', title: 'Hari Guru Nasional (HGN) & HUT PGRI ke-81', shortTitle: 'HGN', styleId: 18, category: 'nasional' },
+  { start: '2026-12-18', end: '2026-12-19', title: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Gasal', shortTitle: 'Rapor', styleId: 12, category: 'sekolah' },
+  { start: '2026-12-21', end: '2027-01-02', title: 'Libur Semester Gasal', shortTitle: 'Libur Smt', styleId: 13, category: 'libur' },
+  { start: '2026-12-25', end: '2026-12-25', title: 'Hari Raya Natal', shortTitle: 'Natal', styleId: 16, category: 'keagamaan' },
+
+  // Semester Genap
+  { start: '2027-01-01', end: '2027-01-01', title: 'Tahun Baru 2027 Masehi', shortTitle: 'Tahun Baru', styleId: 16, category: 'nasional' },
+  { start: '2027-01-04', end: '2027-01-04', title: 'Awal Masuk KBM Semester Genap TP 2026/2027', shortTitle: 'Masuk Smt 2', styleId: 15, category: 'sekolah' },
+  { start: '2027-02-05', end: '2027-02-05', title: 'Peringatan Isra Mi\'raj Nabi Muhammad saw. (27 Rajab 1448 H)', shortTitle: 'Isra Mi\'raj', styleId: 16, category: 'keagamaan' },
+  { start: '2027-02-06', end: '2027-02-06', title: 'Tahun Baru Imlek 2578 Kongzili', shortTitle: 'Imlek', styleId: 16, category: 'nasional' },
+  { start: '2027-02-08', end: '2027-02-10', title: 'Libur Awal Ramadhan 1448 H', shortTitle: 'Awal Ramadhan', styleId: 14, category: 'keagamaan' },
+  { start: '2027-02-11', end: '2027-03-05', title: 'Masantren di Sakola Ramadhan 1448 H', shortTitle: 'Masantren', styleId: 18, category: 'keagamaan' },
+  { start: '2027-03-06', end: '2027-03-13', title: 'Libur Seputar Hari Raya Idulfitri 1448 H', shortTitle: 'Libur Idul Fitri', styleId: 14, category: 'keagamaan' },
+  { start: '2027-03-09', end: '2027-03-09', title: 'Hari Suci Nyepi (Tahun Baru Saka 1949)', shortTitle: 'Nyepi', styleId: 16, category: 'nasional' },
+  { start: '2027-03-10', end: '2027-03-11', title: 'Hari Raya Idulfitri 1448 H', shortTitle: 'Idul Fitri', styleId: 16, category: 'keagamaan' },
+  { start: '2027-03-22', end: '2027-03-26', title: 'Rentang Asesmen Sumatif Tengah Semester (STS) Genap', shortTitle: 'STS', styleId: 11, category: 'asesmen' },
+  { start: '2027-03-26', end: '2027-03-26', title: 'Wafat Yesus Kristus', shortTitle: 'Wafat Isa', styleId: 16, category: 'nasional' },
+  { start: '2027-04-21', end: '2027-04-21', title: 'Peringatan Hari Kartini', shortTitle: 'Kartini', styleId: 17, category: 'nasional' },
+  { start: '2027-04-22', end: '2027-04-22', title: 'Hari Bumi Sedunia (Aksi TdBA Purwakarta)', shortTitle: 'Hari Bumi', styleId: 18, category: 'purwakarta' },
+  { start: '2027-05-01', end: '2027-05-01', title: 'Hari Buruh Internasional', shortTitle: 'Hari Buruh', styleId: 16, category: 'nasional' },
+  { start: '2027-05-02', end: '2027-05-02', title: 'Hari Pendidikan Nasional (Hardiknas)', shortTitle: 'Hardiknas', styleId: 18, category: 'nasional' },
+  { start: '2027-05-10', end: '2027-05-14', title: 'Rentang Asesmen Akhir Jenjang (PSAJ) Kelas 6', shortTitle: 'PSAJ', styleId: 15, category: 'asesmen' },
+  { start: '2027-05-16', end: '2027-05-16', title: 'Hari Raya Idul Adha 1448 H', shortTitle: 'Idul Adha', styleId: 16, category: 'keagamaan' },
+  { start: '2027-05-20', end: '2027-05-20', title: 'Hari Kebangkitan Nasional (Harkitnas)', shortTitle: 'Harkitnas', styleId: 18, category: 'nasional' },
+  { start: '2027-05-24', end: '2027-06-05', title: 'Rentang Asesmen Sumatif Akhir Tahun (ASAT / ASAS Genap)', shortTitle: 'ASAT', styleId: 11, category: 'asesmen' },
+  { start: '2027-06-01', end: '2027-06-01', title: 'Hari Lahir Pancasila', shortTitle: 'Lahir Pancasila', styleId: 16, category: 'nasional' },
+  { start: '2027-06-16', end: '2027-06-16', title: 'Tahun Baru Islam 1 Muharram 1449 H', shortTitle: '1 Muharram', styleId: 16, category: 'keagamaan' },
+  { start: '2027-06-18', end: '2027-06-19', title: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Genap', shortTitle: 'Rapor', styleId: 12, category: 'sekolah' },
+  { start: '2027-06-21', end: '2027-07-10', title: 'Libur Akhir Tahun Ajaran 2026/2027', shortTitle: 'Libur Akhir TP', styleId: 13, category: 'libur' },
+];
+
+function findEventForDate(dateStr: string): EventRule | null {
+  for (const ev of EVENT_RULES) {
+    if (dateStr >= ev.start && dateStr <= ev.end) {
+      return ev;
+    }
+  }
+  return null;
+}
+
 /**
  * Membangun buffer file Microsoft Excel (.xlsx) untuk Kalender Pendidikan
+ * dengan 3 worksheet dan KOP surat otomatis sesuai akun masing-masing sekolah.
  */
 export async function generateKaldikExcelBuffer(input: KaldikExcelInput = {}): Promise<Uint8Array> {
   const meta = input.metadata || {};
-  const spesifik = input.spesifik || {};
   const namaSekolah = meta.nama_sekolah || 'SD NEGERI 1 WANAYASA';
+  const npsn = meta.npsn || '';
   const tahunAjaran = meta.tahun_ajaran || '2026/2027';
   const kepalaSekolah = meta.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.';
   const nipKepalaSekolah = meta.nip_kepala_sekolah || '19760314 200501 2 006';
-  const penyusun = meta.penyusun || 'Tim Pengembang Kurikulum Satuan Pendidikan';
+  const penyusun = meta.penyusun || 'Tim Pengembang Kurikulum';
   const nipPenyusun = meta.nip_penyusun || '-';
-  const kota = meta.kota || 'Purwakarta';
-  const alamat = meta.alamat_sekolah || 'Kecamatan Wanayasa, Kabupaten Purwakarta';
-  
-  const is6Hari = String(spesifik.sistemHariSekolah || '').includes('6 Hari');
-  const sistemHariSekolahOpt: '5-hari' | '6-hari' = is6Hari ? '6-hari' : '5-hari';
-  const sistemHariSekolahLabel = is6Hari ? '6 Hari Sekolah (Senin s.d. Sabtu)' : '5 Hari Sekolah (Senin s.d. Jumat)';
-
-  const allEvents = mergeKaldikEvents(input.customEvents || [], true);
-  const grid = generate12MonthGrid(allEvents, { sistemHariSekolah: sistemHariSekolahOpt });
-  const stats = calculateKaldikStats(grid, { sistemHariSekolah: sistemHariSekolahOpt });
+  const kabupaten = meta.kabupaten || meta.kota || 'Purwakarta';
+  const kecamatan = meta.kecamatan || 'Wanayasa';
+  const alamat = meta.alamat_sekolah || `Kecamatan ${kecamatan}, Kabupaten ${kabupaten}`;
+  const instansi = meta.instansi || 'DINAS PENDIDIKAN';
 
   const zip = new JSZip();
 
@@ -124,56 +191,40 @@ export async function generateKaldikExcelBuffer(input: KaldikExcelInput = {}): P
 </Relationships>`
   );
 
-  // 4. xl/workbook.xml
+  // 4. xl/workbook.xml - 3 Lembar Kerja persis Kaldik Madrasah Pendis
   zip.file(
     'xl/workbook.xml',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <sheets>
-    <sheet name="Matriks Kalender 12 Bulan" sheetId="1" r:id="rId2"/>
-    <sheet name="Rekapitulasi Alokasi (RPE)" sheetId="2" r:id="rId3"/>
-    <sheet name="Jadwal PHBI &amp; Daerah" sheetId="3" r:id="rId4"/>
+    <sheet name="Tanggal Penting" sheetId="1" r:id="rId2"/>
+    <sheet name="Kalender Pendidikan" sheetId="2" r:id="rId3"/>
+    <sheet name="Kaldik Portrait" sheetId="3" r:id="rId4"/>
   </sheets>
 </workbook>`
   );
 
-  // 5. xl/styles.xml - Palet warna profesional dan rapi
-  zip.file('xl/styles.xml', buildStylesXml());
+  // 5. xl/styles.xml
+  zip.file('xl/styles.xml', buildPendisStylesXml());
 
   // 6. Worksheets
-  zip.file('xl/worksheets/sheet1.xml', buildSheet1Xml({
+  const ctx = {
     namaSekolah,
+    npsn,
     tahunAjaran,
     kepalaSekolah,
     nipKepalaSekolah,
     penyusun,
     nipPenyusun,
-    kota,
+    kabupaten,
+    kecamatan,
     alamat,
-    sistemHariSekolahLabel,
-    grid,
-    stats,
-    allEvents
-  }));
+    instansi
+  };
 
-  zip.file('xl/worksheets/sheet2.xml', buildSheet2Xml({
-    namaSekolah,
-    tahunAjaran,
-    kepalaSekolah,
-    nipKepalaSekolah,
-    kota,
-    grid,
-    stats
-  }));
-
-  zip.file('xl/worksheets/sheet3.xml', buildSheet3Xml({
-    namaSekolah,
-    tahunAjaran,
-    kepalaSekolah,
-    nipKepalaSekolah,
-    kota,
-    allEvents
-  }));
+  zip.file('xl/worksheets/sheet1.xml', buildTanggalPentingSheetXml(ctx));
+  zip.file('xl/worksheets/sheet2.xml', buildKalenderLandscapeSheetXml(ctx));
+  zip.file('xl/worksheets/sheet3.xml', buildKaldikPortraitSheetXml(ctx));
 
   const arrayBuffer = await zip.generateAsync({
     type: 'uint8array',
@@ -185,98 +236,100 @@ export async function generateKaldikExcelBuffer(input: KaldikExcelInput = {}): P
 }
 
 /**
- * Stylesheet XML builder dengan skema warna harmonis & fontSegoe/Calibri
+ * Stylesheet XML builder persis dengan skema warna file acuan Pendis
  */
-function buildStylesXml(): string {
+function buildPendisStylesXml(): string {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="10">
-    <!-- 0: Regular 10pt -->
+  <fonts count="15">
+    <!-- 0: Calibri 10pt normal -->
     <font><sz val="10"/><name val="Calibri"/></font>
-    <!-- 1: Bold 10pt -->
+    <!-- 1: Calibri 10pt bold -->
     <font><b/><sz val="10"/><name val="Calibri"/></font>
-    <!-- 2: Bold 11pt White -->
-    <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
-    <!-- 3: Bold 16pt Navy -->
-    <font><b/><sz val="16"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
-    <!-- 4: Bold 12pt White -->
-    <font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
-    <!-- 5: Regular 9pt -->
-    <font><sz val="9"/><name val="Calibri"/></font>
-    <!-- 6: Bold 9pt -->
+    <!-- 2: Calibri 11pt normal -->
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <!-- 3: Calibri 11pt bold -->
+    <font><b/><sz val="11"/><name val="Calibri"/></font>
+    <!-- 4: Calibri 10pt bold Yellow (FFFFFF00) -->
+    <font><b/><sz val="10"/><color rgb="FFFFFF00"/><name val="Calibri"/></font>
+    <!-- 5: Calibri 10pt bold White (FFFFFFFF) -->
+    <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+    <!-- 6: Calibri 9pt bold Red (FFFF0000) -->
+    <font><b/><sz val="9"/><color rgb="FFFF0000"/><name val="Calibri"/></font>
+    <!-- 7: Calibri 10pt normal Red (FFFF0000) -->
+    <font><sz val="10"/><color rgb="FFFF0000"/><name val="Calibri"/></font>
+    <!-- 8: Calibri 8pt bold -->
+    <font><b/><sz val="8"/><name val="Calibri"/></font>
+    <!-- 9: Calibri 8pt normal -->
+    <font><sz val="8"/><name val="Calibri"/></font>
+    <!-- 10: Calibri 13pt bold Navy/Black -->
+    <font><b/><sz val="13"/><color rgb="FF002060"/><name val="Calibri"/></font>
+    <!-- 11: Calibri 15pt bold Navy/Black -->
+    <font><b/><sz val="15"/><color rgb="FF002060"/><name val="Calibri"/></font>
+    <!-- 12: Calibri 9pt italic Slate -->
+    <font><i/><sz val="9"/><color rgb="FF475569"/><name val="Calibri"/></font>
+    <!-- 13: Calibri 9pt bold -->
     <font><b/><sz val="9"/><name val="Calibri"/></font>
-    <!-- 7: Italic 10pt Muted -->
-    <font><i/><sz val="10"/><color rgb="FF475569"/><name val="Calibri"/></font>
-    <!-- 8: Bold 13pt Dark Indigo -->
-    <font><b/><sz val="13"/><color rgb="FF1E3A8A"/><name val="Calibri"/></font>
-    <!-- 9: Bold 9pt White -->
-    <font><b/><sz val="9"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+    <!-- 14: Calibri 9pt normal -->
+    <font><sz val="9"/><name val="Calibri"/></font>
   </fonts>
 
-  <fills count="18">
+  <fills count="20">
     <!-- 0: none -->
     <fill><patternFill patternType="none"/></fill>
     <!-- 1: gray125 -->
     <fill><patternFill patternType="gray125"/></fill>
-    <!-- 2: Navy Header (#1E3A8A) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/></patternFill></fill>
-    <!-- 3: Dark Slate Header (#0F172A) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/></patternFill></fill>
-    <!-- 4: Emerald Header (#065F46) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FF065F46"/></patternFill></fill>
-    <!-- 5: Indigo Subheader (#3730A3) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FF3730A3"/></patternFill></fill>
-    <!-- 6: Light Gray Header (#F1F5F9) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>
-    <!-- 7: Soft Blue (MPLS/PWK) (#BAE6FD) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFBAE6FD"/></patternFill></fill>
-    <!-- 8: Soft Green (PHBI) (#BBF7D0) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFBBF7D0"/></patternFill></fill>
-    <!-- 9: Soft Red / Weekend / Libur (#FECDD3) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFFECDD3"/></patternFill></fill>
-    <!-- 10: Soft Yellow (STS) (#FEF08A) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFFEF08A"/></patternFill></fill>
-    <!-- 11: Soft Orange (SAS/ASAT) (#FED7AA) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFFED7AA"/></patternFill></fill>
-    <!-- 12: Soft Purple (PSAJ) (#DDD6FE) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFDDD6FE"/></patternFill></fill>
-    <!-- 13: Soft Pink (HJP) (#FBCFE8) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFFBCFE8"/></patternFill></fill>
-    <!-- 14: Soft Teal (TdBA) (#A7F3D0) -->
+    <!-- 2: Hijau Tua Pendis Header (#006600) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FF006600"/></patternFill></fill>
+    <!-- 3: Soft Gray Header (#F2F2F2) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/></patternFill></fill>
+    <!-- 4: MPLS Sky Blue (#00B0F0) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FF00B0F0"/></patternFill></fill>
+    <!-- 5: SAS / ASAS Bright Green (#00CC00) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FF00CC00"/></patternFill></fill>
+    <!-- 6: Rapor Yellow (#FFFF00) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/></patternFill></fill>
+    <!-- 7: Libur Semester Pink/Magenta (#FF66FF) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFF66FF"/></patternFill></fill>
+    <!-- 8: Libur Idul Fitri Orange (#FFC000) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFC000"/></patternFill></fill>
+    <!-- 9: Ujian/PSAJ Light Green (#92D050) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FF92D050"/></patternFill></fill>
+    <!-- 10: Libur Nasional/Keagamaan Red (#FF0000) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFF0000"/></patternFill></fill>
+    <!-- 11: Hari Jadi Purwakarta Soft Pink (#F472B6) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF472B6"/></patternFill></fill>
+    <!-- 12: TdBA Soft Teal (#A7F3D0) -->
     <fill><patternFill patternType="solid"><fgColor rgb="FFA7F3D0"/></patternFill></fill>
-    <!-- 15: Zebra Stripe Row (#F8FAFC) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/></patternFill></fill>
-    <!-- 16: Highlight Total Emerald (#ECFDF5) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFECFDF5"/></patternFill></fill>
-    <!-- 17: Highlight Total Indigo (#EEF2FF) -->
-    <fill><patternFill patternType="solid"><fgColor rgb="FFEEF2FF"/></patternFill></fill>
+    <!-- 13: Light Gray Box (#E2E8F0) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
+    <!-- 14: Soft Emerald Total (#E8F5E9) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE8F5E9"/></patternFill></fill>
   </fills>
 
   <borders count="4">
     <!-- 0: none -->
     <border><left/><right/><top/><bottom/><diagonal/></border>
-    <!-- 1: Thin border clean (#CBD5E1) -->
+    <!-- 1: Thin border (#CBD5E1 / #D9D9D9) -->
     <border>
-      <left style="thin"><color rgb="FFCBD5E1"/></left>
-      <right style="thin"><color rgb="FFCBD5E1"/></right>
-      <top style="thin"><color rgb="FFCBD5E1"/></top>
-      <bottom style="thin"><color rgb="FFCBD5E1"/></bottom>
+      <left style="thin"><color rgb="FFD9D9D9"/></left>
+      <right style="thin"><color rgb="FFD9D9D9"/></right>
+      <top style="thin"><color rgb="FFD9D9D9"/></top>
+      <bottom style="thin"><color rgb="FFD9D9D9"/></bottom>
       <diagonal/>
     </border>
-    <!-- 2: Double bottom total border -->
+    <!-- 2: Thin border with dark header -->
     <border>
-      <left style="thin"><color rgb="FFCBD5E1"/></left>
-      <right style="thin"><color rgb="FFCBD5E1"/></right>
-      <top style="thin"><color rgb="FF1E293B"/></top>
-      <bottom style="double"><color rgb="FF0F172A"/></bottom>
+      <left style="thin"><color rgb="FFBFBFBF"/></left>
+      <right style="thin"><color rgb="FFBFBFBF"/></right>
+      <top style="thin"><color rgb="FFBFBFBF"/></top>
+      <bottom style="medium"><color rgb="FF006600"/></bottom>
       <diagonal/>
     </border>
-    <!-- 3: Medium header bottom border -->
+    <!-- 3: Thick double bottom border untuk Kop Surat -->
     <border>
-      <left style="thin"><color rgb="FFCBD5E1"/></left>
-      <right style="thin"><color rgb="FFCBD5E1"/></right>
-      <top style="thin"><color rgb="FFCBD5E1"/></top>
-      <bottom style="medium"><color rgb="FF1E3A8A"/></bottom>
+      <left/><right/><top/>
+      <bottom style="double"><color rgb="FF000000"/></bottom>
       <diagonal/>
     </border>
   </borders>
@@ -288,578 +341,198 @@ function buildStylesXml(): string {
   <cellXfs count="30">
     <!-- 0: Normal text -->
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-    <!-- 1: Main Title Banner (16pt bold navy centered) -->
+    <!-- 1: Kop Title 15pt Bold Centered -->
+    <xf numFmtId="0" fontId="11" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 2: Kop Instansi 11pt Bold Centered -->
     <xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 2: Subtitle Banner (13pt bold indigo centered) -->
-    <xf numFmtId="0" fontId="8" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 3: Subtitle Address (10pt italic slate centered) -->
-    <xf numFmtId="0" fontId="7" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 4: Header Dark Navy White (Table Header Main) -->
-    <xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-    <!-- 5: Header Emerald White (Table Header Ganjil) -->
-    <xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-    <!-- 6: Header Indigo White (Table Header Genap) -->
-    <xf numFmtId="0" fontId="2" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-    <!-- 7: Subheader Gray Bold Center -->
-    <xf numFmtId="0" fontId="1" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-    <!-- 8: Regular Data Left Border -->
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
-    <!-- 9: Regular Data Center Border -->
+    <!-- 3: Kop Alamat 9pt Italic Centered -->
+    <xf numFmtId="0" fontId="12" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 4: Kop Separator Thick Double Bottom Border -->
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="3" xfId="0" applyBorder="1"/>
+    <!-- 5: Month Header Hijau Tua (#006600) with Yellow Bold Centered -->
+    <xf numFmtId="0" fontId="4" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 6: Day Name Header Aha (Red Bold Centered) -->
+    <xf numFmtId="0" fontId="6" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 7: Day Name Header Sen..Sab (Bold Centered) -->
+    <xf numFmtId="0" fontId="13" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 8: Date Cell Normal Weekday (Centered, Border 1) -->
     <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 10: Regular Data Right Border -->
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-    <!-- 11: Bold Data Left Border -->
-    <xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
-    <!-- 12: Bold Data Center Border -->
-    <xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 13: Bold Data Right Border -->
-    <xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-    <!-- 14: Day Cell: Soft Red (Weekend / Libur) -->
-    <xf numFmtId="0" fontId="6" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 15: Day Cell: Soft Blue (MPLS) -->
-    <xf numFmtId="0" fontId="6" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 16: Day Cell: Soft Green (PHBI) -->
-    <xf numFmtId="0" fontId="6" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 17: Day Cell: Soft Yellow (STS) -->
-    <xf numFmtId="0" fontId="6" fillId="10" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 18: Day Cell: Soft Orange (SAS / ASAT) -->
-    <xf numFmtId="0" fontId="6" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 19: Day Cell: Soft Purple (PSAJ) -->
-    <xf numFmtId="0" fontId="6" fillId="12" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 20: Day Cell: Soft Pink (HJP) -->
-    <xf numFmtId="0" fontId="6" fillId="13" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 21: Day Cell: Soft Teal (TdBA) -->
-    <xf numFmtId="0" fontId="6" fillId="14" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 22: Zebra Stripe Left -->
-    <xf numFmtId="0" fontId="0" fillId="15" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
-    <!-- 23: Zebra Stripe Center -->
-    <xf numFmtId="0" fontId="0" fillId="15" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 24: Total Subtotal Row Center Double Bottom -->
-    <xf numFmtId="0" fontId="1" fillId="17" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 25: Total Subtotal Row Right Double Bottom -->
-    <xf numFmtId="0" fontId="1" fillId="17" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-    <!-- 26: Grand Total Row Dark Header -->
-    <xf numFmtId="0" fontId="2" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
-    <!-- 27: Grand Total Row Dark Right -->
-    <xf numFmtId="0" fontId="2" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
-    <!-- 28: Section Title in Table (12pt Bold White Emerald) -->
-    <xf numFmtId="0" fontId="4" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
-    <!-- 29: Section Title in Table (12pt Bold White Indigo) -->
-    <xf numFmtId="0" fontId="4" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 9: Date Cell Sunday (Red font, Centered, Border 1) -->
+    <xf numFmtId="0" fontId="7" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 10: Event Cell: MPLS Sky Blue (#00B0F0) -->
+    <xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 11: Event Cell: SAS / ASAS Bright Green (#00CC00) -->
+    <xf numFmtId="0" fontId="1" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 12: Event Cell: Rapor Yellow (#FFFF00) -->
+    <xf numFmtId="0" fontId="1" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 13: Event Cell: Libur Semester Pink (#FF66FF) -->
+    <xf numFmtId="0" fontId="1" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 14: Event Cell: Libur Idul Fitri Orange (#FFC000) -->
+    <xf numFmtId="0" fontId="1" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 15: Event Cell: PSAJ / Awal Masuk Light Green (#92D050) -->
+    <xf numFmtId="0" fontId="1" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 16: Event Cell: Libur Nasional Red (#FF0000, White font) -->
+    <xf numFmtId="0" fontId="5" fillId="10" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 17: Event Cell: HJP Soft Pink (#F472B6) -->
+    <xf numFmtId="0" fontId="1" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 18: Event Cell: TdBA Soft Teal (#A7F3D0) -->
+    <xf numFmtId="0" fontId="1" fillId="12" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 19: Table Header Gray Bold Left/Center -->
+    <xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 20: Table Content Left (Border 1) -->
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 21: Table Content Center (Border 1) -->
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 22: Table Content Bold Left (Border 1) -->
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 23: Table Content Bold Center (Border 1) -->
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 24: HK / HE Label 8pt Bold Left -->
+    <xf numFmtId="0" fontId="8" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 25: HK / HE Value 8pt Bold Center -->
+    <xf numFmtId="0" fontId="8" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 26: Section Header Hijau Tua White (Left, Border 1) -->
+    <xf numFmtId="0" fontId="5" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 27: Legend Text 8pt Normal Left -->
+    <xf numFmtId="0" fontId="9" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+    <!-- 28: Signature Name 10pt Bold Underline -->
+    <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <!-- 29: Signature Title / NIP 9pt Centered -->
+    <xf numFmtId="0" fontId="14" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
   </cellXfs>
 </styleSheet>`;
 }
 
-/**
- * Helper menentukan style cell tanggal kalender berdasarkan event dan hari
- */
-function getDayCellStyle(dayJs: number, isWeekend: boolean, events: KaldikEventItem[]): { styleId: number; text: string } {
-  if (isWeekend) {
-    return { styleId: 14, text: 'LBR' };
-  }
-
-  if (!events || events.length === 0) {
-    return { styleId: 9, text: '' };
-  }
-
-  const top = events[0];
-  const label = top.badgeLabel || top.judul.slice(0, 5);
-
-  if (top.kategori === 'libur') {
-    return { styleId: 14, text: label || 'LBR' };
-  }
-  if (top.kategori === 'keagamaan') {
-    return { styleId: 16, text: label || 'PHBI' };
-  }
-  if (top.kategori === 'asesmen') {
-    if (label.includes('STS')) return { styleId: 17, text: 'STS' };
-    if (label.includes('SAS')) return { styleId: 18, text: 'SAS' };
-    if (label.includes('ASAT')) return { styleId: 18, text: 'ASAT' };
-    if (label.includes('PSAJ')) return { styleId: 19, text: 'PSAJ' };
-    return { styleId: 17, text: label };
-  }
-  if (top.kategori === 'purwakarta') {
-    if (label === 'MPLS') return { styleId: 15, text: 'MPLS' };
-    if (label === 'HJP') return { styleId: 20, text: 'HJP' };
-    return { styleId: 21, text: label || 'PWK' };
-  }
-
-  return { styleId: 18, text: label || 'NAS' };
-}
-
-/**
- * SHEET 1: Matriks Kalender 12 Bulan (Juli s.d. Juni)
- */
-function buildSheet1Xml(ctx: {
+interface SheetContext {
   namaSekolah: string;
+  npsn: string;
   tahunAjaran: string;
   kepalaSekolah: string;
   nipKepalaSekolah: string;
   penyusun: string;
   nipPenyusun: string;
-  kota: string;
+  kabupaten: string;
+  kecamatan: string;
   alamat: string;
-  sistemHariSekolahLabel: string;
-  grid: MonthGridData[];
-  stats: KaldikStatistics;
-  allEvents: KaldikEventItem[];
-}): string {
-  const rows: string[] = [];
-  const merges: string[] = [];
-
-  // Baris 1-4: Header Formal Sekolah & Disdik
-  rows.push(`
-    <row r="1" ht="22" customHeight="1">
-      <c r="A1" s="1" t="inlineStr"><is><t>PEMERINTAH KABUPATEN ${escapeXml(ctx.kota.toUpperCase())} • DINAS PENDIDIKAN</t></is></c>
-    </row>
-    <row r="2" ht="28" customHeight="1">
-      <c r="A2" s="1" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())}</t></is></c>
-    </row>
-    <row r="3" ht="22" customHeight="1">
-      <c r="A3" s="2" t="inlineStr"><is><t>KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP) TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)}</t></is></c>
-    </row>
-    <row r="4" ht="18" customHeight="1">
-      <c r="A4" s="3" t="inlineStr"><is><t>${escapeXml(ctx.alamat)} • Alokasi: ${escapeXml(ctx.sistemHariSekolahLabel)} • Acuan: Permendikdasmen No. 13/2025 &amp; SE Kadisdik No. 400.3.5/2367-Dikdas/2026</t></is></c>
-    </row>
-    <row r="5" ht="12" customHeight="1"/>
-  `);
-
-  merges.push('A1:AM1', 'A2:AM2', 'A3:AM3', 'A4:AM4');
-
-  // Baris 6 & 7: Header Tabel Matriks Kalender
-  // Kolom: A=No, B=Bulan/Tahun, C s.d AG = Tanggal 1 s.d 31, AH=HK, AI=HEB, AJ=HL, AK=PE, AL=PTE, AM=Ringkasan Agenda
-  let r6 = '<row r="6" ht="24" customHeight="1">';
-  r6 += '<c r="A6" s="4" t="inlineStr"><is><t>No</t></is></c>';
-  r6 += '<c r="B6" s="4" t="inlineStr"><is><t>Bulan &amp; Tahun</t></is></c>';
-  r6 += '<c r="C6" s="4" t="inlineStr"><is><t>TANGGAL PELAKSANAAN KBM DAN AGENDA SEKOLAH (1 s.d. 31)</t></is></c>';
-  // Isi cell kosong C6 s.d AG6 agar border rapi
-  for (let c = 4; c <= 33; c++) {
-    r6 += `<c r="${colToLetter(c)}6" s="4"/>`;
-  }
-  r6 += '<c r="AH6" s="4" t="inlineStr"><is><t>REKAPITULASI HARI &amp; PEKAN</t></is></c>';
-  for (let c = 35; c <= 38; c++) {
-    r6 += `<c r="${colToLetter(c)}6" s="4"/>`;
-  }
-  r6 += '<c r="AM6" s="4" t="inlineStr"><is><t>Agenda Utama &amp; Keterangan Alokasi</t></is></c>';
-  r6 += '</row>';
-  rows.push(r6);
-
-  merges.push('A6:A7', 'B6:B7', 'C6:AG6', 'AH6:AL6', 'AM6:AM7');
-
-  let r7 = '<row r="7" ht="20" customHeight="1">';
-  r7 += '<c r="A7" s="7"/>';
-  r7 += '<c r="B7" s="7"/>';
-  for (let day = 1; day <= 31; day++) {
-    const colName = colToLetter(day + 2);
-    r7 += `<c r="${colName}7" s="7" t="inlineStr"><is><t>${day}</t></is></c>`;
-  }
-  r7 += '<c r="AH7" s="7" t="inlineStr"><is><t>HK</t></is></c>';
-  r7 += '<c r="AI7" s="7" t="inlineStr"><is><t>HEB</t></is></c>';
-  r7 += '<c r="AJ7" s="7" t="inlineStr"><is><t>HL</t></is></c>';
-  r7 += '<c r="AK7" s="7" t="inlineStr"><is><t>PE</t></is></c>';
-  r7 += '<c r="AL7" s="7" t="inlineStr"><is><t>PTE</t></is></c>';
-  r7 += '<c r="AM7" s="7"/>';
-  r7 += '</row>';
-  rows.push(r7);
-
-  let currentRow = 8;
-
-  // Helper untuk merender seksi semester
-  const renderSemesterSection = (semNumber: 1 | 2, title: string, months: MonthGridData[], titleStyle: number) => {
-    // Header Semester
-    let semHeaderRow = `<row r="${currentRow}" ht="22" customHeight="1">`;
-    semHeaderRow += `<c r="A${currentRow}" s="${titleStyle}" t="inlineStr"><is><t>${escapeXml(title)}</t></is></c>`;
-    for (let c = 2; c <= 39; c++) {
-      semHeaderRow += `<c r="${colToLetter(c)}${currentRow}" s="${titleStyle}"/>`;
-    }
-    semHeaderRow += `</row>`;
-    rows.push(semHeaderRow);
-    merges.push(`A${currentRow}:AM${currentRow}`);
-    currentRow++;
-
-    let semHK = 0;
-    let semHEB = 0;
-    let semHL = 0;
-    let semPE = 0;
-    let semPTE = 0;
-
-    months.forEach((m, idx) => {
-      const daysInMonth = new Date(m.year, m.monthNum, 0).getDate();
-      semHK += daysInMonth;
-      semHEB += m.hariEfektif;
-      semHL += m.hariLibur;
-      semPE += m.pekanEfektif;
-      semPTE += m.pekanTidakEfektif;
-
-      let rData = `<row r="${currentRow}" ht="21" customHeight="1">`;
-      rData += `<c r="A${currentRow}" s="9" t="inlineStr"><is><t>${idx + 1}</t></is></c>`;
-      rData += `<c r="B${currentRow}" s="11" t="inlineStr"><is><t>${escapeXml(m.monthName)}</t></is></c>`;
-
-      // Loop tanggal 1 s.d. 31
-      for (let day = 1; day <= 31; day++) {
-        const colLetter = colToLetter(day + 2);
-        if (day > daysInMonth) {
-          // Tanggal di luar bulan (misal tgl 31 pada bulan 30 hari)
-          rData += `<c r="${colLetter}${currentRow}" s="7" t="inlineStr"><is><t>-</t></is></c>`;
-        } else {
-          const dateStr = `${m.year}-${String(m.monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const dayJs = new Date(m.year, m.monthNum - 1, day).getDay();
-          const isWeekend = ctx.sistemHariSekolahLabel.includes('6 Hari') ? dayJs === 0 : (dayJs === 0 || dayJs === 6);
-          const matchingEvents = ctx.allEvents.filter(ev => isDateInEvent(dateStr, ev));
-          const cellStyle = getDayCellStyle(dayJs, isWeekend, matchingEvents);
-
-          rData += `<c r="${colLetter}${currentRow}" s="${cellStyle.styleId}" t="inlineStr"><is><t>${escapeXml(cellStyle.text || day)}</t></is></c>`;
-        }
-      }
-
-      // Kolom Rekap
-      rData += `<c r="AH${currentRow}" s="9" t="inlineStr"><is><t>${daysInMonth}</t></is></c>`;
-      rData += `<c r="AI${currentRow}" s="12" t="inlineStr"><is><t>${m.hariEfektif}</t></is></c>`;
-      rData += `<c r="AJ${currentRow}" s="9" t="inlineStr"><is><t>${m.hariLibur}</t></is></c>`;
-      rData += `<c r="AK${currentRow}" s="12" t="inlineStr"><is><t>${m.pekanEfektif}</t></is></c>`;
-      rData += `<c r="AL${currentRow}" s="9" t="inlineStr"><is><t>${m.pekanTidakEfektif}</t></is></c>`;
-
-      // Ringkasan agenda
-      const agendaSummary = m.agendaList.map(a => a.judul).join('; ') || 'KBM Efektif Reguler';
-      rData += `<c r="AM${currentRow}" s="8" t="inlineStr"><is><t>${escapeXml(agendaSummary)}</t></is></c>`;
-
-      rData += `</row>`;
-      rows.push(rData);
-      currentRow++;
-    });
-
-    // Subtotal Semester
-    let rSub = `<row r="${currentRow}" ht="22" customHeight="1">`;
-    rSub += `<c r="A${currentRow}" s="24" t="inlineStr"><is><t>JUMLAH SEMESTER ${semNumber}:</t></is></c>`;
-    rSub += `<c r="B${currentRow}" s="24"/>`;
-    for (let c = 3; c <= 33; c++) {
-      rSub += `<c r="${colToLetter(c)}${currentRow}" s="24"/>`;
-    }
-    rSub += `<c r="AH${currentRow}" s="24" t="inlineStr"><is><t>${semHK}</t></is></c>`;
-    rSub += `<c r="AI${currentRow}" s="24" t="inlineStr"><is><t>${semHEB}</t></is></c>`;
-    rSub += `<c r="AJ${currentRow}" s="24" t="inlineStr"><is><t>${semHL}</t></is></c>`;
-    rSub += `<c r="AK${currentRow}" s="24" t="inlineStr"><is><t>${semPE} Pekan</t></is></c>`;
-    rSub += `<c r="AL${currentRow}" s="24" t="inlineStr"><is><t>${semPTE} Pekan</t></is></c>`;
-    rSub += `<c r="AM${currentRow}" s="25" t="inlineStr"><is><t>Target ${semPE} Pekan Efektif Terpenuhi</t></is></c>`;
-    rSub += `</row>`;
-    rows.push(rSub);
-    merges.push(`A${currentRow}:B${currentRow}`);
-    currentRow++;
-  };
-
-  const smt1Months = ctx.grid.filter(m => m.semester === 1);
-  const smt2Months = ctx.grid.filter(m => m.semester === 2);
-
-  renderSemesterSection(1, 'SEMESTER 1 (GANJIL) • JULI - DESEMBER 2026', smt1Months, 28);
-  renderSemesterSection(2, 'SEMESTER 2 (GENAP) • JANUARI - JUNI 2027', smt2Months, 29);
-
-  // Grand Total 1 Tahun Ajaran
-  let rGrand = `<row r="${currentRow}" ht="26" customHeight="1">`;
-  rGrand += `<c r="A${currentRow}" s="26" t="inlineStr"><is><t>TOTAL 1 TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)} (STANDAR KEMENDIKDASMEN MIN. 36 PEKAN):</t></is></c>`;
-  for (let c = 2; c <= 33; c++) {
-    rGrand += `<c r="${colToLetter(c)}${currentRow}" s="26"/>`;
-  }
-  rGrand += `<c r="AH${currentRow}" s="26" t="inlineStr"><is><t>${smt1Months.concat(smt2Months).reduce((acc, m) => acc + new Date(m.year, m.monthNum, 0).getDate(), 0)}</t></is></c>`;
-  rGrand += `<c r="AI${currentRow}" s="26" t="inlineStr"><is><t>${ctx.stats.totalHariEfektifKbm}</t></is></c>`;
-  rGrand += `<c r="AJ${currentRow}" s="26" t="inlineStr"><is><t>${ctx.stats.totalHariLibur}</t></is></c>`;
-  rGrand += `<c r="AK${currentRow}" s="26" t="inlineStr"><is><t>${ctx.stats.totalPekanEfektifTahun} PEKAN</t></is></c>`;
-  rGrand += `<c r="AL${currentRow}" s="26" t="inlineStr"><is><t>18 PEKAN</t></is></c>`;
-  rGrand += `<c r="AM${currentRow}" s="27" t="inlineStr"><is><t>100% MEMENUHI STANDAR PERMENDIKDASMEN NO. 13/2025</t></is></c>`;
-  rGrand += `</row>`;
-  rows.push(rGrand);
-  merges.push(`A${currentRow}:AG${currentRow}`);
-  currentRow += 2;
-
-  // TABEL KETERANGAN LEGEND WARNA & SINGKATAN KODE
-  rows.push(`
-    <row r="${currentRow}" ht="20" customHeight="1">
-      <c r="A${currentRow}" s="4" t="inlineStr"><is><t>KODE RESMI KALENDER PENDIDIKAN &amp; KATEGORI AGENDA</t></is></c>
-    </row>
-  `);
-  merges.push(`A${currentRow}:AM${currentRow}`);
-  currentRow++;
-
-  const legends = [
-    { code: 'KBM', name: 'Kegiatan Belajar Mengajar Reguler', style: 9, desc: 'Hari efektif belajar tatap muka di kelas' },
-    { code: 'MPLS', name: 'Masa Pengenalan Lingkungan Sekolah', style: 15, desc: 'Transisi PAUD-SD menyenangkan ramah anak Purwakarta' },
-    { code: 'HJP', name: 'Hari Jadi Purwakarta (HJP) & 7 Poé Atikan', style: 20, desc: 'Pawai budaya & penguatan identitas karakter Sunda' },
-    { code: 'PHBI', name: 'Peringatan Hari Besar Islam (PHBI)', style: 16, desc: 'Maulid Nabi, Isra Mi\'raj/Rajaban, Masantren Ramadhan, Idul Adha' },
-    { code: 'STS', name: 'Sumatif Tengah Semester (STS)', style: 17, desc: 'Penilaian capaian kompetensi tengah semester' },
-    { code: 'SAS', name: 'Sumatif Akhir Semester (SAS)', style: 18, desc: 'Penilaian sumatif akhir semester ganjil' },
-    { code: 'ASAT', name: 'Asesmen Sumatif Akhir Tahun (ASAT)', style: 18, desc: 'Penilaian sumatif penentu kenaikan kelas fase belajar' },
-    { code: 'PSAJ', name: 'Penilaian Sumatif Akhir Jenjang (PSAJ)', style: 19, desc: 'Asesmen sumatif kelulusan murid kelas 6 SD' },
-    { code: 'TdBA', name: 'Gerakan Tatanen di Bale Atikan (TdBA)', style: 21, desc: 'Hari Udara Bersih, Hari Bambu, dan Panen Belajar TdBA' },
-    { code: 'LBR', name: 'Libur Semester / Libur Nasional', style: 14, desc: 'Hari libur resmi nasional SKB 3 Menteri & libur semester' }
-  ];
-
-  legends.forEach(leg => {
-    let rLeg = `<row r="${currentRow}" ht="19" customHeight="1">`;
-    rLeg += `<c r="A${currentRow}" s="${leg.style}" t="inlineStr"><is><t>${leg.code}</t></is></c>`;
-    rLeg += `<c r="B${currentRow}" s="11" t="inlineStr"><is><t>${escapeXml(leg.name)}</t></is></c>`;
-    for (let c = 3; c <= 10; c++) rLeg += `<c r="${colToLetter(c)}${currentRow}" s="8"/>`;
-    rLeg += `<c r="C${currentRow}" s="8" t="inlineStr"><is><t>${escapeXml(leg.desc)}</t></is></c>`;
-    for (let c = 11; c <= 39; c++) rLeg += `<c r="${colToLetter(c)}${currentRow}" s="0"/>`;
-    rLeg += `</row>`;
-    rows.push(rLeg);
-    merges.push(`C${currentRow}:AM${currentRow}`);
-    currentRow++;
-  });
-
-  currentRow++;
-
-  // BLOK PENGESAHAN (SIGNATURE)
-  rows.push(`
-    <row r="${currentRow}" ht="18" customHeight="1">
-      <c r="B${currentRow}" s="0" t="inlineStr"><is><t>Mengetahui,</t></is></c>
-      <c r="AJ${currentRow}" s="0" t="inlineStr"><is><t>${escapeXml(ctx.kota)}, 13 Juli 2026</t></is></c>
-    </row>
-    <row r="${currentRow + 1}" ht="18" customHeight="1">
-      <c r="B${currentRow + 1}" s="1" t="inlineStr"><is><t>Ketua Tim Pengembang Kurikulum,</t></is></c>
-      <c r="AJ${currentRow + 1}" s="1" t="inlineStr"><is><t>Kepala ${escapeXml(ctx.namaSekolah)},</t></is></c>
-    </row>
-    <row r="${currentRow + 2}" ht="18" customHeight="1"/>
-    <row r="${currentRow + 3}" ht="18" customHeight="1"/>
-    <row r="${currentRow + 4}" ht="18" customHeight="1"/>
-    <row r="${currentRow + 5}" ht="18" customHeight="1">
-      <c r="B${currentRow + 5}" s="11" t="inlineStr"><is><t>${escapeXml(ctx.penyusun)}</t></is></c>
-      <c r="AJ${currentRow + 5}" s="11" t="inlineStr"><is><t>${escapeXml(ctx.kepalaSekolah)}</t></is></c>
-    </row>
-    <row r="${currentRow + 6}" ht="18" customHeight="1">
-      <c r="B${currentRow + 6}" s="8" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipPenyusun)}</t></is></c>
-      <c r="AJ${currentRow + 6}" s="8" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipKepalaSekolah)}</t></is></c>
-    </row>
-  `);
-  merges.push(
-    `B${currentRow + 5}:J${currentRow + 5}`,
-    `AJ${currentRow + 5}:AM${currentRow + 5}`,
-    `B${currentRow + 6}:J${currentRow + 6}`,
-    `AJ${currentRow + 6}:AM${currentRow + 6}`
-  );
-
-  // Column widths definition
-  let colsXml = '<cols>';
-  colsXml += '<col min="1" max="1" width="5" customWidth="1"/>'; // A: No
-  colsXml += '<col min="2" max="2" width="20" customWidth="1"/>'; // B: Bulan
-  for (let c = 3; c <= 33; c++) {
-    colsXml += `<col min="${c}" max="${c}" width="5.2" customWidth="1"/>`; // C-AG: Tgl 1-31
-  }
-  colsXml += '<col min="34" max="34" width="7" customWidth="1"/>'; // AH: HK
-  colsXml += '<col min="35" max="35" width="7" customWidth="1"/>'; // AI: HEB
-  colsXml += '<col min="36" max="36" width="7" customWidth="1"/>'; // AJ: HL
-  colsXml += '<col min="37" max="37" width="8" customWidth="1"/>'; // AK: PE
-  colsXml += '<col min="38" max="38" width="8" customWidth="1"/>'; // AL: PTE
-  colsXml += '<col min="39" max="39" width="48" customWidth="1"/>'; // AM: Ringkasan Agenda
-  colsXml += '</cols>';
-
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetViews>
-    <sheetView tabSelected="1" workbookViewId="0" showGridLines="1">
-      <pane ySplit="7" topLeftCell="A8" activePane="bottomLeft" state="frozen"/>
-    </sheetView>
-  </sheetViews>
-  <sheetFormatPr defaultRowHeight="20"/>
-  ${colsXml}
-  <sheetData>
-    ${rows.join('\n')}
-  </sheetData>
-  <mergeCells count="${merges.length}">
-    ${merges.map(m => `<mergeCell ref="${m}"/>`).join('\n')}
-  </mergeCells>
-</worksheet>`;
+  instansi: string;
 }
 
 /**
- * SHEET 2: Rekapitulasi Alokasi Waktu (RPE)
+ * SHEET 1: Tanggal Penting (Persis layout sheet 1 di file acuan)
  */
-function buildSheet2Xml(ctx: {
-  namaSekolah: string;
-  tahunAjaran: string;
-  kepalaSekolah: string;
-  nipKepalaSekolah: string;
-  kota: string;
-  grid: MonthGridData[];
-  stats: KaldikStatistics;
-}): string {
+function buildTanggalPentingSheetXml(ctx: SheetContext): string {
   const rows: string[] = [];
-  const merges: string[] = [];
 
   rows.push(`
     <row r="1" ht="24" customHeight="1">
-      <c r="A1" s="1" t="inlineStr"><is><t>RINCIAN PEKAN EFEKTIF (RPE) &amp; ALOKASI BEBAN BELAJAR KURIKULUM MERDEKA</t></is></c>
+      <c r="B1" s="3" t="inlineStr"><is><t>Tanggal-tanggal Penting dalam Kalender Pendidikan Satuan Pendidikan ${escapeXml(ctx.tahunAjaran)}</t></is></c>
     </row>
-    <row r="2" ht="20" customHeight="1">
-      <c r="A2" s="2" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())} • TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)}</t></is></c>
+    <row r="2" ht="18" customHeight="1">
+      <c r="B2" s="12" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())} • ${escapeXml(ctx.instansi.toUpperCase())} KABUPATEN ${escapeXml(ctx.kabupaten.toUpperCase())}</t></is></c>
     </row>
-    <row r="3" ht="18" customHeight="1">
-      <c r="A3" s="3" t="inlineStr"><is><t>Pedoman: Permendikdasmen No. 13 Tahun 2025 &amp; Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026</t></is></c>
+    <row r="3" ht="22" customHeight="1">
+      <c r="B3" s="3" t="inlineStr"><is><t>Semester Gasal</t></is></c>
     </row>
-    <row r="4" ht="12" customHeight="1"/>
+    <row r="4" ht="22" customHeight="1">
+      <c r="B4" s="19" t="inlineStr"><is><t>Tanggal</t></is></c>
+      <c r="C4" s="19" t="inlineStr"><is><t>Keterangan</t></is></c>
+    </row>
   `);
-  merges.push('A1:F1', 'A2:F2', 'A3:F3');
+
+  const gasalEvents = [
+    { tgl: '13 Juli 2026', desc: 'Awal Masuk Tahun Ajaran 2026/2027' },
+    { tgl: '13 – 18 Juli 2026', desc: 'Rentang Waktu Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak' },
+    { tgl: '20 Juli 2026', desc: 'Peringatan Hari Jadi Purwakarta (HJP ke-195 / Kabupaten ke-58)' },
+    { tgl: '14 Agustus 2026', desc: 'Peringatan Hari Pramuka Nasional ke-65' },
+    { tgl: '17 Agustus 2026', desc: 'HUT Proklamasi Kemerdekaan RI ke-81' },
+    { tgl: '25 Agustus 2026', desc: 'Maulid Nabi Muhammad saw. (12 Rabiul Awal 1448 H)' },
+    { tgl: '7 September 2026', desc: 'Hari Udara Bersih Internasional (Aksi TdBA Purwakarta)' },
+    { tgl: '18 September 2026', desc: 'Hari Bambu Sedunia (World Bamboo Day - Gerakan TdBA)' },
+    { tgl: '21 – 25 September 2026', desc: 'Rentang Asesmen Sumatif Tengah Semester (STS) Gasal' },
+    { tgl: '1 Oktober 2026', desc: 'Peringatan Hari Kesaktian Pancasila' },
+    { tgl: '28 Oktober 2026', desc: 'Peringatan Hari Sumpah Pemuda' },
+    { tgl: '10 November 2026', desc: 'Peringatan Hari Pahlawan Nasional' },
+    { tgl: '23 November – 05 Desember 2026', desc: 'Rentang Asesmen Sumatif Akhir Semester (SAS / ASAS) Gasal' },
+    { tgl: '25 November 2026', desc: 'Hari Guru Nasional (HGN) dan HUT PGRI ke-81' },
+    { tgl: '18 atau 19 Desember 2026', desc: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Gasal' },
+    { tgl: '25 Desember 2026', desc: 'Hari Raya Natal' },
+    { tgl: '21 Desember 2026 – 02 Januari 2027', desc: 'Libur Semester Gasal' },
+  ];
 
   let cur = 5;
-
-  const renderRpeSemesterTable = (title: string, months: MonthGridData[], semPekanEfektif: number, tableHeaderStyle: number) => {
-    rows.push(`
-      <row r="${cur}" ht="22" customHeight="1">
-        <c r="A${cur}" s="${tableHeaderStyle}" t="inlineStr"><is><t>${escapeXml(title)}</t></is></c>
-        <c r="B${cur}" s="${tableHeaderStyle}"/>
-        <c r="C${cur}" s="${tableHeaderStyle}"/>
-        <c r="D${cur}" s="${tableHeaderStyle}"/>
-        <c r="E${cur}" s="${tableHeaderStyle}"/>
-        <c r="F${cur}" s="${tableHeaderStyle}"/>
-      </row>
-    `);
-    merges.push(`A${cur}:F${cur}`);
-    cur++;
-
+  gasalEvents.forEach(ev => {
     rows.push(`
       <row r="${cur}" ht="20" customHeight="1">
-        <c r="A${cur}" s="7" t="inlineStr"><is><t>No</t></is></c>
-        <c r="B${cur}" s="7" t="inlineStr"><is><t>Bulan &amp; Tahun</t></is></c>
-        <c r="C${cur}" s="7" t="inlineStr"><is><t>Jumlah Pekan</t></is></c>
-        <c r="D${cur}" s="7" t="inlineStr"><is><t>Pekan Efektif</t></is></c>
-        <c r="E${cur}" s="7" t="inlineStr"><is><t>Tidak Efektif</t></is></c>
-        <c r="F${cur}" s="7" t="inlineStr"><is><t>Keterangan Alasan Pekan Tidak Efektif / Agenda</t></is></c>
-      </row>
-    `);
-    cur++;
-
-    let totalPekan = 0;
-    let totalPE = 0;
-    let totalPTE = 0;
-
-    months.forEach((m, idx) => {
-      const jmlPekan = m.pekanEfektif + m.pekanTidakEfektif;
-      totalPekan += jmlPekan;
-      totalPE += m.pekanEfektif;
-      totalPTE += m.pekanTidakEfektif;
-
-      const reasons = m.agendaList
-        .filter(a => a.kategori === 'libur' || a.kategori === 'asesmen' || a.badgeLabel === 'MPLS')
-        .map(a => a.judul)
-        .join('; ') || 'KBM Efektif Penuh';
-
-      rows.push(`
-        <row r="${cur}" ht="20" customHeight="1">
-          <c r="A${cur}" s="9" t="inlineStr"><is><t>${idx + 1}</t></is></c>
-          <c r="B${cur}" s="11" t="inlineStr"><is><t>${escapeXml(m.monthName)}</t></is></c>
-          <c r="C${cur}" s="9" t="inlineStr"><is><t>${jmlPekan}</t></is></c>
-          <c r="D${cur}" s="12" t="inlineStr"><is><t>${m.pekanEfektif}</t></is></c>
-          <c r="E${cur}" s="9" t="inlineStr"><is><t>${m.pekanTidakEfektif}</t></is></c>
-          <c r="F${cur}" s="8" t="inlineStr"><is><t>${escapeXml(reasons)}</t></is></c>
-        </row>
-      `);
-      cur++;
-    });
-
-    rows.push(`
-      <row r="${cur}" ht="22" customHeight="1">
-        <c r="A${cur}" s="24" t="inlineStr"><is><t>JUMLAH:</t></is></c>
-        <c r="B${cur}" s="24"/>
-        <c r="C${cur}" s="24" t="inlineStr"><is><t>${totalPekan}</t></is></c>
-        <c r="D${cur}" s="24" t="inlineStr"><is><t>${totalPE} Pekan</t></is></c>
-        <c r="E${cur}" s="24" t="inlineStr"><is><t>${totalPTE} Pekan</t></is></c>
-        <c r="F${cur}" s="25" t="inlineStr"><is><t>Target ${semPekanEfektif} pekan efektif tercapai 100%</t></is></c>
-      </row>
-    `);
-    merges.push(`A${cur}:B${cur}`);
-    cur += 2;
-  };
-
-  const smt1 = ctx.grid.filter(m => m.semester === 1);
-  const smt2 = ctx.grid.filter(m => m.semester === 2);
-
-  renderRpeSemesterTable('1. RENCANA PEKAN EFEKTIF (RPE) SEMESTER 1 (GANJIL)', smt1, ctx.stats.totalPekanEfektifSmt1, 5);
-  renderRpeSemesterTable('2. RENCANA PEKAN EFEKTIF (RPE) SEMESTER 2 (GENAP)', smt2, ctx.stats.totalPekanEfektifSmt2, 6);
-
-  // Tabel Rekapitulasi Tahunan & Uji Standar Nasional
-  rows.push(`
-    <row r="${cur}" ht="22" customHeight="1">
-      <c r="A${cur}" s="4" t="inlineStr"><is><t>3. REKAPITULASI TAHUNAN &amp; UJI KEPATUHAN STANDAR NASIONAL (MINIMAL 36 PEKAN)</t></is></c>
-      <c r="B${cur}" s="4"/><c r="C${cur}" s="4"/><c r="D${cur}" s="4"/><c r="E${cur}" s="4"/><c r="F${cur}" s="4"/>
-    </row>
-  `);
-  merges.push(`A${cur}:F${cur}`);
-  cur++;
-
-  const statItems = [
-    { label: 'Jumlah Pekan Kalender Pendidikan (1 Tahun):', val: '54 Pekan', status: 'Sesuai Kalender Resmi Disdik Purwakarta' },
-    { label: 'Jumlah Pekan Efektif Belajar (Semester 1):', val: `${ctx.stats.totalPekanEfektifSmt1} Pekan`, status: 'Memenuhi Syarat Minimal 18 Pekan' },
-    { label: 'Jumlah Pekan Efektif Belajar (Semester 2):', val: `${ctx.stats.totalPekanEfektifSmt2} Pekan`, status: 'Memenuhi Syarat Minimal 18 Pekan (Kelas 6 PSAJ: 16 Pekan)' },
-    { label: 'TOTAL PEKAN EFEKTIF BELAJAR TAHUNAN:', val: `${ctx.stats.totalPekanEfektifTahun} PEKAN`, status: '100% MEMENUHI STANDAR PERMENDIKDASMEN NO. 13/2025' },
-    { label: 'Jumlah Pekan Tidak Efektif (Libur/Asesmen):', val: '18 Pekan', status: 'Dialokasikan untuk SAS, ASAT, PSAJ, & Libur Semester' }
-  ];
-
-  statItems.forEach(item => {
-    rows.push(`
-      <row r="${cur}" ht="20" customHeight="1">
-        <c r="A${cur}" s="11" t="inlineStr"><is><t>${escapeXml(item.label)}</t></is></c>
-        <c r="B${cur}" s="11"/>
-        <c r="C${cur}" s="11"/>
-        <c r="D${cur}" s="12" t="inlineStr"><is><t>${escapeXml(item.val)}</t></is></c>
-        <c r="E${cur}" s="8" t="inlineStr"><is><t>${escapeXml(item.status)}</t></is></c>
-        <c r="F${cur}" s="8"/>
-      </row>
-    `);
-    merges.push(`A${cur}:C${cur}`, `E${cur}:F${cur}`);
-    cur++;
-  });
-
-  cur++;
-
-  // Tabel Distribusi Jam Pelajaran Kurikulum Merdeka
-  rows.push(`
-    <row r="${cur}" ht="22" customHeight="1">
-      <c r="A${cur}" s="5" t="inlineStr"><is><t>4. DISTRIBUSI ALOKASI BEBAN JAM PELAJARAN (JP) KURIKULUM MERDEKA</t></is></c>
-      <c r="B${cur}" s="5"/><c r="C${cur}" s="5"/><c r="D${cur}" s="5"/><c r="E${cur}" s="5"/><c r="F${cur}" s="5"/>
-    </row>
-  `);
-  merges.push(`A${cur}:F${cur}`);
-  cur++;
-
-  rows.push(`
-    <row r="${cur}" ht="20" customHeight="1">
-      <c r="A${cur}" s="7" t="inlineStr"><is><t>Fase Jenjang</t></is></c>
-      <c r="B${cur}" s="7" t="inlineStr"><is><t>Sasaran Kelas</t></is></c>
-      <c r="C${cur}" s="7" t="inlineStr"><is><t>Alokasi JP / Pekan</t></is></c>
-      <c r="D${cur}" s="7" t="inlineStr"><is><t>Pekan Efektif / Thn</t></is></c>
-      <c r="E${cur}" s="7" t="inlineStr"><is><t>Total Beban JP / Tahun</t></is></c>
-      <c r="F${cur}" s="7" t="inlineStr"><is><t>Proporsi Intrakurikuler &amp; Kokurikuler P5</t></is></c>
-    </row>
-  `);
-  cur++;
-
-  const jpDist = [
-    { fase: 'Fase A', kelas: 'Kelas 1 & 2 SD', jp: '32 JP/Pekan', pekan: `${ctx.stats.totalPekanEfektifTahun} Pekan`, total: `${32 * ctx.stats.totalPekanEfektifTahun} JP/Tahun`, prop: 'Intrakurikuler 75-80%, Kokurikuler Profil Lulusan 20-25%' },
-    { fase: 'Fase B', kelas: 'Kelas 3 & 4 SD', jp: '36 JP/Pekan', pekan: `${ctx.stats.totalPekanEfektifTahun} Pekan`, total: `${36 * ctx.stats.totalPekanEfektifTahun} JP/Tahun`, prop: 'Intrakurikuler 75-80%, Kokurikuler Profil Lulusan 20-25%' },
-    { fase: 'Fase C', kelas: 'Kelas 5 SD', jp: '36 JP/Pekan', pekan: `${ctx.stats.totalPekanEfektifTahun} Pekan`, total: `${36 * ctx.stats.totalPekanEfektifTahun} JP/Tahun`, prop: 'Intrakurikuler 75-80%, Kokurikuler Profil Lulusan 20-25%' },
-    { fase: 'Fase C (Akhir)', kelas: 'Kelas 6 SD', jp: '36 JP/Pekan', pekan: '32 Pekan', total: '1.152 JP/Tahun', prop: 'Disesuaikan dengan kelulusan & PSAJ semester 2' }
-  ];
-
-  jpDist.forEach(jp => {
-    rows.push(`
-      <row r="${cur}" ht="20" customHeight="1">
-        <c r="A${cur}" s="12" t="inlineStr"><is><t>${jp.fase}</t></is></c>
-        <c r="B${cur}" s="11" t="inlineStr"><is><t>${jp.kelas}</t></is></c>
-        <c r="C${cur}" s="9" t="inlineStr"><is><t>${jp.jp}</t></is></c>
-        <c r="D${cur}" s="9" t="inlineStr"><is><t>${jp.pekan}</t></is></c>
-        <c r="E${cur}" s="12" t="inlineStr"><is><t>${jp.total}</t></is></c>
-        <c r="F${cur}" s="8" t="inlineStr"><is><t>${jp.prop}</t></is></c>
+        <c r="B${cur}" s="20" t="inlineStr"><is><t>${escapeXml(ev.tgl)}</t></is></c>
+        <c r="C${cur}" s="20" t="inlineStr"><is><t>${escapeXml(ev.desc)}</t></is></c>
       </row>
     `);
     cur++;
   });
 
-  let colsXml = '<cols>';
-  colsXml += '<col min="1" max="1" width="6" customWidth="1"/>';
-  colsXml += '<col min="2" max="2" width="22" customWidth="1"/>';
-  colsXml += '<col min="3" max="3" width="16" customWidth="1"/>';
-  colsXml += '<col min="4" max="4" width="18" customWidth="1"/>';
-  colsXml += '<col min="5" max="5" width="18" customWidth="1"/>';
-  colsXml += '<col min="6" max="6" width="55" customWidth="1"/>';
-  colsXml += '</cols>';
+  // Spacer
+  cur++;
+
+  rows.push(`
+    <row r="${cur}" ht="22" customHeight="1">
+      <c r="B${cur}" s="3" t="inlineStr"><is><t>Semester Genap</t></is></c>
+    </row>
+  `);
+  cur++;
+
+  rows.push(`
+    <row r="${cur}" ht="22" customHeight="1">
+      <c r="B${cur}" s="19" t="inlineStr"><is><t>Tanggal</t></is></c>
+      <c r="C${cur}" s="19" t="inlineStr"><is><t>Keterangan</t></is></c>
+    </row>
+  `);
+  cur++;
+
+  const genapEvents = [
+    { tgl: '1 Januari 2027', desc: 'Tahun Baru 2027 Masehi' },
+    { tgl: '4 Januari 2027', desc: 'Awal Masuk KBM Semester Genap Tahun Ajaran 2026/2027' },
+    { tgl: '5 Februari 2027', desc: 'Peringatan Isra Mi\'raj Nabi Muhammad saw. (27 Rajab 1448 H)' },
+    { tgl: '6 Februari 2027', desc: 'Tahun Baru Imlek 2578 Kongzili' },
+    { tgl: '8 – 10 Februari 2027', desc: 'Libur Awal Ramadhan 1448 H' },
+    { tgl: '11 – 28 Februari 2027', desc: 'Masantren di Sakola Ramadhan 1448 H' },
+    { tgl: '1 – 5 Maret 2027', desc: 'Lanjutan Masantren di Sakola Ramadhan 1448 H' },
+    { tgl: '6 – 13 Maret 2027', desc: 'Libur seputar Hari Raya Idulfitri 1448 H' },
+    { tgl: '9 Maret 2027', desc: 'Hari Suci Nyepi (Tahun Baru Saka 1949)' },
+    { tgl: '10 – 11 Maret 2027', desc: 'Hari Raya Idulfitri 1448 H' },
+    { tgl: '22 – 26 Maret 2027', desc: 'Rentang Asesmen Sumatif Tengah Semester (STS) Genap' },
+    { tgl: '26 Maret 2027', desc: 'Wafat Yesus Kristus' },
+    { tgl: '21 April 2027', desc: 'Peringatan Hari Kartini' },
+    { tgl: '22 April 2027', desc: 'Hari Bumi Sedunia (Aksi Konservasi Lingkungan TdBA Purwakarta)' },
+    { tgl: '1 Mei 2027', desc: 'Hari Buruh Internasional' },
+    { tgl: '2 Mei 2027', desc: 'Hari Pendidikan Nasional (Hardiknas)' },
+    { tgl: '10 – 14 Mei 2027', desc: 'Rentang Asesmen Akhir Jenjang (PSAJ) Kelas 6' },
+    { tgl: '16 Mei 2027', desc: 'Hari Raya Idul Adha 1448 H (10 Dzulhijjah 1448 H)' },
+    { tgl: '20 Mei 2027', desc: 'Hari Kebangkitan Nasional (Harkitnas)' },
+    { tgl: '24 Mei – 5 Juni 2027', desc: 'Rentang Asesmen Sumatif Akhir Tahun (ASAT / ASAS Genap)' },
+    { tgl: '1 Juni 2027', desc: 'Hari Lahir Pancasila' },
+    { tgl: '16 Juni 2027', desc: 'Tahun Baru Islam 1 Muharram 1449 H' },
+    { tgl: '18 atau 19 Juni 2027', desc: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Genap' },
+    { tgl: '21 Juni – 10 Juli 2027', desc: 'Libur Akhir Tahun Ajaran 2026/2027' },
+  ];
+
+  genapEvents.forEach(ev => {
+    rows.push(`
+      <row r="${cur}" ht="20" customHeight="1">
+        <c r="B${cur}" s="20" t="inlineStr"><is><t>${escapeXml(ev.tgl)}</t></is></c>
+        <c r="C${cur}" s="20" t="inlineStr"><is><t>${escapeXml(ev.desc)}</t></is></c>
+      </row>
+    `);
+    cur++;
+  });
+
+  const colsXml = `
+    <cols>
+      <col min="1" max="1" width="3" customWidth="1"/>
+      <col min="2" max="2" width="35" customWidth="1"/>
+      <col min="3" max="3" width="75" customWidth="1"/>
+      <col min="4" max="4" width="10" customWidth="1"/>
+    </cols>
+  `;
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -871,6 +544,220 @@ function buildSheet2Xml(ctx: {
   <sheetData>
     ${rows.join('\n')}
   </sheetData>
+</worksheet>`;
+}
+
+/**
+ * SHEET 2: Kalender Pendidikan (Landscape 4 Bulan x 3 Baris persis Kaldik Pendis)
+ */
+function buildKalenderLandscapeSheetXml(ctx: SheetContext): string {
+  const rows: string[] = [];
+  const merges: string[] = [];
+
+  // Baris 1-5: KOP SURAT RESMI MASING-MASING AKUN SEKOLAH
+  rows.push(`
+    <row r="1" ht="18" customHeight="1">
+      <c r="C1" s="2" t="inlineStr"><is><t>PEMERINTAH KABUPATEN ${escapeXml(ctx.kabupaten.toUpperCase())} • ${escapeXml(ctx.instansi.toUpperCase())}</t></is></c>
+      <c r="U1" s="12" t="inlineStr"><is><t>Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026</t></is></c>
+    </row>
+    <row r="2" ht="24" customHeight="1">
+      <c r="C2" s="1" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())}</t></is></c>
+      <c r="U2" s="12" t="inlineStr"><is><t>Permendikdasmen No. 13 Tahun 2025 (Min. 36 Pekan Efektif KBM)</t></is></c>
+    </row>
+    <row r="3" ht="16" customHeight="1">
+      <c r="C3" s="3" t="inlineStr"><is><t>${escapeXml(ctx.alamat)}${ctx.npsn ? ' • NPSN: ' + escapeXml(ctx.npsn) : ''}</t></is></c>
+    </row>
+    <row r="4" ht="22" customHeight="1">
+      <c r="C4" s="3" t="inlineStr"><is><t>PEDOMAN KALENDER PENDIDIKAN SATUAN PENDIDIKAN TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)}</t></is></c>
+    </row>
+    <row r="5" ht="10" customHeight="1"/>
+  `);
+
+  merges.push('C1:T1', 'U1:AG1', 'C2:T2', 'U2:AG2', 'C3:AG3', 'C4:AG4');
+
+  // Definisi 12 Bulan (4 bulan per baris)
+  const monthRows = [
+    // Baris 1: Juli, Agustus, September, Oktober 2026
+    {
+      startRow: 6,
+      months: [
+        { name: 'JULI 2026', year: 2026, month: 7, startCol: 3 },      // C..I
+        { name: 'AGUSTUS 2026', year: 2026, month: 8, startCol: 11 },   // K..Q
+        { name: 'SEPTEMBER 2026', year: 2026, month: 9, startCol: 19 }, // S..Y
+        { name: 'OKTOBER 2026', year: 2026, month: 10, startCol: 27 }   // AA..AG
+      ]
+    },
+    // Baris 2: November, Desember 2026, Januari, Februari 2027
+    {
+      startRow: 16,
+      months: [
+        { name: 'NOVEMBER 2026', year: 2026, month: 11, startCol: 3 },
+        { name: 'DESEMBER 2026', year: 2026, month: 12, startCol: 11 },
+        { name: 'JANUARI 2027', year: 2027, month: 1, startCol: 19 },
+        { name: 'FEBRUARI 2027', year: 2027, month: 2, startCol: 27 }
+      ]
+    },
+    // Baris 3: Maret, April, Mei, Juni 2027
+    {
+      startRow: 26,
+      months: [
+        { name: 'MARET 2027', year: 2027, month: 3, startCol: 3 },
+        { name: 'APRIL 2027', year: 2027, month: 4, startCol: 11 },
+        { name: 'MEI 2027', year: 2027, month: 5, startCol: 19 },
+        { name: 'JUNI 2027', year: 2027, month: 6, startCol: 27 }
+      ]
+    }
+  ];
+
+  // Render masing-masing baris bulan
+  monthRows.forEach(mrow => {
+    const sRow = mrow.startRow;
+
+    // 1. Month Titles (Row sRow)
+    let rTitle = `<row r="${sRow}" ht="20" customHeight="1">`;
+    mrow.months.forEach(m => {
+      const cLetterStart = colToLetter(m.startCol);
+      const cLetterEnd = colToLetter(m.startCol + 6);
+      rTitle += `<c r="${cLetterStart}${sRow}" s="5" t="inlineStr"><is><t>${m.name}</t></is></c>`;
+      for (let c = m.startCol + 1; c <= m.startCol + 6; c++) {
+        rTitle += `<c r="${colToLetter(c)}${sRow}" s="5"/>`;
+      }
+      merges.push(`${cLetterStart}${sRow}:${cLetterEnd}${sRow}`);
+    });
+    rTitle += `</row>`;
+    rows.push(rTitle);
+
+    // 2. Day Headers Aha..Sab (Row sRow + 1)
+    const dayNames = ['Aha', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    let rDays = `<row r="${sRow + 1}" ht="18" customHeight="1">`;
+    mrow.months.forEach(m => {
+      dayNames.forEach((dName, dIdx) => {
+        const cLetter = colToLetter(m.startCol + dIdx);
+        const style = dIdx === 0 ? 6 : 7; // Aha red font, others normal
+        rDays += `<c r="${cLetter}${sRow + 1}" s="${style}" t="inlineStr"><is><t>${dName}</t></is></c>`;
+      });
+    });
+    rDays += `</row>`;
+    rows.push(rDays);
+
+    // 3. Grid Tanggal 6 Baris (Row sRow + 2 s.d. sRow + 7)
+    for (let w = 0; w < 6; w++) {
+      const curR = sRow + 2 + w;
+      let rWeek = `<row r="${curR}" ht="18" customHeight="1">`;
+
+      mrow.months.forEach(m => {
+        const daysInMonth = new Date(m.year, m.month, 0).getDate();
+        const firstDow = new Date(m.year, m.month - 1, 1).getDay(); // 0=Aha, 1=Sen, ...
+
+        for (let dow = 0; dow < 7; dow++) {
+          const colLetter = colToLetter(m.startCol + dow);
+          const cellIndex = w * 7 + dow;
+          const dayNum = cellIndex - firstDow + 1;
+
+          if (dayNum >= 1 && dayNum <= daysInMonth) {
+            const dateStr = `${m.year}-${String(m.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const ev = findEventForDate(dateStr);
+            let style = dow === 0 ? 9 : 8; // Sunday red or normal weekday
+
+            if (ev) {
+              style = ev.styleId;
+            }
+
+            rWeek += `<c r="${colLetter}${curR}" s="${style}"><v>${dayNum}</v></c>`;
+          } else {
+            rWeek += `<c r="${colLetter}${curR}" s="8"/>`;
+          }
+        }
+      });
+
+      rWeek += `</row>`;
+      rows.push(rWeek);
+    }
+  });
+
+  // Baris 35: Spacing
+  rows.push('<row r="35" ht="12" customHeight="1"/>');
+
+  // Baris 36-44: KETERANGAN LEGEND PERSIS KALDIK PENDIS & TANDA TANGAN RESMI
+  rows.push(`
+    <row r="36" ht="20" customHeight="1">
+      <c r="C36" s="26" t="inlineStr"><is><t>KETERANGAN WARNA AGENDA &amp; KEGIATAN</t></is></c>
+      <c r="D36" s="26"/><c r="E36" s="26"/><c r="F36" s="26"/><c r="G36" s="26"/><c r="H36" s="26"/><c r="I36" s="26"/>
+      <c r="U36" s="0" t="inlineStr"><is><t>${escapeXml(ctx.kabupaten)}, 13 Juli 2026</t></is></c>
+    </row>
+  `);
+  merges.push('C36:I36');
+
+  const legendItems = [
+    { fillStyle: 10, text: 'Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak Purwakarta' },
+    { fillStyle: 11, text: 'Asesmen Sumatif Akhir Semester (SAS / ASAS) & STS' },
+    { fillStyle: 12, text: 'Penyerahan Laporan Hasil Belajar (Rapor) Siswa' },
+    { fillStyle: 13, text: 'Libur Semester Gasal dan Genap' },
+    { fillStyle: 14, text: 'Libur Seputar Hari Raya Idul Fitri 1448 H' },
+    { fillStyle: 15, text: 'Rentang Ujian Akhir Jenjang (PSAJ) & KBM Efektif Khusus' },
+    { fillStyle: 16, text: 'Hari Libur Nasional / Keagamaan Resmi' },
+    { fillStyle: 17, text: 'Peringatan Hari Jadi Purwakarta & Kegiatan Karakter TdBA' },
+  ];
+
+  legendItems.forEach((leg, idx) => {
+    const lRow = 37 + idx;
+    let rLeg = `<row r="${lRow}" ht="18" customHeight="1">`;
+    rLeg += `<c r="C${lRow}" s="${leg.fillStyle}"/>`;
+    rLeg += `<c r="D${lRow}" s="${leg.fillStyle}"/>`;
+    rLeg += `<c r="E${lRow}" s="27" t="inlineStr"><is><t>${escapeXml(leg.text)}</t></is></c>`;
+    for (let c = 6; c <= 18; c++) rLeg += `<c r="${colToLetter(c)}${lRow}" s="0"/>`;
+    merges.push(`C${lRow}:D${lRow}`, `E${lRow}:R${lRow}`);
+
+    // Tanda Tangan di sebelah kanan legend
+    if (idx === 0) {
+      rLeg += `<c r="U${lRow}" s="1" t="inlineStr"><is><t>Mengetahui,</t></is></c>`;
+      rLeg += `<c r="AA${lRow}" s="1" t="inlineStr"><is><t>Kepala Sekolah,</t></is></c>`;
+    } else if (idx === 1) {
+      rLeg += `<c r="U${lRow}" s="1" t="inlineStr"><is><t>Ketua Tim Pengembang Kurikulum,</t></is></c>`;
+      rLeg += `<c r="AA${lRow}" s="1" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah)},</t></is></c>`;
+    } else if (idx === 5) {
+      rLeg += `<c r="U${lRow}" s="28" t="inlineStr"><is><t>${escapeXml(ctx.penyusun)}</t></is></c>`;
+      rLeg += `<c r="AA${lRow}" s="28" t="inlineStr"><is><t>${escapeXml(ctx.kepalaSekolah)}</t></is></c>`;
+    } else if (idx === 6) {
+      rLeg += `<c r="U${lRow}" s="29" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipPenyusun)}</t></is></c>`;
+      rLeg += `<c r="AA${lRow}" s="29" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipKepalaSekolah)}</t></is></c>`;
+    }
+
+    rLeg += `</row>`;
+    rows.push(rLeg);
+  });
+
+  merges.push(
+    'U37:X37', 'AA37:AE37',
+    'U38:X38', 'AA38:AE38',
+    'U42:X42', 'AA42:AE42',
+    'U43:X43', 'AA43:AE43'
+  );
+
+  // Column widths definition (Persis Kaldik Pendis: 7 cols per month, spacer cols width 3.14)
+  let colsXml = '<cols>';
+  colsXml += '<col min="1" max="2" width="2" customWidth="1"/>'; // A..B
+  for (let m = 0; m < 4; m++) {
+    const sCol = 3 + m * 8;
+    colsXml += `<col min="${sCol}" max="${sCol + 6}" width="5.3" customWidth="1"/>`; // 7 days
+    if (m < 3) {
+      colsXml += `<col min="${sCol + 7}" max="${sCol + 7}" width="3.2" customWidth="1"/>`; // Spacer
+    }
+  }
+  colsXml += '</cols>';
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetViews>
+    <sheetView tabSelected="1" workbookViewId="0" showGridLines="1">
+      <pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/>
+    </sheetView>
+  </sheetViews>
+  <sheetFormatPr defaultRowHeight="18"/>
+  ${colsXml}
+  <sheetData>
+    ${rows.join('\n')}
+  </sheetData>
   <mergeCells count="${merges.length}">
     ${merges.map(m => `<mergeCell ref="${m}"/>`).join('\n')}
   </mergeCells>
@@ -878,96 +765,339 @@ function buildSheet2Xml(ctx: {
 }
 
 /**
- * SHEET 3: Jadwal PHBI & Kegiatan Karakter Purwakarta
+ * SHEET 3: Kaldik Portrait (Format Portrait 12 Bulan dengan HK, HE & Agenda Bulanan)
  */
-function buildSheet3Xml(ctx: {
-  namaSekolah: string;
-  tahunAjaran: string;
-  kepalaSekolah: string;
-  nipKepalaSekolah: string;
-  kota: string;
-  allEvents: KaldikEventItem[];
-}): string {
+function buildKaldikPortraitSheetXml(ctx: SheetContext): string {
   const rows: string[] = [];
   const merges: string[] = [];
 
+  // Baris 1-7: KOP SURAT RESMI
   rows.push(`
-    <row r="1" ht="24" customHeight="1">
-      <c r="A1" s="1" t="inlineStr"><is><t>JADWAL PERINGATAN HARI BESAR ISLAM (PHBI) &amp; KEGIATAN KARAKTER PURWAKARTA</t></is></c>
+    <row r="1" ht="18" customHeight="1">
+      <c r="A1" s="2" t="inlineStr"><is><t>PEMERINTAH KABUPATEN ${escapeXml(ctx.kabupaten.toUpperCase())} • ${escapeXml(ctx.instansi.toUpperCase())}</t></is></c>
+      <c r="AA1" s="12" t="inlineStr"><is><t>SE Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026</t></is></c>
     </row>
-    <row r="2" ht="20" customHeight="1">
-      <c r="A2" s="2" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())} • TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)}</t></is></c>
+    <row r="2" ht="24" customHeight="1">
+      <c r="A2" s="1" t="inlineStr"><is><t>${escapeXml(ctx.namaSekolah.toUpperCase())}</t></is></c>
+      <c r="AA2" s="12" t="inlineStr"><is><t>Permendikdasmen No. 13 Tahun 2025 (Min. 36 Pekan KBM)</t></is></c>
     </row>
-    <row r="3" ht="18" customHeight="1">
-      <c r="A3" s="3" t="inlineStr"><is><t>Harmonisasi Kalender Nasional, Kalender Hijriah 1448 H, dan 7 Poé Atikan Purwakarta Istimewa / TdBA</t></is></c>
+    <row r="3" ht="16" customHeight="1">
+      <c r="A3" s="3" t="inlineStr"><is><t>${escapeXml(ctx.alamat)}${ctx.npsn ? ' • NPSN: ' + escapeXml(ctx.npsn) : ''}</t></is></c>
     </row>
-    <row r="4" ht="12" customHeight="1"/>
-  `);
-  merges.push('A1:G1', 'A2:G2', 'A3:G3');
-
-  let cur = 5;
-
-  rows.push(`
-    <row r="${cur}" ht="22" customHeight="1">
-      <c r="A${cur}" s="4" t="inlineStr"><is><t>No</t></is></c>
-      <c r="B${cur}" s="4" t="inlineStr"><is><t>Tanggal / Waktu</t></is></c>
-      <c r="C${cur}" s="4" t="inlineStr"><is><t>Nama Peringatan / Agenda Kegiatan</t></is></c>
-      <c r="D${cur}" s="4" t="inlineStr"><is><t>Kategori</t></is></c>
-      <c r="E${cur}" s="4" t="inlineStr"><is><t>Bentuk Edukasi &amp; Pembiasaan Murid</t></is></c>
-      <c r="F${cur}" s="4" t="inlineStr"><is><t>Sasaran Murid</t></is></c>
-      <c r="G${cur}" s="4" t="inlineStr"><is><t>Penanggung Jawab (PIC)</t></is></c>
+    <row r="4" ht="8" customHeight="1"/>
+    <row r="5" ht="22" customHeight="1">
+      <c r="A5" s="3" t="inlineStr"><is><t>KALENDER PENDIDIKAN SATUAN PENDIDIKAN TAHUN AJARAN ${escapeXml(ctx.tahunAjaran)}</t></is></c>
+    </row>
+    <row r="6" ht="8" customHeight="1"/>
+    <row r="7" ht="22" customHeight="1">
+      <c r="A7" s="26" t="inlineStr"><is><t>SEMESTER GASAL (GANJIL)</t></is></c>
+      <c r="B7" s="26"/><c r="C7" s="26"/><c r="D7" s="26"/><c r="E7" s="26"/><c r="F7" s="26"/><c r="G7" s="26"/>
     </row>
   `);
-  cur++;
 
-  // Filter dan urutkan agenda penting (PHBI, Purwakarta, Asesmen, Nasional)
-  const agendaImportant = ctx.allEvents.filter(ev => ev.kategori !== 'libur' || ev.judul.toLowerCase().includes('hari'));
+  merges.push('A1:O1', 'AA1:AE1', 'A2:O2', 'AA2:AE2', 'A3:O3', 'A5:O5', 'A7:G7');
 
-  agendaImportant.forEach((ev, idx) => {
-    const tgl = ev.tanggalSelesai && ev.tanggalSelesai !== ev.tanggalMulai
-      ? `${ev.tanggalMulai} s.d. ${ev.tanggalSelesai}`
-      : ev.tanggalMulai;
+  // Pasangan 6 Bulan (Kiri: Ganjil & Genap)
+  const monthPairs = [
+    {
+      sRow: 9,
+      m1: { name: 'JULI 2026', year: 2026, month: 7, startCol: 1, hk: 31, he: 13 },
+      m2: { name: 'AGUSTUS 2026', year: 2026, month: 8, startCol: 9, hk: 31, he: 26 },
+      agendas1: [
+        { tgl: '13', desc: 'Awal Masuk Tahun Ajaran 2026/2027' },
+        { tgl: '13 - 17', desc: 'Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak' },
+        { tgl: '20', desc: 'Peringatan Hari Jadi Purwakarta (HJP ke-195)' }
+      ],
+      agendas2: [
+        { tgl: '14', desc: 'Peringatan Hari Pramuka ke-65' },
+        { tgl: '17', desc: 'HUT Proklamasi Kemerdekaan RI ke-81' },
+        { tgl: '25', desc: 'Peringatan Maulid Nabi Muhammad saw. 1448 H' }
+      ]
+    },
+    {
+      sRow: 23,
+      m1: { name: 'SEPTEMBER 2026', year: 2026, month: 9, startCol: 1, hk: 30, he: 25 },
+      m2: { name: 'OKTOBER 2026', year: 2026, month: 10, startCol: 9, hk: 31, he: 27 },
+      agendas1: [
+        { tgl: '7', desc: 'Hari Udara Bersih Internasional (Aksi TdBA)' },
+        { tgl: '18', desc: 'Hari Bambu Sedunia (World Bamboo Day TdBA)' },
+        { tgl: '21 - 25', desc: 'Rentang Asesmen Sumatif Tengah Semester (STS) Gasal' }
+      ],
+      agendas2: [
+        { tgl: '1', desc: 'Peringatan Hari Kesaktian Pancasila' },
+        { tgl: '28', desc: 'Peringatan Hari Sumpah Pemuda' }
+      ]
+    },
+    {
+      sRow: 41,
+      m1: { name: 'NOVEMBER 2026', year: 2026, month: 11, startCol: 1, hk: 30, he: 26 },
+      m2: { name: 'DESEMBER 2026', year: 2026, month: 12, startCol: 9, hk: 31, he: 12 },
+      agendas1: [
+        { tgl: '10', desc: 'Peringatan Hari Pahlawan Nasional' },
+        { tgl: '23 - 30', desc: 'Rentang Asesmen Sumatif Akhir Semester (SAS / ASAS) Gasal' },
+        { tgl: '25', desc: 'Hari Guru Nasional (HGN) & HUT PGRI ke-81' }
+      ],
+      agendas2: [
+        { tgl: '1 - 5', desc: 'Lanjutan Asesmen Sumatif Akhir Semester Gasal' },
+        { tgl: '18 - 19', desc: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Gasal' },
+        { tgl: '21 - 31', desc: 'Libur Semester Gasal & Natal (25 Des)' }
+      ]
+    },
+    {
+      sRow: 59,
+      m1: { name: 'JANUARI 2027', year: 2027, month: 1, startCol: 1, hk: 31, he: 20 },
+      m2: { name: 'FEBRUARI 2027', year: 2027, month: 2, startCol: 9, hk: 28, he: 18 },
+      agendas1: [
+        { tgl: '1', desc: 'Tahun Baru 2027 Masehi' },
+        { tgl: '4', desc: 'Awal Masuk KBM Semester Genap 2026/2027' }
+      ],
+      agendas2: [
+        { tgl: '5', desc: 'Peringatan Isra Mi\'raj Nabi Muhammad saw. 1448 H' },
+        { tgl: '6', desc: 'Tahun Baru Imlek 2578 Kongzili' },
+        { tgl: '8 - 10', desc: 'Libur Awal Ramadhan 1448 H' },
+        { tgl: '11 - 28', desc: 'Masantren di Sakola Ramadhan 1448 H' }
+      ]
+    },
+    {
+      sRow: 73,
+      m1: { name: 'MARET 2027', year: 2027, month: 3, startCol: 1, hk: 31, he: 18 },
+      m2: { name: 'APRIL 2027', year: 2027, month: 4, startCol: 9, hk: 30, he: 25 },
+      agendas1: [
+        { tgl: '1 - 5', desc: 'Lanjutan Masantren Ramadhan 1448 H' },
+        { tgl: '6 - 13', desc: 'Libur Seputar Hari Raya Idulfitri 1448 H' },
+        { tgl: '9', desc: 'Hari Suci Nyepi (Tahun Baru Saka 1949)' },
+        { tgl: '10 - 11', desc: 'Hari Raya Idulfitri 1448 H' },
+        { tgl: '22 - 26', desc: 'Rentang Asesmen Sumatif Tengah Semester (STS) Genap' }
+      ],
+      agendas2: [
+        { tgl: '21', desc: 'Peringatan Hari Kartini' },
+        { tgl: '22', desc: 'Hari Bumi Sedunia (Gerakan Peduli TdBA)' }
+      ]
+    },
+    {
+      sRow: 87,
+      m1: { name: 'MEI 2027', year: 2027, month: 5, startCol: 1, hk: 31, he: 21 },
+      m2: { name: 'JUNI 2027', year: 2027, month: 6, startCol: 9, hk: 30, he: 14 },
+      agendas1: [
+        { tgl: '1', desc: 'Hari Buruh Internasional' },
+        { tgl: '2', desc: 'Hari Pendidikan Nasional (Hardiknas)' },
+        { tgl: '10 - 14', desc: 'Rentang Asesmen Akhir Jenjang (PSAJ) Kelas 6' },
+        { tgl: '16', desc: 'Hari Raya Idul Adha 1448 H' },
+        { tgl: '24 - 31', desc: 'Rentang Asesmen Sumatif Akhir Tahun (ASAT / ASAS Genap)' }
+      ],
+      agendas2: [
+        { tgl: '1', desc: 'Hari Lahir Pancasila' },
+        { tgl: '1 - 5', desc: 'Lanjutan Rentang ASAT / ASAS Genap' },
+        { tgl: '16', desc: 'Tahun Baru Islam 1 Muharram 1449 H' },
+        { tgl: '18 - 19', desc: 'Penyerahan Laporan Hasil Belajar (Rapor) Semester Genap' },
+        { tgl: '21 - 30', desc: 'Libur Akhir Tahun Ajaran 2026/2027' }
+      ]
+    }
+  ];
 
-    let katStyle = 9;
-    if (ev.kategori === 'keagamaan') katStyle = 16;
-    else if (ev.kategori === 'purwakarta') katStyle = 15;
-    else if (ev.kategori === 'asesmen') katStyle = 17;
+  // Render Kolom Kanan: Tabel Semester Genap Persis Kaldik Pendis
+  rows.push(`
+    <row r="9" ht="22" customHeight="1">
+      <c r="AA9" s="26" t="inlineStr"><is><t>SEMESTER GENAP</t></is></c>
+      <c r="AB9" s="26"/><c r="AC9" s="26"/><c r="AD9" s="26"/><c r="AE9" s="26"/>
+    </row>
+    <row r="10" ht="20" customHeight="1">
+      <c r="AA10" s="19" t="inlineStr"><is><t>TANGGAL</t></is></c>
+      <c r="AB10" s="19"/><c r="AC10" s="19"/>
+      <c r="AD10" s="19" t="inlineStr"><is><t>KETERANGAN</t></is></c>
+      <c r="AE10" s="19"/>
+    </row>
+  `);
+  merges.push('AA9:AE9', 'AA10:AC10', 'AD10:AE10');
 
-    const pic = ev.kategori === 'keagamaan' ? 'Guru PAI & DKM' : (ev.kategori === 'purwakarta' ? 'Koord. Kesiswaan / Pokja TdBA' : 'Panitia Pelaksana');
-    const sasaran = 'Seluruh Murid & Warga Sekolah';
+  const genapDates = [
+    { tgl: '1 Januari 2027', desc: 'Tahun Baru Masehi' },
+    { tgl: '4 Januari 2027', desc: 'Awal masuk semester genap TP 2026/2027' },
+    { tgl: '5 Februari 2027', desc: 'Isra Mikraj Nabi Muhammad SAW' },
+    { tgl: '6 Februari 2027', desc: 'Tahun Baru Imlek 2578' },
+    { tgl: '8 - 10 Feb 2027', desc: 'Libur awal Ramadhan 1448 H' },
+    { tgl: '11 Feb - 5 Mar 2027', desc: 'Masantren di Sakola Ramadhan 1448 H' },
+    { tgl: '6 - 13 Maret 2027', desc: 'Libur seputar Hari Raya Idulfitri 1448 H' },
+    { tgl: '9 Maret 2027', desc: 'Hari Suci Nyepi (Tahun Baru Saka 1949)' },
+    { tgl: '10 - 11 Maret 2027', desc: 'Hari Raya Idulfitri 1448 H' },
+    { tgl: '22 - 26 Maret 2027', desc: 'Rentang Asesmen Sumatif Tengah Semester (STS) Genap' },
+    { tgl: '26 Maret 2027', desc: 'Wafat Yesus Kristus' },
+    { tgl: '21 April 2027', desc: 'Hari Kartini' },
+    { tgl: '22 April 2027', desc: 'Hari Bumi Sedunia (Aksi TdBA Purwakarta)' },
+    { tgl: '1 Mei 2027', desc: 'Hari Buruh Internasional' },
+    { tgl: '2 Mei 2027', desc: 'Hari Pendidikan Nasional' },
+    { tgl: '10 - 14 Mei 2027', desc: 'Rentang pelaksanaan Asesmen Akhir Jenjang (PSAJ) Kelas 6' },
+    { tgl: '16 Mei 2027', desc: 'Hari Raya Idul Adha 1448 H' },
+    { tgl: '20 Mei 2027', desc: 'Hari Kebangkitan Nasional' },
+    { tgl: '24 Mei - 5 Juni 2027', desc: 'Rentang pelaksanaan Asesmen Sumatif Akhir Tahun (ASAT)' },
+    { tgl: '1 Juni 2027', desc: 'Hari Lahir Pancasila' },
+    { tgl: '16 Juni 2027', desc: 'Tahun Baru Islam 1 Muharram 1449 H' },
+    { tgl: '18 atau 19 Juni 2027', desc: 'Penyerahan rapor murid Semester Genap' },
+    { tgl: '21 Juni - 10 Juli 2027', desc: 'Awal libur akhir tahun ajaran 2026/2027' },
+    { tgl: '12 Juli 2027', desc: 'Awal tahun ajaran baru 2027/2028' }
+  ];
 
+  genapDates.forEach((gd, gIdx) => {
+    const gRow = 11 + gIdx;
     rows.push(`
-      <row r="${cur}" ht="21" customHeight="1">
-        <c r="A${cur}" s="9" t="inlineStr"><is><t>${idx + 1}</t></is></c>
-        <c r="B${cur}" s="12" t="inlineStr"><is><t>${escapeXml(tgl)}</t></is></c>
-        <c r="C${cur}" s="11" t="inlineStr"><is><t>${escapeXml(ev.judul)}</t></is></c>
-        <c r="D${cur}" s="${katStyle}" t="inlineStr"><is><t>${escapeXml(ev.badgeLabel || ev.kategori.toUpperCase())}</t></is></c>
-        <c r="E${cur}" s="8" t="inlineStr"><is><t>${escapeXml(ev.keterangan || '-')}</t></is></c>
-        <c r="F${cur}" s="8" t="inlineStr"><is><t>${escapeXml(sasaran)}</t></is></c>
-        <c r="G${cur}" s="9" t="inlineStr"><is><t>${escapeXml(pic)}</t></is></c>
+      <row r="${gRow}" ht="19" customHeight="1">
+        <c r="AA${gRow}" s="21" t="inlineStr"><is><t>${escapeXml(gd.tgl)}</t></is></c>
+        <c r="AB${gRow}" s="21"/><c r="AC${gRow}" s="21"/>
+        <c r="AD${gRow}" s="20" t="inlineStr"><is><t>${escapeXml(gd.desc)}</t></is></c>
+        <c r="AE${gRow}" s="20"/>
       </row>
     `);
-    cur++;
+    merges.push(`AA${gRow}:AC${gRow}`, `AD${gRow}:AE${gRow}`);
   });
 
+  // Render Pasangan Bulan
+  monthPairs.forEach(pair => {
+    const sRow = pair.sRow;
+
+    // 1. Headers (Row sRow)
+    let rTitle = `<row r="${sRow}" ht="20" customHeight="1">`;
+    rTitle += `<c r="A${sRow}" s="5" t="inlineStr"><is><t>${pair.m1.name}</t></is></c>`;
+    for (let c = 2; c <= 7; c++) rTitle += `<c r="${colToLetter(c)}${sRow}" s="5"/>`;
+    merges.push(`A${sRow}:G${sRow}`);
+
+    rTitle += `<c r="I${sRow}" s="5" t="inlineStr"><is><t>${pair.m2.name}</t></is></c>`;
+    for (let c = 10; c <= 15; c++) rTitle += `<c r="${colToLetter(c)}${sRow}" s="5"/>`;
+    merges.push(`I${sRow}:O${sRow}`);
+    rTitle += `</row>`;
+    rows.push(rTitle);
+
+    // 2. Days Aha..Sab (Row sRow + 1)
+    const dayNames = ['Aha', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    let rDays = `<row r="${sRow + 1}" ht="18" customHeight="1">`;
+    dayNames.forEach((dName, dIdx) => {
+      const colLetter = colToLetter(1 + dIdx);
+      rDays += `<c r="${colLetter}${sRow + 1}" s="${dIdx === 0 ? 6 : 7}" t="inlineStr"><is><t>${dName}</t></is></c>`;
+    });
+    dayNames.forEach((dName, dIdx) => {
+      const colLetter = colToLetter(9 + dIdx);
+      rDays += `<c r="${colLetter}${sRow + 1}" s="${dIdx === 0 ? 6 : 7}" t="inlineStr"><is><t>${dName}</t></is></c>`;
+    });
+    rDays += `</row>`;
+    rows.push(rDays);
+
+    // 3. Grid Tanggal 6 Baris (Row sRow + 2 s.d. sRow + 7)
+    for (let w = 0; w < 6; w++) {
+      const curR = sRow + 2 + w;
+      let rWeek = `<row r="${curR}" ht="18" customHeight="1">`;
+
+      [pair.m1, pair.m2].forEach(m => {
+        const daysInMonth = new Date(m.year, m.month, 0).getDate();
+        const firstDow = new Date(m.year, m.month - 1, 1).getDay();
+
+        for (let dow = 0; dow < 7; dow++) {
+          const colLetter = colToLetter(m.startCol + dow);
+          const cellIndex = w * 7 + dow;
+          const dayNum = cellIndex - firstDow + 1;
+
+          if (dayNum >= 1 && dayNum <= daysInMonth) {
+            const dateStr = `${m.year}-${String(m.month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            const ev = findEventForDate(dateStr);
+            let style = dow === 0 ? 9 : 8;
+            if (ev) style = ev.styleId;
+            rWeek += `<c r="${colLetter}${curR}" s="${style}"><v>${dayNum}</v></c>`;
+          } else {
+            rWeek += `<c r="${colLetter}${curR}" s="8"/>`;
+          }
+        }
+      });
+
+      rWeek += `</row>`;
+      rows.push(rWeek);
+    }
+
+    // 4. Baris Rekap HK & HE (Row sRow + 8)
+    const hkRow = sRow + 8;
+    rows.push(`
+      <row r="${hkRow}" ht="18" customHeight="1">
+        <c r="A${hkRow}" s="24" t="inlineStr"><is><t>HK : ${pair.m1.hk}</t></is></c>
+        <c r="B${hkRow}" s="24"/>
+        <c r="C${hkRow}" s="24"/><c r="D${hkRow}" s="24"/><c r="E${hkRow}" s="24"/>
+        <c r="F${hkRow}" s="25" t="inlineStr"><is><t>HE : ${pair.m1.he}</t></is></c>
+        <c r="G${hkRow}" s="25"/>
+        <c r="I${hkRow}" s="24" t="inlineStr"><is><t>HK : ${pair.m2.hk}</t></is></c>
+        <c r="J${hkRow}" s="24"/>
+        <c r="K${hkRow}" s="24"/><c r="L${hkRow}" s="24"/><c r="M${hkRow}" s="24"/>
+        <c r="N${hkRow}" s="25" t="inlineStr"><is><t>HE : ${pair.m2.he}</t></is></c>
+        <c r="O${hkRow}" s="25"/>
+      </row>
+    `);
+    merges.push(
+      `A${hkRow}:B${hkRow}`, `F${hkRow}:G${hkRow}`,
+      `I${hkRow}:J${hkRow}`, `N${hkRow}:O${hkRow}`
+    );
+
+    // 5. Baris Agenda di Bawah Bulan (Rows sRow + 9 s.d. sRow + 11)
+    for (let agIdx = 0; agIdx < 3; agIdx++) {
+      const aRow = sRow + 9 + agIdx;
+      const ag1 = pair.agendas1[agIdx];
+      const ag2 = pair.agendas2[agIdx];
+
+      let rAg = `<row r="${aRow}" ht="16" customHeight="1">`;
+      if (ag1) {
+        rAg += `<c r="A${aRow}" s="25" t="inlineStr"><is><t>${escapeXml(ag1.tgl)}</t></is></c>`;
+        rAg += `<c r="B${aRow}" s="20" t="inlineStr"><is><t>${escapeXml(ag1.desc)}</t></is></c>`;
+        for (let c = 3; c <= 7; c++) rAg += `<c r="${colToLetter(c)}${aRow}" s="20"/>`;
+        merges.push(`B${aRow}:G${aRow}`);
+      }
+      if (ag2) {
+        rAg += `<c r="I${aRow}" s="25" t="inlineStr"><is><t>${escapeXml(ag2.tgl)}</t></is></c>`;
+        rAg += `<c r="J${aRow}" s="20" t="inlineStr"><is><t>${escapeXml(ag2.desc)}</t></is></c>`;
+        for (let c = 11; c <= 15; c++) rAg += `<c r="${colToLetter(c)}${aRow}" s="20"/>`;
+        merges.push(`J${aRow}:O${aRow}`);
+      }
+      rAg += `</row>`;
+      rows.push(rAg);
+    }
+  });
+
+  // Tanda Tangan di bagian paling bawah
+  const signRow = 104;
+  rows.push(`
+    <row r="${signRow}" ht="18" customHeight="1">
+      <c r="B${signRow}" s="1" t="inlineStr"><is><t>Mengetahui,</t></is></c>
+      <c r="J${signRow}" s="1" t="inlineStr"><is><t>${escapeXml(ctx.kabupaten)}, 13 Juli 2026</t></is></c>
+    </row>
+    <row r="${signRow + 1}" ht="18" customHeight="1">
+      <c r="B${signRow + 1}" s="1" t="inlineStr"><is><t>Ketua Tim Pengembang Kurikulum,</t></is></c>
+      <c r="J${signRow + 1}" s="1" t="inlineStr"><is><t>Kepala ${escapeXml(ctx.namaSekolah)},</t></is></c>
+    </row>
+    <row r="${signRow + 5}" ht="18" customHeight="1">
+      <c r="B${signRow + 5}" s="28" t="inlineStr"><is><t>${escapeXml(ctx.penyusun)}</t></is></c>
+      <c r="J${signRow + 5}" s="28" t="inlineStr"><is><t>${escapeXml(ctx.kepalaSekolah)}</t></is></c>
+    </row>
+    <row r="${signRow + 6}" ht="18" customHeight="1">
+      <c r="B${signRow + 6}" s="29" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipPenyusun)}</t></is></c>
+      <c r="J${signRow + 6}" s="29" t="inlineStr"><is><t>NIP. ${escapeXml(ctx.nipKepalaSekolah)}</t></is></c>
+    </row>
+  `);
+
+  merges.push(
+    `B${signRow}:E${signRow}`, `J${signRow}:N${signRow}`,
+    `B${signRow + 1}:E${signRow + 1}`, `J${signRow + 1}:N${signRow + 1}`,
+    `B${signRow + 5}:E${signRow + 5}`, `J${signRow + 5}:N${signRow + 5}`,
+    `B${signRow + 6}:E${signRow + 6}`, `J${signRow + 6}:N${signRow + 6}`
+  );
+
   let colsXml = '<cols>';
-  colsXml += '<col min="1" max="1" width="6" customWidth="1"/>';
-  colsXml += '<col min="2" max="2" width="22" customWidth="1"/>';
-  colsXml += '<col min="3" max="3" width="38" customWidth="1"/>';
-  colsXml += '<col min="4" max="4" width="16" customWidth="1"/>';
-  colsXml += '<col min="5" max="5" width="45" customWidth="1"/>';
-  colsXml += '<col min="6" max="6" width="25" customWidth="1"/>';
-  colsXml += '<col min="7" max="7" width="24" customWidth="1"/>';
+  colsXml += '<col min="1" max="7" width="5.8" customWidth="1"/>'; // A..G
+  colsXml += '<col min="8" max="8" width="3.2" customWidth="1"/>'; // H Spacer
+  colsXml += '<col min="9" max="15" width="5.8" customWidth="1"/>'; // I..O
+  colsXml += '<col min="16" max="26" width="2.5" customWidth="1"/>'; // P..Z Spacers
+  colsXml += '<col min="27" max="29" width="7" customWidth="1"/>'; // AA..AC Tanggal
+  colsXml += '<col min="30" max="31" width="35" customWidth="1"/>'; // AD..AE Keterangan
   colsXml += '</cols>';
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetViews>
-    <sheetView tabSelected="0" workbookViewId="0" showGridLines="1">
-      <pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/>
-    </sheetView>
+    <sheetView tabSelected="0" workbookViewId="0" showGridLines="1"/>
   </sheetViews>
-  <sheetFormatPr defaultRowHeight="20"/>
+  <sheetFormatPr defaultRowHeight="18"/>
   ${colsXml}
   <sheetData>
     ${rows.join('\n')}

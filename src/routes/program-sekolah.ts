@@ -1756,19 +1756,63 @@ programSekolah.post('/kaldik-matrix', async (c) => {
 
 // ============================================
 // Endpoint 3d: Ekspor Kalender Pendidikan Satuan Pendidikan ke Microsoft Excel (.xlsx)
+// Menyesuaikan KOP Surat otomatis dengan akun dan database sekolah masing-masing
 // ============================================
 programSekolah.post('/kaldik-excel', async (c) => {
   try {
+    const user: any = c.get('user');
     const body = await c.req.json().catch(() => ({}));
-    const data = body.data || body;
-    const buffer = await generateKaldikExcelBuffer(data);
+    const data = body.data || body || {};
 
-    const namaSekolah = (data.metadata?.nama_sekolah || 'Sekolah')
+    // 1. Ambil target nama sekolah dari payload atau user profile
+    const targetSekolahName = data.metadata?.nama_sekolah || user?.sekolah || 'SD NEGERI 1 WANAYASA';
+    let sekolahInfo: any = null;
+    if (c.env?.DB && targetSekolahName) {
+      sekolahInfo = await c.env.DB.prepare(
+        'SELECT nama, npsn, alamat, kepala_sekolah, nip_kepala_sekolah, tipe FROM sekolah WHERE nama = ? LIMIT 1'
+      ).bind(targetSekolahName).first().catch(() => null);
+    }
+
+    // 2. Ambil settings instansi, kabupaten & kecamatan jika ada di database
+    let settingsMap: Record<string, string> = {};
+    if (c.env?.DB) {
+      const settingsRows: any = await c.env.DB.prepare('SELECT key, value FROM settings').all().catch(() => ({ results: [] }));
+      (settingsRows.results || []).forEach((r: any) => {
+        settingsMap[r.key] = r.value;
+      });
+    }
+
+    const kab = settingsMap.kabupaten || 'Purwakarta';
+    const kec = settingsMap.kecamatan || 'Wanayasa';
+    const instansi = settingsMap.nama_instansi || 'DINAS PENDIDIKAN';
+
+    // 3. Gabungkan metadata lengkap untuk KOP Surat resmi masing-masing sekolah
+    const enrichedData = {
+      ...data,
+      metadata: {
+        ...data.metadata,
+        nama_sekolah: targetSekolahName,
+        npsn: data.metadata?.npsn || sekolahInfo?.npsn || '',
+        alamat_sekolah: data.metadata?.alamat_sekolah || sekolahInfo?.alamat || `Kecamatan ${kec}, Kabupaten ${kab}`,
+        kepala_sekolah: data.metadata?.kepala_sekolah || sekolahInfo?.kepala_sekolah || user?.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.',
+        nip_kepala_sekolah: data.metadata?.nip_kepala_sekolah || sekolahInfo?.nip_kepala_sekolah || user?.nip_kepala_sekolah || '19760314 200501 2 006',
+        penyusun: data.metadata?.penyusun || user?.nama || 'Tim Pengembang Kurikulum',
+        nip_penyusun: data.metadata?.nip_penyusun || user?.nip || '-',
+        kabupaten: kab,
+        kecamatan: kec,
+        instansi: instansi,
+        tahun_ajaran: data.metadata?.tahun_ajaran || '2026/2027',
+      }
+    };
+
+    const buffer = await generateKaldikExcelBuffer(enrichedData);
+
+    const namaSekolahSafe = String(targetSekolahName)
       .replace(/[\\/?%*:|"<>]/g, '')
       .replace(/\s+/g, '_')
-      .slice(0, 30);
-    const tahun = (data.metadata?.tahun_ajaran || '2026-2027').replace('/', '-');
-    const filename = `Kalender_Pendidikan_${namaSekolah}_${tahun}.xlsx`;
+      .slice(0, 35);
+    const tahunSafe = String(enrichedData.metadata.tahun_ajaran).replace('/', '-');
+    const filename = `Kaldik_${namaSekolahSafe}_${tahunSafe}.xlsx`;
 
     c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     c.header('Content-Disposition', `attachment; filename="${filename}"`);

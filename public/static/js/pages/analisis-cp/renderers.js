@@ -1263,52 +1263,103 @@ export function groupAnalysisDataByElementsClient(data) {
     });
   });
 
-  // Scoring function
-  const scoreItem = (elemName, text, babCp, babTitle) => {
-    const t = (text || '').toLowerCase();
+  // Scoring function yang presisi
+  const scoreItem = (elemName, itemText, babCp, babTitle) => {
+    const t = (itemText || '').toLowerCase();
+    const cpLower = (babCp || '').toLowerCase();
+    const titleLower = (babTitle || '').toLowerCase();
     const e = elemName.toLowerCase();
     const cleanElem = e.split('(')[0].trim();
     let score = 0;
 
-    // Prioritas utama: jika ada tag kurung siku [Nama Elemen] pada babCp atau babTitle
-    const tag = `[${cleanElem}`;
-    if ((babCp || '').toLowerCase().includes(tag) || (babTitle || '').toLowerCase().includes(tag)) {
+    // 1. Prioritas utama: jika ada tag kurung siku [Nama Elemen] pada babCp atau babTitle
+    const tags = [`[${cleanElem}`];
+    if (cleanElem.includes('data') || cleanElem.includes('peluang')) {
+      tags.push('[analisis data', '[data dan diagram', '[data dan peluang', '[data]', '[peluang]');
+    } else if (cleanElem.includes('pengukuran')) {
+      tags.push('[pengukuran', '[mengukur');
+    } else if (cleanElem.includes('geometri')) {
+      tags.push('[geometri', '[bangun datar', '[bangun ruang');
+    } else if (cleanElem.includes('aljabar')) {
+      tags.push('[aljabar', '[pola bilangan', '[rasio', '[proporsi');
+    } else if (cleanElem.includes('bilangan')) {
+      tags.push('[bilangan', '[bilangan cacah', '[pecahan');
+    }
+
+    const hasTagMatch = tags.some(tag => cpLower.includes(tag) || titleLower.includes(tag));
+    if (hasTagMatch) {
       score += 100;
     }
 
-    // Jika judul bab secara eksplisit menyebut elemen
-    if ((babTitle || '').toLowerCase().includes(cleanElem)) {
-      score += 30;
+    // 2. Jika judul bab secara eksplisit menyebut elemen atau aliasnya
+    if (titleLower.includes(cleanElem)) {
+      score += 35;
+    } else if (cleanElem.includes('data') || cleanElem.includes('peluang')) {
+      if (/\b(data|diagram|piktogram|turus|grafik|peluang|frekuensi)\b/i.test(titleLower.replace(/datar/g, ''))) score += 35;
+    } else if (cleanElem.includes('pengukuran')) {
+      if (/\b(pengukuran|mengukur|keliling|luas|sudut|panjang|berat|volume|durasi|waktu)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('geometri')) {
+      if (/\b(geometri|bangun ruang|bangun datar|spasial|kubus|balok|prisma|tabung|simetri)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('aljabar')) {
+      if (/\b(aljabar|rasio|proporsi|skala|variabel)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('bilangan')) {
+      if (/\b(bilangan|cacah|kpk|fpb|pecahan|desimal)\b/i.test(titleLower)) score += 35;
     }
 
-    if (t.includes(e)) score += 10;
-    if (cleanElem.includes('bilangan')) {
-      if (t.includes('bukan bilangan')) {
-        // Jangan beri skor bilangan jika konteksnya negasi "bukan bilangan"
-      } else if (t.includes('bilangan cacah') || t.includes('nilai tempat') || t.includes('membaca dan menulis bilangan') || t.includes('pecahan') || t.includes('hitung') || t.includes('angka') || t.includes('operasi') || t.includes('uang')) {
+    // 3. Keyword scoring pada judul & item
+    const combined = `${titleLower} ${t}`;
+
+    if (cleanElem.includes('data') || cleanElem.includes('peluang')) {
+      const withoutDatar = combined.replace(/datar/g, '');
+      if (withoutDatar.includes('analisis data') || withoutDatar.includes('diagram') || withoutDatar.includes('tabel data') || withoutDatar.includes('tabel frekuensi') || withoutDatar.includes('piktogram') || withoutDatar.includes('turus') || withoutDatar.includes('grafik') || withoutDatar.includes('peluang') || withoutDatar.includes('mengumpulkan data') || withoutDatar.includes('pengumpulan data') || withoutDatar.includes('penyajian data') || /\bdata\b/i.test(withoutDatar)) {
+        score += 30;
+      }
+    }
+
+    if (cleanElem.includes('geometri')) {
+      if (combined.includes('bangun datar') || combined.includes('bangun ruang') || combined.includes('geometri') || combined.includes('kubus') || combined.includes('balok') || combined.includes('segitiga') || combined.includes('lingkaran') || combined.includes('spasial') || combined.includes('simetri lipat') || combined.includes('simetri putar') || combined.includes('jaring-jaring')) {
         score += 25;
       }
     }
-    if (cleanElem.includes('aljabar') && (t.includes('aljabar') || t.includes('pola') || t.includes('kalimat matematika') || t.includes('simbol') || t.includes('rasio') || t.includes('proporsi'))) score += 25;
-    if (cleanElem.includes('pengukuran') && (t.includes('pengukuran') || t.includes('mengukur') || t.includes('panjang') || t.includes('berat') || t.includes('luas') || t.includes('volume') || t.includes('waktu') || t.includes('sudut') || t.includes('keliling'))) score += 25;
-    if (cleanElem.includes('geometri') && (t.includes('bangun datar') || t.includes('bangun ruang') || t.includes('geometri') || t.includes('kubus') || t.includes('balok') || t.includes('segitiga') || t.includes('lingkaran') || t.includes('spasial'))) score += 25;
-    if ((cleanElem.includes('data') || cleanElem.includes('peluang')) && (t.includes('analisis data') || t.includes('diagram') || t.includes('tabel data') || t.includes('piktogram') || t.includes('turus') || t.includes('peluang'))) score += 25;
-    if (cleanElem.includes('menyimak') && (t.includes('simak') || t.includes('dengar') || t.includes('aural') || t.includes('audio'))) score += 25;
-    if ((cleanElem.includes('membaca') || cleanElem.includes('memirsa')) && (t.includes('baca') || t.includes('memirsa') || t.includes('teks visual') || t.includes('kosakata'))) score += 25;
-    if ((cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) && (t.includes('bicara') || t.includes('presentasi') || t.includes('lisan') || t.includes('diskusi'))) score += 25;
-    if (cleanElem.includes('menulis') && (t.includes('tulis') || t.includes('kalimat') || t.includes('paragraf') || t.includes('karangan') || t.includes('ejaan'))) score += 25;
-    if (cleanElem.includes('pemahaman ipas') && !t.includes('keterampilan proses')) score += 25;
-    if (cleanElem.includes('keterampilan proses') && (t.includes('keterampilan proses') || t.includes('mengamati') || t.includes('penyelidikan') || t.includes('percobaan'))) score += 25;
+
+    if (cleanElem.includes('pengukuran')) {
+      if (combined.includes('pengukuran') || combined.includes('mengukur') || combined.includes('panjang') || combined.includes('berat') || combined.includes('luas') || combined.includes('volume') || combined.includes('durasi') || combined.includes('sudut') || combined.includes('keliling') || combined.includes('busur')) {
+        score += 25;
+      }
+    }
+
+    if (cleanElem.includes('aljabar')) {
+      if (combined.includes('aljabar') || combined.includes('pola bilangan') || combined.includes('kalimat matematika') || combined.includes('simbol') || combined.includes('rasio') || combined.includes('proporsi') || combined.includes('variabel') || combined.includes('skala')) {
+        score += 25;
+      }
+    }
+
+    if (cleanElem.includes('bilangan')) {
+      if (combined.includes('bukan bilangan')) {
+        // Abaikan jika negasi
+      } else if (combined.includes('bilangan cacah') || combined.includes('nilai tempat') || combined.includes('membaca dan menulis bilangan') || combined.includes('pecahan') || combined.includes('desimal') || combined.includes('operasi hitung') || combined.includes('kpk') || combined.includes('fpb') || combined.includes('faktor prima') || combined.includes('uang')) {
+        score += 25;
+      } else if (combined.includes('bilangan')) {
+        score += 10;
+      }
+    }
+
+    if (cleanElem.includes('menyimak') && (combined.includes('simak') || combined.includes('dengar') || combined.includes('aural') || combined.includes('audio'))) score += 25;
+    if ((cleanElem.includes('membaca') || cleanElem.includes('memirsa')) && (combined.includes('baca') || combined.includes('memirsa') || combined.includes('teks visual') || combined.includes('kosakata'))) score += 25;
+    if ((cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) && (combined.includes('bicara') || combined.includes('presentasi') || combined.includes('lisan') || combined.includes('diskusi'))) score += 25;
+    if (cleanElem.includes('menulis') && (combined.includes('tulis') || combined.includes('kalimat') || combined.includes('paragraf') || combined.includes('karangan') || combined.includes('ejaan'))) score += 25;
+    if (cleanElem.includes('pemahaman ipas') && !combined.includes('keterampilan proses')) score += 25;
+    if (cleanElem.includes('keterampilan proses') && (combined.includes('keterampilan proses') || combined.includes('mengamati') || combined.includes('penyelidikan') || combined.includes('percobaan'))) score += 25;
     return score;
   };
 
   allItems.forEach(({ item, babTitle, babNo, babCp }) => {
-    const ctx = `${babTitle} ${babCp} ${item.materi_pokok || ''} ${item.tp || ''} ${item.atp || ''}`;
+    const itemContent = `${item.materi_pokok || ''} ${item.tp || ''} ${item.atp || ''}`;
     let bestIdx = 0;
     let maxScore = -1;
 
     buckets.forEach((b, idx) => {
-      const sc = scoreItem(b.elemen, ctx, babCp, babTitle);
+      const sc = scoreItem(b.elemen, itemContent, babCp, babTitle);
       if (sc > maxScore) {
         maxScore = sc;
         bestIdx = idx;
@@ -1394,9 +1445,11 @@ export function renderAtpElemenTable(data, inputData = {}) {
   `;
 
   groups.forEach(group => {
+    const isAljabarKelas5 = group.elemen.toLowerCase().includes('aljabar') && (String(jenjangKelas).includes('5'));
+
     const materiHtml = (group.lingkup_materi && group.lingkup_materi.length > 0)
       ? group.lingkup_materi.map(m => `<div class="mb-1">• ${escapeHtml(m)}</div>`).join('')
-      : '-';
+      : (isAljabarKelas5 ? '<span class="italic text-slate-500 font-sans">• (Diprogramkan di Kelas 6)</span>' : '-');
 
     const tpHtml = (group.items && group.items.length > 0)
       ? group.items.map(it => `
@@ -1404,7 +1457,9 @@ export function renderAtpElemenTable(data, inputData = {}) {
             <strong class="text-slate-950">${escapeHtml(it.kode_tp)}</strong> ${escapeHtml(it.tp)}
           </div>
         `).join('')
-      : '<div>Mencapai tujuan pembelajaran elemen ini.</div>';
+      : (isAljabarKelas5
+          ? '<div class="italic text-slate-600 font-sans leading-relaxed">Kompetensi Elemen Aljabar Fase C (Rasio & Proporsi) diprogramkan pada pembelajaran Kelas 6 sesuai struktur kurikulum resmi Kemendikbudristek.</div>'
+          : '<div>Mencapai tujuan pembelajaran elemen ini.</div>');
 
     html += `
       <tr class="hover:bg-slate-50/50">

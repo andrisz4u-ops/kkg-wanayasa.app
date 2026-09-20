@@ -120,94 +120,122 @@ export function groupAnalysisDataByElements(data: AnalisisCpDocxInput): AtpEleme
     };
   });
 
-  // Keyword weights per elemen untuk scoring
-  const getElementScore = (elemName: string, text: string, babCpText: string, babTitleText: string): number => {
-    const t = text.toLowerCase();
+  // Keyword weights per elemen untuk scoring yang presisi
+  const getElementScore = (elemName: string, itemText: string, babCpText: string, babTitleText: string): number => {
+    const t = itemText.toLowerCase();
+    const cpLower = (babCpText || '').toLowerCase();
+    const titleLower = (babTitleText || '').toLowerCase();
     const elemLower = elemName.toLowerCase();
     const cleanElem = elemLower.split('(')[0].trim();
     let score = 0;
 
-    // Prioritas utama: jika ada tag kurung siku [Nama Elemen] pada babCp atau babTitle
-    // contoh: "[Aljabar] Mengenali..." atau "[Bilangan]"
-    const tag = `[${cleanElem}`;
-    if (babCpText.toLowerCase().includes(tag) || babTitleText.toLowerCase().includes(tag)) {
+    // 1. Prioritas utama: Tag kurung siku [Nama Elemen] pada babCp atau babTitle
+    // Mendukung alias tag umum resmi
+    const tags: string[] = [`[${cleanElem}`];
+    if (cleanElem.includes('analisis data') || cleanElem.includes('peluang')) {
+      tags.push('[analisis data', '[data dan diagram', '[data dan peluang', '[data]', '[peluang]');
+    } else if (cleanElem.includes('pengukuran')) {
+      tags.push('[pengukuran', '[mengukur');
+    } else if (cleanElem.includes('geometri')) {
+      tags.push('[geometri', '[bangun datar', '[bangun ruang');
+    } else if (cleanElem.includes('aljabar')) {
+      tags.push('[aljabar', '[pola bilangan', '[rasio', '[proporsi');
+    } else if (cleanElem.includes('bilangan')) {
+      tags.push('[bilangan', '[bilangan cacah', '[pecahan');
+    }
+
+    const hasTagMatch = tags.some(tag => cpLower.includes(tag) || titleLower.includes(tag));
+    if (hasTagMatch) {
       score += 100;
     }
 
-    // Jika judul bab secara eksplisit menyebut elemen
-    if (babTitleText.toLowerCase().includes(cleanElem)) {
-      score += 30;
+    // 2. Jika judul bab secara eksplisit menyebut elemen atau aliasnya
+    if (titleLower.includes(cleanElem)) {
+      score += 35;
+    } else if (cleanElem.includes('analisis data') || cleanElem.includes('peluang')) {
+      if (/\b(data|diagram|piktogram|turus|grafik|peluang|frekuensi)\b/i.test(titleLower.replace(/datar/g, ''))) score += 35;
+    } else if (cleanElem.includes('pengukuran')) {
+      if (/\b(pengukuran|mengukur|keliling|luas|sudut|panjang|berat|volume|durasi|waktu)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('geometri')) {
+      if (/\b(geometri|bangun ruang|bangun datar|spasial|kubus|balok|prisma|tabung|simetri)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('aljabar')) {
+      if (/\b(aljabar|rasio|proporsi|skala|variabel)\b/i.test(titleLower)) score += 35;
+    } else if (cleanElem.includes('bilangan')) {
+      if (/\b(bilangan|cacah|kpk|fpb|pecahan|desimal)\b/i.test(titleLower)) score += 35;
     }
 
-    // Cek kata kunci spesifik
-    if (cleanElem.includes('bilangan')) {
-      if (t.includes('bukan bilangan')) {
-        // Abaikan atau kurangi poin jika konteksnya negasi "bukan bilangan"
-      } else if (t.includes('bilangan cacah') || t.includes('nilai tempat') || t.includes('membaca dan menulis bilangan') || t.includes('pecahan') || t.includes('desimal') || t.includes('operasi hitung') || t.includes('kpk') || t.includes('fpb') || t.includes('uang')) {
-        score += 25;
-      } else if (t.includes('bilangan')) {
-        score += 10;
+    // 3. Cek kata kunci spesifik pada judul bab & konten TP/materi (itemText)
+    const combinedContent = `${titleLower} ${t}`;
+
+    if (cleanElem.includes('analisis data') || cleanElem.includes('peluang')) {
+      const withoutDatar = combinedContent.replace(/datar/g, '');
+      if (withoutDatar.includes('analisis data') || withoutDatar.includes('diagram') || withoutDatar.includes('tabel data') || withoutDatar.includes('tabel frekuensi') || withoutDatar.includes('piktogram') || withoutDatar.includes('turus') || withoutDatar.includes('grafik') || withoutDatar.includes('peluang') || withoutDatar.includes('mengumpulkan data') || withoutDatar.includes('pengumpulan data') || withoutDatar.includes('penyajian data') || /\bdata\b/i.test(withoutDatar)) {
+        score += 30;
       }
     }
 
-    if (cleanElem.includes('aljabar')) {
-      if (t.includes('aljabar') || t.includes('pola') || t.includes('kalimat matematika') || t.includes('simbol') || t.includes('rasio') || t.includes('proporsi') || t.includes('variabel')) {
+    if (cleanElem.includes('geometri')) {
+      if (combinedContent.includes('bangun datar') || combinedContent.includes('bangun ruang') || combinedContent.includes('geometri') || combinedContent.includes('kubus') || combinedContent.includes('balok') || combinedContent.includes('segitiga') || combinedContent.includes('lingkaran') || combinedContent.includes('spasial') || combinedContent.includes('simetri lipat') || combinedContent.includes('simetri putar') || combinedContent.includes('jaring-jaring')) {
         score += 25;
       }
     }
 
     if (cleanElem.includes('pengukuran')) {
-      if (t.includes('pengukuran') || t.includes('mengukur') || t.includes('panjang') || t.includes('berat') || t.includes('luas') || t.includes('volume') || t.includes('durasi') || t.includes('sudut') || t.includes('keliling')) {
+      if (combinedContent.includes('pengukuran') || combinedContent.includes('mengukur') || combinedContent.includes('panjang') || combinedContent.includes('berat') || combinedContent.includes('luas') || combinedContent.includes('volume') || combinedContent.includes('durasi') || combinedContent.includes('sudut') || combinedContent.includes('keliling') || combinedContent.includes('busur derajat')) {
         score += 25;
       }
     }
 
-    if (cleanElem.includes('geometri')) {
-      if (t.includes('bangun datar') || t.includes('bangun ruang') || t.includes('geometri') || t.includes('kubus') || t.includes('balok') || t.includes('segitiga') || t.includes('lingkaran') || t.includes('spasial')) {
+    if (cleanElem.includes('aljabar')) {
+      if (combinedContent.includes('aljabar') || combinedContent.includes('pola bilangan') || combinedContent.includes('kalimat matematika') || combinedContent.includes('simbol') || combinedContent.includes('rasio') || combinedContent.includes('proporsi') || combinedContent.includes('variabel') || combinedContent.includes('skala')) {
         score += 25;
       }
     }
 
-    if (cleanElem.includes('analisis data') || cleanElem.includes('peluang')) {
-      if (t.includes('analisis data') || t.includes('diagram') || t.includes('tabel data') || t.includes('piktogram') || t.includes('turus') || t.includes('grafik') || t.includes('peluang')) {
+    if (cleanElem.includes('bilangan')) {
+      if (combinedContent.includes('bukan bilangan')) {
+        // Abaikan jika negasi
+      } else if (combinedContent.includes('bilangan cacah') || combinedContent.includes('nilai tempat') || combinedContent.includes('membaca dan menulis bilangan') || combinedContent.includes('pecahan') || combinedContent.includes('desimal') || combinedContent.includes('operasi hitung') || combinedContent.includes('kpk') || combinedContent.includes('fpb') || combinedContent.includes('faktor prima') || combinedContent.includes('uang')) {
         score += 25;
+      } else if (combinedContent.includes('bilangan')) {
+        score += 10;
       }
     }
 
     // Bahasa Indonesia
     if (cleanElem.includes('menyimak')) {
-      if (t.includes('simak') || t.includes('dengar') || t.includes('aural') || t.includes('audio')) score += 25;
+      if (combinedContent.includes('simak') || combinedContent.includes('dengar') || combinedContent.includes('aural') || combinedContent.includes('audio')) score += 25;
     }
     if (cleanElem.includes('membaca') || cleanElem.includes('memirsa')) {
-      if (t.includes('baca') || t.includes('memirsa') || t.includes('teks visual') || t.includes('kosakata')) score += 25;
+      if (combinedContent.includes('baca') || combinedContent.includes('memirsa') || combinedContent.includes('teks visual') || combinedContent.includes('kosakata')) score += 25;
     }
     if (cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) {
-      if (t.includes('bicara') || t.includes('presentasi') || t.includes('lisan') || t.includes('tanya') || t.includes('diskusi')) score += 25;
+      if (combinedContent.includes('bicara') || combinedContent.includes('presentasi') || combinedContent.includes('lisan') || combinedContent.includes('tanya') || combinedContent.includes('diskusi')) score += 25;
     }
     if (cleanElem.includes('menulis')) {
-      if (t.includes('tulis') || t.includes('karangan') || t.includes('kalimat') || t.includes('paragraf') || t.includes('ejaan')) score += 25;
+      if (combinedContent.includes('tulis') || combinedContent.includes('karangan') || combinedContent.includes('kalimat') || combinedContent.includes('paragraf') || combinedContent.includes('ejaan')) score += 25;
     }
 
     // Pendidikan Pancasila
     if (cleanElem.includes('pancasila')) {
-      if (t.includes('pancasila') || t.includes('sila') || t.includes('garuda') || t.includes('lambang')) score += 25;
+      if (combinedContent.includes('pancasila') || combinedContent.includes('sila') || combinedContent.includes('garuda') || combinedContent.includes('lambang')) score += 25;
     }
     if (cleanElem.includes('uud') || cleanElem.includes('1945') || cleanElem.includes('norma')) {
-      if (t.includes('norma') || t.includes('aturan') || t.includes('hak') || t.includes('kewajiban') || t.includes('musyawarah')) score += 25;
+      if (combinedContent.includes('norma') || combinedContent.includes('aturan') || combinedContent.includes('hak') || combinedContent.includes('kewajiban') || combinedContent.includes('musyawarah')) score += 25;
     }
     if (cleanElem.includes('bhinneka')) {
-      if (t.includes('bhinneka') || t.includes('keberagaman') || t.includes('budaya') || t.includes('suku') || t.includes('identitas')) score += 25;
+      if (combinedContent.includes('bhinneka') || combinedContent.includes('keberagaman') || combinedContent.includes('budaya') || combinedContent.includes('suku') || combinedContent.includes('identitas')) score += 25;
     }
     if (cleanElem.includes('nkri') || cleanElem.includes('kesatuan')) {
-      if (t.includes('nkri') || t.includes('kesatuan') || t.includes('wilayah') || t.includes('gotong royong')) score += 25;
+      if (combinedContent.includes('nkri') || combinedContent.includes('kesatuan') || combinedContent.includes('wilayah') || combinedContent.includes('gotong royong')) score += 25;
     }
 
     // IPAS
     if (cleanElem.includes('pemahaman ipas')) {
-      if (!t.includes('keterampilan proses') && (t.includes('organ') || t.includes('ekosistem') || t.includes('cahaya') || t.includes('bunyi') || t.includes('geografis') || t.includes('ekonomi') || t.includes('sejarah') || t.includes('siklus air'))) score += 25;
+      if (!combinedContent.includes('keterampilan proses') && (combinedContent.includes('organ') || combinedContent.includes('ekosistem') || combinedContent.includes('cahaya') || combinedContent.includes('bunyi') || combinedContent.includes('geografis') || combinedContent.includes('ekonomi') || combinedContent.includes('sejarah') || combinedContent.includes('siklus air'))) score += 25;
     }
     if (cleanElem.includes('keterampilan proses')) {
-      if (t.includes('keterampilan proses') || t.includes('mengamati') || t.includes('menyelidiki') || t.includes('percobaan') || t.includes('eksperimen') || t.includes('laporan penyelidikan')) score += 25;
+      if (combinedContent.includes('keterampilan proses') || combinedContent.includes('mengamati') || combinedContent.includes('menyelidiki') || combinedContent.includes('percobaan') || combinedContent.includes('eksperimen') || combinedContent.includes('laporan penyelidikan')) score += 25;
     }
 
     return score;
@@ -215,12 +243,12 @@ export function groupAnalysisDataByElements(data: AnalisisCpDocxInput): AtpEleme
 
   // Petakan setiap TP item ke elemen dengan skor tertinggi
   allItems.forEach(({ item, babTitle, babNo, babCp }) => {
-    const contextText = `${babTitle} ${babCp} ${item.materi_pokok || ''} ${item.tp || ''} ${item.atp || ''}`;
+    const itemContent = `${item.materi_pokok || ''} ${item.tp || ''} ${item.atp || ''}`;
     let bestElem = elementNames[0];
     let maxScore = -1;
 
     elementNames.forEach(elemName => {
-      const score = getElementScore(elemName, contextText, babCp, babTitle);
+      const score = getElementScore(elemName, itemContent, babCp, babTitle);
       if (score > maxScore) {
         maxScore = score;
         bestElem = elemName;
@@ -460,6 +488,8 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
   groups.forEach(group => {
     grandTotalJp += group.total_jp;
 
+    const isAljabarKelas5 = group.elemen.toLowerCase().includes('aljabar') && (jenjangKelas === '5' || jenjangKelas.includes('5'));
+
     // Lingkup Materi paragraphs
     const materiParagraphs: Paragraph[] = (group.lingkup_materi && group.lingkup_materi.length > 0)
       ? group.lingkup_materi.map(m => new Paragraph({
@@ -470,7 +500,14 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
         }))
       : [new Paragraph({
           spacing: { after: 30 },
-          children: [new TextRun({ text: '-', size: 18, font: 'Times New Roman' })]
+          children: [
+            new TextRun({
+              text: isAljabarKelas5 ? '• (Diprogramkan di Kelas 6)' : '-',
+              size: 18,
+              font: 'Times New Roman',
+              italics: isAljabarKelas5
+            })
+          ]
         })];
 
     // TP paragraphs dengan format kode tebal + teks justified persis foto referensi
@@ -485,7 +522,17 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
         }))
       : [new Paragraph({
           spacing: { after: 30 },
-          children: [new TextRun({ text: 'Mencapai tujuan pembelajaran elemen ini.', size: 18, font: 'Times New Roman' })]
+          alignment: AlignmentType.JUSTIFY,
+          children: [
+            new TextRun({
+              text: isAljabarKelas5
+                ? 'Kompetensi Elemen Aljabar Fase C (Rasio & Proporsi) diprogramkan pada pembelajaran Kelas 6 sesuai struktur kurikulum resmi BSKAP.'
+                : 'Mencapai tujuan pembelajaran elemen ini.',
+              size: 18,
+              font: 'Times New Roman',
+              italics: isAljabarKelas5
+            })
+          ]
         })];
 
     const row = new TableRow({

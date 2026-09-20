@@ -176,6 +176,70 @@ export function repairAndEnrichIpasBabCp(bab, fase = 'C') {
   return `[Pemahaman IPAS]\n${finalPemahaman}\n\n[Keterampilan Proses]\n${finalProses}`;
 }
 
+// Helper: Perbaikan dan Pemetaan Elemen Resmi Matematika (BSKAP 046/2025)
+export function repairAndEnrichMatematikaBabCp(bab, fase = 'C') {
+  let cpText = (bab?.cp || '').trim();
+  const babTitle = (bab?.bab || '').toLowerCase();
+  const allMateri = (Array.isArray(bab?.materi_list) ? bab.materi_list.join(' ') : '') + ' ' + (Array.isArray(bab?.items) ? bab.items.map(i => (i.materi_pokok || '') + ' ' + (i.tp || '') + ' ' + (i.atp || '')).join(' ') : '');
+  const combinedContext = (babTitle + ' ' + allMateri).toLowerCase();
+
+  const officialMatematika = {
+    'Fase A': {
+      'Bilangan': 'Memiliki pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 100; membaca, menulis, menentukan nilai tempat, membandingkan, dan mengurutkan bilangan cacah sampai 100.',
+      'Aljabar': 'Menemukan pola gambar atau objek sederhana dan pola bilangan membesar dan mengecil yang melibatkan penjumlahan dan pengurangan pada bilangan cacah sampai 20.',
+      'Pengukuran': 'Mengukur, membandingkan, dan mengurutkan panjang dan berat benda menggunakan satuan tidak baku serta mengukur dan mengestimasi durasi waktu.',
+      'Geometri': 'Mengenal berbagai bangun datar (segitiga, segiempat, segi banyak, lingkaran) dan bangun ruang (balok, kubus, kerucut, dan bola).',
+      'Analisis Data dan Peluang': 'Mengurutkan, menyortir, mengelompokkan, membandingkan, dan menyajikan data dari banyak benda dengan menggunakan turus dan piktogram paling banyak 4 kategori.'
+    },
+    'Fase B': {
+      'Bilangan': 'Memiliki pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 10.000; membaca, menulis, membandingkan, dan mengurutkan bilangan; menentukan nilai tempat; operasi penjumlahan dan pengurangan sampai 1.000, perkalian dan pembagian sampai 100; mengenal pecahan dan desimal.',
+      'Aljabar': 'Menemukan nilai yang tidak diketahui dalam kalimat matematika yang melibatkan penjumlahan dan pengurangan pada bilangan cacah sampai 100; mengidentifikasi pola bilangan.',
+      'Pengukuran': 'Mengukur panjang dan berat benda menggunakan satuan baku; serta mengukur dan mengestimasi luas dan volume menggunakan satuan baku/tidak baku.',
+      'Geometri': 'Mendeskripsikan ciri berbagai bentuk bangun datar; menyusun (komposisi) dan mengurai (dekomposisi) berbagai bangun datar.',
+      'Analisis Data dan Peluang': 'Mengurutkan, membandingkan, menyajikan, menganalisis dan menginterpretasi data dalam bentuk tabel, diagram gambar, piktogram, dan diagram batang (skala satu satuan).'
+    },
+    'Fase C': {
+      'Bilangan': 'Menunjukkan pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 1.000.000; membaca, menulis, menentukan nilai tempat, membandingkan, mengurutkan, melakukan komposisi dan dekomposisi bilangan; menyelesaikan masalah KPK dan FPB; serta memahami pecahan dan desimal.',
+      'Aljabar': 'Menemukan nilai yang belum diketahui dalam kalimat matematika yang melibatkan penjumlahan, pengurangan, perkalian, dan pembagian pada bilangan cacah sampai 1000; bernalar secara proporsional dengan rasio satuan dan proporsi.',
+      'Pengukuran': 'Menentukan keliling dan luas berbagai bentuk bangun datar (segitiga, segiempat, dan segi banyak) serta gabungannya; menghitung durasi waktu dan mengukur besar sudut.',
+      'Geometri': 'Mengkonstruksi dan mengurai bangun ruang (kubus, balok, dan gabungannya) dan mengenali visualisasi spasial; membandingkan karakteristik antar bangun datar dan antar bangun ruang; serta menentukan lokasi pada sistem berpetak.',
+      'Analisis Data dan Peluang': 'Mengurutkan, membandingkan, menyajikan, dan menganalisis data banyak benda dan data hasil pengukuran dalam bentuk gambar, piktogram, diagram batang, dan tabel frekuensi untuk mendapatkan informasi; menentukan kejadian dengan kemungkinan yang lebih besar atau lebih kecil dalam suatu percobaan acak.'
+    }
+  };
+
+  const faseKey = fase ? (fase.startsWith('Fase') ? fase : `Fase ${fase}`) : 'Fase C';
+  const curFaseMap = officialMatematika[faseKey] || officialMatematika['Fase C'];
+
+  let targetElem = 'Bilangan';
+
+  const contextWithoutDatar = combinedContext.replace(/datar/g, '');
+  if (/\b(data|diagram|piktogram|turus|grafik|peluang|frekuensi)\b/i.test(contextWithoutDatar) || combinedContext.includes('pengumpulan data') || combinedContext.includes('penyajian data') || combinedContext.includes('analisis data') || combinedContext.includes('tabel data') || combinedContext.includes('tabel frekuensi')) {
+    targetElem = 'Analisis Data dan Peluang';
+  } else if (combinedContext.includes('bangun ruang') || combinedContext.includes('simetri lipat') || combinedContext.includes('simetri putar') || combinedContext.includes('visualisasi spasial') || combinedContext.includes('sistem berpetak') || (combinedContext.includes('bangun datar') && !combinedContext.includes('keliling') && !combinedContext.includes('luas'))) {
+    targetElem = 'Geometri';
+  } else if (combinedContext.includes('keliling') || combinedContext.includes('luas') || combinedContext.includes('sudut') || combinedContext.includes('pengukuran') || combinedContext.includes('mengukur') || combinedContext.includes('busur') || combinedContext.includes('durasi') || combinedContext.includes('panjang') || combinedContext.includes('berat') || combinedContext.includes('volume')) {
+    targetElem = 'Pengukuran';
+  } else if (combinedContext.includes('aljabar') || combinedContext.includes('rasio') || combinedContext.includes('proporsi') || combinedContext.includes('skala') || combinedContext.includes('pola bilangan') || combinedContext.includes('kalimat matematika') || combinedContext.includes('variabel')) {
+    targetElem = 'Aljabar';
+  } else {
+    targetElem = 'Bilangan';
+  }
+
+  const officialCpElemText = curFaseMap[targetElem] || '';
+
+  // Cek apakah cpText yang ada sudah cocok dengan tag targetElem
+  const hasTargetTag = cpText.toLowerCase().includes(`[${targetElem.toLowerCase()}`);
+  if (!hasTargetTag) {
+    if (officialCpElemText) {
+      return `[${targetElem}]\n${officialCpElemText}`;
+    }
+    const cleanOldCp = cpText.replace(/^\[.*?\]\s*:?\s*/i, '').trim();
+    return `[${targetElem}]\n${cleanOldCp || 'Memahami dan menguasai materi pada elemen ini.'}`;
+  }
+
+  return cpText;
+}
+
 /**
  * Validasi dan perbaikan otomatis data Analisis CP sebelum rendering atau penyimpanan
  * @param {object} rawData - Data mentah hasil generate AI atau dari cache/DB
@@ -198,9 +262,10 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
   data.metadata.fase_kelas = data.metadata.fase_kelas || `${data.metadata.fase}/${kelasNum}`;
   data.metadata.tahun_pembelajaran = data.metadata.tahun_pembelajaran || formMeta.tahunAjaran || '2025/2026';
 
-  // Cek apakah mata pelajaran adalah IPAS
+  // Cek apakah mata pelajaran adalah IPAS atau Matematika
   const mapelStr = (data.metadata.mata_pelajaran || formMeta.mataPelajaran || formMeta.mata_pelajaran || '').toLowerCase();
   const isIpasSubject = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
+  const isMatematikaSubject = mapelStr.includes('matematika');
 
   // 2. Normalisasi Semesters
   if (!Array.isArray(data.semesters) || data.semesters.length === 0) {
@@ -304,9 +369,11 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     sem.babs.sort((a, b) => (a.no || 0) - (b.no || 0));
 
     for (const bab of sem.babs) {
-      // Auto-Repair & Enrich IPAS Elements (Pemahaman IPAS + Keterampilan Proses)
+      // Auto-Repair & Enrich IPAS & Matematika Elements
       if (isIpasSubject) {
         bab.cp = repairAndEnrichIpasBabCp(bab, data.metadata?.fase || formMeta.fase || 'C');
+      } else if (isMatematikaSubject) {
+        bab.cp = repairAndEnrichMatematikaBabCp(bab, data.metadata?.fase || formMeta.fase || 'C');
       }
 
       // Pastikan prefix elemen terpasang pada bab.cp jika bab memiliki penanda elemen [Elemen]

@@ -934,6 +934,46 @@ export function repairAndEnrichIpasBabCp(bab: any, fase: string = 'C'): string {
   return `[Pemahaman IPAS]\n${finalPemahaman}\n\n[Keterampilan Proses]\n${finalProses}`;
 }
 
+// Helper: Perbaikan dan Pemetaan Elemen Resmi Matematika (BSKAP 046/2025)
+export function repairAndEnrichMatematikaBabCp(bab: any, fase: string = 'C'): string {
+  let cpText = (bab?.cp || '').trim();
+  const babTitle = (bab?.bab || '').toLowerCase();
+  const allMateri = (Array.isArray(bab?.materi_list) ? bab.materi_list.join(' ') : '') + ' ' + (Array.isArray(bab?.items) ? bab.items.map((i: any) => (i.materi_pokok || '') + ' ' + (i.tp || '') + ' ' + (i.atp || '')).join(' ') : '');
+  const combinedContext = (babTitle + ' ' + allMateri).toLowerCase();
+
+  const faseKey = fase ? (fase.startsWith('Fase') ? fase : `Fase ${fase}`) : 'Fase C';
+  const officialMatematika = cpElementsData['Matematika']?.[faseKey] || cpElementsData['Matematika']?.['Fase C'] || {};
+
+  let targetElem = 'Bilangan';
+
+  const contextWithoutDatar = combinedContext.replace(/datar/g, '');
+  if (/\b(data|diagram|piktogram|turus|grafik|peluang|frekuensi)\b/i.test(contextWithoutDatar) || combinedContext.includes('pengumpulan data') || combinedContext.includes('penyajian data') || combinedContext.includes('analisis data') || combinedContext.includes('tabel data') || combinedContext.includes('tabel frekuensi')) {
+    targetElem = 'Analisis Data dan Peluang';
+  } else if (combinedContext.includes('bangun ruang') || combinedContext.includes('simetri lipat') || combinedContext.includes('simetri putar') || combinedContext.includes('visualisasi spasial') || combinedContext.includes('sistem berpetak') || (combinedContext.includes('bangun datar') && !combinedContext.includes('keliling') && !combinedContext.includes('luas'))) {
+    targetElem = 'Geometri';
+  } else if (combinedContext.includes('keliling') || combinedContext.includes('luas') || combinedContext.includes('sudut') || combinedContext.includes('pengukuran') || combinedContext.includes('mengukur') || combinedContext.includes('busur') || combinedContext.includes('durasi') || combinedContext.includes('panjang') || combinedContext.includes('berat') || combinedContext.includes('volume')) {
+    targetElem = 'Pengukuran';
+  } else if (combinedContext.includes('aljabar') || combinedContext.includes('rasio') || combinedContext.includes('proporsi') || combinedContext.includes('skala') || combinedContext.includes('pola bilangan') || combinedContext.includes('kalimat matematika') || combinedContext.includes('variabel')) {
+    targetElem = 'Aljabar';
+  } else {
+    targetElem = 'Bilangan';
+  }
+
+  const officialCpElemText = officialMatematika[targetElem] || '';
+
+  // Cek apakah cpText yang ada sudah cocok dengan tag targetElem
+  const hasTargetTag = cpText.toLowerCase().includes(`[${targetElem.toLowerCase()}`);
+  if (!hasTargetTag) {
+    if (officialCpElemText) {
+      return `[${targetElem}]\n${officialCpElemText}`;
+    }
+    const cleanOldCp = cpText.replace(/^\[.*?\]\s*:?\s*/i, '').trim();
+    return `[${targetElem}]\n${cleanOldCp || 'Memahami dan menguasai materi pada elemen ini.'}`;
+  }
+
+  return cpText;
+}
+
 // Helper: Validasi & Auto-Repair Output AI untuk Struktur Dokumen Kedinasan yang Presisi
 export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: any[], meta: any): any {
   const result = (rawResult && typeof rawResult === 'object') ? JSON.parse(JSON.stringify(rawResult)) : {};
@@ -1072,11 +1112,14 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
     sem.babs.sort((a: any, b: any) => (a.no || 0) - (b.no || 0));
 
     for (const bab of sem.babs) {
-      // Auto-Repair & Enrich IPAS Elements (Pemahaman IPAS + Keterampilan Proses)
+      // Auto-Repair & Enrich IPAS & Matematika Elements
       const mapelStr = (meta?.mataPelajaran || result.metadata?.mata_pelajaran || '').toLowerCase();
       const isIpasSubject = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
+      const isMatematikaSubject = mapelStr.includes('matematika');
       if (isIpasSubject) {
         bab.cp = repairAndEnrichIpasBabCp(bab, result.metadata?.fase || meta?.fase || 'C');
+      } else if (isMatematikaSubject) {
+        bab.cp = repairAndEnrichMatematikaBabCp(bab, result.metadata?.fase || meta?.fase || 'C');
       }
 
       if (!Array.isArray(bab.items) || bab.items.length === 0) {
@@ -1389,11 +1432,16 @@ analisisCp.post('/docx', async (c) => {
 
     const mapelStr = String(metadata?.mata_pelajaran || '').toLowerCase();
     const isIpas = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
-    if (isIpas && Array.isArray(semesters)) {
+    const isMatematika = mapelStr.includes('matematika');
+    if ((isIpas || isMatematika) && Array.isArray(semesters)) {
       for (const sem of semesters) {
         if (Array.isArray(sem.babs)) {
           for (const bab of sem.babs) {
-            bab.cp = repairAndEnrichIpasBabCp(bab, metadata?.fase || 'C');
+            if (isIpas) {
+              bab.cp = repairAndEnrichIpasBabCp(bab, metadata?.fase || 'C');
+            } else if (isMatematika) {
+              bab.cp = repairAndEnrichMatematikaBabCp(bab, metadata?.fase || 'C');
+            }
           }
         }
       }
@@ -1584,6 +1632,23 @@ analisisCp.post('/docx/atp-elemen', async (c) => {
 
     if (!semesters || !Array.isArray(semesters)) {
       return Errors.badRequest(c, 'Data semesters wajib disertakan');
+    }
+
+    const mapelStr = String(metadata?.mata_pelajaran || '').toLowerCase();
+    const isIpas = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
+    const isMatematika = mapelStr.includes('matematika');
+    if ((isIpas || isMatematika) && Array.isArray(semesters)) {
+      for (const sem of semesters) {
+        if (Array.isArray(sem.babs)) {
+          for (const bab of sem.babs) {
+            if (isIpas) {
+              bab.cp = repairAndEnrichIpasBabCp(bab, metadata?.fase || 'C');
+            } else if (isMatematika) {
+              bab.cp = repairAndEnrichMatematikaBabCp(bab, metadata?.fase || 'C');
+            }
+          }
+        }
+      }
     }
 
     const kopUrl = await resolveKopUrl(c, metadata?.kop_surat_url);

@@ -9,6 +9,7 @@ import {
   ensureAnalisisCpTables,
   replacePesertaDidik,
   repairAndEnrichIpasBabCp,
+  repairAndEnrichMatematikaBabCp,
   default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
@@ -1050,6 +1051,153 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(elemenNames).toContain('Kecakapan Hidup (Life Skills)');
       expect(json.data.capaian_elemen).toHaveLength(4);
       expect(json.data.capaian_umum).toContain('keseimbangan ekosistem');
+    });
+  });
+
+  describe('Matematika Kelas 5 - ATP Elemen & Bab 8 Data Grouping', () => {
+    it('repairAndEnrichMatematikaBabCp correctly tags Bab 8 Data dan Diagram as [Analisis Data dan Peluang]', () => {
+      const bab8 = {
+        no: 8,
+        bab: 'Bab 8: Data dan Diagram',
+        materi_list: ['Pengumpulan data', 'Tabel frekuensi', 'Diagram batang'],
+        items: [
+          { kode_tp: '5.21', tp: 'Murid mampu merencanakan dan mengumpulkan data sederhana.', materi_pokok: 'Pengumpulan data' },
+          { kode_tp: '5.22', tp: 'Murid mampu menyajikan data ke dalam tabel frekuensi.', materi_pokok: 'Tabel frekuensi' },
+          { kode_tp: '5.23', tp: 'Murid mampu membuat diagram batang.', materi_pokok: 'Diagram batang' }
+        ]
+      };
+
+      const resultCp = repairAndEnrichMatematikaBabCp(bab8, 'Fase C');
+      expect(resultCp).toContain('[Analisis Data dan Peluang]');
+      expect(resultCp).toContain('Mengurutkan, membandingkan, menyajikan, dan menganalisis data');
+    });
+
+    it('repairAndEnrichMatematikaBabCp correctly tags Bab 4-6 as [Pengukuran] and Bab 7 as [Geometri]', () => {
+      const bab4 = { no: 4, bab: 'Bab 4: Keliling Bangun Datar', materi_list: ['Keliling segitiga'] };
+      const bab7 = { no: 7, bab: 'Bab 7: Membandingkan Ciri-Ciri Bangun Datar', materi_list: ['Sisi, rusuk, sudut', 'Simetri lipat & simetri putar'] };
+
+      expect(repairAndEnrichMatematikaBabCp(bab4, 'Fase C')).toContain('[Pengukuran]');
+      expect(repairAndEnrichMatematikaBabCp(bab7, 'Fase C')).toContain('[Geometri]');
+    });
+
+    it('groupAnalysisDataByElements accurately puts Bab 8 into Analisis Data dan Peluang and provides informative Aljabar for Kelas 5', () => {
+      const mockMatematikaKelas5: AnalisisCpDocxInput = {
+        metadata: {
+          satuan_pendidikan: 'SDN 2 Cibuntu',
+          mata_pelajaran: 'Matematika',
+          kelas: '5',
+          fase: 'C',
+          tahun_pembelajaran: '2026/2027'
+        },
+        semesters: [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: [
+              {
+                no: 1,
+                bab: 'Bab 1: Bilangan Cacah sampai 100.000',
+                cp: '[Bilangan] Pemahaman bilangan cacah',
+                items: [
+                  { kode_tp: '5.1', tp: 'Membaca dan menulis lambang bilangan.', alokasi_waktu: '12 JP', materi_pokok: 'Membaca & menulis bilangan' }
+                ]
+              },
+              {
+                no: 4,
+                bab: 'Bab 4: Keliling Bangun Datar',
+                cp: '[Pengukuran] Keliling bangun datar',
+                items: [
+                  { kode_tp: '5.10', tp: 'Menghitung keliling segitiga.', alokasi_waktu: '6 JP', materi_pokok: 'Keliling segitiga' }
+                ]
+              }
+            ]
+          },
+          {
+            semester: 2,
+            semester_label: 'SEMESTER 2',
+            babs: [
+              {
+                no: 7,
+                bab: 'Bab 7: Membandingkan Ciri-Ciri Bangun Datar',
+                cp: '[Geometri] Bangun datar dan simetri',
+                items: [
+                  { kode_tp: '5.20', tp: 'Menentukan simetri lipat dan putar.', alokasi_waktu: '8 JP', materi_pokok: 'Simetri lipat & simetri putar' }
+                ]
+              },
+              {
+                no: 8,
+                bab: 'Bab 8: Data dan Diagram',
+                cp: '[Analisis Data dan Peluang] Mengurutkan dan menyajikan data',
+                items: [
+                  { kode_tp: '5.21', tp: 'Murid mampu merencanakan dan mengumpulkan data sederhana terkait dirinya.', alokasi_waktu: '6 JP', materi_pokok: 'Pengumpulan data' },
+                  { kode_tp: '5.22', tp: 'Murid mampu menyajikan data yang telah dikumpulkan ke dalam tabel frekuensi.', alokasi_waktu: '6 JP', materi_pokok: 'Tabel frekuensi' },
+                  { kode_tp: '5.23', tp: 'Murid mampu membuat diagram batang dari suatu data.', alokasi_waktu: '6 JP', materi_pokok: 'Diagram batang' }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const groups = groupAnalysisDataByElements(mockMatematikaKelas5);
+      expect(groups).toHaveLength(5);
+
+      const bilanganGroup = groups.find(g => g.elemen === 'Bilangan');
+      const aljabarGroup = groups.find(g => g.elemen === 'Aljabar');
+      const dataGroup = groups.find(g => g.elemen === 'Analisis Data dan Peluang');
+
+      expect(bilanganGroup).toBeDefined();
+      expect(bilanganGroup?.items).toHaveLength(1); // Only 5.1, NOT Bab 8 items!
+
+      expect(aljabarGroup).toBeDefined();
+      expect(aljabarGroup?.items).toHaveLength(0); // Aljabar has no items in Grade 5
+
+      expect(dataGroup).toBeDefined();
+      expect(dataGroup?.items).toHaveLength(3); // Bab 8 items (5.21, 5.22, 5.23) are properly placed here!
+      expect(dataGroup?.total_jp).toBe(18); // 6 + 6 + 6 JP
+      expect(dataGroup?.lingkup_materi).toContain('Pengumpulan data');
+      expect(dataGroup?.lingkup_materi).toContain('Tabel frekuensi');
+      expect(dataGroup?.lingkup_materi).toContain('Diagram batang');
+    });
+
+    it('POST /docx/atp-elemen returns HTTP 200 with Word attachment containing Data element for Matematika Kelas 5', async () => {
+      const req = new Request('http://localhost/docx/atp-elemen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            satuan_pendidikan: 'SDN 2 Cibuntu',
+            mata_pelajaran: 'Matematika',
+            kelas: '5',
+            fase: 'C',
+            tahun_pembelajaran: '2026/2027'
+          },
+          semesters: [
+            {
+              semester: 2,
+              semester_label: 'SEMESTER 2',
+              babs: [
+                {
+                  no: 8,
+                  bab: 'Bab 8: Data dan Diagram',
+                  materi_list: ['Pengumpulan data', 'Tabel frekuensi', 'Diagram batang'],
+                  items: [
+                    { kode_tp: '5.21', tp: 'Murid mampu merencanakan dan mengumpulkan data.', materi_pokok: 'Pengumpulan data', alokasi_waktu: '6 JP' },
+                    { kode_tp: '5.22', tp: 'Murid mampu menyajikan data ke dalam tabel frekuensi.', materi_pokok: 'Tabel frekuensi', alokasi_waktu: '6 JP' },
+                    { kode_tp: '5.23', tp: 'Murid mampu membuat diagram batang.', materi_pokok: 'Diagram batang', alokasi_waktu: '6 JP' }
+                  ]
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Disposition')).toContain('ATP_Elemen_Matematika_Kelas_5.docx');
+      const arrayBuffer = await res.arrayBuffer();
+      expect(arrayBuffer.byteLength).toBeGreaterThan(1000);
     });
   });
 });

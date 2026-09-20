@@ -5,5 +5,7 @@ export * from './proker';
 export * from './laporan';
 export * from './rpp';
 export * from './analisis-cp';
+export * from './atp-elemen';
+export * from './capaian-pembelajaran';
 export * from './program-sekolah';
 export * from './sppd';

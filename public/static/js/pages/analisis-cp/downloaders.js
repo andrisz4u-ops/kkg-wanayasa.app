@@ -25,10 +25,12 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
   syncCanvasToAnalysisData(currentAnalysisData);
   replacePesertaDidik(currentAnalysisData);
 
-  const docTypeName = type === 'prota' ? 'Program Tahunan (PROTA)'
+  const docTypeName = type === 'data-cp' ? 'Capaian Pembelajaran (CP)'
+                    : type === 'prota' ? 'Program Tahunan (PROTA)'
                     : type === 'promes' ? 'Program Semester (PROMES)'
                     : type === 'rpe' ? 'Rincian Pekan Efektif (RPE)'
                     : type === 'kktp' ? 'Kriteria Ketercapaian (KKTP)'
+                    : type === 'atp-elemen' ? 'Alur Tujuan Pembelajaran (ATP Elemen)'
                     : 'Analisis CP, TP, dan ATP';
 
   showToast(`Menyiapkan berkas Word ${docTypeName}...`, 'info');
@@ -37,10 +39,12 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
     const origin = window.location.origin;
     const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
 
-    const endpoint = type === 'prota' ? '/api/analisis-cp/docx/prota'
+    const endpoint = type === 'data-cp' ? '/api/analisis-cp/docx/data-cp'
+                   : type === 'prota' ? '/api/analisis-cp/docx/prota'
                    : type === 'promes' ? '/api/analisis-cp/docx/promes'
                    : type === 'rpe' ? '/api/analisis-cp/docx/rpe'
                    : type === 'kktp' ? '/api/analisis-cp/docx/kktp'
+                   : type === 'atp-elemen' ? '/api/analisis-cp/docx/atp-elemen'
                    : '/api/analisis-cp/docx';
 
     const res = await fetch(endpoint, {
@@ -73,10 +77,12 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
     a.href = url;
     const mapelSafe = (currentInputData?.mataPelajaran || 'Mapel').replace(/\s+/g, '_');
     const kelasSafe = (currentInputData?.jenjangKelas || 'Kelas_5').replace(/\s+/g, '_');
-    const prefix = type === 'prota' ? 'PROTA'
+    const prefix = type === 'data-cp' ? 'Capaian_Pembelajaran'
+                 : type === 'prota' ? 'PROTA'
                  : type === 'promes' ? 'PROMES'
                  : type === 'rpe' ? 'RPE'
                  : type === 'kktp' ? 'KKTP'
+                 : type === 'atp-elemen' ? 'ATP_Elemen'
                  : 'Analisis_CP_TP_ATP';
 
     a.download = `${prefix}_${mapelSafe}_${kelasSafe}.docx`;
@@ -93,7 +99,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
 }
 
 /**
- * Unduh Semua 5 Paket Dokumen Word Sekaligus secara berurutan
+ * Unduh Semua 7 Paket Dokumen Word Sekaligus secara berurutan
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
  */
@@ -103,8 +109,8 @@ export async function downloadAllDocs(currentAnalysisData, currentInputData) {
     return;
   }
 
-  showToast('Memulai pengunduhan 5 paket dokumen Word (Analisis CP, Prota, Promes, RPE, KKTP)...', 'info');
-  const tabs = ['analisis', 'prota', 'promes', 'rpe', 'kktp'];
+  showToast('Memulai pengunduhan 7 paket dokumen Word (Capaian Pembelajaran, Analisis CP, ATP Elemen, Prota, Promes, RPE, KKTP)...', 'info');
+  const tabs = ['data-cp', 'analisis', 'atp-elemen', 'prota', 'promes', 'rpe', 'kktp'];
 
   for (let i = 0; i < tabs.length; i++) {
     await downloadDocx(tabs[i], currentAnalysisData, currentInputData);
@@ -113,7 +119,7 @@ export async function downloadAllDocs(currentAnalysisData, currentInputData) {
     }
   }
 
-  showToast('Seluruh 5 paket dokumen berhasil diunduh!', 'success');
+  showToast('Seluruh 7 paket dokumen berhasil diunduh!', 'success');
 }
 
 import { loadCpKolaboratifCountBadge } from './kolaboratif.js';

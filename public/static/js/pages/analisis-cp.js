@@ -8,7 +8,7 @@ import { saveDocArchive } from '../storage-archive.js';
 // Modul Terpisah Analisis CP
 import { fetchStandardChapters, fetchBookProfiles, saveBookProfile, deleteBookProfile, loadPdfJsScript, parseChaptersHeuristically } from './analisis-cp/helpers.js';
 import { validateAndRepairAnalysisData } from './analisis-cp/validator.js';
-import { renderAnalysisCanvas, syncCanvasToAnalysisData, applyPrintOrientation } from './analisis-cp/renderers.js';
+import { renderAnalysisCanvas, syncCanvasToAnalysisData, applyPrintOrientation, getOfficialCpDocumentDataClient } from './analisis-cp/renderers.js';
 import { downloadDocx, downloadAllDocs, saveToDatabase, openAnalisisArchiveDrawer } from './analisis-cp/downloaders.js';
 import { loadCpKolaboratifCountBadge, openCpKolaboratifDrawer } from './analisis-cp/kolaboratif.js';
 
@@ -183,6 +183,33 @@ export async function renderAnalisisCp() {
                       <option value="1">Semester 1 Saja (Ganjil)</option>
                       <option value="2">Semester 2 Saja (Genap)</option>
                     </select>
+                  </div>
+                </div>
+
+                <!-- PRATINJAU DATA AWAL CAPAIAN PEMBELAJARAN (CP) RESMI -->
+                <div class="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 transition-all">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-[11px] font-extrabold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider flex items-center gap-1.5">
+                      <i class="fas fa-file-contract text-emerald-600"></i> Data Awal CP Resmi:
+                    </label>
+                    <span id="badge-cp-fase" class="px-2 py-0.5 rounded text-[9.5px] font-black uppercase bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border border-emerald-300/60 shadow-2xs">
+                      BSKAP 046
+                    </span>
+                  </div>
+                  <div id="preview-cp-summary" class="text-[11px] font-serif text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                    Memuat data capaian pembelajaran resmi...
+                  </div>
+                  <div class="mt-2 flex items-center justify-between pt-1.5 border-t border-emerald-200/60 dark:border-emerald-900/40">
+                    <div id="preview-cp-elements-tags" class="flex flex-wrap gap-1">
+                      <!-- Elemen tags -->
+                    </div>
+                    <button type="button" id="btn-toggle-cp-details" class="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 underline flex items-center gap-1 cursor-pointer">
+                      <span id="btn-toggle-cp-text">Lihat Rincian</span> <i id="btn-toggle-cp-icon" class="fas fa-chevron-down text-[9px]"></i>
+                    </button>
+                  </div>
+                  <!-- Collapsible Details Box -->
+                  <div id="preview-cp-details-box" class="hidden mt-2 pt-2 border-t border-emerald-200/60 text-[11px] font-serif space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <!-- Expanded elements details -->
                   </div>
                 </div>
 
@@ -406,10 +433,16 @@ export async function renderAnalisisCp() {
               <i class="fas fa-arrow-left"></i> <span class="hidden sm:inline">Ubah Data</span>
             </button>
             
-            <!-- Tab View Dokumen: Analisis CP vs Prota vs Promes vs KKTP -->
+            <!-- Tab View Dokumen: Data CP vs Analisis CP vs Prota vs Promes vs KKTP vs ATP Elemen -->
             <div id="analisis-view-tabs" class="flex p-1 rounded-xl bg-slate-800/90 text-xs font-bold border border-slate-700/60">
+              <button type="button" data-tab="data-cp" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5" title="Dokumen Resmi Capaian Pembelajaran (CP) Kurikulum Merdeka">
+                <i class="fas fa-file-contract text-emerald-400"></i> <span>Data CP</span>
+              </button>
               <button type="button" data-tab="analisis" class="analisis-tab-btn active px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-indigo-600 text-white shadow-sm flex items-center gap-1.5">
                 <i class="fas fa-table-columns"></i> <span>Analisis CP</span>
+              </button>
+              <button type="button" data-tab="atp-elemen" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5" title="Alur Tujuan Pembelajaran Format Rekapitulasi Berbasis Elemen CP (Model PPA BSKAP)">
+                <i class="fas fa-route text-rose-400"></i> <span>ATP (Elemen)</span>
               </button>
               <button type="button" data-tab="prota" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5">
                 <i class="fas fa-calendar-check text-sky-400"></i> <span>Prota</span>
@@ -421,7 +454,7 @@ export async function renderAnalisisCp() {
                 <i class="fas fa-calendar-week text-purple-400"></i> <span>RPE</span>
               </button>
               <button type="button" data-tab="kktp" class="analisis-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-1.5">
-                <i class="fas fa-list-check text-emerald-400"></i> <span>KKTP</span>
+                <i class="fas fa-list-check text-teal-400"></i> <span>KKTP</span>
               </button>
             </div>
           </div>
@@ -454,9 +487,9 @@ export async function renderAnalisisCp() {
               <i class="fas fa-file-word"></i> <span id="btn-download-docx-label">Unduh Word</span>
             </button>
 
-            <!-- Download All 5 Documents Button -->
-            <button type="button" id="btn-download-all-docs" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer" title="Unduh 5 Dokumen Word Sekaligus (Analisis CP, Prota, Promes, RPE, KKTP)">
-              <i class="fas fa-download"></i> <span class="hidden lg:inline">Unduh Semua (5 File)</span>
+            <!-- Download All 7 Documents Button -->
+            <button type="button" id="btn-download-all-docs" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer" title="Unduh 7 Dokumen Word Sekaligus (Data CP, Analisis CP, ATP Elemen, Prota, Promes, RPE, KKTP)">
+              <i class="fas fa-download"></i> <span class="hidden lg:inline">Unduh Semua (7 File)</span>
             </button>
           </div>
         </div>
@@ -926,6 +959,7 @@ export function initAnalisisCp() {
     const kelas = document.getElementById('select-jenjang-kelas')?.value || 'Kelas 5';
     isCustomPdfUploaded = false;
     await loadBookProfilesForClass(kelas, mapel);
+    updatePreviewDataCp(mapel, kelas);
     showToast(`Struktur materi disesuaikan dengan ${mapel} (${kelas})`, 'info');
   });
 
@@ -975,6 +1009,7 @@ export function initAnalisisCp() {
 
     isCustomPdfUploaded = false;
     await loadBookProfilesForClass(kelas, mapel);
+    updatePreviewDataCp(mapel, kelas);
     showToast(`Struktur materi disesuaikan untuk ${kelas} (${mapel})`, 'info');
   });
 
@@ -1137,11 +1172,73 @@ export function initAnalisisCp() {
     }
   });
 
+  // Toggle Collapsible Details Box for CP
+  document.getElementById('btn-toggle-cp-details')?.addEventListener('click', () => {
+    const box = document.getElementById('preview-cp-details-box');
+    const text = document.getElementById('btn-toggle-cp-text');
+    const icon = document.getElementById('btn-toggle-cp-icon');
+    if (!box) return;
+    const isHidden = box.classList.contains('hidden');
+    if (isHidden) {
+      box.classList.remove('hidden');
+      if (text) text.textContent = 'Tutup Rincian';
+      if (icon) icon.className = 'fas fa-chevron-up text-[9px]';
+    } else {
+      box.classList.add('hidden');
+      if (text) text.textContent = 'Lihat Rincian';
+      if (icon) icon.className = 'fas fa-chevron-down text-[9px]';
+    }
+  });
+
   // Load initial chapters if empty or if no active analysis session
   const activeKelas = document.getElementById('select-jenjang-kelas')?.value || `Kelas ${detectUserDefaultKelas(state.user)}`;
   const activeMapel = document.getElementById('select-mata-pelajaran')?.value || detectUserDefaultMapel(state.user, detectUserDefaultKelas(state.user));
+  updatePreviewDataCp(activeMapel, activeKelas);
   if (detectedChapters.length === 0 || !currentAnalysisData) {
     loadBookProfilesForClass(activeKelas, activeMapel);
+  }
+}
+
+/**
+ * Memperbarui Pratinjau Data Awal Capaian Pembelajaran (CP) di Kartu 1
+ */
+export function updatePreviewDataCp(mapel, kelas) {
+  const summaryEl = document.getElementById('preview-cp-summary');
+  const tagsEl = document.getElementById('preview-cp-elements-tags');
+  const detailsBox = document.getElementById('preview-cp-details-box');
+  const badgeFase = document.getElementById('badge-cp-fase');
+  if (!summaryEl) return;
+
+  try {
+    const cpData = getOfficialCpDocumentDataClient(mapel, kelas);
+    if (!cpData) return;
+
+    if (badgeFase) {
+      badgeFase.textContent = `${cpData.fase} • ${cpData.kelas}`;
+    }
+
+    if (summaryEl) {
+      summaryEl.textContent = cpData.capaian_umum || 'Capaian pembelajaran mata pelajaran pada fase ini.';
+    }
+
+    if (tagsEl && Array.isArray(cpData.capaian_elemen)) {
+      tagsEl.innerHTML = cpData.capaian_elemen.map(el => `
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-white dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300/60 shadow-2xs">
+          ${escapeHtml(el.elemen)}
+        </span>
+      `).join('');
+    }
+
+    if (detailsBox && Array.isArray(cpData.capaian_elemen)) {
+      detailsBox.innerHTML = cpData.capaian_elemen.map(el => `
+        <div class="p-2 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-emerald-200/60 dark:border-emerald-800/40">
+          <div class="font-bold text-emerald-900 dark:text-emerald-300 text-[10.5px] mb-0.5">${escapeHtml(el.elemen)}:</div>
+          <div class="text-slate-700 dark:text-slate-300 text-[10px] leading-relaxed">${escapeHtml(el.cp)}</div>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Error updating preview Data CP:', err);
   }
 }
 

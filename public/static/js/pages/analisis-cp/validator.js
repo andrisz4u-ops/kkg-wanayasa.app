@@ -27,6 +27,155 @@ export function replacePesertaDidik(data) {
   return data;
 }
 
+// Helper: Perbaikan dan Pengayaan Elemen IPAS (Pemahaman IPAS + Keterampilan Proses)
+export function repairAndEnrichIpasBabCp(bab, fase = 'C') {
+  let cpText = (bab?.cp || '').trim();
+  const babTitle = (bab?.bab || '').toLowerCase();
+  const allMateri = (Array.isArray(bab?.materi_list) ? bab.materi_list.join(' ') : '') + ' ' + (Array.isArray(bab?.items) ? bab.items.map(i => (i.materi_pokok || '') + ' ' + (i.tp || '') + ' ' + (i.atp || '')).join(' ') : '');
+  const combinedContext = (babTitle + ' ' + allMateri).toLowerCase();
+
+  // 1. Tentukan kalimat Pemahaman IPAS yang akurat berdasarkan materi bab (urutan spesifik per-bab presisi)
+  let pemahamanContent = '';
+
+  if ((combinedContext.includes('geografis') && !combinedContext.includes('sejarah') && !combinedContext.includes('pahlawan')) || combinedContext.includes('daratan') || combinedContext.includes('lautan') || combinedContext.includes('maritim') || combinedContext.includes('agraris') || combinedContext.includes('khatulistiwa') || (combinedContext.includes('peta') && !combinedContext.includes('sejarah') && !combinedContext.includes('pahlawan')) || combinedContext.includes('letak indonesia')) {
+    pemahamanContent = 'Menjelaskan letak dan kondisi geografis negara Indonesia dengan menggunakan peta konvensional/digital.';
+  } else if (combinedContext.includes('ekonomi') || combinedContext.includes('kebutuhan') || combinedContext.includes('pasar') || combinedContext.includes('jual beli') || (/\buang\b/.test(combinedContext) && !combinedContext.includes('perjuangan') && !combinedContext.includes('berjuang') && !combinedContext.includes('peluang') && !combinedContext.includes('terbuang')) || combinedContext.includes('keuangan') || combinedContext.includes('konsumsi') || combinedContext.includes('produksi') || combinedContext.includes('distribusi') || combinedContext.includes('pelaku ekonomi') || combinedContext.includes('majulah daerahku')) {
+    pemahamanContent = 'Menerapkan kegiatan ekonomi masyarakat di lingkungan sekitar dan menjelaskan pengelolaan keuangan/kebutuhan hidup secara bijak.';
+  } else if (combinedContext.includes('ekosistem') || combinedContext.includes('rantai makanan') || combinedContext.includes('jaring') || combinedContext.includes('biotik') || combinedContext.includes('abiotik') || combinedContext.includes('harmoni dalam ekosistem') || combinedContext.includes('harmoni') || combinedContext.includes('habitat') || combinedContext.includes('populasi')) {
+    pemahamanContent = 'Menganalisis hubungan antar komponen biotik dan abiotik, serta pengaruhnya terhadap ekosistem.';
+  } else if (combinedContext.includes('siklus air') || combinedContext.includes('air sumber') || combinedContext.includes('air bersih') || combinedContext.includes('daur air') || combinedContext.includes('hidrologi') || combinedContext.includes('penghematan energi') || combinedContext.includes('energi alternatif') || (/\bair\b/.test(combinedContext) && !combinedContext.includes('tanah air') && !combinedContext.includes('mata pencaharian') && !combinedContext.includes('cair'))) {
+    pemahamanContent = 'Menghasilkan upaya penghematan energi, serta pemanfaatan sumber energi alternatif dari sumber daya yang ada di sekitarnya sebagai upaya mitigasi perubahan iklim, serta memahami siklus air dan kaitannya dengan upaya menjaga ketersediaan air.';
+  } else if (combinedContext.includes('sejarah') || combinedContext.includes('pahlawan') || combinedContext.includes('perjuangan') || combinedContext.includes('penjajahan') || combinedContext.includes('kemerdekaan') || combinedContext.includes('masa lalu') || combinedContext.includes('warisan budaya') || combinedContext.includes('kearifan') || combinedContext.includes('kebhinekaan')) {
+    pemahamanContent = 'Meninjau sejarah perjuangan para pahlawan di lingkungan sekitar tempat tinggalnya dan menemukan keragaman budaya nasional dalam konteks kebinekaan.';
+  } else if (combinedContext.includes('puber') || combinedContext.includes('perubahan pada diriku') || combinedContext.includes('privasi') || (/\borgan\b/.test(combinedContext) && !combinedContext.includes('organisasi')) || combinedContext.includes('pernapasan') || combinedContext.includes('pencernaan') || combinedContext.includes('darah') || combinedContext.includes('tubuh manusia') || combinedContext.includes('tulang') || combinedContext.includes('otot') || combinedContext.includes('kesehatan diri') || combinedContext.includes('sehat tubuh')) {
+    pemahamanContent = 'Merefleksikan sistem organ tubuh manusia yang dikaitkan dengan cara menjaga kesehatan tubuhnya (masa puber).';
+  } else if (combinedContext.includes('cahaya') || combinedContext.includes('penglihatan') || combinedContext.includes('bayangan') || combinedContext.includes('cermin') || combinedContext.includes('lensa') || combinedContext.includes('warna') || combinedContext.includes('dispersi') || combinedContext.includes('indra penglihatan') || (/\bmata\b/.test(combinedContext) && !combinedContext.includes('pencaharian') && !combinedContext.includes('uang') && !combinedContext.includes('matahari') && !combinedContext.includes('angin'))) {
+    pemahamanContent = 'Menjelaskan fenomena gelombang cahaya dalam kehidupan sehari-hari melalui penyelidikan sederhana.';
+  } else if (combinedContext.includes('bunyi') || combinedContext.includes('pendengaran') || combinedContext.includes('telinga') || combinedContext.includes('getaran') || combinedContext.includes('akustik') || combinedContext.includes('suara') || combinedContext.includes('merambat bunyi')) {
+    pemahamanContent = 'Menjelaskan fenomena gelombang bunyi dalam kehidupan sehari-hari melalui penyelidikan sederhana.';
+  } else if (combinedContext.includes('tata surya') || combinedContext.includes('planet') || combinedContext.includes('rotasi') || combinedContext.includes('revolusi') || combinedContext.includes('bumi') || combinedContext.includes('bulan') || combinedContext.includes('matahari')) {
+    pemahamanContent = 'Menjelaskan sistem tata surya, serta kaitannya dengan rotasi dan revolusi bumi.';
+  } else if (combinedContext.includes('budaya') || combinedContext.includes('kearifan') || combinedContext.includes('adat') || combinedContext.includes('tradisi')) {
+    pemahamanContent = 'Menemukan keragaman budaya nasional dalam konteks kebhinekaan berdasarkan pemahaman terhadap nilai-nilai kearifan lokal yang berlaku di wilayah tempat tinggal.';
+  } else if (combinedContext.includes('pancaindra') || combinedContext.includes('indra')) {
+    pemahamanContent = 'Menjelaskan bentuk dan fungsi pancaindra dalam kehidupan sehari-hari.';
+  } else if (combinedContext.includes('gaya') || combinedContext.includes('gerak') || combinedContext.includes('magnet')) {
+    pemahamanContent = 'Membedakan jenis gaya dan pengaruhnya terhadap arah, gerak, dan bentuk benda.';
+  } else if (combinedContext.includes('wujud zat') || combinedContext.includes('perubahan wujud') || combinedContext.includes('padat') || combinedContext.includes('cair') || combinedContext.includes('gas')) {
+    pemahamanContent = 'Menyimpulkan proses perubahan wujud zat dalam kehidupan sehari-hari.';
+  }
+
+  // 2. Tentukan Keterampilan Proses yang relevan dengan aktivitas bab
+  let prosesContent = '';
+  if ((combinedContext.includes('peta') && !combinedContext.includes('sejarah') && !combinedContext.includes('pahlawan')) || (combinedContext.includes('geografis') && !combinedContext.includes('sejarah') && !combinedContext.includes('pahlawan')) || combinedContext.includes('daratan') || combinedContext.includes('lautan') || (combinedContext.includes('indonesia') && (combinedContext.includes('maritim') || combinedContext.includes('agraris') || combinedContext.includes('letak') || combinedContext.includes('kondisi')))) {
+    prosesContent = 'Mengamati fenomena geografis pada peta konvensional/digital, mengidentifikasi pola wilayah daratan/lautan, memproses data tabel informasi, dan mengomunikasikan hasil analisis.';
+  } else if (combinedContext.includes('sejarah') || combinedContext.includes('pahlawan') || combinedContext.includes('warisan') || combinedContext.includes('budaya') || combinedContext.includes('perjuangan')) {
+    prosesContent = 'Mengamati peninggalan sejarah dan kearifan lokal, menggali informasi dari narasumber/literatur, menyusun garis waktu peristiwa (timeline), serta mengomunikasikan nilai-nilai perjuangan.';
+  } else if (combinedContext.includes('ekonomi') || combinedContext.includes('kebutuhan') || combinedContext.includes('pasar') || combinedContext.includes('jual beli') || (/\buang\b/.test(combinedContext) && !combinedContext.includes('perjuangan') && !combinedContext.includes('berjuang') && !combinedContext.includes('peluang') && !combinedContext.includes('terbuang')) || combinedContext.includes('keuangan')) {
+    prosesContent = 'Melakukan observasi dan wawancara sederhana aktivitas ekonomi di lingkungan sekitar, mengolah data kebutuhan dan keinginan, serta merefleksikan pengelolaan keuangan secara bijak.';
+  } else if (combinedContext.includes('ekosistem') || combinedContext.includes('rantai makanan') || combinedContext.includes('harmoni')) {
+    prosesContent = 'Mengamati interaksi antar komponen ekosistem di lingkungan sekitar, mempertanyakan dan memprediksi dampak perubahan rantai makanan, serta menyajikan hasil penyelidikan.';
+  } else if (combinedContext.includes('siklus air') || combinedContext.includes('daur air') || (/\bair\b/.test(combinedContext) && !combinedContext.includes('tanah air')) || combinedContext.includes('energi')) {
+    prosesContent = 'Merencanakan dan melakukan penyelidikan siklus air/energi menggunakan model percobaan sederhana, mencatat data observasi, dan mengomunikasikan kampanye pelestarian.';
+  } else if (combinedContext.includes('cahaya') || combinedContext.includes('bayangan') || combinedContext.includes('lensa') || combinedContext.includes('cermin')) {
+    prosesContent = 'Merencanakan dan melakukan penyelidikan sifat-sifat cahaya dan pembentukan bayangan menggunakan alat bantu sederhana, membandingkan data pengamatan dengan prediksi, serta mengevaluasi hasil percobaan.';
+  } else if (combinedContext.includes('bunyi') || combinedContext.includes('suara') || combinedContext.includes('getaran') || combinedContext.includes('akustik')) {
+    prosesContent = 'Merencanakan dan melakukan penyelidikan ilmiah perambatan dan peredaman bunyi menggunakan alat sederhana, membandingkan data pengamatan dengan prediksi, serta mengomunikasikan hasil penyelidikan.';
+  } else if (combinedContext.includes('organ') || combinedContext.includes('tubuh') || combinedContext.includes('puber') || combinedContext.includes('diriku') || combinedContext.includes('pancaindra')) {
+    prosesContent = 'Mengamati model/diagram struktur organ tubuh dan perubahan fisik secara cermat, mencatat karakteristik fungsi organ, serta mengomunikasikan panduan pola hidup sehat dan privasi diri.';
+  } else {
+    prosesContent = 'Menerapkan keterampilan proses sains: mengamati fenomena, membuat prediksi, merencanakan penyelidikan sederhana, mengolah data, dan mengomunikasikan hasil secara lisan maupun tertulis.';
+  }
+
+  // Cek apakah cpText yang ada sudah punya [Pemahaman IPAS] dan [Keterampilan Proses]
+  const hasPemahaman = /\[(Elemen\s*:\s*)?Pemahaman\s*IPAS\]/i.test(cpText) || /^Pemahaman\s*IPAS\s*:/i.test(cpText);
+  const hasProses = /\[(Elemen\s*:\s*)?Keterampilan\s*Proses\]/i.test(cpText) || /Keterampilan\s*Proses\s*:/i.test(cpText);
+
+  let existingPemahaman = '';
+  if (hasPemahaman) {
+    const match = cpText.match(/\[(?:Elemen\s*:\s*)?Pemahaman\s*IPAS\]\s*([\s\S]*?)(?=\[(?:Elemen\s*:\s*)?Keterampilan\s*Proses\]|$)/i);
+    if (match && match[1].trim()) {
+      existingPemahaman = match[1].trim();
+    } else {
+      const colonMatch = cpText.match(/^Pemahaman\s*IPAS\s*:/i);
+      if (colonMatch) {
+        existingPemahaman = cpText.replace(/^Pemahaman\s*IPAS\s*:/i, '').trim();
+      }
+    }
+  }
+
+  // Deteksi ketidaksesuaian topik (topic mismatch) pada existingPemahaman
+  const isMismatched = (() => {
+    if (!existingPemahaman || !pemahamanContent) return false;
+    const lower = existingPemahaman.toLowerCase();
+
+    if ((combinedContext.includes('ekonomi') || combinedContext.includes('kebutuhan') || combinedContext.includes('pasar') || (/\buang\b/.test(combinedContext) && !combinedContext.includes('perjuangan') && !combinedContext.includes('berjuang'))) &&
+        (lower.includes('geografis') || lower.includes('daratan') || lower.includes('bunyi') || lower.includes('cahaya') || lower.includes('penghematan energi') || lower.includes('sejarah'))) {
+      return true;
+    }
+    if ((combinedContext.includes('ekosistem') || combinedContext.includes('rantai makanan') || combinedContext.includes('harmoni')) &&
+        (lower.includes('geografis') || lower.includes('ekonomi') || lower.includes('bunyi') || lower.includes('cahaya') || lower.includes('penghematan energi') || lower.includes('sejarah'))) {
+      return true;
+    }
+    if ((combinedContext.includes('air') || combinedContext.includes('siklus')) &&
+        (lower.includes('geografis') || lower.includes('ekonomi') || lower.includes('bunyi') || lower.includes('cahaya') || lower.includes('organ tubuh') || lower.includes('sejarah'))) {
+      return true;
+    }
+    if ((combinedContext.includes('sejarah') || combinedContext.includes('pahlawan') || combinedContext.includes('warisan') || combinedContext.includes('perjuangan')) &&
+        (lower.includes('bunyi') || lower.includes('cahaya') || lower.includes('geografis') || lower.includes('ekonomi') || lower.includes('organ tubuh') || lower.includes('siklus air'))) {
+      return true;
+    }
+    if ((combinedContext.includes('puber') || combinedContext.includes('organ') || combinedContext.includes('diriku')) &&
+        (lower.includes('bunyi') || lower.includes('cahaya') || lower.includes('geografis') || lower.includes('ekonomi') || lower.includes('sejarah'))) {
+      return true;
+    }
+    if (combinedContext.includes('cahaya') &&
+        ((lower.includes('bunyi') && !lower.includes('cahaya')) || lower.includes('geografis') || lower.includes('sejarah') || lower.includes('ekonomi'))) {
+      return true;
+    }
+    if (combinedContext.includes('bunyi') &&
+        ((lower.includes('cahaya') && !lower.includes('bunyi')) || lower.includes('geografis') || lower.includes('sejarah') || lower.includes('ekonomi'))) {
+      return true;
+    }
+    if ((combinedContext.includes('peta') || combinedContext.includes('geografis') || combinedContext.includes('indonesia berada')) &&
+        (lower.includes('bunyi') || lower.includes('ekonomi') || lower.includes('organ') || lower.includes('penghematan energi') || lower.includes('sejarah'))) {
+      return true;
+    }
+    if (lower.startsWith('mengamati fenomena') && !lower.includes('menjelaskan') && !lower.includes('menganalisis') && !lower.includes('menerapkan') && !lower.includes('meninjau') && !lower.includes('merefleksikan')) {
+      return true;
+    }
+    return false;
+  })();
+
+  let finalPemahaman = '';
+  if (!hasPemahaman || isMismatched || !existingPemahaman) {
+    finalPemahaman = pemahamanContent || 'Memahami konsep esensial sains dan lingkungan dalam kehidupan sehari-hari.';
+  } else {
+    finalPemahaman = existingPemahaman;
+  }
+
+  let finalProses = '';
+  if (hasProses) {
+    const matchProses = cpText.match(/\[(?:Elemen\s*:\s*)?Keterampilan\s*Proses\]\s*([\s\S]*?)$/i);
+    const existingProses = (matchProses && matchProses[1].trim()) ? matchProses[1].trim() : '';
+    const prosesLower = existingProses.toLowerCase();
+
+    const isProsesMismatched = 
+      ((combinedContext.includes('ekonomi') || combinedContext.includes('ekosistem') || combinedContext.includes('sejarah') || combinedContext.includes('bunyi') || combinedContext.includes('puber')) && prosesLower.includes('geografis pada peta')) ||
+      ((combinedContext.includes('sejarah') || combinedContext.includes('puber') || combinedContext.includes('cahaya') || combinedContext.includes('ekonomi')) && prosesLower.includes('fenomena bunyi'));
+
+    if (!existingProses || isProsesMismatched) {
+      finalProses = prosesContent;
+    } else {
+      finalProses = existingProses;
+    }
+  } else {
+    finalProses = prosesContent;
+  }
+
+  return `[Pemahaman IPAS]\n${finalPemahaman}\n\n[Keterampilan Proses]\n${finalProses}`;
+}
+
 /**
  * Validasi dan perbaikan otomatis data Analisis CP sebelum rendering atau penyimpanan
  * @param {object} rawData - Data mentah hasil generate AI atau dari cache/DB
@@ -48,6 +197,10 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
   data.metadata.kelas = kelasNum;
   data.metadata.fase_kelas = data.metadata.fase_kelas || `${data.metadata.fase}/${kelasNum}`;
   data.metadata.tahun_pembelajaran = data.metadata.tahun_pembelajaran || formMeta.tahunAjaran || '2025/2026';
+
+  // Cek apakah mata pelajaran adalah IPAS
+  const mapelStr = (data.metadata.mata_pelajaran || formMeta.mataPelajaran || formMeta.mata_pelajaran || '').toLowerCase();
+  const isIpasSubject = mapelStr.includes('ipas') || mapelStr.includes('ilmu pengetahuan alam') || mapelStr.includes('sains');
 
   // 2. Normalisasi Semesters
   if (!Array.isArray(data.semesters) || data.semesters.length === 0) {
@@ -151,6 +304,11 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     sem.babs.sort((a, b) => (a.no || 0) - (b.no || 0));
 
     for (const bab of sem.babs) {
+      // Auto-Repair & Enrich IPAS Elements (Pemahaman IPAS + Keterampilan Proses)
+      if (isIpasSubject) {
+        bab.cp = repairAndEnrichIpasBabCp(bab, data.metadata?.fase || formMeta.fase || 'C');
+      }
+
       // Pastikan prefix elemen terpasang pada bab.cp jika bab memiliki penanda elemen [Elemen]
       if (bab.bab && (!bab.cp || !bab.cp.includes('['))) {
         const matchEl = bab.bab.match(/\[(.*?)\]/);

@@ -12,6 +12,9 @@ import {
   default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
+import { generateAtpElemenDocxBuffer, groupAnalysisDataByElements } from '../src/lib/docx/atp-elemen';
+import { generateCapaianPembelajaranDocxBuffer } from '../src/lib/docx/capaian-pembelajaran';
+import { getOfficialCpDocumentData } from '../src/lib/cp-document-data';
 import { getOfficialCP, cpElementsData } from '../src/lib/cp-data';
 
 describe('Analisis CP - Standard Official Curriculum Presets', () => {
@@ -593,6 +596,62 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
     expect(bab2.cp).toContain('kegiatan ekonomi');
   });
 
+  it('repairAndEnrichIpasBabCp automatically corrects topic mismatches across all 8 chapters of IPAS Grade 5', () => {
+    // Simulate common bug where Bab 1 CP was copied to Bab 2-4, and Bab 8 CP was copied to Bab 5-7
+    const duplicateSem1Cp = '[Elemen: PEMAHAMAN IPAS] Mengamati fenomena geografis pada peta, mempertanyakan dan memprediksi informasi letak Indonesia...';
+    const duplicateSem2Cp = '[Elemen: PEMAHAMAN IPAS] Mengamati fenomena bunyi, mempertanyakan dan memprediksi, merencanakan serta melakukan penyelidikan...';
+
+    const babs = [
+      { no: 1, bab: 'Bab 1: Di Mana Indonesia Berada?', cp: duplicateSem1Cp, items: [{ kode_tp: '5.1', materi_pokok: 'Daratan dan Lautan' }] },
+      { no: 2, bab: 'Bab 2: Majulah Daerahku!', cp: duplicateSem1Cp, items: [{ kode_tp: '5.4', materi_pokok: 'Kegiatan Ekonomi di Daerahku' }] },
+      { no: 3, bab: 'Bab 3: Harmoni dalam Ekosistem', cp: duplicateSem1Cp, items: [{ kode_tp: '5.7', materi_pokok: 'Interaksi Antarkomponen dalam Ekosistem' }] },
+      { no: 4, bab: 'Bab 4: Air Sumber Kehidupan', cp: duplicateSem1Cp, items: [{ kode_tp: '5.10', materi_pokok: 'Beginilah Terjadinya Siklus Air' }] },
+      { no: 5, bab: 'Bab 5: Daerahku yang Bersejarah', cp: duplicateSem2Cp, items: [{ kode_tp: '5.13', materi_pokok: 'Cerita Masa Lalu Daerahku' }] },
+      { no: 6, bab: 'Bab 6: Perubahan pada Diriku', cp: duplicateSem2Cp, items: [{ kode_tp: '5.16', materi_pokok: 'Bersiap Menghadapi Masa Puber' }] },
+      { no: 7, bab: 'Bab 7: Bermain dengan Cahaya', cp: duplicateSem2Cp, items: [{ kode_tp: '5.19', materi_pokok: 'Melihat karena Cahaya' }] },
+      { no: 8, bab: 'Bab 8: Ramai karena Bunyi', cp: duplicateSem2Cp, items: [{ kode_tp: '5.22', materi_pokok: 'Mendengar karena Bunyi' }] }
+    ];
+
+    const repaired = babs.map(b => repairAndEnrichIpasBabCp(b, 'C'));
+
+    // Bab 1: Geografi
+    expect(repaired[0]).toContain('letak dan kondisi geografis');
+    expect(repaired[0]).toContain('fenomena geografis pada peta');
+
+    // Bab 2: Ekonomi
+    expect(repaired[1]).toContain('kegiatan ekonomi');
+    expect(repaired[1]).not.toContain('geografis');
+    expect(repaired[1]).toContain('aktivitas ekonomi di lingkungan sekitar');
+
+    // Bab 3: Ekosistem
+    expect(repaired[2]).toContain('biotik dan abiotik');
+    expect(repaired[2]).not.toContain('geografis');
+    expect(repaired[2]).toContain('interaksi antar komponen ekosistem');
+
+    // Bab 4: Air & Energi
+    expect(repaired[3]).toContain('siklus air');
+    expect(repaired[3]).not.toContain('geografis');
+    expect(repaired[3]).toContain('penyelidikan siklus air');
+
+    // Bab 5: Sejarah & Pahlawan
+    expect(repaired[4]).toContain('sejarah perjuangan para pahlawan');
+    expect(repaired[4]).not.toContain('fenomena bunyi');
+    expect(repaired[4]).toContain('peninggalan sejarah');
+
+    // Bab 6: Puber & Organ
+    expect(repaired[5]).toContain('organ tubuh');
+    expect(repaired[5]).toContain('masa puber');
+    expect(repaired[5]).not.toContain('fenomena bunyi');
+
+    // Bab 7: Cahaya
+    expect(repaired[6]).toContain('gelombang cahaya');
+    expect(repaired[6]).not.toContain('fenomena bunyi');
+
+    // Bab 8: Bunyi
+    expect(repaired[7]).toContain('gelombang bunyi');
+    expect(repaired[7]).not.toContain('gelombang cahaya');
+  });
+
   it('buildAnalisisCpPrompt contains specific dual-element instructions when mataPelajaran is IPAS', () => {
     const prompt = buildAnalisisCpPrompt({
       namaSekolah: 'SDN 1 Wanayasa',
@@ -695,4 +754,266 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(body.data.default_profile.chapters.length).toBe(8);
     });
   });
+
+  describe('ATP Format Rekapitulasi Berbasis Elemen CP (Model PPA BSKAP)', () => {
+    it('correctly groups Matematika Kelas 1 into official BSKAP elements (Bilangan, Aljabar, Pengukuran, Geometri, Analisis Data)', () => {
+      const mockInput: AnalisisCpDocxInput = {
+        metadata: {
+          satuan_pendidikan: 'UPT SDN 32 GURUN PANJANG',
+          mata_pelajaran: 'Matematika',
+          fase: 'A',
+          kelas: '1',
+          tahun_pembelajaran: '2025/2026',
+          kepala_sekolah: 'Kepala Sekolah, S.Pd',
+          guru: 'Guru Kelas 1'
+        },
+        semesters: [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: [
+              {
+                no: 1,
+                bab: 'Bab 1: Mengenal Bilangan Cacah',
+                cp: '[Bilangan] Mengenal bilangan dan simbol bilangan cacah sampai 20',
+                materi_list: ['Bilangan secara Konkret dan Simbol', 'Nilai Tempat'],
+                items: [
+                  { kode_tp: '1.1.1', materi_pokok: 'Bilangan Konkret', tp: 'Mengenal bilangan dan simbol bilangan cacah berdasarkan kumpulan benda.', atp: 'Mengamati benda...', alokasi_waktu: '24 JP' },
+                  { kode_tp: '1.1.2', materi_pokok: 'Membaca dan Menulis Bilangan', tp: 'Membaca dan menuliskan bilangan cacah.', atp: 'Membaca angka...', alokasi_waktu: '24 JP' },
+                  { kode_tp: '1.1.3', materi_pokok: 'Nilai Tempat', tp: 'Mengenal dan menentukan nilai tempat suatu bilangan.', atp: 'Mengelompokkan puluhan...', alokasi_waktu: '24 JP' }
+                ]
+              },
+              {
+                no: 2,
+                bab: 'Bab 2: Pola Bilangan dan Bentuk',
+                cp: '[Aljabar] Mengenali, meniru, dan melanjutkan pola bukan bilangan',
+                materi_list: ['Pola Bukan Bilangan'],
+                items: [
+                  { kode_tp: '1.2.1', materi_pokok: 'Pola Gambar dan Warna', tp: 'Mengenali dan meniru pola gambar dan warna.', atp: 'Mengamati pola...', alokasi_waktu: '18 JP' }
+                ]
+              }
+            ]
+          },
+          {
+            semester: 2,
+            semester_label: 'SEMESTER 2',
+            babs: [
+              {
+                no: 3,
+                bab: 'Bab 3: Membandingkan Panjang dan Berat',
+                cp: '[Pengukuran] Membandingkan panjang dan berat benda secara langsung',
+                materi_list: ['Panjang Benda', 'Berat Benda'],
+                items: [
+                  { kode_tp: '1.3.1', materi_pokok: 'Panjang Benda', tp: 'Membandingkan panjang benda secara langsung.', atp: 'Mengukur langsung...', alokasi_waktu: '24 JP' }
+                ]
+              },
+              {
+                no: 4,
+                bab: 'Bab 4: Mengenal Bangun Datar dan Bangun Ruang',
+                cp: '[Geometri] Mengenal berbagai bangun datar dan bangun ruang',
+                materi_list: ['Bangun Datar', 'Bangun Ruang'],
+                items: [
+                  { kode_tp: '1.4.1', materi_pokok: 'Bentuk Bangun Datar', tp: 'Mengenal bentuk segitiga, segiempat, dan lingkaran.', atp: 'Mengamati benda...', alokasi_waktu: '20 JP' }
+                ]
+              },
+              {
+                no: 5,
+                bab: 'Bab 5: Pengelompokan Data',
+                cp: '[Analisis Data dan Peluang] Mengurutkan, menyortir, mengelompokkan data',
+                materi_list: ['Data dan Diagram Gambar'],
+                items: [
+                  { kode_tp: '1.5.1', materi_pokok: 'Mengelompokkan Data', tp: 'Menyajikan data banyak benda menggunakan turus dan piktogram.', atp: 'Membilang benda...', alokasi_waktu: '10 JP' }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const groups = groupAnalysisDataByElements(mockInput);
+      expect(groups.length).toBe(5);
+
+      // Verify each element
+      const bilangan = groups.find(g => g.elemen === 'Bilangan');
+      expect(bilangan).toBeDefined();
+      expect(bilangan!.total_jp).toBe(72); // 24 + 24 + 24 = 72 JP (persis seperti foto referensi!)
+      expect(bilangan!.items.length).toBe(3);
+      expect(bilangan!.items[0].kode_tp).toBe('1.1.1');
+
+      const aljabar = groups.find(g => g.elemen === 'Aljabar');
+      expect(aljabar).toBeDefined();
+      expect(aljabar!.total_jp).toBe(18);
+
+      const pengukuran = groups.find(g => g.elemen === 'Pengukuran');
+      expect(pengukuran).toBeDefined();
+      expect(pengukuran!.total_jp).toBe(24);
+
+      const geometri = groups.find(g => g.elemen === 'Geometri');
+      expect(geometri).toBeDefined();
+      expect(geometri!.total_jp).toBe(20);
+
+      const dataGroup = groups.find(g => g.elemen === 'Analisis Data dan Peluang');
+      expect(dataGroup).toBeDefined();
+      expect(dataGroup!.total_jp).toBe(10);
+
+      const totalJp = groups.reduce((acc, g) => acc + g.total_jp, 0);
+      expect(totalJp).toBe(144); // 72 + 18 + 24 + 20 + 10 = 144 JP (tepat sesuai alokasi resmi setahun!)
+    });
+
+    it('generates valid DOCX buffer for ATP Model Elemen (Landscape A4)', async () => {
+      const mockInput: AnalisisCpDocxInput = {
+        metadata: {
+          satuan_pendidikan: 'UPT SDN 32 GURUN PANJANG',
+          mata_pelajaran: 'Matematika',
+          fase: 'A',
+          kelas: '1',
+          tahun_pembelajaran: '2025/2026',
+          kepala_sekolah: 'Kepala Sekolah, S.Pd',
+          nip_kepala_sekolah: '197001011990011001',
+          guru: 'Guru Matematika, S.Pd',
+          nip_guru: '198501012010012002'
+        },
+        semesters: [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: [
+              {
+                no: 1,
+                bab: 'Bab 1: Bilangan Cacah',
+                cp: '[Bilangan] Memahami bilangan cacah',
+                items: [
+                  { kode_tp: '1.1.1', materi_pokok: 'Bilangan 1-20', tp: 'Mengenal bilangan cacah sampai 20.', atp: 'Aktivitas belajar', alokasi_waktu: '72 JP' }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const buffer = await generateAtpElemenDocxBuffer(mockInput);
+      expect(buffer).toBeDefined();
+      expect(buffer.length).toBeGreaterThan(1000);
+    });
+
+    it('POST /docx/atp-elemen returns HTTP 200 with Word attachment', async () => {
+      const req = new Request('http://localhost/docx/atp-elemen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            satuan_pendidikan: 'SDN 2 Nangerang',
+            mata_pelajaran: 'Matematika',
+            kelas: '1',
+            fase: 'A'
+          },
+          semesters: [
+            {
+              semester: 1,
+              semester_label: 'SEMESTER 1',
+              babs: [
+                {
+                  no: 1,
+                  bab: 'Bab 1: Bilangan Cacah',
+                  cp: '[Bilangan] Memahami bilangan cacah',
+                  items: [
+                    { kode_tp: '1.1.1', materi_pokok: 'Bilangan 1-20', tp: 'Mengenal bilangan cacah sampai 20.', atp: 'Aktivitas', alokasi_waktu: '72 JP' }
+                  ]
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(res.headers.get('Content-Disposition')).toContain('ATP_Elemen_Matematika_Kelas_1.docx');
+    });
+  });
+
+  describe('Dokumen Resmi Capaian Pembelajaran (CP) Sesuai Mata Pelajaran', () => {
+    it('getOfficialCpDocumentData returns accurate official CP document data for IPAS Kelas 5', () => {
+      const data = getOfficialCpDocumentData('Ilmu Pengetahuan Alam dan Sosial (IPAS)', 'Kelas 5');
+      expect(data).toBeDefined();
+      expect(data.mata_pelajaran).toContain('IPAS');
+      expect(data.fase).toBe('Fase C');
+      expect(data.regulasi).toContain('BSKAP');
+      expect(data.rasional).toBeTruthy();
+      expect(Array.isArray(data.tujuan)).toBe(true);
+      expect(data.tujuan.length).toBeGreaterThanOrEqual(3);
+      expect(data.karakteristik).toBeTruthy();
+      expect(Array.isArray(data.elemen_deskripsi)).toBe(true);
+      expect(data.elemen_deskripsi.length).toBe(2);
+      expect(data.capaian_umum).toContain('Fase C');
+      expect(Array.isArray(data.capaian_elemen)).toBe(true);
+      expect(data.capaian_elemen.length).toBe(2);
+    });
+
+    it('getOfficialCpDocumentData returns accurate data for Matematika Kelas 1', () => {
+      const data = getOfficialCpDocumentData('Matematika', 'Kelas 1');
+      expect(data).toBeDefined();
+      expect(data.fase).toBe('Fase A');
+      expect(data.capaian_elemen.some(el => el.elemen === 'Bilangan')).toBe(true);
+      expect(data.capaian_elemen.some(el => el.elemen === 'Geometri')).toBe(true);
+    });
+
+    it('generates DOCX buffer for Capaian Pembelajaran document', async () => {
+      const mockInput: AnalisisCpDocxInput = {
+        metadata: {
+          satuan_pendidikan: 'SDN 2 Nangerang',
+          mata_pelajaran: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+          kelas: '5',
+          fase: 'C',
+          tahun_pembelajaran: '2025/2026',
+          guru: 'Ulfah Laiza, S.Pd.',
+          nip_guru: '198501012010012001',
+          kepala_sekolah: 'Hj. Nenden Siti Fatimah, M.Pd.',
+          nip_kepala_sekolah: '197001011993032001'
+        },
+        semesters: []
+      };
+
+      const buffer = await generateCapaianPembelajaranDocxBuffer(mockInput);
+      expect(buffer).toBeDefined();
+      expect(buffer.length).toBeGreaterThan(1000);
+    });
+
+    it('GET /official-cp returns 200 with CP document data', async () => {
+      const req = new Request('http://localhost/official-cp?mapel=IPAS&kelas=Kelas%205', {
+        method: 'GET'
+      });
+
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+      const json: any = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.mata_pelajaran).toContain('IPAS');
+      expect(json.data.fase).toBe('Fase C');
+    });
+
+    it('POST /docx/data-cp returns HTTP 200 with Word attachment', async () => {
+      const req = new Request('http://localhost/docx/data-cp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            satuan_pendidikan: 'SDN 2 Nangerang',
+            mata_pelajaran: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+            kelas: '5',
+            fase: 'C',
+            tahun_pembelajaran: '2025/2026'
+          },
+          semesters: []
+        })
+      });
+
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(res.headers.get('Content-Disposition')).toContain('Capaian_Pembelajaran_Ilmu_Pengetahuan_Alam_dan_Sosial_(IPAS)_Kelas_5.docx');
+    });
+  });
 });
+

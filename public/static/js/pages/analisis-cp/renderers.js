@@ -528,7 +528,7 @@ export function renderPromesTable(data, inputData = {}, activePromesSemester = '
                     [ELEMEN: ${escapeHtml(item.element)}]
                   </div>
                 ` : ''}
-                <p class="text-slate-800 text-justify" contenteditable="true" data-field="cp" data-sem-idx="${effectiveSemIdx}" data-bab-idx="${item.babIndices[0]}" data-bab-indices="${item.babIndices.join(',')}">
+                <p class="text-slate-800 text-justify" contenteditable="true" data-field="promes_cp_overview" data-sem-idx="${effectiveSemIdx}" data-bab-idx="${item.babIndices[0]}">
                   ${escapeHtml(item.cp).replace(/\n/g, '<br>')}
                 </p>
               </div>
@@ -1172,7 +1172,553 @@ export function renderKktpTable(data, inputData = {}, activePromesSemester = 'al
 }
 
 /**
- * 5. MASTER CANVAS DISPATCHER (4-in-1 Output Engine)
+ * Helper client-side untuk mengelompokkan data analisis ke dalam Elemen CP resmi BSKAP
+ */
+export function groupAnalysisDataByElementsClient(data) {
+  const metadata = data?.metadata || {};
+  const mapel = (metadata.mata_pelajaran || '').toLowerCase();
+  const kelas = metadata.kelas || '5';
+  
+  // Kamus elemen standar untuk mapel-mapel utama SD
+  let elementDefs = [];
+  if (mapel.includes('matematika')) {
+    elementDefs = [
+      { name: "Bilangan", cp: "Menunjukkan pemahaman dan memiliki intuisi bilangan (number sense) pada bilangan cacah sampai tingkat yang dipelajari; melakukan operasi penjumlahan, pengurangan, perkalian, pembagian, serta memahami konsep pecahan dan desimal." },
+      { name: "Aljabar", cp: "Menemukan pola gambar atau objek sederhana dan pola bilangan membesar/mengecil; memahami makna kalimat matematika dan menyelesaikan permasalahan yang melibatkan operasi hitung dasar." },
+      { name: "Pengukuran", cp: "Mengukur dan membandingkan panjang, berat, luas, volume benda, durasi waktu, serta besar sudut menggunakan satuan baku dan satuan tidak baku." },
+      { name: "Geometri", cp: "Mendeskripsikan dan mengonstruksi ciri berbagai bangun datar dan bangun ruang; mengenali visualisasi spasial serta menentukan posisi dan lokasi benda." },
+      { name: "Analisis Data dan Peluang", cp: "Mengurutkan, membandingkan, menyajikan, dan menganalisis data banyak benda dalam bentuk tabel, piktogram, dan diagram batang; serta memahami konsep peluang kejadian sederhana." }
+    ];
+  } else if (mapel.includes('ipas') || mapel.includes('ilmu pengetahuan alam') || mapel.includes('sains')) {
+    elementDefs = [
+      { name: "Pemahaman IPAS", cp: "Memahami dan merefleksikan sistem organ tubuh manusia dan kesehatan, interaksi komponen biotik dan abiotik dalam ekosistem, fenomena gelombang bunyi dan cahaya, siklus air dan penghematan energi, letak geografis Indonesia, sejarah perjuangan pahlawan dan keragaman budaya, serta kegiatan ekonomi masyarakat." },
+      { name: "Keterampilan Proses", cp: "Menerapkan keterampilan proses sains: mengamati fenomena dan peristiwa secara cermat, membuat prediksi ilmiah, merencanakan dan melakukan penyelidikan sederhana, mengorganisasikan data hasil observasi, mengevaluasi hasil penyelidikan, serta mengomunikasikan kesimpulan secara lisan maupun tertulis." }
+    ];
+  } else if (mapel.includes('indonesia')) {
+    elementDefs = [
+      { name: "Menyimak", cp: "Memahami dan menganalisis informasi, pesan, ide pokok, dan ide pendukung dari berbagai tipe teks nonsastra dan sastra berbentuk teks aural (yang dibacakan atau didengarkan)." },
+      { name: "Membaca dan Memirsa", cp: "Membaca kata-kata dan teks dengan fasih, serta memahami dan menganalisis informasi, nilai-nilai moral, dan karakter tokoh dalam teks visual maupun audiovisual." },
+      { name: "Berbicara dan Mempresentasikan", cp: "Menyampaikan gagasan, tanggapan, dan perasaan secara lisan dengan pilihan kata yang santun, intonasi yang tepat, serta sikap tubuh/gestur yang percaya diri dalam berbagai konteks komunikasi." },
+      { name: "Menulis", cp: "Menulis berbagai tipe teks narasi, deskripsi, eksposisi, dan kreatif dengan kalimat efektif, kosakata yang kaya, serta menerapkan kaidah kebahasaan dan ejaan yang benar." }
+    ];
+  } else if (mapel.includes('pancasila') || mapel.includes('pkn')) {
+    elementDefs = [
+      { name: "Pancasila", cp: "Memahami sejarah kelahiran Pancasila, makna simbol dan sila-sila Pancasila, serta meneladani sikap para perumus Pancasila dalam kehidupan sehari-hari." },
+      { name: "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945", cp: "Mengimplementasikan bentuk-bentuk norma, hak, dan kewajiban sebagai warga negara, serta mempraktikkan musyawarah untuk mencapai mufakat dalam membuat aturan bersama." },
+      { name: "Bhinneka Tunggal Ika", cp: "Menghormati, menjaga, dan melestarikan keberagaman budaya, suku bangsa, bahasa, dan agama dalam bingkai Bhinneka Tunggal Ika." },
+      { name: "Negara Kesatuan Republik Indonesia", cp: "Mengenal karakteristik wilayah tempat tinggal dan lingkungan sekitar, serta menunjukkan perilaku gotong royong untuk menjaga persatuan bangsa." }
+    ];
+  } else if (mapel.includes('agama') || mapel.includes('paibp') || mapel.includes('pai') || mapel.includes('islam')) {
+    elementDefs = [
+      { name: "Al-Qur’an Hadis", cp: "Membaca, menulis huruf hijaiah bersambung, menghafal serta menjelaskan kandungan beberapa surah pendek Al-Qur'an dan hadis tentang akhlak mulia." },
+      { name: "Akidah", cp: "Menjelaskan dan meyakini rukun iman, sifat-sifat Allah Swt., beberapa asmaulhusna, dan hari akhir." },
+      { name: "Akhlak", cp: "Menerapkan akhlak terpuji terhadap Allah Swt., diri sendiri, orang tua, keluarga, guru, sesama manusia, serta menjaga kelestarian lingkungan." },
+      { name: "Fikih", cp: "Menerapkan ketentuan tata cara bersuci (thaharah), salat fardu dan sunah, puasa, serta zakat/infak/sedekah sesuai syariat Islam." },
+      { name: "Sejarah Peradaban Islam", cp: "Menceritakan dan mengambil keteladanan dari kisah perjuangan dakwah Nabi Muhammad saw., para sahabat, dan khulafaur rasyidin." }
+    ];
+  } else if (mapel.includes('seni rupa') || mapel.includes('rupa')) {
+    elementDefs = [
+      { name: "Mengalami (Experiencing)", cp: "Mengidentifikasi dan mengamati unsur rupa (garis, bentuk, warna, tekstur) dan prinsip desain pada karya seni rupa di lingkungan sekitar." },
+      { name: "Merefleksikan (Reflecting)", cp: "Merefleksikan dan mengapresiasi karya seni rupa diri sendiri dan teman menggunakan kosakata seni yang sesuai." },
+      { name: "Berpikir dan Bekerja Artistik", cp: "Mengenali dan menguji coba variasi alat, bahan, dan teknik berkarya seni rupa." },
+      { name: "Menciptakan (Making/Creating)", cp: "Membuat karya seni rupa dua atau tiga dimensi berdasarkan pengalaman dan pengamatan terhadap lingkungan sekitar." },
+      { name: "Berdampak (Impacting)", cp: "Menghasilkan karya seni rupa yang berdampak positif pada perasaan dirinya atau menyampaikan pesan kepedulian lingkungan." }
+    ];
+  } else {
+    // Fallback: ambil elemen unik dari bab-bab yang ada
+    const fallbackMap = new Map();
+    (data?.semesters || []).forEach(sem => {
+      (sem.babs || []).forEach(bab => {
+        fallbackMap.set(bab.bab, {
+          name: bab.bab,
+          cp: bab.cp || 'Memahami dan menerapkan materi pokok pada bab ini.'
+        });
+      });
+    });
+    elementDefs = Array.from(fallbackMap.values());
+  }
+
+  // Buat buckets
+  const buckets = elementDefs.map((def, idx) => ({
+    no: idx + 1,
+    elemen: def.name,
+    cp: def.cp,
+    lingkup_materi: new Set(),
+    items: [],
+    total_jp: 0
+  }));
+
+  // Kumpulkan items
+  const allItems = [];
+  (data?.semesters || []).forEach(sem => {
+    (sem.babs || []).forEach((bab, bIdx) => {
+      (bab.items || []).forEach(it => {
+        allItems.push({
+          item: it,
+          babTitle: bab.bab,
+          babNo: bab.no || bIdx + 1,
+          babCp: bab.cp || ''
+        });
+      });
+    });
+  });
+
+  // Scoring function
+  const scoreItem = (elemName, text, babCp, babTitle) => {
+    const t = (text || '').toLowerCase();
+    const e = elemName.toLowerCase();
+    const cleanElem = e.split('(')[0].trim();
+    let score = 0;
+
+    // Prioritas utama: jika ada tag kurung siku [Nama Elemen] pada babCp atau babTitle
+    const tag = `[${cleanElem}`;
+    if ((babCp || '').toLowerCase().includes(tag) || (babTitle || '').toLowerCase().includes(tag)) {
+      score += 100;
+    }
+
+    // Jika judul bab secara eksplisit menyebut elemen
+    if ((babTitle || '').toLowerCase().includes(cleanElem)) {
+      score += 30;
+    }
+
+    if (t.includes(e)) score += 10;
+    if (cleanElem.includes('bilangan')) {
+      if (t.includes('bukan bilangan')) {
+        // Jangan beri skor bilangan jika konteksnya negasi "bukan bilangan"
+      } else if (t.includes('bilangan cacah') || t.includes('nilai tempat') || t.includes('membaca dan menulis bilangan') || t.includes('pecahan') || t.includes('hitung') || t.includes('angka') || t.includes('operasi') || t.includes('uang')) {
+        score += 25;
+      }
+    }
+    if (cleanElem.includes('aljabar') && (t.includes('aljabar') || t.includes('pola') || t.includes('kalimat matematika') || t.includes('simbol') || t.includes('rasio') || t.includes('proporsi'))) score += 25;
+    if (cleanElem.includes('pengukuran') && (t.includes('pengukuran') || t.includes('mengukur') || t.includes('panjang') || t.includes('berat') || t.includes('luas') || t.includes('volume') || t.includes('waktu') || t.includes('sudut') || t.includes('keliling'))) score += 25;
+    if (cleanElem.includes('geometri') && (t.includes('bangun datar') || t.includes('bangun ruang') || t.includes('geometri') || t.includes('kubus') || t.includes('balok') || t.includes('segitiga') || t.includes('lingkaran') || t.includes('spasial'))) score += 25;
+    if ((cleanElem.includes('data') || cleanElem.includes('peluang')) && (t.includes('analisis data') || t.includes('diagram') || t.includes('tabel data') || t.includes('piktogram') || t.includes('turus') || t.includes('peluang'))) score += 25;
+    if (cleanElem.includes('menyimak') && (t.includes('simak') || t.includes('dengar') || t.includes('aural') || t.includes('audio'))) score += 25;
+    if ((cleanElem.includes('membaca') || cleanElem.includes('memirsa')) && (t.includes('baca') || t.includes('memirsa') || t.includes('teks visual') || t.includes('kosakata'))) score += 25;
+    if ((cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) && (t.includes('bicara') || t.includes('presentasi') || t.includes('lisan') || t.includes('diskusi'))) score += 25;
+    if (cleanElem.includes('menulis') && (t.includes('tulis') || t.includes('kalimat') || t.includes('paragraf') || t.includes('karangan') || t.includes('ejaan'))) score += 25;
+    if (cleanElem.includes('pemahaman ipas') && !t.includes('keterampilan proses')) score += 25;
+    if (cleanElem.includes('keterampilan proses') && (t.includes('keterampilan proses') || t.includes('mengamati') || t.includes('penyelidikan') || t.includes('percobaan'))) score += 25;
+    return score;
+  };
+
+  allItems.forEach(({ item, babTitle, babNo, babCp }) => {
+    const ctx = `${babTitle} ${babCp} ${item.materi_pokok || ''} ${item.tp || ''} ${item.atp || ''}`;
+    let bestIdx = 0;
+    let maxScore = -1;
+
+    buckets.forEach((b, idx) => {
+      const sc = scoreItem(b.elemen, ctx, babCp, babTitle);
+      if (sc > maxScore) {
+        maxScore = sc;
+        bestIdx = idx;
+      }
+    });
+
+    if (maxScore <= 0) {
+      bestIdx = (babNo - 1) % buckets.length;
+    }
+
+    const jp = parseJpNum(item.alokasi_waktu);
+    buckets[bestIdx].total_jp += jp;
+    if (item.materi_pokok) {
+      buckets[bestIdx].lingkup_materi.add(item.materi_pokok.trim());
+    }
+
+    const cleanKode = item.kode_tp && item.kode_tp.startsWith(`${kelas}.`)
+      ? item.kode_tp
+      : `${kelas}.${bestIdx + 1}.${buckets[bestIdx].items.length + 1}`;
+
+    buckets[bestIdx].items.push({
+      kode_tp: cleanKode,
+      tp: item.tp,
+      materi_pokok: item.materi_pokok,
+      alokasi_waktu: item.alokasi_waktu
+    });
+  });
+
+  return buckets.map(b => ({
+    ...b,
+    lingkup_materi: Array.from(b.lingkup_materi)
+  }));
+}
+
+/**
+ * 4b. RENDER TABEL ALUR TUJUAN PEMBELAJARAN (ATP) MODEL REKAPITULASI ELEMEN CP
+ */
+export function renderAtpElemenTable(data, inputData = {}) {
+  const metadata = data.metadata || {};
+  const groups = groupAnalysisDataByElementsClient(data);
+  const jenjangKelas = metadata.kelas || inputData.jenjangKelas || '5';
+  const faseCode = metadata.fase ? metadata.fase.replace(/^Fase\s*/i, '').trim() : 'C';
+  const faseStr = `Fase ${faseCode}`;
+
+  let grandTotalJp = 0;
+  groups.forEach(g => { grandTotalJp += g.total_jp; });
+
+  let html = `
+    ${getKopSuratHtml()}
+
+    <div class="text-center mb-6">
+      <h2 class="text-xl font-black uppercase tracking-wide text-slate-950 font-serif">ALUR TUJUAN PEMBELAJARAN</h2>
+      <p class="text-xs font-bold text-slate-700 font-serif uppercase tracking-widest mt-0.5">KURIKULUM MERDEKA</p>
+    </div>
+
+    <div class="mb-5 max-w-xl">
+      <table class="w-full text-xs font-bold font-serif text-slate-900 border-collapse">
+        <tr><td class="py-0.5 w-44">SATUAN PENDIDIKAN</td><td>: ${escapeHtml(metadata.satuan_pendidikan || inputData.namaSekolah || '-')}</td></tr>
+        <tr><td class="py-0.5">MATA PELAJARAN</td><td>: ${escapeHtml(metadata.mata_pelajaran || inputData.mataPelajaran || '-')}</td></tr>
+        <tr><td class="py-0.5">FASE</td><td>: ${escapeHtml(faseCode)}</td></tr>
+        <tr><td class="py-0.5">KELAS</td><td>: ${escapeHtml(jenjangKelas)}</td></tr>
+        <tr><td class="py-0.5">TAHUN AJARAN</td><td>: ${escapeHtml(metadata.tahun_pembelajaran || inputData.tahunAjaran || '2026/2027')}</td></tr>
+      </table>
+    </div>
+
+    <p class="text-xs italic text-slate-800 font-serif mb-3">
+      Pada akhir ${escapeHtml(faseStr)}, murid memiliki kemampuan sebagai berikut:
+    </p>
+
+    <div class="overflow-x-auto mb-6">
+      <table class="w-full border-collapse border border-slate-900 text-xs font-serif text-slate-900">
+        <thead>
+          <tr class="bg-slate-100 font-bold text-center">
+            <th class="border border-slate-900 p-2 w-[4%]">NO.</th>
+            <th class="border border-slate-900 p-2 w-[13%]">ELEMEN</th>
+            <th class="border border-slate-900 p-2 w-[27%]">CAPAIAN PEMBELAJARAN</th>
+            <th class="border border-slate-900 p-2 w-[15%]">LINGKUP MATERI</th>
+            <th class="border border-slate-900 p-2 w-[33%]">TUJUAN PEMBELAJARAN</th>
+            <th class="border border-slate-900 p-2 w-[8%]">ALOKASI WAKTU</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  groups.forEach(group => {
+    const materiHtml = (group.lingkup_materi && group.lingkup_materi.length > 0)
+      ? group.lingkup_materi.map(m => `<div class="mb-1">• ${escapeHtml(m)}</div>`).join('')
+      : '-';
+
+    const tpHtml = (group.items && group.items.length > 0)
+      ? group.items.map(it => `
+          <div class="mb-2 text-justify">
+            <strong class="text-slate-950">${escapeHtml(it.kode_tp)}</strong> ${escapeHtml(it.tp)}
+          </div>
+        `).join('')
+      : '<div>Mencapai tujuan pembelajaran elemen ini.</div>';
+
+    html += `
+      <tr class="hover:bg-slate-50/50">
+        <td class="border border-slate-900 p-2 text-center align-top font-bold">${group.no}</td>
+        <td class="border border-slate-900 p-2.5 align-top font-bold text-slate-900">${escapeHtml(group.elemen)}</td>
+        <td class="border border-slate-900 p-2.5 align-top text-justify leading-relaxed">${escapeHtml(group.cp)}</td>
+        <td class="border border-slate-900 p-2.5 align-top">${materiHtml}</td>
+        <td class="border border-slate-900 p-2.5 align-top">${tpHtml}</td>
+        <td class="border border-slate-900 p-2 text-center align-top font-bold text-slate-900">${group.total_jp > 0 ? `${group.total_jp} JP` : '-'}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+        <tr class="bg-slate-50 font-bold">
+          <td colspan="5" class="border border-slate-900 p-2.5 text-right uppercase tracking-wider">
+            TOTAL ALOKASI WAKTU 1 TAHUN AJARAN:
+          </td>
+          <td class="border border-slate-900 p-2.5 text-center text-sm font-black text-slate-950">
+            ${grandTotalJp} JP
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  `;
+
+  const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2026/2027';
+  const titimangsa = getKaldikTitimangsa(tahunAjaran, 1);
+  html += getPengesahanHtml(inputData, titimangsa);
+
+  return html;
+}
+
+/**
+ * 4c. HELPER CLIENT: DATA DOKUMEN CAPAIAN PEMBELAJARAN RESMI
+ */
+export function getOfficialCpDocumentDataClient(mataPelajaran = 'Matematika', jenjangKelas = '5') {
+  const mapelLower = (mataPelajaran || '').toLowerCase();
+  const kNum = parseInt((String(jenjangKelas).match(/\d+/) || ['5'])[0], 10);
+  const fase = kNum <= 2 ? 'Fase A' : kNum <= 4 ? 'Fase B' : 'Fase C';
+
+  if (mapelLower.includes('pancasila') || mapelLower.includes('pkn')) {
+    return {
+      mata_pelajaran: 'Pendidikan Pancasila',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'Pendidikan Pancasila merupakan muatan pembelajaran strategis untuk menanamkan nilai-nilai luhur falsafah dasar negara, membina moralitas, konstitusionalisme, semangat kebangsaan, dan kebinekaan global bagi murid. Mata pelajaran ini berorientasi pada pembentukan karakter warga negara yang beriman, bertakwa kepada Tuhan Yang Maha Esa, berakhlak mulia, bergotong royong, mandiri, bernalar kritis, dan berjiwa patriotik.',
+      tujuan: [
+        'Menginternalisasi dan mengamalkan nilai-nilai Pancasila dalam kehidupan berkeluarga, bermasyarakat, berbangsa, dan bernegara.',
+        'Menumbuhkan kesadaran hukum dan kepatuhan terhadap norma, hak, dan kewajiban konstitusional warga negara berdasarkan UUD 1945.',
+        'Mengembangkan sikap toleransi, inklusivitas, dan penghargaan terhadap keragaman suku, agama, ras, dan antargolongan dalam bingkai Bhinneka Tunggal Ika.',
+        'Memperkokoh komitmen kebangsaan, rasa cinta tanah air, dan partisipasi aktif dalam menjaga keutuhan Negara Kesatuan Republik Indonesia.'
+      ],
+      karakteristik: 'Pendidikan Pancasila berorientasi pada pengamalan nilai nyata dan pembiasaan keteladanan (habituasi), mengedepankan pendekatan kontekstual dan reflektif melalui 4 (empat) pilar elemen esensial kebangsaan.',
+      elemen_deskripsi: [
+        { elemen: 'Pancasila', deskripsi: 'Membahas sejarah kelahiran, makna simbol, sila-sila, nilai-nilai dasar, dan pengamalan Pancasila sebagai pandangan hidup bangsa serta dasar negara.' },
+        { elemen: 'UUD Negara Republik Indonesia Tahun 1945', deskripsi: 'Membahas norma, aturan hidup bermasyarakat, hak dan kewajiban asasi warga negara, serta musyawarah mufakat dalam kehidupan sehari-hari.' },
+        { elemen: 'Bhinneka Tunggal Ika', deskripsi: 'Membahas identitas diri, apresiasi keragaman budaya, kearifan lokal, sikap saling menghargai, dan toleransi sosial.' },
+        { elemen: 'Negara Kesatuan Republik Indonesia', deskripsi: 'Membahas wilayah tempat tinggal, sekolah, daerah kabupaten/provinsi, gotong royong, persatuan, dan wujud bela negara.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Pada akhir Fase A, murid mengenal bendera negara, lagu kebangsaan, lambang Garuda Pancasila, simbol dan sila Pancasila di lingkungan keluarga; mengenal dan mematuhi aturan di rumah dan sekolah; menghargai identitas diri dan teman; serta bekerja sama menjaga lingkungan sekitar.'
+        : fase === 'Fase B'
+          ? 'Pada akhir Fase B, murid memahami makna sila-sila Pancasila dan penerapannya; mengidentifikasi serta melaksanakan aturan, hak, dan kewajiban di sekolah dan masyarakat; membedakan dan menghargai keragaman budaya dan suku; serta bekerja sama menjaga keutuhan lingkungan sekitar.'
+          : 'Pada akhir Fase C, murid memahami kronologi sejarah kelahiran Pancasila dan meneladani perumusnya; mengimplementasikan norma, hak, dan kewajiban serta musyawarah mufakat; melestarikan keberagaman budaya nasional; serta menunjukkan perilaku gotong royong menjaga keutuhan NKRI.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Pancasila', cp: fase === 'Fase A' ? 'Mengenal bendera negara, lagu kebangsaan, simbol dan sila-sila Pancasila dalam lambang negara Garuda Pancasila dan simbol Pancasila beserta sila-sila Pancasila; menerapkan nilai-nilai Pancasila di lingkungan keluarga.' : fase === 'Fase B' ? 'Mengidentifikasi makna sila-sila Pancasila, dan penerapannya dalam kehidupan sehari-hari; mengenal karakter para perumus Pancasila; menunjukkan sikap bangga menjadi anak Indonesia yang memiliki bahasa Indonesia sebagai bahasa persatuan di lingkungan sekitar.' : 'Memahami kronologi sejarah kelahiran Pancasila; meneladani sikap para perumus Pancasila dan menerapkan di lingkungan masyarakat; menghubungkan sila-sila dalam Pancasila sebagai suatu kesatuan yang utuh; menguraikan makna nilai-nilai Pancasila sebagai dasar negara, dan pandangan hidup bangsa.' },
+        { no: 2, elemen: 'UUD Negara Republik Indonesia Tahun 1945', cp: fase === 'Fase A' ? 'Mengenal aturan di lingkungan keluarga; menunjukkan dan menceritakan mematuhi aturan di lingkungan keluarga.' : fase === 'Fase B' ? 'Mengidentifikasi dan melaksanakan aturan di sekolah dan lingkungan tempat tinggal; mengidentifikasi dan menerapkan hak yang didapat dan kewajiban sebagai anggota keluarga dan sebagai warga sekolah.' : 'Mengimplementasikan bentuk-bentuk norma, hak, dan kewajiban dalam kedudukannya sebagai warga negara; mengenal Pembukaan UUD 1945; mempraktikkan musyawarah untuk membuat kesepakatan dan aturan bersama.' },
+        { no: 3, elemen: 'Bhinneka Tunggal Ika', cp: fase === 'Fase A' ? 'Mengenal semboyan Bhinneka Tunggal Ika; mengidentifikasi dan menghargai identitas dirinya sesuai dengan jenis kelamin, hobi, bahasa, serta agama dan kepercayaan di lingkungan sekitar.' : fase === 'Fase B' ? 'Membedakan dan menghargai identitas, keluarga, dan teman-temannya sesuai budaya, suku bangsa, bahasa, agama dan kepercayaannya di lingkungan sekitar.' : 'Menyajikan hasil identifikasi sikap menghormati, menjaga, dan melestarikan keberagaman budaya sesuai semboyan dalam bingkai Bhinneka Tunggal Ika di lingkungan sekitar.' },
+        { no: 4, elemen: 'Negara Kesatuan Republik Indonesia', cp: fase === 'Fase A' ? 'Mengenal karakteristik lingkungan tempat tinggal dan sekolah, sebagai bagian dari wilayah NKRI; menceritakan dan mempraktikkan bekerja sama menjaga lingkungan sekitar dalam keberagaman.' : fase === 'Fase B' ? 'Mengidentifikasi lingkungan tempat tinggal (RT, RW, desa atau kelurahan, dan kecamatan) sebagai bagian dari wilayah NKRI; menunjukkan perilaku bekerja sama dalam berbagai bentuk keberagaman suku bangsa, sosial, dan budaya di Indonesia.' : 'Mengenal wilayahnya dalam konteks kabupaten/kota, dan provinsi sebagai bagian dari wilayah NKRI; menunjukkan perilaku gotong royong untuk menjaga persatuan di lingkungan sekolah dan sekitar sebagai wujud bela negara.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('indonesia')) {
+    return {
+      mata_pelajaran: 'Bahasa Indonesia',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'Bahasa Indonesia adalah wahana utama untuk mengembangkan kecakapan berpikir kritis, bernalar kreatif, berkomunikasi santun, dan menumbuhkan kecintaan terhadap karya sastra serta identitas kebangsaan. Pembelajaran bahasa membekali murid dengan literasi multi-moda yang relevan untuk mengakses ilmu pengetahuan dan berkontribusi positif di masyarakat.',
+      tujuan: [
+        'Menumbuhkan kemahiran berbahasa Indonesia lisan dan tulis secara tepat, santun, efektif, dan percaya diri dalam berbagai konteks sosial.',
+        'Meningkatkan kemampuan literasi membaca, memirsa, dan bernalar analitis terhadap berbagai teks informatif dan sastra.',
+        'Mengembangkan keterampilan menulis secara kreatif, terstruktur, dan mematuhi kaidah kebahasaan yang baik.',
+        'Menghargai dan membudayakan karya sastra Indonesia sebagai warisan luhur nilai estetika dan kemanusiaan.'
+      ],
+      karakteristik: 'Pembelajaran Bahasa Indonesia berbasis teks multimodal yang integratif, mencakup 4 (empat) elemen reseptif dan produktif yang berkesinambungan.',
+      elemen_deskripsi: [
+        { elemen: 'Menyimak', deskripsi: 'Kemampuan memahami, memaknai, menginterpretasi, dan menganalisis informasi dan pesan dari teks aural (teks lisan yang dibacakan/didengarkan).' },
+        { elemen: 'Membaca dan Memirsa', deskripsi: 'Kemampuan melafalkan, memahami kosa kata baru, menemukan ide pokok dan pendukung, serta menganalisis teks tertulis dan visual multimodal.' },
+        { elemen: 'Berbicara dan Mempresentasikan', deskripsi: 'Kemampuan menyampaikan gagasan, pendapat, perasaan, dan tanggapan secara lisan dengan artikulasi, intonasi, dan gestur santun.' },
+        { elemen: 'Menulis', deskripsi: 'Kemampuan mengekspresikan gagasan, fakta, dan imajinasi ke dalam bentuk teks tulis dengan ejaan, tanda baca, dan struktur kalimat yang tepat.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Pada akhir Fase A, murid memiliki kemampuan berbahasa untuk berkomunikasi dan bernalar; memahami instruksi dan teks aural sederhana; membaca kata-kata sederhana dengan fasih; merespons pembicaraan secara santun; serta menulis permulaan dengan tulisan yang rapi dan benar.'
+        : fase === 'Fase B'
+          ? 'Pada akhir Fase B, murid memiliki kemampuan berbahasa untuk memahami ide pokok teks aural dan visual multimodal; menyajikan pendapat dengan intonasi dan pilihan kata santun; serta menulis teks narasi dan deskripsi sederhana dengan kosakata beragam dan ejaan yang tepat.'
+          : 'Pada akhir Fase C, murid memiliki kemampuan berbahasa untuk menganalisis teks sastra dan nonsastra aural/visual; mempresentasikan ide secara efektif; serta menulis berbagai jenis teks narasi, eksposisi, dan kreatif dengan kalimat kompleks dan kosakata konotatif/denotatif.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Menyimak', cp: fase === 'Fase A' ? 'Memahami informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan) berupa percakapan; dan memahami pesan teks sastra berbentuk teks aural.' : fase === 'Fase B' ? 'Memahami ide pokok suatu informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan); dan memahami isi teks sastra berbentuk teks aural.' : 'Menganalisis informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan); dan menganalisis isi teks sastra berbentuk teks aural.' },
+        { no: 2, elemen: 'Membaca dan Memirsa', cp: fase === 'Fase A' ? 'Membaca kata-kata sederhana dengan fasih dari bacaan/tayangan yang dipirsa; dan memahami isi bacaan/tayangan tentang diri, keluarga, dan lingkungan sekitar.' : fase === 'Fase B' ? 'Membaca kata-kata baru dengan fasih; dan memahami ide pokok, ide pendukung, pesan, dan informasi dalam teks sastra dan nonsastra cetak/elektronik.' : 'Membaca kata-kata dengan berbagai pola kombinasi huruf dengan fasih; dan menganalisis informasi serta nilai-nilai dalam teks sastra dan nonsastra berwujud visual/audiovisual.' },
+        { no: 3, elemen: 'Berbicara dan Mempresentasikan', cp: fase === 'Fase A' ? 'Merespons dengan bertanya, menjawab, dan menanggapi komentar orang lain dengan santun; mengungkapkan perasaan secara lisan dengan atau tanpa bantuan gambar; dan menceritakan kembali isi teks.' : fase === 'Fase B' ? 'Menyajikan pendapat dengan pilihan kata dan sikap tubuh/gestur yang sesuai, menggunakan volume dan intonasi tepat sesuai konteks; menanggapi diskusi sesuai tata cara.' : 'Mempresentasikan gagasan dari berbagai tipe teks dengan efektif dan santun; dan menyampaikan perasaan berdasarkan fakta/imajinasi secara indah dan menarik dalam bentuk teks sastra.' },
+        { no: 4, elemen: 'Menulis', cp: fase === 'Fase A' ? 'Menulis permulaan dengan benar di atas kertas/media digital; mengembangkan tulisan tangan yang semakin baik; dan menulis kalimat sederhana.' : fase === 'Fase B' ? 'Menulis berbagai tipe teks sederhana dengan rangkaian kalimat beragam; dan menggunakan kaidah kebahasaan dan kosakata baru ber-makna denotatif sesuai konteks.' : 'Menulis berbagai tipe teks sederhana berdasarkan gagasan, hasil pengamatan, pengalaman, dan/atau imajinasi dengan kalimat kompleks secara kreatif; serta menggunakan kaidah kebahasaan yang benar.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('ipas') || mapelLower.includes('ilmu pengetahuan alam') || mapelLower.includes('sains')) {
+    return {
+      mata_pelajaran: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+      fase: fase === 'Fase A' ? 'Fase B' : fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'IPAS merupakan integrasi holistik antara sains kealaman dan ilmu sosial yang dirancang untuk merawat rasa ingin tahu alami murid tentang dirinya, lingkungan fisik, ekosistem, sejarah peradaban, serta interaksi sosial-ekonomi. Pembelajaran IPAS melatih murid menjadi penyelidik cilik yang berwawasan ilmiah, peka terhadap kelestarian lingkungan, dan bangga akan warisan budaya nusantara.',
+      tujuan: [
+        'Menumbuhkan rasa ingin tahu, kecintaan terhadap alam, dan kepedulian sosial terhadap dinamika lingkungan tempat tinggal.',
+        'Memahami konsep esensial kealaman dan kemasyarakatan serta interaksi dinamis antara manusia dan ekosistem.',
+        'Mengembangkan keterampilan proses sains (inkuiri ilmiah): mengamati, memprediksi, merencanakan penyelidikan, menganalisis data, dan mengomunikasikan temuan.',
+        'Menumbuhkan kesadaran mitigasi bencana, pelestarian sumber daya alam, kearifan lokal, dan tanggung jawab sosial.'
+      ],
+      karakteristik: 'Pembelajaran IPAS menggabungkan dua elemen yang saling menopang: pemahaman konsep esensial dan keterampilan proses berbasis penyelidikan langsung (hands-on inquiry).',
+      elemen_deskripsi: [
+        { elemen: 'Pemahaman IPAS', deskripsi: 'Mencakup pemahaman konsep tentang anatomi dan kesehatan organ tubuh, ekosistem, energi, gelombang bunyi/cahaya, sistem tata surya, letak geografis, sejarah pahlawan, keanekaragaman budaya, dan kegiatan ekonomi.' },
+        { elemen: 'Keterampilan Proses', deskripsi: 'Mencakup kemampuan penyelidikan ilmiah yang meliputi: Mengamati; Mempertanyakan dan Memprediksi; Merencanakan dan Melakukan Penyelidikan; Memproses, Menganalisis Data dan Informasi; Mengevaluasi dan Refleksi; serta Mengomunikasikan Hasil.' }
+      ],
+      capaian_umum: fase === 'Fase B'
+        ? 'Pada akhir Fase B, murid mampu menjelaskan bentuk dan fungsi pancaindra, menganalisis siklus hidup makhluk hidup, wujud zat, energi, gaya; mengenali letak kabupaten/provinsi dengan peta; mengidentifikasi sejarah dan keragaman budaya lokal; menjelaskan pengelolaan keuangan secara bijak; serta menerapkan keterampilan proses inkuiri sains terpadu.'
+        : 'Pada akhir Fase C, murid merefleksikan sistem organ tubuh dan masa pubertas, hubungan ekosistem, gelombang bunyi dan cahaya, sistem tata surya, siklus air dan penghematan energi; menjelaskan letak geografis Indonesia; meninjau sejarah perjuangan pahlawan; memahami kearifan lokal dan ekonomi masyarakat; serta melakukan penyelidikan sains mandiri yang sistematis.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Pemahaman IPAS', cp: fase === 'Fase B' ? 'Menjelaskan bentuk dan fungsi pancaindra; menganalisis siklus hidup makhluk hidup dan pelestariannya; menghasilkan solusi pelestarian SDA; menyimpulkan proses perubahan wujud zat; menjelaskan sumber/bentuk energi dan gaya; mengenali letak kabupaten/provinsi dengan peta; mengklasifikasikan bentang alam dan kearifan lokal; serta menjelaskan nilai mata uang dan keuangan bijak.' : 'Merefleksikan sistem organ tubuh manusia dan pubertas; menganalisis hubungan antar komponen ekosistem; menjelaskan fenomena gelombang bunyi dan cahaya; menghasilkan upaya penghematan energi dan siklus air; menjelaskan sistem tata surya; menjelaskan letak geografis Indonesia dengan peta; meninjau sejarah pahlawan dan keragaman budaya; serta menerapkan kegiatan ekonomi masyarakat.' },
+        { no: 2, elemen: 'Keterampilan Proses', cp: 'Mampu menerapkan keterampilan proses sains yang meliputi: 1) Mengamati fenomena secara cermat; 2) Mempertanyakan dan memprediksi secara mandiri; 3) Merencanakan dan melakukan penyelidikan terpadu; 4) Memproses, menganalisis data, dan menemukan pola informasi; 5) Mengevaluasi dan refleksi hasil observasi; serta 6) Mengomunikasikan kesimpulan ilmiah secara lisan maupun tertulis.' }
+      ]
+    };
+  }
+
+  // Default: Matematika
+  return {
+    mata_pelajaran: 'Matematika',
+    fase,
+    kelas: jenjangKelas,
+    regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+    rasional: 'Matematika merupakan ilmu universal yang mendasari perkembangan sains, teknologi, dan kecakapan bernalar logis, sistematis, kritis, dan analitis. Melalui pembelajaran matematika, murid dibimbing membangun kepekaan numerik (number sense), pemecahan masalah (problem solving), dan penalaran matematis yang konkret hingga abstrak dalam kehidupan sehari-hari.',
+    tujuan: [
+      'Memahami konsep matematis, operasi hitung, dan hubungan antar-konsep secara mendalam dan fleksibel.',
+      'Menggunakan penalaran matematis pada pola, representasi data, dan hubungan spasial untuk menyusun argumen logis.',
+      'Menyelesaikan masalah kontekstual nyata melalui permodelan matematis yang tepat dan efisien.',
+      'Menumbuhkan sikap pantang menyerah, teliti, apresiatif, dan percaya diri terhadap kegunaan matematika.'
+    ],
+    karakteristik: 'Pembelajaran Matematika disajikan secara hierarkis dan spiral melalui peragaan konkret, semi-konkret (gambar), hingga simbolis abstrak yang mencakup 5 (lima) elemen utama.',
+    elemen_deskripsi: [
+      { elemen: 'Bilangan', deskripsi: 'Membahas konsep dan intuisi bilangan cacah, pecahan, desimal, operasi hitung penjumlahan, pengurangan, perkalian, pembagian, serta KPK dan FPB.' },
+      { elemen: 'Aljabar', deskripsi: 'Membahas pola gambar/objek, kalimat matematika, persamaan sederhana, rasio, proporsi, dan penalaran aljabar pemecahan masalah.' },
+      { elemen: 'Pengukuran', deskripsi: 'Membahas satuan baku dan tidak baku untuk panjang, berat, luas, volume, durasi waktu, serta besar sudut.' },
+      { elemen: 'Geometri', deskripsi: 'Membahas karakteristik bangun datar, bangun ruang, visualisasi spasial, komposisi, dekomposisi, serta sistem posisi berpetak.' },
+      { elemen: 'Analisis Data dan Peluang', deskripsi: 'Membahas pengumpulan, pengorganisasian, penyajian data (tabel, diagram batang, piktogram), interpretasi data, dan peluang percobaan sederhana.' }
+    ],
+    capaian_umum: fase === 'Fase A'
+      ? 'Pada akhir Fase A, murid memiliki intuisi bilangan cacah sampai 100, melakukan operasi tambah/kurang benda konkret sampai 20; mengenal pola bukan bilangan; membandingkan panjang, berat, dan durasi waktu; mengenal bangun datar dan bangun ruang; serta menyajikan data menggunakan turus dan piktogram.'
+      : fase === 'Fase B'
+        ? 'Pada akhir Fase B, murid menguasai bilangan cacah sampai 10.000, operasi hitung dasar, pecahan senilai dan desimal; menemukan nilai yang belum diketahui dalam pola; mengukur panjang, berat, luas, dan volume dengan satuan baku; mendeskripsikan sifat bangun datar; serta menginterpretasi diagram batang.'
+        : 'Pada akhir Fase C, murid menguasai bilangan cacah sampai 1.000.000, pecahan campuran, perbandingan dan rasio; bernalar proporsional; menghitung keliling dan luas bangun datar serta sudut; mengonstruksi bangun ruang dan visualisasi spasial; serta menganalisis diagram batang, tabel frekuensi, dan peluang sederhana.',
+    capaian_elemen: [
+      { no: 1, elemen: 'Bilangan', cp: fase === 'Fase A' ? 'Menunjukkan pemahaman dan memiliki intuisi bilangan (number sense) pada bilangan cacah sampai 100; membaca, menulis, menentukan nilai tempat, membandingkan, mengurutkan, serta melakukan komposisi dan dekomposisi bilangan; melakukan operasi penjumlahan dan pengurangan menggunakan benda konkret sampai 20; dan mengenal pecahan setengah dan seperempat.' : fase === 'Fase B' ? 'Memiliki pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 10.000; membaca, menulis, membandingkan, menentukan nilai tempat; menyelesaikan masalah operasi hitung sampai 1.000; operasi perkalian dan pembagian sampai 100; perbandingan pecahan dan desimal.' : 'Menunjukkan pemahaman dan intuisi bilangan pada bilangan cacah sampai 1.000.000; menyelesaikan masalah uang, KPK dan FPB; operasi hitung pecahan biasa, campuran, dan desimal.' },
+      { no: 2, elemen: 'Aljabar', cp: fase === 'Fase A' ? 'Menunjukkan pemahaman makna simbol matematika "=" dalam kalimat matematika penjumlahan dan pengurangan bilangan cacah sampai 20 menggunakan gambar; mengenali, meniru, dan melanjutkan pola bukan bilangan.' : fase === 'Fase B' ? 'Menemukan nilai yang tidak diketahui dalam kalimat matematika penjumlahan dan pengurangan bilangan cacah sampai 100; mengidentifikasi dan mengembangkan pola gambar serta pola bilangan membesar/mengecil.' : 'Menemukan nilai belum diketahui dalam kalimat matematika sampai 1000; mengembangkan pola bilangan; bernalar secara proporsional dan menyelesaikan masalah perbandingan rasio satuan.' },
+      { no: 3, elemen: 'Pengukuran', cp: fase === 'Fase A' ? 'Membandingkan panjang dan berat benda secara langsung, membandingkan durasi waktu; mengukur dan mengestimasi panjang dan berat menggunakan satuan tidak baku.' : fase === 'Fase B' ? 'Mengukur panjang dan berat benda menggunakan satuan baku (cm, m, g, kg); mengukur dan mengestimasi luas dan volume menggunakan satuan tidak baku dan satuan baku.' : 'Menentukan keliling dan luas berbagai bentuk bangun datar (segitiga, segiempat, segi banyak) serta gabungannya; menghitung durasi waktu dan mengukur besar sudut.' },
+      { no: 4, elemen: 'Geometri', cp: fase === 'Fase A' ? 'Mengenal berbagai bangun datar (segitiga, segiempat, lingkaran) dan bangun ruang (balok, kubus, kerucut, bola); melakukan komposisi dan dekomposisi bangun datar; menentukan posisi benda.' : fase === 'Fase B' ? 'Mendeskripsikan ciri berbagai bentuk bangun datar (segiempat, segitiga, segi banyak); menyusun dan mengurai berbagai bangun datar dengan lebih dari satu cara.' : 'Mengonstruksi dan mengurai bangun ruang (kubus, balok, gabungannya); mengenali visualisasi spasial; membandingkan karakteristik bangun ruang; menentukan lokasi pada sistem koordinat berpetak.' },
+      { no: 5, elemen: 'Analisis Data dan Peluang', cp: fase === 'Fase A' ? 'Mengurutkan, menyortir, mengelompokkan, membandingkan, dan menyajikan data dari banyak benda menggunakan turus dan piktogram paling banyak 4 kategori.' : fase === 'Fase B' ? 'Mengurutkan, membandingkan, menyajikan, menganalisis dan menginterpretasi data dalam bentuk tabel, diagram gambar, piktogram, dan diagram batang skala satu satuan.' : 'Mengurutkan, membandingkan, menyajikan, dan menganalisis data dalam bentuk gambar, diagram batang, tabel frekuensi; menentukan peluang kejadian sederhana dalam percobaan acak.' }
+    ]
+  };
+}
+
+/**
+ * 4d. RENDER DOKUMEN CAPAIAN PEMBELAJARAN (CP) AWAL RESMI
+ */
+export function renderDataCpView(data, inputData = {}) {
+  const metadata = data?.metadata || {};
+  const mapel = metadata.mata_pelajaran || inputData?.mataPelajaran || 'Matematika';
+  const jenjangKelas = metadata.kelas || inputData?.jenjangKelas || '5';
+  
+  const cpDoc = getOfficialCpDocumentDataClient(mapel, jenjangKelas);
+
+  let html = `
+    ${getKopSuratHtml()}
+
+    <div class="text-center mb-6">
+      <div class="inline-block px-3 py-1 mb-2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10.5px] font-black tracking-wider uppercase font-sans shadow-2xs">
+        <i class="fas fa-certificate text-emerald-600 mr-1"></i> DOKUMEN RESMI KURIKULUM MERDEKA - ${escapeHtml(cpDoc.regulasi)}
+      </div>
+      <h2 class="text-xl font-black uppercase tracking-wide text-slate-950 font-serif">CAPAIAN PEMBELAJARAN (CP)</h2>
+      <p class="text-xs font-bold text-slate-700 font-serif uppercase tracking-widest mt-0.5">
+        MATA PELAJARAN: ${escapeHtml(mapel.toUpperCase())} &bull; ${escapeHtml(cpDoc.fase.toUpperCase())}
+      </p>
+    </div>
+
+    <!-- Identitas Dokumen -->
+    <div class="mb-6 p-4 rounded-xl border border-slate-300 bg-slate-50/70">
+      <table class="w-full text-xs font-bold font-serif text-slate-900 border-collapse">
+        <tr><td class="py-1 w-48 text-slate-600">SATUAN PENDIDIKAN</td><td>: ${escapeHtml(metadata.satuan_pendidikan || inputData.namaSekolah || '-')}</td></tr>
+        <tr><td class="py-1 text-slate-600">MATA PELAJARAN</td><td>: ${escapeHtml(mapel)}</td></tr>
+        <tr><td class="py-1 text-slate-600">FASE / KELAS</td><td>: ${escapeHtml(cpDoc.fase)} / Kelas ${escapeHtml(jenjangKelas)}</td></tr>
+        <tr><td class="py-1 text-slate-600">TAHUN AJARAN</td><td>: ${escapeHtml(metadata.tahun_pembelajaran || inputData.tahunAjaran || '2025/2026')}</td></tr>
+        <tr><td class="py-1 text-slate-600">DASAR REGULASI</td><td>: ${escapeHtml(cpDoc.regulasi)}</td></tr>
+      </table>
+    </div>
+
+    <!-- I. Rasional Mata Pelajaran -->
+    <div class="mb-6">
+      <h3 class="text-sm font-black font-serif uppercase tracking-wider text-slate-950 mb-2 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-slate-900 text-white flex items-center justify-center text-xs font-bold font-sans">I</span>
+        <span>RASIONAL MATA PELAJARAN</span>
+      </h3>
+      <div class="p-4 rounded-xl border border-slate-200 bg-white font-serif text-xs text-slate-800 leading-relaxed text-justify" contenteditable="true" data-field="cp_rasional">
+        ${escapeHtml(cpDoc.rasional)}
+      </div>
+    </div>
+
+    <!-- II. Tujuan Belajar Mata Pelajaran -->
+    <div class="mb-6">
+      <h3 class="text-sm font-black font-serif uppercase tracking-wider text-slate-950 mb-2 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-slate-900 text-white flex items-center justify-center text-xs font-bold font-sans">II</span>
+        <span>TUJUAN BELAJAR MATA PELAJARAN</span>
+      </h3>
+      <div class="p-4 rounded-xl border border-slate-200 bg-white font-serif text-xs text-slate-800 leading-relaxed space-y-2" contenteditable="true" data-field="cp_tujuan">
+        ${cpDoc.tujuan.map((t, idx) => `
+          <div class="flex items-start gap-2">
+            <span class="font-bold">${idx + 1}.</span>
+            <span class="text-justify">${escapeHtml(t)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- III. Karakteristik & Elemen -->
+    <div class="mb-6">
+      <h3 class="text-sm font-black font-serif uppercase tracking-wider text-slate-950 mb-2 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-slate-900 text-white flex items-center justify-center text-xs font-bold font-sans">III</span>
+        <span>KARAKTERISTIK MATA PELAJARAN & RUANG LINGKUP ELEMEN</span>
+      </h3>
+      <p class="font-serif text-xs text-slate-800 leading-relaxed text-justify mb-3 p-3 bg-white rounded-xl border border-slate-200" contenteditable="true" data-field="cp_karakteristik">
+        ${escapeHtml(cpDoc.karakteristik)}
+      </p>
+
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-slate-900 text-xs font-serif text-slate-900 mb-2">
+          <thead>
+            <tr class="bg-slate-100 font-bold text-center">
+              <th class="border border-slate-900 p-2.5 w-[30%]">ELEMEN</th>
+              <th class="border border-slate-900 p-2.5 w-[70%]">DESKRIPSI RUANG LINGKUP</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cpDoc.elemen_deskripsi.map(el => `
+              <tr>
+                <td class="border border-slate-900 p-2.5 font-bold align-top bg-slate-50/50">${escapeHtml(el.elemen)}</td>
+                <td class="border border-slate-900 p-2.5 align-top text-justify leading-relaxed">${escapeHtml(el.deskripsi)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- IV. Capaian Pembelajaran Fase -->
+    <div class="mb-6">
+      <h3 class="text-sm font-black font-serif uppercase tracking-wider text-slate-950 mb-2 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-slate-900 text-white flex items-center justify-center text-xs font-bold font-sans">IV</span>
+        <span>CAPAIAN PEMBELAJARAN ${escapeHtml(cpDoc.fase.toUpperCase())}</span>
+      </h3>
+
+      <div class="mb-4">
+        <h4 class="text-xs font-bold font-serif text-slate-900 mb-1">A. Capaian Pembelajaran Umum Akhir Fase</h4>
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-emerald-50/30 font-serif text-xs text-slate-800 italic leading-relaxed text-justify" contenteditable="true" data-field="cp_umum">
+          ${escapeHtml(cpDoc.capaian_umum)}
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold font-serif text-slate-900 mb-2">B. Capaian Pembelajaran Berdasarkan Elemen</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse border border-slate-900 text-xs font-serif text-slate-900">
+            <thead>
+              <tr class="bg-slate-100 font-bold text-center">
+                <th class="border border-slate-900 p-2.5 w-[6%]">NO.</th>
+                <th class="border border-slate-900 p-2.5 w-[26%]">ELEMEN</th>
+                <th class="border border-slate-900 p-2.5 w-[68%]">CAPAIAN PEMBELAJARAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${cpDoc.capaian_elemen.map(item => `
+                <tr class="hover:bg-slate-50/60">
+                  <td class="border border-slate-900 p-2.5 text-center font-bold align-top">${item.no}</td>
+                  <td class="border border-slate-900 p-2.5 font-bold align-top text-slate-950 bg-slate-50/40">${escapeHtml(item.elemen)}</td>
+                  <td class="border border-slate-900 p-2.5 align-top text-justify leading-relaxed" contenteditable="true" data-field="cp_elemen_${item.no}">${escapeHtml(item.cp)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const tahunAjaran = metadata.tahun_pembelajaran || inputData?.tahunAjaran || '2025/2026';
+  const titimangsa = getKaldikTitimangsa(tahunAjaran, 1);
+  html += getPengesahanHtml(inputData, titimangsa);
+
+  return html;
+}
+
+/**
+ * 5. MASTER CANVAS DISPATCHER (5-in-1 Output Engine)
  */
 export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'analisis', activePromesSemester = 'all', onSemesterFilterChange = null) {
   const canvas = document.getElementById('analisis-canvas');
@@ -1190,10 +1736,12 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
   // Update download button label
   const downloadLabel = document.getElementById('btn-download-docx-label');
   if (downloadLabel) {
-    if (activeAnalysisTab === 'prota') downloadLabel.innerText = 'Unduh Word Prota';
+    if (activeAnalysisTab === 'data-cp') downloadLabel.innerText = 'Unduh Word Data CP';
+    else if (activeAnalysisTab === 'prota') downloadLabel.innerText = 'Unduh Word Prota';
     else if (activeAnalysisTab === 'promes') downloadLabel.innerText = 'Unduh Word Promes';
     else if (activeAnalysisTab === 'rpe') downloadLabel.innerText = 'Unduh Word RPE';
     else if (activeAnalysisTab === 'kktp') downloadLabel.innerText = 'Unduh Word KKTP';
+    else if (activeAnalysisTab === 'atp-elemen') downloadLabel.innerText = 'Unduh Word ATP (Elemen)';
     else downloadLabel.innerText = 'Unduh Word Analisis CP';
   }
 
@@ -1262,7 +1810,9 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
 
   let contentHtml = '';
   try {
-    if (activeAnalysisTab === 'prota') {
+    if (activeAnalysisTab === 'data-cp') {
+      contentHtml = renderDataCpView(data, inputData);
+    } else if (activeAnalysisTab === 'prota') {
       contentHtml = renderProtaTable(data, inputData);
     } else if (activeAnalysisTab === 'promes') {
       contentHtml = renderPromesTable(data, inputData, activePromesSemester);
@@ -1270,6 +1820,8 @@ export function renderAnalysisCanvas(data, inputData, activeAnalysisTab = 'anali
       contentHtml = renderRpeTable(data, inputData, activePromesSemester);
     } else if (activeAnalysisTab === 'kktp') {
       contentHtml = renderKktpTable(data, inputData, activePromesSemester);
+    } else if (activeAnalysisTab === 'atp-elemen') {
+      contentHtml = renderAtpElemenTable(data, inputData);
     } else {
       contentHtml = renderAnalisisTable(data, inputData);
     }
@@ -1361,7 +1913,9 @@ export function syncCanvasToAnalysisData(analysisData) {
       const rawIndices = el.dataset.babIndices;
       if (rawIndices) {
         const indices = rawIndices.split(',').map(n => Number(n.trim())).filter(n => !isNaN(n));
-        indices.forEach(bIdx => {
+        // Hanya sinkronkan jika elemen ini menargetkan tepat 1 bab (jangan pernah menimpa banyak bab secara massal)
+        if (indices.length === 1) {
+          const bIdx = indices[0];
           if (targetSem.babs?.[bIdx]) {
             const orig = targetSem.babs[bIdx].cp || '';
             const elMatch = orig.match(/^(\[[^\]]+\]\s*|(?:Elemen\s*[^:\n]+|[^:\n]{3,35}):\s*)/i);
@@ -1371,7 +1925,7 @@ export function syncCanvasToAnalysisData(analysisData) {
               targetSem.babs[bIdx].cp = val;
             }
           }
-        });
+        }
       } else {
         targetBab.cp = val;
       }

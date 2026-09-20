@@ -12,6 +12,11 @@ export async function downloadProgramDocx(programData) {
     return;
   }
 
+  // Khusus Kalender Pendidikan bukan dokumen program BAB I-V, langsung arahkan ke Excel
+  if (programData.metadata?.template_id === 'kalender-sekolah' || programData.metadata?.is_excel_only) {
+    return downloadKaldikExcel(programData);
+  }
+
   showLoading('Menyiapkan file Microsoft Word (DOCX)...');
 
   try {

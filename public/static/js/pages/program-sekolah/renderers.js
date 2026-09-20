@@ -13,6 +13,11 @@ export function renderProgramCanvas(data, activeTab = 'all') {
     </div>`;
   }
 
+  // Khusus Kalender Pendidikan: bukan dokumen program BAB I-V, tampilkan pratinjau khusus spreadsheet Excel
+  if (data.metadata?.template_id === 'kalender-sekolah' || data.metadata?.is_excel_only) {
+    return renderKaldikExcelCanvas(data, activeTab);
+  }
+
   const meta = data.metadata || {};
   const kota = meta.kota || 'Purwakarta';
   const tahun = meta.tahun_ajaran ? meta.tahun_ajaran.split('/')[0] : '2025';
@@ -70,6 +75,275 @@ export function renderProgramCanvas(data, activeTab = 'all') {
         ${(activeTab === 'all' || activeTab === 'bab') ? renderBab5(data.bab_5_penutup) : ''}
 
         ${(activeTab === 'all' || activeTab === 'lampiran') ? renderLampiran(data, meta, tahun) : ''}
+
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
+// KHUSUS KALENDER PENDIDIKAN: FORMAT SPREADSHEET EXCEL (.XLSX) TANPA BAB I-V
+// ============================================================================
+function renderKaldikExcelCanvas(data, activeTab = 'all') {
+  const meta = data.metadata || {};
+  const namaSekolah = meta.nama_sekolah || 'SD NEGERI 1 WANAYASA';
+  const kota = meta.kota || 'Purwakarta';
+  const tahunAjaran = meta.tahun_ajaran || '2026/2027';
+  const npsn = meta.npsn || '20205869';
+  const alamat = meta.alamat_sekolah || meta.alamat || `Kecamatan Wanayasa, Kabupaten ${kota}`;
+  const kepalaSekolah = meta.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.';
+  const nipKs = meta.nip_kepala_sekolah || '19760314 200501 2 006';
+
+  const agendaGasal = [
+    { no: 1, tanggal: '13 - 15 Juli 2026', uraian: 'Hari Pertama Masuk Sekolah & Masa Pengenalan Lingkungan Sekolah (MPLS)' },
+    { no: 2, tanggal: '20 Juli 2026', uraian: 'Peringatan Hari Jadi Purwakarta (HJP) ke-195 & Kabupaten ke-58' },
+    { no: 3, tanggal: '17 Agustus 2026', uraian: 'Upacara HUT Kemerdekaan Republik Indonesia ke-81' },
+    { no: 4, tanggal: '25 Agustus 2026', uraian: 'Peringatan Maulid Nabi Muhammad SAW 1448 H (12 Rabiul Awal 1448 H)' },
+    { no: 5, tanggal: '21 - 26 September 2026', uraian: 'Pelaksanaan Sumatif Tengah Semester (STS) Gasal' },
+    { no: 6, tanggal: '30 Nov - 5 Des 2026', uraian: 'Pelaksanaan Sumatif Akhir Semester (SAS) Gasal' },
+    { no: 7, tanggal: '18 / 19 Desember 2026', uraian: 'Penyerahan Buku Laporan Hasil Belajar (Rapor) Semester Gasal' },
+    { no: 8, tanggal: '21 Des 2026 - 2 Jan 2027', uraian: 'Libur Pembelajaran Akhir Semester Gasal' }
+  ];
+
+  const agendaGenap = [
+    { no: 1, tanggal: '4 Januari 2027', uraian: 'Hari Pertama Masuk Sekolah Semester Genap' },
+    { no: 2, tanggal: '5 Februari 2027', uraian: 'Peringatan Isra Mi\'raj Nabi Muhammad SAW (Rajaban / 27 Rajab 1448 H)' },
+    { no: 3, tanggal: '11 Feb - 5 Maret 2027', uraian: 'Program Pembiasaan Masantren di Sakola Ramadhan 1448 H' },
+    { no: 4, tanggal: '8 - 13 Maret 2027', uraian: 'Pelaksanaan Sumatif Tengah Semester (STS) Genap' },
+    { no: 5, tanggal: '15 - 20 Maret 2027', uraian: 'Libur Hari Raya Idul Fitri 1448 H & Cuti Bersama' },
+    { no: 6, tanggal: '3 - 8 Mei 2027', uraian: 'Pelaksanaan Asesmen Sumatif Akhir Jenjang (PSAJ) Kelas 6 SD' },
+    { no: 7, tanggal: '17 Mei 2027', uraian: 'Hari Raya Idul Adha 1448 H (10 Dzulhijjah 1448 H)' },
+    { no: 8, tanggal: '7 - 12 Juni 2027', uraian: 'Pelaksanaan Asesmen Sumatif Akhir Tahun (ASAT) Kelas 1 s.d. 5' },
+    { no: 9, tanggal: '16 Juni 2027', uraian: 'Peringatan Tahun Baru Islam 1449 H (1 Muharram 1449 H)' },
+    { no: 10, tanggal: '25 / 26 Juni 2027', uraian: 'Penyerahan Rapor Kenaikan Kelas & Kelulusan' },
+    { no: 11, tanggal: '28 Juni - 10 Juli 2027', uraian: 'Libur Akhir Tahun Ajaran 2026/2027' }
+  ];
+
+  return `
+    <div class="program-document-wrapper bg-white shadow-xl border border-slate-200/90 rounded-2xl overflow-hidden print:border-0 print:shadow-none">
+      
+      <!-- Toolbar Navigation Tabs (Khusus Kalender: Tanpa BAB I-V) -->
+      <div class="no-print bg-slate-50 border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
+          <button type="button" onclick="window.switchProgramTab('all')" 
+            class="px-3.5 py-1.5 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+            <i class="fa-solid fa-file-excel text-emerald-600 mr-1.5"></i>Pratinjau Spreadsheet
+          </button>
+          <button type="button" onclick="window.switchProgramTab('tanggal')" 
+            class="px-3.5 py-1.5 rounded-lg transition-all ${activeTab === 'tanggal' ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+            <i class="fa-solid fa-calendar-check text-emerald-600 mr-1.5"></i>Tanggal Penting
+          </button>
+          <button type="button" onclick="window.switchProgramTab('rekap')" 
+            class="px-3.5 py-1.5 rounded-lg transition-all ${activeTab === 'rekap' ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}">
+            <i class="fa-solid fa-chart-simple text-emerald-600 mr-1.5"></i>Rekapitulasi HK & HE
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs font-medium">
+          <button type="button" onclick="window.downloadKaldikExcel && window.downloadKaldikExcel()"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-file-excel text-sm"></i>
+            <span>Unduh Kalender (Excel .xlsx)</span>
+          </button>
+          <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-1.5 rounded-md border border-emerald-200 text-[11px]">
+            <i class="fa-solid fa-check-double text-emerald-600"></i> Dokumen Format Excel 3-Sheet
+          </span>
+        </div>
+      </div>
+
+      <!-- Canvas Body (A4 Paper emulation with serif typography & justified alignment) -->
+      <div id="program-canvas-content" class="p-8 sm:p-14 font-serif text-slate-900 leading-relaxed text-[14px] bg-white min-h-screen select-text" 
+           style="font-family: 'Times New Roman', Times, serif;">
+        
+        <!-- KOP SURAT RESMI SEKOLAH -->
+        <div class="border-b-4 border-double border-slate-900 pb-4 mb-8 text-center">
+          <p class="text-xs sm:text-sm font-bold tracking-widest uppercase text-slate-700 leading-tight">PEMERINTAH DAERAH KABUPATEN PURWAKARTA</p>
+          <p class="text-xs sm:text-sm font-bold tracking-wider uppercase text-slate-700 leading-tight">DINAS PENDIDIKAN</p>
+          <h2 class="text-lg sm:text-xl font-black uppercase tracking-wide text-slate-900 mt-1 leading-snug">${namaSekolah}</h2>
+          <p class="text-[11px] sm:text-xs text-slate-600 mt-0.5">${alamat} • NPSN: ${npsn}</p>
+        </div>
+
+        <!-- JUDUL KALENDER PENDIDIKAN -->
+        <div class="text-center mb-8">
+          <h1 class="text-xl sm:text-2xl font-black uppercase tracking-wide text-slate-900 mb-1">
+            KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP)
+          </h1>
+          <p class="text-sm font-bold text-slate-700">TAHUN AJARAN ${tahunAjaran}</p>
+          <div class="inline-flex items-center gap-2 mt-2 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-sans font-semibold">
+            <i class="fa-solid fa-file-excel text-emerald-600"></i>
+            <span>Format Microsoft Excel (.xlsx) • Acuan Kaldik Madrasah Pendis (3 Sheet Lengkap)</span>
+          </div>
+        </div>
+
+        <!-- ELEGANT EXCEL 3-SHEET OVERVIEW SHOWCASE -->
+        <div class="no-print mb-8 font-sans">
+          <div class="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-6 rounded-2xl shadow-md border border-emerald-500/30">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/15">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-2xl shrink-0">
+                  <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-white text-base">Spreadsheet Kalender Pendidikan Siap Digunakan</h3>
+                  <p class="text-xs text-emerald-200">File telah disesuaikan secara otomatis dengan KOP Surat resmi ${namaSekolah}.</p>
+                </div>
+              </div>
+              <button type="button" onclick="window.downloadKaldikExcel && window.downloadKaldikExcel()"
+                      class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer">
+                <i class="fa-solid fa-download"></i>
+                <span>Unduh File Excel (.xlsx)</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-white/10 hover:bg-white/15 border border-white/10 p-3.5 rounded-xl backdrop-blur-xs transition-all">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-400 text-slate-950 text-xs font-black flex items-center justify-center">1</span>
+                  <h4 class="font-bold text-xs text-white">Sheet 1: Tanggal Penting</h4>
+                </div>
+                <p class="text-[11px] text-emerald-100/80 leading-relaxed">
+                  Daftar agenda lengkap Semester Gasal & Genap: MPLS, STS/SAS, PSAJ, Libur Semester, Idul Fitri & Ramadhan.
+                </p>
+              </div>
+
+              <div class="bg-white/10 hover:bg-white/15 border border-white/10 p-3.5 rounded-xl backdrop-blur-xs transition-all">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-400 text-slate-950 text-xs font-black flex items-center justify-center">2</span>
+                  <h4 class="font-bold text-xs text-white">Sheet 2: Kalender Pendidikan</h4>
+                </div>
+                <p class="text-[11px] text-emerald-100/80 leading-relaxed">
+                  Matriks 12 Bulan Landscape (4x3 grid) dengan header hijau tua (#006600), font kuning tebal, hari Minggu merah, dan kode warna acara.
+                </p>
+              </div>
+
+              <div class="bg-white/10 hover:bg-white/15 border border-white/10 p-3.5 rounded-xl backdrop-blur-xs transition-all">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-400 text-slate-950 text-xs font-black flex items-center justify-center">3</span>
+                  <h4 class="font-bold text-xs text-white">Sheet 3: Kaldik Portrait</h4>
+                </div>
+                <p class="text-[11px] text-emerald-100/80 leading-relaxed">
+                  Format vertikal 2 kolom per semester dengan statistik Hari Kalender (HK) & Hari Efektif (HE) di bawah tiap bulan.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${(activeTab === 'all' || activeTab === 'tanggal') ? `
+          <!-- TABEL TANGGAL PENTING: SEMESTER GASAL -->
+          <div class="mb-8">
+            <h3 class="font-bold text-sm text-slate-900 uppercase tracking-wide mb-2 pb-1 border-b border-slate-300">
+              A. DAFTAR TANGGAL PENTING SEMESTER GASAL (GANJIL) TAHUN AJARAN ${tahunAjaran}
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse border border-slate-400">
+                <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-400">
+                  <tr>
+                    <th class="p-2 border-r border-slate-400 w-10 text-center">No</th>
+                    <th class="p-2 border-r border-slate-400 w-48 text-center">Hari / Tanggal</th>
+                    <th class="p-2">Uraian Kegiatan / Agenda Pendidikan</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-300">
+                  ${agendaGasal.map(item => `
+                    <tr class="hover:bg-slate-50">
+                      <td class="p-2 border-r border-slate-300 text-center font-mono">${item.no}</td>
+                      <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">${item.tanggal}</td>
+                      <td class="p-2 text-slate-800">${item.uraian}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TABEL TANGGAL PENTING: SEMESTER GENAP -->
+          <div class="mb-8">
+            <h3 class="font-bold text-sm text-slate-900 uppercase tracking-wide mb-2 pb-1 border-b border-slate-300">
+              B. DAFTAR TANGGAL PENTING SEMESTER GENAP TAHUN AJARAN ${tahunAjaran}
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse border border-slate-400">
+                <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-400">
+                  <tr>
+                    <th class="p-2 border-r border-slate-400 w-10 text-center">No</th>
+                    <th class="p-2 border-r border-slate-400 w-48 text-center">Hari / Tanggal</th>
+                    <th class="p-2">Uraian Kegiatan / Agenda Pendidikan</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-300">
+                  ${agendaGenap.map(item => `
+                    <tr class="hover:bg-slate-50">
+                      <td class="p-2 border-r border-slate-300 text-center font-mono">${item.no}</td>
+                      <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">${item.tanggal}</td>
+                      <td class="p-2 text-slate-800">${item.uraian}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        ${(activeTab === 'all' || activeTab === 'rekap') ? `
+          <!-- TABEL REKAPITULASI ALOKASI WAKTU (RPE) -->
+          <div class="mb-10">
+            <h3 class="font-bold text-sm text-slate-900 uppercase tracking-wide mb-2 pb-1 border-b border-slate-300">
+              C. REKAPITULASI ALOKASI PEKAN EFEKTIF BELAJAR (RPE)
+            </h3>
+            <p class="text-xs text-slate-600 mb-3">
+              Perhitungan alokasi waktu efektif berdasarkan Permendikdasmen No. 13 Tahun 2025 (Standar Nasional 36 Pekan Efektif per Tahun Ajaran):
+            </p>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse border border-slate-400">
+                <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-400">
+                  <tr>
+                    <th class="p-2 border-r border-slate-400 text-center">Semester</th>
+                    <th class="p-2 border-r border-slate-400 text-center">Jumlah Pekan Kalender</th>
+                    <th class="p-2 border-r border-slate-400 text-center">Pekan Tidak Efektif</th>
+                    <th class="p-2 border-r border-slate-400 text-center font-bold text-emerald-800">Pekan Efektif Belajar</th>
+                    <th class="p-2 text-center font-bold text-slate-800">Keterangan Standar</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-300 text-center">
+                  <tr>
+                    <td class="p-2.5 border-r border-slate-300 font-bold text-slate-900">Semester Gasal (Ganjil)</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono">26 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono">8 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono font-bold text-emerald-700 bg-emerald-50">18 Pekan</td>
+                    <td class="p-2.5 text-slate-600 text-xs">Memenuhi Standar Kurikulum</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 border-r border-slate-300 font-bold text-slate-900">Semester Genap</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono">26 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono">8 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-300 font-mono font-bold text-emerald-700 bg-emerald-50">18 Pekan</td>
+                    <td class="p-2.5 text-slate-600 text-xs">Memenuhi Standar Kurikulum</td>
+                  </tr>
+                  <tr class="bg-slate-100 font-bold">
+                    <td class="p-2.5 border-r border-slate-400 text-slate-900">Jumlah Total 1 Tahun</td>
+                    <td class="p-2.5 border-r border-slate-400 font-mono">52 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-400 font-mono">16 Pekan</td>
+                    <td class="p-2.5 border-r border-slate-400 font-mono text-emerald-800 bg-emerald-100">36 Pekan Efektif</td>
+                    <td class="p-2.5 text-emerald-800">100% Sesuai Standar BSKAP</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- PENGESAHAN RESMI KEPALA SEKOLAH -->
+        <div class="mt-12 pt-6 border-t border-slate-300">
+          <div class="flex justify-end">
+            <div class="w-72 text-center text-xs">
+              <p class="text-slate-800 mb-1">${kota}, 13 Juli ${tahunAjaran.split('/')[0] || '2026'}</p>
+              <p class="font-bold text-slate-900 mb-16">Mengetahui,<br>Kepala ${namaSekolah}</p>
+              <p class="font-bold underline text-slate-900 text-sm">${kepalaSekolah}</p>
+              <p class="text-slate-600 mt-0.5">NIP. ${nipKs}</p>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>

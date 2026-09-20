@@ -281,14 +281,15 @@ export const PROGRAM_TEMPLATES = [
   },
   {
     id: 'kalender-sekolah',
-    title: 'Program Kalender Pendidikan Satuan Pendidikan (KPSP)',
-    tag: 'Kalender & Agenda Resmi',
-    icon: 'fa-calendar-days',
-    color: 'violet',
-    gradient: 'from-violet-600 to-indigo-700',
-    description: 'Penyusunan Kalender Pendidikan Sekolah resmi berpedoman pada Permendikdasmen No. 13 Tahun 2025 dan SE Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026. Lengkap dengan 36 pekan efektif, matriks 12 bulan visual, serta penyesuaian kegiatan PHBI (Maulid Nabi, Rajaban, dll.) dan agenda khas sekolah.',
-    defaultJudul: 'PROGRAM KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP)',
-    defaultSubjudul: 'Pedoman Alokasi Waktu Efektif Belajar, Hari Libur, dan Matriks Agenda Tahunan Sekolah Berdasarkan Regulasi Nasional & Disdik Purwakarta',
+    title: 'Kalender Pendidikan Sekolah (Excel .xlsx)',
+    tag: 'Khusus Excel (.xlsx)',
+    icon: 'fa-file-excel',
+    color: 'emerald',
+    gradient: 'from-emerald-600 to-teal-700',
+    description: 'Khusus Kalender Pendidikan bukan dokumen program kerja naratif (tanpa BAB I s.d. V). Menghasilkan file spreadsheet Microsoft Excel (.xlsx) 3-Sheet resmi (Tanggal Penting, Kalender Pendidikan Landscape, dan Kaldik Portrait) lengkap dengan KOP surat akun sekolah Anda.',
+    defaultJudul: 'KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP)',
+    defaultSubjudul: 'Format Spreadsheet Microsoft Excel (.xlsx) 3-Sheet Lengkap dengan KOP Satuan Pendidikan',
+    isExcelOnly: true,
     fields: [
       {
         id: 'sistemHariSekolah',

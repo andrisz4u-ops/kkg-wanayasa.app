@@ -179,7 +179,7 @@ export function renderProgramSekolah() {
 
           <!-- AI Model Selection, Method Selector & Action Button -->
           <div class="mt-8 pt-6 border-t border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-4">
+            <div class="flex flex-wrap items-center gap-4" id="ai-controls-wrapper">
               <div class="flex items-center gap-2">
                 <label class="text-xs font-semibold text-slate-700 whitespace-nowrap">
                   <i class="fa-solid fa-microchip mr-1 text-indigo-500"></i> Model AI:
@@ -200,10 +200,23 @@ export function renderProgramSekolah() {
               </div>
             </div>
 
+            <!-- Kalender Info Banner (Khusus Kalender Pendidikan Spreadsheet) -->
+            <div id="kalender-info-banner" class="hidden flex items-center gap-3 bg-emerald-50 text-emerald-950 px-4 py-3 rounded-xl border border-emerald-300 text-xs">
+              <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <i class="fa-solid fa-file-excel text-lg"></i>
+              </div>
+              <div>
+                <p class="font-bold text-slate-900 text-xs">Format Khusus Spreadsheet Excel (.xlsx) 3-Sheet</p>
+                <p class="text-[11px] text-emerald-800 leading-relaxed">
+                  Kalender Pendidikan bukan program naratif (tanpa BAB I s.d. V). Sistem langsung menghasilkan file spreadsheet Excel 3-Sheet resmi lengkap dengan KOP akun sekolah Anda.
+                </p>
+              </div>
+            </div>
+
             <button type="button" id="btn-generate-program"
                     class="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white font-bold text-sm shadow-md shadow-indigo-200 transition-all cursor-pointer">
-              <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
-              <span>Buat Program Sekolah (AI)</span>
+              <i id="btn-generate-icon" class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+              <span id="btn-generate-label">Buat Program Sekolah (AI)</span>
             </button>
           </div>
 
@@ -702,12 +715,96 @@ function updateSpecificFieldsUI(tmplId) {
       `;
     }
   }).join('');
+
+  // ── Khusus Template Kalender: Bukan Program BAB, Langsung Generate Excel (.xlsx) ──
+  const isKalender = tmplId === 'kalender-sekolah';
+  const aiControls = document.getElementById('ai-controls-wrapper');
+  const kaldikBanner = document.getElementById('kalender-info-banner');
+  const btnGen = document.getElementById('btn-generate-program');
+  const btnGenLabel = document.getElementById('btn-generate-label');
+  const btnGenIcon = document.getElementById('btn-generate-icon');
+
+  if (isKalender) {
+    if (aiControls) aiControls.classList.add('hidden');
+    if (kaldikBanner) kaldikBanner.classList.remove('hidden');
+    if (btnGen) {
+      btnGen.className = 'inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-95 text-white font-bold text-sm shadow-md shadow-emerald-200 transition-all cursor-pointer';
+    }
+    if (btnGenLabel) btnGenLabel.textContent = 'Generate File Excel Kalender (.xlsx)';
+    if (btnGenIcon) btnGenIcon.className = 'fa-solid fa-file-excel text-emerald-200 text-base';
+  } else {
+    if (aiControls) aiControls.classList.remove('hidden');
+    if (kaldikBanner) kaldikBanner.classList.add('hidden');
+    if (btnGen) {
+      btnGen.className = 'inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-95 text-white font-bold text-sm shadow-md shadow-indigo-200 transition-all cursor-pointer';
+    }
+    if (btnGenLabel) btnGenLabel.textContent = 'Buat Program Sekolah (AI)';
+    if (btnGenIcon) btnGenIcon.className = 'fa-solid fa-wand-magic-sparkles text-amber-300';
+  }
+}
+
+/**
+ * Handle direct generation & download of Kalender Pendidikan Excel (.xlsx) 3-Sheet
+ * (Khusus Kalender Pendidikan: bukan program naratif BAB I-V, melainkan spreadsheet resmi sesuai Kaldik Pendis)
+ */
+async function handleGenerateKaldikExcelDirectly() {
+  const namaSekolah = document.getElementById('inp-nama-sekolah')?.value?.trim();
+  const tahunAjaran = document.getElementById('inp-tahun-ajaran')?.value?.trim() || '2026/2027';
+  const jenjang = document.getElementById('inp-jenjang')?.value?.trim() || 'Sekolah Dasar (SD)';
+  const kota = document.getElementById('inp-kota')?.value?.trim() || 'Purwakarta';
+  const penyusun = document.getElementById('inp-penyusun')?.value?.trim();
+  const nipPenyusun = document.getElementById('inp-nip-penyusun')?.value?.trim();
+  const kepalaSekolah = document.getElementById('inp-kepala-sekolah')?.value?.trim();
+  const nipKepalaSekolah = document.getElementById('inp-nip-kepala-sekolah')?.value?.trim();
+
+  if (!namaSekolah) {
+    showToast('Nama Satuan Pendidikan wajib diisi untuk KOP Kalender', 'error');
+    return;
+  }
+
+  // Ambil parameter spesifik kalender jika ada
+  const tmpl = PROGRAM_TEMPLATES.find(t => t.id === 'kalender-sekolah');
+  const spesifik = {};
+  if (tmpl) {
+    tmpl.fields.forEach(f => {
+      const el = document.getElementById(`field-${f.id}`);
+      if (el) spesifik[f.id] = el.value.trim();
+    });
+  }
+
+  currentProgramData = {
+    metadata: {
+      template_id: 'kalender-sekolah',
+      judul_program: 'KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP)',
+      subjudul: `Pedoman Alokasi Waktu Efektif Belajar & Agenda Sekolah Tahun Ajaran ${tahunAjaran} (Format Excel .xlsx)`,
+      nama_sekolah: namaSekolah,
+      tahun_ajaran: tahunAjaran,
+      fase_jenjang: jenjang,
+      kota: kota,
+      penyusun: penyusun || 'Tim Pengembang Kurikulum',
+      nip_penyusun: nipPenyusun || '-',
+      kepala_sekolah: kepalaSekolah || '',
+      nip_kepala_sekolah: nipKepalaSekolah || '',
+      is_excel_only: true,
+    },
+    spesifik,
+  };
+
+  // Unduh langsung file Excel & tampilkan pratinjau khusus spreadsheet
+  await downloadKaldikExcel(currentProgramData);
+  showCanvasResult(currentProgramData);
 }
 
 /**
  * Handle AI Generation with SSE Streaming Monitor
  */
 async function handleGenerateProgram() {
+  // KHUSUS KALENDER PENDIDIKAN: BUKAN PROGRAM BAB I-V, LANGSUNG EKSPOR EXCEL (.XLSX)
+  if (selectedTemplateId === 'kalender-sekolah') {
+    await handleGenerateKaldikExcelDirectly();
+    return;
+  }
+
   const namaSekolah = document.getElementById('inp-nama-sekolah')?.value?.trim();
   const tahunAjaran = document.getElementById('inp-tahun-ajaran')?.value?.trim();
   const jenjang = document.getElementById('inp-jenjang')?.value?.trim();
@@ -931,12 +1028,29 @@ function showCanvasResult(data) {
   if (!resultSec || !canvasEl) return;
 
   const btnExcel = document.getElementById('btn-download-kaldik-excel');
+  const btnDocx = document.getElementById('btn-download-docx');
+  const btnDocxLampiran = document.getElementById('btn-download-lampiran-only');
+  const isKalender = data?.metadata?.template_id === 'kalender-sekolah' || data?.metadata?.is_excel_only || selectedTemplateId === 'kalender-sekolah';
+
   if (btnExcel) {
-    const isKalender = data?.metadata?.template_id === 'kalender-sekolah' || selectedTemplateId === 'kalender-sekolah';
     if (isKalender) {
       btnExcel.classList.remove('hidden');
     } else {
       btnExcel.classList.add('hidden');
+    }
+  }
+  if (btnDocx) {
+    if (isKalender) {
+      btnDocx.classList.add('hidden');
+    } else {
+      btnDocx.classList.remove('hidden');
+    }
+  }
+  if (btnDocxLampiran) {
+    if (isKalender) {
+      btnDocxLampiran.classList.add('hidden');
+    } else {
+      btnDocxLampiran.classList.remove('hidden');
     }
   }
 

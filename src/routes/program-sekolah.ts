@@ -1507,6 +1507,8 @@ programSekolah.post('/generate-section', async (c) => {
     }
 
     const ai = new AIService(c.env);
+    await ai.loadProviders(c.env.DB);
+
     const prompt = buildSectionPrompt(section, {
       template,
       identitas: identitas || {},

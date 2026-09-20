@@ -430,5 +430,43 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       expect(jsonBad.success).toBe(false);
       expect(jsonBad.error?.message || jsonBad.error).toContain('Parameter section tidak valid');
     });
+
+    it('should call loadProviders with DB in /generate-section endpoint', async () => {
+      let queryExecuted = false;
+      const mockDbWithProviders: any = {
+        prepare: vi.fn().mockImplementation((sql: string) => {
+          if (sql.includes('ai_providers')) {
+            queryExecuted = true;
+          }
+          return {
+            bind: vi.fn().mockReturnValue({
+              first: vi.fn().mockResolvedValue({ id: 1, role: 'admin', nama: 'Admin Wanayasa' }),
+              all: vi.fn().mockResolvedValue({ results: [] }),
+              run: vi.fn().mockResolvedValue({}),
+            }),
+            first: vi.fn().mockResolvedValue({ id: 1, role: 'admin', nama: 'Admin Wanayasa' }),
+            all: vi.fn().mockResolvedValue({ results: [] }),
+            run: vi.fn().mockResolvedValue({}),
+          };
+        }),
+        batch: vi.fn().mockResolvedValue([]),
+      };
+
+      await programSekolah.request('/generate-section', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer admin-token',
+        },
+        body: JSON.stringify({
+          template: 'kalender-sekolah',
+          section: 'bab1',
+          identitas: { namaSekolah: 'SDN 1 Test' },
+        }),
+      }, { DB: mockDbWithProviders } as any);
+
+      expect(queryExecuted).toBe(true);
+    });
   });
 });
+

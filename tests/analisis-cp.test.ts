@@ -1034,6 +1034,24 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(res.headers.get('Content-Type')).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       expect(res.headers.get('Content-Disposition')).toContain('Capaian_Pembelajaran_Ilmu_Pengetahuan_Alam_dan_Sosial_(IPAS)_Kelas_5.docx');
     });
+
+    it('GET /official-cp returns revised Tatanen di Bale Atikan CP with 4 elements', async () => {
+      const req = new Request('http://localhost/official-cp?mapel=Tatanen%20di%20Bale%20Atikan&kelas=Kelas%205');
+      const res = await analisisCpRoutes.fetch(req, {} as any);
+      expect(res.status).toBe(200);
+      const json: any = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.mata_pelajaran).toBe('Tatanen di Bale Atikan');
+      expect(json.data.elemen_deskripsi).toHaveLength(4);
+      const elemenNames = json.data.elemen_deskripsi.map((e: any) => e.elemen);
+      expect(elemenNames).toContain('Hidup Berkelanjutan');
+      expect(elemenNames).toContain('Permakultur');
+      expect(elemenNames).toContain('Pola Hidup Sehat');
+      expect(elemenNames).toContain('Kecakapan Hidup (Life Skills)');
+      expect(json.data.capaian_elemen).toHaveLength(4);
+      expect(json.data.capaian_umum).toContain('keseimbangan ekosistem');
+    });
   });
 });
+
 

@@ -265,25 +265,25 @@ const SUBJECT_CP_METADATA: Record<string, SubjectMetaDef> = {
   },
 
   "Tatanen di Bale Atikan": {
-    regulasi: "Peraturan Bupati Purwakarta No. 69 Tahun 2021 tentang Pendidikan Berkarakter TdBA",
-    rasional: "Tatanen di Bale Atikan (TdBA) nyaéta gerakan atikan transformatif dumasar kana falsafah Panca Niti nu ngahijikeun budidaya tatanén alami (permakultur), konservasi lingkungan, jeung penumbuhan karakter murid pikeun mulih deui ka alam (back to nature) demi karaharjaan babarengan.",
+    regulasi: "Peraturan Bupati Purwakarta No. 69 Tahun 2021 tentang Pendidikan Berkarakter Tatanen di Bale Atikan (TdBA)",
+    rasional: "Tatanen di Bale Atikan (TdBA) adalah gerakan pendidikan transformatif berbasis kearifan lokal Purwakarta yang mengintegrasikan budidaya pertanian alami (permakultur), ekoliterasi, konservasi lingkungan hidup berkelanjutan, pola hidup sehat, dan penumbuhan kecakapan hidup (life skills) murid demi terwujudnya keharmonisan hidup dengan alam.",
     tujuan: [
-      "Ngahudang kasadaran ékologis jeung kacintaan kana taneuh, cai, tutuwuhan, sarta sakabéh ciptaan Gusti.",
-      "Ngalatih kaparigelan tatanén alami organik, daur ulang runtah organik, jeung ngahasilkeun pangan sehat di sakola.",
-      "Ngamalkeun falsafah Panca Niti (Niti Harti, Niti Surti, Niti Bukti, Niti Bakti, Niti Sajati) dina kabiasaan sapopoé."
+      "Mengembangkan kesadaran ekoliterasi dan hidup berkelanjutan melalui pemahaman jenis sampah, efisiensi energi, dan pelestarian alam.",
+      "Membekali keterampilan permakultur dan ketahanan pangan melalui budidaya tanaman selaras alam dan pemanfaatan pekarangan.",
+      "Membiasakan pola hidup sehat, menjaga kebersihan diri dan lingkungan, serta mengonsumsi pangan bergizi seimbang hasil tanam sendiri.",
+      "Menumbuhkan kecakapan hidup (life skills), komunikasi, berpikir kritis, kreativitas, jiwa wirausaha, dan pengamalan nilai kearifan lokal Sunda (leuweung hejo, rakyat ngejo)."
     ],
-    karakteristik: "Pembelajaran berbasis aksi nyata di kebun sekolah dan laboratorium alam yang mengintegrasikan sains tanah, mikroorganisme, dan etika lingkungan.",
+    karakteristik: "Pembelajaran berbasis aksi nyata di kebun sekolah dan lingkungan sekitar yang mengintegrasikan empat elemen utama: Hidup Berkelanjutan, Permakultur, Pola Hidup Sehat, dan Kecakapan Hidup (Life Skills).",
     elemenDeskripsi: {
-      "Niti Harti": "Mikanyaho jeung mikaharti konsép dasar taneuh subur, cai beresih, tutuwuhan, siklus hara, jeung ékosistem tatanén alami.",
-      "Niti Surti": "Miboga rasa empati jeung kapekaeun kana kaayaan lingkungan, runtah, polusi, sarta bahaya bahan kimia.",
-      "Niti Bukti": "Prak-prakan ngolah taneuh, nyieun kompos jeung POC, melak binih, ngarawat pepelakan, sarta panén sacara mandiri.",
-      "Niti Bakti": "Méré mangpaat tina hasil panén pikeun kasehatan diri, babagi ka sasama, sarta miara kelestarian bumi.",
-      "Niti Sajati": "Kasaimbangan diri jeung alam, ngahontal kaharmonisan hirup anu pinuh ku rasa sukur ka Gusti Nu Maha Suci."
+      "Hidup Berkelanjutan": "Memahami jenis sampah, pengelolaan sampah bijak, efisiensi energi, dan pelestarian lingkungan.",
+      "Permakultur": "Sistem pertanian selaras dengan alam, pemanfaatan wadah/barang bekas, media tanam, pembuatan kompos, dan budidaya tanaman.",
+      "Pola Hidup Sehat": "Menjaga kebersihan diri, kesehatan fisik, dan konsumsi pangan bergizi seimbang dari hasil tanam sendiri.",
+      "Kecakapan Hidup (Life Skills)": "Keterampilan sosial, komunikasi, berpikir kritis, pemecahan masalah, kecakapan ekologi, kreativitas, dan jiwa wirausaha."
     },
     capaianUmum: {
-      "Fase A": "Murid mikawanoh rupa-rupa tutuwuhan sakola, bagean awak pepelakan, nyiram pepelakan rutin, miara kaberesihan kebon, sarta syukur ka ciptaan Gusti.",
-      "Fase B": "Murid mikaharti hubungan kasuburan taneuh jeung cai, milah runtah organik/anorganik, nyieun kompos basajan, nyemai bibit, sarta ngonsumsi pangan sehat.",
-      "Fase C": "Murid paham prinsip permakultur jeung konservasi, ngarancang siklus tatanen lengkep (media tanam organik, POC, eco-enzyme), panen mandiri, jeung bazaar ekologis."
+      "Fase A": "Pada akhir Fase A, murid mampu mengenal dan memahami jenis sampah serta pengaruhnya bagi kehidupan, terlibat dalam pengelolaan sampah sederhana dan pemanfaatan benda alam (kompos/infused water), mengenal bagian tanaman dan menanam sederhana di sekolah, serta membiasakan peduli kebersihan dan pola hidup sehat.",
+      "Fase B": "Pada akhir Fase B, murid mampu menjelaskan dan mempraktikkan pengelolaan sampah terstruktur (kurangi, pilah, olah), mengidentifikasi tanaman pangan lokal, memanfaatkan energi alam untuk pascapanen sederhana, memahami teknik dasar budidaya tanaman, serta membangun kesadaran pola hidup sehat selaras alam.",
+      "Fase C": "Pada akhir Fase C, murid memahami pentingnya menjaga keseimbangan ekosistem dan menganalisis dampak aktivitas manusia, mempraktikkan budidaya tanaman mandiri (semai hingga panen), mengolah sampah organik untuk pangan sehat, membiasakan konsumsi pangan bergizi, serta mengembangkan kepedulian sosial dan kearifan lokal Sunda (leuweung hejo, rakyat ngejo)."
     }
   },
 

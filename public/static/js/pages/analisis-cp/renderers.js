@@ -1742,37 +1742,54 @@ export function getOfficialCpDocumentDataClient(mataPelajaran = 'Matematika', je
   }
 
   if (mapelLower.includes('tatanen') || mapelLower.includes('tdba') || mapelLower.includes('bale atikan')) {
+    const capaianUmumMap = {
+      'Fase A': 'Pada akhir Fase A, murid mampu mengenal dan memahami jenis-jenis sampah di lingkungan sekitar serta pengaruhnya bagi kehidupan, terlibat dalam praktik pengelolaan sampah sederhana (kompos/infused water), mengenal bagian tanaman dan berpartisipasi menanam di sekolah, serta membiasakan pola hidup sehat dan peduli kebersihan lingkungan belajar.',
+      'Fase B': 'Pada akhir Fase B, murid mampu mengelola sampah secara terstruktur (mengurangi, memilah, mengolah), mengidentifikasi tanaman pangan lokal dan pascapanen dengan energi alam, menguasai teknik dasar budidaya tanaman, serta membangun kesadaran pola hidup sehat dan perawatan bumi.',
+      'Fase C': 'Pada akhir Fase C, murid memahami pentingnya menjaga keseimbangan ekosistem dan menganalisis dampak aktivitas manusia, mempraktikkan budidaya tanaman mandiri (semai hingga panen), mengolah sampah organik untuk pangan sehat, membiasakan konsumsi pangan bergizi, serta mengembangkan kepedulian sosial dan kearifan lokal Sunda (leuweung hejo, rakyat ngejo).'
+    };
+
+    const capaianElemenMap = {
+      'Fase A': [
+        { no: 1, elemen: 'Hidup Berkelanjutan', cp: 'Murid mampu mengenal, mengidentifikasi, dan memahami jenis-jenis sampah di lingkungan sekitar serta pengaruhnya bagi kehidupan. Murid juga mulai dilibatkan dalam praktik pengelolaan sampah sederhana dan pemanfaatan bahan/sisa benda alam (seperti daun atau bagian tumbuhan) untuk kegiatan terdekat seperti pembuatan kompos atau infused water dari buah/sayur.' },
+        { no: 2, elemen: 'Permakultur', cp: 'Murid mengenal bagian-bagian tanaman, mengamati fenomena alam di sekitar, serta ikut serta dalam praktik menanam sederhana di lingkungan sekolah.' },
+        { no: 3, elemen: 'Pola Hidup Sehat', cp: 'Murid mengenal produk atau makanan sehat sederhana dari lingkungan sekitar serta membiasakan diri peduli pada kebersihan lingkungan belajar.' },
+        { no: 4, elemen: 'Kecakapan Hidup (Life Skills)', cp: 'Murid membiasakan diri berkolaborasi, berkomunikasi, dan peduli terhadap kebersihan serta keasrian lingkungan belajar dan kebun sekolah.' }
+      ],
+      'Fase B': [
+        { no: 1, elemen: 'Hidup Berkelanjutan', cp: 'Murid mampu menjelaskan, mempraktikkan, dan mengambil keputusan mandiri terkait pengelolaan sampah secara lebih terstruktur (mengurangi, memilah, dan mengolah sampah organik/anorganik).' },
+        { no: 2, elemen: 'Permakultur', cp: 'Murid mampu mengidentifikasi bagian tanaman yang dapat dimanfaatkan sebagai bahan pangan atau olahan (misalnya singkong, pisang, atau sayuran lokal), memanfaatkan energi alam seperti sinar matahari untuk proses pascapanen sederhana (mengeringkan atau mengawetkan hasil Tatanén), serta memahami teknik dasar budidaya tanaman.' },
+        { no: 3, elemen: 'Pola Hidup Sehat', cp: 'Murid mengembangkan kesadaran pola hidup sehat melalui pemahaman keterkaitan antara perawatan bumi, sumber pangan lokal yang bersih, dan kesehatan diri.' },
+        { no: 4, elemen: 'Kecakapan Hidup (Life Skills)', cp: 'Murid menumbuhkan keterampilan berpikir kritis, pemecahan masalah lingkungan, kreativitas, dan kerja sama tim dalam merawat kebun dan mengolah hasil panen.' }
+      ],
+      'Fase C': [
+        { no: 1, elemen: 'Hidup Berkelanjutan', cp: 'Murid memahami pentingnya menjaga keseimbangan ekosistem alam, serta mampu menganalisis dampak aktivitas manusia terhadap lingkungan sekitar.' },
+        { no: 2, elemen: 'Permakultur', cp: 'Murid mempraktikkan teknik budidaya tanaman secara mandiri (mulai dari penyemaian, perawatan, hingga panen), serta memahami konsep pengolahan sampah organik dan pemanfaatan pekarangan sekolah untuk pangan sehat.' },
+        { no: 3, elemen: 'Pola Hidup Sehat', cp: 'Murid membiasakan diri mengonsumsi makanan bergizi hasil tatanen/pertanian lokal, serta menyadari hubungan antara kesehatan tubuh dengan kebersihan lingkungan sekitar.' },
+        { no: 4, elemen: 'Kecakapan Hidup (Life Skills)', cp: 'Murid mengembangkan kepedulian sosial melalui kerja kelompok dalam mengelola kebun sekolah, serta mengenal nilai kearifan lokal Sunda terkait kecintaan terhadap bumi (leuweung hejo, rakyat ngejo / pelestarian alam), kreativitas, dan jiwa wirausaha.' }
+      ]
+    };
+
     return {
       mata_pelajaran: 'Tatanen di Bale Atikan (TdBA)',
       fase,
       kelas: jenjangKelas,
-      regulasi: 'Peraturan Bupati Purwakarta No. 69 Tahun 2021 tentang Pendidikan Berkarakter TdBA',
-      rasional: 'Tatanen di Bale Atikan (TdBA) nyaéta gerakan atikan transformatif dumasar kana falsafah Panca Niti nu ngahijikeun budidaya tatanén alami (permakultur), konservasi lingkungan, jeung penumbuhan karakter murid pikeun mulih deui ka alam (back to nature) demi karaharjaan babarengan.',
+      regulasi: 'Peraturan Bupati Purwakarta No. 69 Tahun 2021 tentang Pendidikan Berkarakter Tatanen di Bale Atikan (TdBA)',
+      rasional: 'Tatanen di Bale Atikan (TdBA) adalah gerakan pendidikan transformatif berbasis kearifan lokal Purwakarta yang mengintegrasikan budidaya pertanian alami (permakultur), ekoliterasi, konservasi lingkungan hidup berkelanjutan, pola hidup sehat, dan penumbuhan kecakapan hidup (life skills) murid demi terwujudnya keharmonisan hidup dengan alam.',
       tujuan: [
-        'Ngahudang kasadaran ékologis jeung kacintaan kana taneuh, cai, tutuwuhan, sarta sakabéh ciptaan Gusti.',
-        'Ngalatih kaparigelan tatanén alami organik, daur ulang runtah organik, jeung ngahasilkeun pangan sehat di sakola.',
-        'Ngamalkeun falsafah Panca Niti (Niti Harti, Niti Surti, Niti Bukti, Niti Bakti, Niti Sajati) dina kabiasaan sapopoé.'
+        'Mengembangkan kesadaran ekoliterasi dan hidup berkelanjutan melalui pemahaman jenis sampah, efisiensi energi, dan pelestarian alam.',
+        'Membekali keterampilan permakultur dan ketahanan pangan melalui budidaya tanaman selaras alam dan pemanfaatan pekarangan.',
+        'Membiasakan pola hidup sehat, menjaga kebersihan diri dan lingkungan, serta mengonsumsi pangan bergizi seimbang hasil tanam sendiri.',
+        'Menumbuhkan kecakapan hidup (life skills), komunikasi, berpikir kritis, kreativitas, jiwa wirausaha, dan pengamalan nilai kearifan lokal Sunda (leuweung hejo, rakyat ngejo).'
       ],
-      karakteristik: 'Pembelajaran berbasis aksi nyata di kebun sekolah dan laboratorium alam yang mengintegrasikan sains tanah, mikroorganisme, dan etika lingkungan.',
+      karakteristik: 'Pembelajaran berbasis aksi nyata di kebun sekolah dan lingkungan sekitar yang mengintegrasikan empat elemen utama: Hidup Berkelanjutan, Permakultur, Pola Hidup Sehat, dan Kecakapan Hidup (Life Skills).',
       elemen_deskripsi: [
-        { elemen: 'Niti Harti', deskripsi: 'Mikanyaho jeung mikaharti konsép dasar taneuh subur, cai beresih, tutuwuhan, siklus hara, jeung ékosistem tatanén alami.' },
-        { elemen: 'Niti Surti', deskripsi: 'Miboga rasa empati jeung kapekaeun kana kaayaan lingkungan, runtah, polusi, sarta bahaya bahan kimia.' },
-        { elemen: 'Niti Bukti', deskripsi: 'Prak-prakan ngolah taneuh, nyieun kompos jeung POC, melak binih, ngarawat pepelakan, sarta panén sacara mandiri.' },
-        { elemen: 'Niti Bakti', deskripsi: 'Méré mangpaat tina hasil panén pikeun kasehatan diri, babagi ka sasama, sarta miara kelestarian bumi.' },
-        { elemen: 'Niti Sajati', deskripsi: 'Kasaimbangan diri jeung alam, ngahontal kaharmonisan hirup anu pinuh ku rasa sukur ka Gusti Nu Maha Suci.' }
+        { elemen: 'Hidup Berkelanjutan', deskripsi: 'Memahami jenis sampah, pengelolaan sampah bijak, efisiensi energi, dan pelestarian lingkungan.' },
+        { elemen: 'Permakultur', deskripsi: 'Sistem pertanian selaras dengan alam, pemanfaatan wadah/barang bekas, media tanam, pembuatan kompos, dan budidaya tanaman.' },
+        { elemen: 'Pola Hidup Sehat', deskripsi: 'Menjaga kebersihan diri, kesehatan fisik, dan konsumsi pangan bergizi seimbang dari hasil tanam sendiri.' },
+        { elemen: 'Kecakapan Hidup (Life Skills)', deskripsi: 'Keterampilan sosial, komunikasi, berpikir kritis, pemecahan masalah, kecakapan ekologi, kreativitas, dan jiwa wirausaha.' }
       ],
-      capaian_umum: fase === 'Fase A'
-        ? 'Murid mikawanoh rupa-rupa tutuwuhan sakola, bagean awak pepelakan, nyiram pepelakan rutin, miara kaberesihan kebon, sarta syukur ka ciptaan Gusti.'
-        : fase === 'Fase B'
-          ? 'Murid mikaharti hubungan kasuburan taneuh jeung cai, milah runtah organik/anorganik, nyieun kompos basajan, nyemai bibit, sarta ngonsumsi pangan sehat.'
-          : 'Murid paham prinsip permakultur jeung konservasi, ngarancang siklus tatanen lengkep (media tanam organik, POC, eco-enzyme), panen mandiri, jeung bazaar ekologis.',
-      capaian_elemen: [
-        { no: 1, elemen: 'Niti Harti', cp: 'Mikaharti unsur kasuburan taneuh, mikroorganisme organik, daur hidrologi, sarta kaanekaragaman hayati tutuwuhan.' },
-        { no: 2, elemen: 'Niti Surti', cp: 'Numbuhkeun kapekaan kana kaseimbangan alam, ngariksa lingkungan sabudeureun sakola tina polusi kimiawi.' },
-        { no: 3, elemen: 'Niti Bukti', cp: 'Prak-prakan melak bibit, nyieun kompos organik, ngarawat pepelakan, sarta metik hasil panen sacara gotong royong.' },
-        { no: 4, elemen: 'Niti Bakti', cp: 'Mangpaatkeun hasil tatanen pikeun ngarojong program gizi sehat sakola sarta babagi ka warga masarakat.' },
-        { no: 5, elemen: 'Niti Sajati', cp: 'Refleksi spiritual sukur ka Gusti Nu Maha Asih sarta komitmen ngajaga kalumangsungan bumi.' }
-      ]
+      capaian_umum: capaianUmumMap[fase] || capaianUmumMap['Fase C'],
+      capaian_elemen: capaianElemenMap[fase] || capaianElemenMap['Fase C']
     };
   }
 

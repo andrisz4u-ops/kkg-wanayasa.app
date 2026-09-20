@@ -5,6 +5,13 @@ import { successResponse, Errors } from '../lib/response';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { generateProgramDocxBuffer, generateProgramLampiranOnlyDocxBuffer, type ProgramSekolahData } from '../lib/docx/program-sekolah';
+import {
+  mergeKaldikEvents,
+  generate12MonthGrid,
+  calculateKaldikStats,
+  OFFICIAL_KALDIK_EVENTS_2026_2027,
+  type KaldikEventItem,
+} from '../lib/kaldik-calendar-engine';
 import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings } from '../types/env';
 
@@ -92,6 +99,16 @@ export const regulasiProgramDatabase: Record<string, string[]> = {
     'Permendikbud Nomor 23 Tahun 2015 tentang Penumbuhan Budi Pekerti',
     'Permendikbudristek Nomor 12 Tahun 2024 tentang Kurikulum Satuan Pendidikan',
   ],
+  'kalender-sekolah': [
+    'Undang-Undang Republik Indonesia Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional',
+    'Peraturan Pemerintah Nomor 4 Tahun 2022 tentang Perubahan atas PP No. 57 Tahun 2021 tentang Standar Nasional Pendidikan',
+    'Permendikbudristek Nomor 12 Tahun 2024 tentang Kurikulum pada PAUD, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah',
+    'Permendikdasmen Nomor 13 Tahun 2025 tentang Pedoman Kurikulum dan Alokasi Waktu Belajar (Standar Minimal 36 Pekan Efektif/Tahun)',
+    'Keputusan Bersama Menag, Menaker, dan MenPAN-RB (SKB 3 Menteri) tentang Hari Libur Nasional dan Cuti Bersama',
+    'Surat Edaran Kepala Dinas Pendidikan Kabupaten Purwakarta Nomor 400.3.5/2367-Dikdas/2026 tentang Pedoman Penyusunan Kalender Pendidikan Tahun Ajaran 2026/2027',
+    'Peraturan Bupati Purwakarta Nomor 69 Tahun 2015 tentang Pendidikan Berkarakter (7 Poé Atikan Purwakarta Istimewa)',
+    'Peraturan Bupati Purwakarta Nomor 103 Tahun 2021 tentang Tatanen di Bale Atikan (TdBA)',
+  ],
   'kustom': [
     'Undang-Undang Republik Indonesia Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional',
     'Peraturan Pemerintah Nomor 4 Tahun 2022 tentang Standar Nasional Pendidikan',
@@ -140,6 +157,8 @@ export function buildProgramPrompt(params: {
     fokusDeskripsi = `Program Sekolah Adiwiyata / Lingkungan Hidup Berkelanjutan yang disinergikan dengan Program Tatanen di Bale Atikan (TdBA) khas Purwakarta. Fokus: Pengurangan Sampah Plastik Sekali Pakai, Budidaya Kebun Sekolah Organik / TdBA, Konservasi Air dan Energi, serta Integrasi Pembelajaran Lingkungan Hidup Holistik.`;
   } else if (template === 'keagamaan') {
     fokusDeskripsi = `Program Pembiasaan Keagamaan dan Akhlak Mulia. Fokus: Sholat Dhuha/Dzuhur Berjamaah, Tadarus Pagi / Hafalan Surat Pendek, Infaq Jumat, dan Peringatan Hari Besar Keagamaan.`;
+  } else if (template === 'kalender-sekolah') {
+    fokusDeskripsi = `Program Kalender Pendidikan Satuan Pendidikan (KPSP) mengacu pada Permendikdasmen No. 13 Tahun 2025 (Pusat) dan Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026. Alokasi waktu: ${spesifik.sistemHariSekolah || '5 Hari Sekolah (Senin - Jumat)'}, target minimal 36 pekan efektif KBM (18 pekan Semester 1 + 18 pekan Semester 2). Penyesuaian agenda khusus keagamaan (PHBI): ${spesifik.agendaKeagamaan || 'Maulid Nabi Muhammad SAW, Rajaban (Isra Mi’raj), Pesantren Kilat/Masantren di Sakola Ramadhan 1448 H, Idul Fitri, dan Idul Adha'}. Penyesuaian agenda daerah Purwakarta: ${spesifik.agendaPurwakarta || 'Hari Jadi Purwakarta (HJP), Hari Bambu Sedunia TdBA, Hari Udara Bersih, dan Asesmen STS/SAS/ASAT/PSAJ'}. Kegiatan tambahan sekolah: ${spesifik.kegiatanKustomTambahan || 'Classmeeting Porseni, Gelar Karya Profil Lulusan / Pentas Seni Akhir Tahun'}.`;
   } else {
     fokusDeskripsi = `Program: "${spesifik.judulKustom || 'Program Inovasi Sekolah'}". Deskripsi singkat: ${spesifik.deskripsiKustom || 'Pengembangan mutu dan budaya positif di lingkungan sekolah'}. Tujuan utama: ${spesifik.tujuanKustom || 'Meningkatkan prestasi, karakter, dan iklim belajar murid'}.`;
   }
@@ -422,6 +441,8 @@ export function buildSectionPrompt(
     fokusDeskripsi = `Adiwiyata & Lingkungan Hidup (PBLHS + TdBA Purwakarta). Target: ${spesifik.targetLevel || 'Kabupaten'}. Aksi: ${spesifik.aksiUtama || 'Bank Sampah & Kebun Sekolah'}.`;
   } else if (template === 'keagamaan') {
     fokusDeskripsi = `Pembiasaan Keagamaan & Budi Pekerti. Jadwal: ${spesifik.jadwalIbadah || 'Sholat Berjamaah & Tadarus'}.`;
+  } else if (template === 'kalender-sekolah') {
+    fokusDeskripsi = `Program Kalender Pendidikan Satuan Pendidikan (KPSP) berlandaskan Permendikdasmen No. 13 Tahun 2025 dan SE Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026. Target: 36 Pekan Efektif (18 Smt 1 + 18 Smt 2). Agenda PHBI: ${spesifik.agendaKeagamaan || 'Maulid Nabi, Rajaban, Masantren Ramadhan'}. Daerah: ${spesifik.agendaPurwakarta || 'Hari Jadi Purwakarta, TdBA'}.`;
   } else {
     fokusDeskripsi = `Program: ${spesifik.judulKustom || 'Inovasi Sekolah'}. Deskripsi: ${spesifik.deskripsiKustom || 'Pengembangan Mutu'}.`;
   }
@@ -617,8 +638,8 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
 
   const metadata = {
     template_id: templateId,
-    judul_program: parsed.metadata?.judul_program || input.spesifik?.judulKustom || 'PROGRAM KERJA PEMBIASAAN DAN BUDAYA POSITIF SEKOLAH',
-    subjudul: parsed.metadata?.subjudul || 'Pedoman Operasional Penumbuhan Karakter dan Mutu Pendidikan',
+    judul_program: parsed.metadata?.judul_program || (templateId === 'kalender-sekolah' ? 'PROGRAM KALENDER PENDIDIKAN SATUAN PENDIDIKAN (KPSP)' : (input.spesifik?.judulKustom || 'PROGRAM KERJA PEMBIASAAN DAN BUDAYA POSITIF SEKOLAH')),
+    subjudul: parsed.metadata?.subjudul || (templateId === 'kalender-sekolah' ? 'Pedoman Alokasi Waktu Efektif Belajar, Hari Libur, dan Matriks Agenda Tahunan Sekolah Berdasarkan Regulasi Nasional & Disdik Purwakarta' : 'Pedoman Operasional Penumbuhan Karakter dan Mutu Pendidikan'),
     nama_sekolah: input.identitas?.namaSekolah || parsed.metadata?.nama_sekolah || 'SD NEGERI KABUPATEN PURWAKARTA',
     tahun_ajaran: input.identitas?.tahunAjaran || parsed.metadata?.tahun_ajaran || '2025/2026',
     jenjang: input.identitas?.jenjang || parsed.metadata?.jenjang || 'Sekolah Dasar (SD)',
@@ -811,6 +832,25 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
         },
       ],
     },
+    'kalender-sekolah': {
+      judul_bab: 'LANDASAN YURIDIS, KONSEPTUAL, DAN PENGELOLAAN WAKTU BELAJAR SATUAN PENDIDIKAN',
+      sub_bab: [
+        {
+          judul: 'Prinsip Time on Task dan Efektivitas Waktu Pembelajaran Mendalam (Deep Learning)',
+          isi: [
+            'Waktu belajar merupakan modalitas fundamental dalam proses pendidikan. Teori efektivitas instruksional menegaskan bahwa alokasi waktu aktif belajar (Time on Task) yang optimal dan terlindungi dari interupsi berkorelasi langsung terhadap penguasaan kompetensi dan kedalaman pemahaman (Deep Learning) murid.',
+            'Pengaturan kalender pendidikan satuan pendidikan dirancang untuk menjamin pemenuhan hak belajar murid sekurang-kurangnya 36 pekan efektif per tahun ajaran sesuai ketentuan Permendikdasmen Nomor 13 Tahun 2025.',
+          ],
+        },
+        {
+          judul: 'Harmonisasi Kalender Nasional, Kalender Hijriah (PHBI), dan Kearifan Lokal 7 Poé Atikan Purwakarta',
+          isi: [
+            'Penyusunan kalender pendidikan di satuan pendidikan memadukan tiga dimensi kalender secara sinergis: (1) Kalender Akademik Nasional berbasis hari efektif KBM dan asesmen sumatif, (2) Kalender Hijriah untuk peringatan hari besar keagamaan (Maulid Nabi Muhammad SAW, Rajaban/Isra Mi’raj, dan Masantren di Sakola selama bulan Ramadhan), serta (3) Kalender Budaya Karakter Purwakarta (7 Poé Atikan dan Tatanen di Bale Atikan).',
+            'Sesuai Surat Edaran Kadisdik Purwakarta Nomor 400.3.5/2367-Dikdas/2026, pekan efektif dihitung dengan ketentuan minimal tiga hari efektif KBM dalam satu minggu, menghasilkan pembagian presisi 18 pekan efektif pada Semester 1 dan 18 pekan efektif pada Semester 2.',
+          ],
+        },
+      ],
+    },
     'kustom': {
       judul_bab: 'LANDASAN PENGEMBANGAN MUTU DAN INOVASI PENDIDIKAN SEKOLAH',
       sub_bab: [
@@ -871,10 +911,184 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
 
   const total_anggaran = parsed.bab_3_rencana_program?.total_anggaran || (totalNum > 0 ? `Rp ${totalNum.toLocaleString('id-ID')}` : 'Rp 2.450.000');
 
+  const defaultKalenderKegiatan = [
+    {
+      nama: 'Rapat Pleno Penyusunan Kalender Pendidikan Satuan Pendidikan (KPSP)',
+      deskripsi: 'Musyawarah dewan guru, kepala sekolah, dan komite sekolah membedah kalender pendidikan Disdik Purwakarta 2026/2027 dan menetapkan pembagian 36 pekan efektif.',
+      tahapan: [
+        'Pra-Kegiatan: Menelaah SE Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026 dan SKB 3 Menteri.',
+        'Pelaksanaan: Rapat pleno penyusunan jadwal efektif, matrikulasi semester 1 dan 2, serta penetapan tim.',
+        'Output: Draf resmi SK Kepala Sekolah dan Matriks Kalender Pendidikan 12 Bulan.',
+      ],
+      tujuan: 'Menetapkan kepastian jadwal belajar mengajar dan perlindungan jam KBM murid.',
+      waktu: 'Pekan ke-1 s.d ke-2 Juli 2026',
+      sasaran: 'Seluruh Pendidik dan Tenaga Kependidikan',
+      pic: 'Kepala Sekolah & Tim Pengembang Kurikulum',
+    },
+    {
+      nama: 'Pelaksanaan Masa Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak',
+      deskripsi: 'Kegiatan pengenalan lingkungan belajar, sarana sekolah, dan pembiasaan budaya positif tanpa kekerasan bagi peserta didik baru.',
+      tahapan: [
+        'Pra-Kegiatan: Pembentukan panitia MPLS dan penyusunan panduan transisi ramah anak.',
+        'Pelaksanaan: Apel pembukaan, pengenalan guru, tur sekolah, dan ice breaking edukatif.',
+        'Output: Adaptasi murid baru yang ceria dan terpetakannya profil awal kesiapan belajar.',
+      ],
+      tujuan: 'Memfasilitasi masa transisi murid baru secara menyenangkan dan aman.',
+      waktu: '13 - 17 Juli 2026',
+      sasaran: 'Peserta Didik Baru Kelas 1 & Pindahan',
+      pic: 'Ketua Panitia MPLS',
+    },
+    {
+      nama: 'Peringatan Hari Jadi Purwakarta (HJP) & Penguatan 7 Poé Atikan',
+      deskripsi: 'Pawai karnaval budaya Sunda, pameran kuliner tradisional, dan peneguhan komitmen pendidikan berkarakter khas Purwakarta.',
+      tahapan: [
+        'Pra-Kegiatan: Persiapan busana adat Sunda dan materi edukasi sejarah Purwakarta.',
+        'Pelaksanaan: Upacara peringatan HJP, atraksi seni pencak silat, dan kaulinan barudak.',
+        'Output: Peningkatan kebanggaan kearifan lokal dan dokumentasi portofolio budaya.',
+      ],
+      tujuan: 'Menanamkan rasa cinta tanah kelahiran dan penguatan karakter Rebo Maneuh di Sunda.',
+      waktu: '20 Juli 2026',
+      sasaran: 'Seluruh Ekosistem Sekolah',
+      pic: 'Koordinator Muatan Lokal & 7 Poé Atikan',
+    },
+    {
+      nama: 'Peringatan Hari Besar Islam (PHBI) Maulid Nabi Muhammad SAW 1448 H',
+      deskripsi: 'Tabligh akbar keagamaan, perlombaan adzan, tahfidz juz 30, dai cilik, dan santunan anak yatim/piatu di lingkungan sekolah.',
+      tahapan: [
+        'Pra-Kegiatan: Pembentukan kepanitiaan PHBI dan seleksi peserta lomba kelas.',
+        'Pelaksanaan: Tausiyah keteladanan akhlak Rasulullah SAW dan pentas seni islami murid.',
+        'Output: Meningkatnya kecintaan murid pada Nabi SAW dan kepedulian sosial.',
+      ],
+      tujuan: 'Menginternalisasikan keteladanan akhlak mulia Nabi Muhammad SAW.',
+      waktu: '25 Agustus 2026 (atau pekan terdekat)',
+      sasaran: 'Seluruh Murid, Guru, dan Orang Tua',
+      pic: 'Guru PAI & Seksi Keagamaan',
+    },
+    {
+      nama: 'Pelaksanaan Sumatif Tengah Semester (STS) Ganjil & Genap Terjadwal',
+      deskripsi: 'Penyelenggaraan penilaian capaian kompetensi formatif-sumatif tengah semester secara terstandar dan objektif.',
+      tahapan: [
+        'Pra-Kegiatan: Penyusunan kisi-kisi dan naskah asesmen bermutu oleh guru kelas/mapel.',
+        'Pelaksanaan: Ujian tertulis dan praktik berbasis pemecahan masalah (Problem Solving).',
+        'Output: Data nilai diagnostik untuk perencanaan remedial dan pengayaan belajar.',
+      ],
+      tujuan: 'Mengukur kemajuan belajar berkala dan melakukan perbaikan mutu pembelajaran.',
+      waktu: 'September 2026 & Maret 2027',
+      sasaran: 'Seluruh Peserta Didik Kelas 1 - 6',
+      pic: 'Koordinator Tim Asesmen',
+    },
+    {
+      nama: 'Peringatan Isra Mi\'raj Nabi Muhammad SAW / Rajaban (27 Rajab 1448 H)',
+      deskripsi: 'Peringatan peristiwa Isra Mi\'raj dan penguatan rukun sholat 5 waktu serta pembiasaan sholat berjamaah di sekolah.',
+      tahapan: [
+        'Pra-Kegiatan: Pembagian kelompok mentoring sholat dan persiapan panggung gebyar Rajaban.',
+        'Pelaksanaan: Praktik sholat khusyuk berjamaah, ceramah hikmah Isra Mi\'raj, dan istighotsah.',
+        'Output: Peningkatan disiplin ibadah sholat dan buku mutaba\'ah yaumiyah terisi aktif.',
+      ],
+      tujuan: 'Memperkokoh tiang agama melalui pemahaman makna hakiki perintah sholat.',
+      waktu: '5 Februari 2027 (27 Rajab 1448 H)',
+      sasaran: 'Seluruh Murid Muslim dan Pendidik',
+      pic: 'Guru PAI & Dewan Kemakmuran Mushola Sekolah',
+    },
+    {
+      nama: 'Program Pembiasaan Karakter "Masantren di Sakola" Ramadhan 1448 H',
+      deskripsi: 'Pendalaman agama Islam intensif selama bulan suci Ramadhan mengacu pada kebijakan khas Dinas Pendidikan Kabupaten Purwakarta.',
+      tahapan: [
+        'Pra-Kegiatan: Penyusunan silabus materi Masantren di Sakola Ramadhan.',
+        'Pelaksanaan: Tadarus Al-Qur\'an pagi, sholat dhuha berjamaah, zakat fitrah, dan buka bersama.',
+        'Output: Sertifikat khatam Al-Qur\'an dan dokumentasi amaliyah Ramadhan siswa.',
+      ],
+      tujuan: 'Mencetak generasi yang bertaqwa, gemar membaca Al-Qur\'an, dan berakhlak karimah.',
+      waktu: '11 Februari - 5 Maret 2027',
+      sasaran: 'Seluruh Murid Kelas 1 - 6',
+      pic: 'Tim Khusus Masantren Ramadhan',
+    },
+    {
+      nama: 'Pekan Penilaian Sumatif Akhir Jenjang (PSAJ) & ASAT Kenaikan Kelas',
+      deskripsi: 'Penyelenggaraan asesmen akhir jenjang kelas 6 dan asesmen akhir tahun penentu kenaikan kelas fase A, B, dan C.',
+      tahapan: [
+        'Pra-Kegiatan: Verifikasi kelayakan peserta, percetakan naskah soal, dan simulasi asesmen.',
+        'Pelaksanaan: Asesmen berbasis kertas dan komputer secara jujur dan tertib.',
+        'Output: Rekapitulasi nilai akhir semester genap dan kelulusan siswa.',
+      ],
+      tujuan: 'Menilai capaian kompetensi lulusan secara menyeluruh dan akuntabel.',
+      waktu: 'Mei 2027 (PSAJ) & Juni 2027 (ASAT)',
+      sasaran: 'Kelas 6 (PSAJ) & Seluruh Kelas 1-5 (ASAT)',
+      pic: 'Ketua Panitia Asesmen Akhir',
+    },
+    {
+      nama: 'Gelar Karya Pentas Seni Profil Lulusan / P5 & Pembagian Rapor',
+      deskripsi: 'Pameran panen hasil belajar kokurikuler, pementasan bakat seni, bazar kewirausahaan TdBA, serta penyerahan buku laporan hasil belajar.',
+      tahapan: [
+        'Pra-Kegiatan: Penataan stan pameran kelas dan persiapan panggung pertunjukan karya anak.',
+        'Pelaksanaan: Pembukaan oleh Pengawas Pembina, parade karya siswa, dan pembagian rapor.',
+        'Output: Publikasi portofolio karya murid dan buku rapor resmi terbagikan 100%.',
+      ],
+      tujuan: 'Memberikan apresiasi pencapaian belajar dan memupuk rasa percaya diri anak.',
+      waktu: '21 - 25 Juni 2027',
+      sasaran: 'Seluruh Murid, Komite, dan Orang Tua',
+      pic: 'Tim Kokurikuler & Seluruh Wali Kelas',
+    },
+  ];
+
+  const defaultKalenderTim = [
+    {
+      no: 1,
+      jabatan: 'Penanggung Jawab & Pengarah',
+      nama: metadata.kepala_sekolah || 'Kepala Sekolah',
+      tugas: 'Menetapkan kebijakan umum kalender sekolah, menerbitkan SK Tim, dan melakukan supervisi kepatuhan waktu KBM.',
+    },
+    {
+      no: 2,
+      jabatan: 'Ketua Tim Pengembang Kalender Sekolah',
+      nama: metadata.penyusun || 'Koordinator Program',
+      tugas: 'Menyusun matrikulasi jadwal, mengkoordinasikan agenda semesteran, dan menyelaraskan agenda dinas.',
+    },
+    {
+      no: 3,
+      jabatan: 'Sekretaris & Pengelola Jadwal KBM',
+      nama: 'Guru Kelas / Tim Kurikulum',
+      tugas: 'Mendokumentasikan kalender, menyusun jadwal pelajaran reguler, dan merekapitulasi jurnal harian kelas.',
+    },
+    {
+      no: 4,
+      jabatan: 'Koordinator Peringatan Hari Besar Islam (PHBI)',
+      nama: 'Guru PAI / DKM Sekolah',
+      tugas: 'Menyelenggarakan kegiatan keagamaan (Maulid Nabi, Rajaban, Masantren Ramadhan, dan Idul Adha).',
+    },
+    {
+      no: 5,
+      jabatan: 'Koordinator Hari Besar Nasional & Karakter Purwakarta',
+      nama: 'Guru Kelas / Tim 7 Poé Atikan & TdBA',
+      tugas: 'Mengkoordinasikan peringatan HUT RI, Hari Jadi Purwakarta, Hari Guru, Hari Pramuka, dan kegiatan lingkungan hidup.',
+    },
+    {
+      no: 6,
+      jabatan: 'Koordinator Penilaian & Evaluasi (STS/SAS/ASAT)',
+      nama: 'Ketua Panitia Asesmen',
+      tugas: 'Menyiapkan administrasi pengujian, jadwal pengolahan nilai e-Rapor, dan pembagian buku rapor.',
+    },
+  ];
+
+  const defaultKalenderActionPlan = [
+    { no: 1, kegiatan: 'Rapat Pleno & Penetapan SK Kalender Pendidikan', bulan: [1], pic: 'Kepala Sekolah' },
+    { no: 2, kegiatan: 'MPLS Ramah Anak & Peringatan Hari Jadi Purwakarta', bulan: [1], pic: 'Panitia MPLS' },
+    { no: 3, kegiatan: 'Peringatan Hari Pramuka, HUT RI & PHBI Maulid Nabi', bulan: [2], pic: 'Koord. PHBI & Kesiswaan' },
+    { no: 4, kegiatan: 'Hari Bambu TdBA & Asesmen Sumatif Tengah Semester (STS) 1', bulan: [3], pic: 'Tim Asesmen' },
+    { no: 5, kegiatan: 'Hari Kesaktian Pancasila & Sumpah Pemuda', bulan: [4], pic: 'Koord. Nasional' },
+    { no: 6, kegiatan: 'Hari Pahlawan, Hari Guru & Mulai SAS Ganjil', bulan: [5], pic: 'Panitia SAS' },
+    { no: 7, kegiatan: 'SAS Ganjil, Classmeeting, Rapor Smt 1 & Libur Semester 1', bulan: [6], pic: 'Wali Kelas' },
+    { no: 8, kegiatan: 'Awal KBM Semester Genap & Peringatan Rajaban (Isra Mi\'raj)', bulan: [7, 8], pic: 'Koord. PHBI' },
+    { no: 9, kegiatan: 'Libur Awal Ramadhan & Kegiatan Masantren di Sakola Ramadhan', bulan: [8, 9], pic: 'Tim Masantren' },
+    { no: 10, kegiatan: 'Libur Idul Fitri & Sumatif Tengah Semester (STS) Genap', bulan: [9], pic: 'Tim Asesmen' },
+    { no: 11, kegiatan: 'Hari Kartini, Hardiknas & PSAJ Khusus Kelas 6', bulan: [10, 11], pic: 'Panitia PSAJ' },
+    { no: 12, kegiatan: 'ASAT Kenaikan Kelas, Gelar Karya P5, Bagi Rapor Smt 2 & Libur TP', bulan: [12], pic: 'Seluruh Tim' },
+  ];
+
   const bab_3_rencana_program = {
     kegiatan: Array.isArray(parsed.bab_3_rencana_program?.kegiatan) && parsed.bab_3_rencana_program.kegiatan.length > 0
       ? parsed.bab_3_rencana_program.kegiatan
-      : [
+      : (templateId === 'kalender-sekolah' ? defaultKalenderKegiatan : [
           {
             nama: 'Sosialisasi Program dan Pembekalan Jurnal Harian',
             deskripsi: 'Pertemuan pengenalan tujuan program kerja, pembagian format jurnal kebiasaan siswa, dan penjelasan peran orang tua.',
@@ -940,10 +1154,10 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
             sasaran: 'Murid berprestasi karakter',
             pic: 'Tim Monitoring & Wali Kelas',
           },
-        ],
+        ]),
     tim_pelaksana: Array.isArray(parsed.bab_3_rencana_program?.tim_pelaksana) && parsed.bab_3_rencana_program.tim_pelaksana.length > 0
       ? parsed.bab_3_rencana_program.tim_pelaksana
-      : [
+      : (templateId === 'kalender-sekolah' ? defaultKalenderTim : [
           {
             no: 1,
             jabatan: 'Penanggung Jawab / Pengarah',
@@ -974,10 +1188,10 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
             nama: 'Seluruh Wali Kelas 1 - 6',
             tugas: 'Melakukan pemantauan langsung setiap pagi, memvalidasi jurnal anak, dan membina komunikasi aktif dengan orang tua.',
           },
-        ],
+        ]),
     action_plan: Array.isArray(parsed.bab_3_rencana_program?.action_plan) && parsed.bab_3_rencana_program.action_plan.length > 0
       ? parsed.bab_3_rencana_program.action_plan
-      : [
+      : (templateId === 'kalender-sekolah' ? defaultKalenderActionPlan : [
           { no: 1, kegiatan: 'Sosialisasi Program dan Pembagian Jurnal', bulan: [1, 2], pic: 'Ketua Tim' },
           { no: 2, kegiatan: 'Pelaksanaan Pembiasaan Rutin Harian', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Wali Kelas' },
           { no: 3, kegiatan: 'Aksi Bersih Lingkungan & Gotong Royong', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Koord. Sarpras' },
@@ -985,7 +1199,7 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
           { no: 5, kegiatan: 'Evaluasi Semester I & Gelar Apresiasi', bulan: [6], pic: 'Tim Program' },
           { no: 6, kegiatan: 'Monitoring dan Refleksi Triwulan II', bulan: [9], pic: 'Tim Monitoring' },
           { no: 7, kegiatan: 'Evaluasi Akhir Tahun & Diseminasi Praktik Baik', bulan: [12], pic: 'Ketua Tim & Komite' },
-        ],
+        ]),
     sarana_anggaran: parsed.bab_3_rencana_program?.sarana_anggaran || [
       'Dukungan sarana meliputi pengadaan buku jurnal pembiasaan siswa, banner dan poster edukasi karakter di setiap sudut kelas, perlengkapan sanitasi dan tempat sampah terpilah, serta koleksi buku bacaan bermutu.',
       'Anggaran pembiayaan bersumber dari dana Bantuan Operasional Satuan Pendidikan (BOSP) komponen pengembangan karakter dan kegiatan kokurikuler, serta dukungan swadaya komite sekolah sesuai ketentuan perundang-undangan.',
@@ -1030,6 +1244,25 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
         ],
   };
 
+  let lampiran = parsed.lampiran || {};
+  let kaldik_events: KaldikEventItem[] | undefined = undefined;
+  let kaldik_grid: any = undefined;
+  let kaldik_stats: any = undefined;
+
+  if (templateId === 'kalender-sekolah') {
+    const rawCustomEvents = input.spesifik?.kegiatanKustomList || parsed.kaldik_events || input.kaldik_events || [];
+    kaldik_events = mergeKaldikEvents(rawCustomEvents, true);
+    const sistemHariSekolah = input.spesifik?.sistemHariSekolah || '5-hari';
+    kaldik_grid = generate12MonthGrid(kaldik_events, { sistemHariSekolah });
+    kaldik_stats = calculateKaldikStats(kaldik_grid, { sistemHariSekolah });
+    lampiran = {
+      ...lampiran,
+      kaldik_events,
+      kaldik_grid,
+      kaldik_stats,
+    };
+  }
+
   return replacePesertaDidik({
     metadata,
     bab_1_pendahuluan,
@@ -1037,7 +1270,8 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
     bab_3_rencana_program,
     bab_4_monitoring_evaluasi,
     bab_5_penutup,
-    lampiran: parsed.lampiran || {},
+    lampiran,
+    ...(kaldik_events ? { kaldik_events, kaldik_grid, kaldik_stats } : {}),
   });
 }
 
@@ -1496,6 +1730,23 @@ programSekolah.post('/docx-lampiran', async (c) => {
     return c.body(buffer as any);
   } catch (e: any) {
     console.error('Program Sekolah DOCX Lampiran Export Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// ============================================
+// Endpoint 3c: Ambil Matriks & Agenda Kalender Pendidikan Resmi & Kustom
+// ============================================
+programSekolah.post('/kaldik-matrix', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const customEvents = body.customEvents || [];
+    const sistemHariSekolah = body.sistemHariSekolah || '5-hari';
+    const allEvents = mergeKaldikEvents(customEvents, true);
+    const grid = generate12MonthGrid(allEvents, { sistemHariSekolah });
+    const stats = calculateKaldikStats(grid, { sistemHariSekolah });
+    return successResponse(c, { events: allEvents, grid, stats });
+  } catch (e: any) {
     return Errors.internal(c, e.message);
   }
 });

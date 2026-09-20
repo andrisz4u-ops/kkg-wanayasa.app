@@ -61,11 +61,11 @@ export function renderProgramCanvas(data, activeTab = 'all') {
         ${(activeTab === 'all' || activeTab === 'cover') ? renderCoverSection(meta, kota, tahun) : ''}
         ${(activeTab === 'all' || activeTab === 'cover') ? renderPengesahanSection(meta, kota, tahun) : ''}
         ${(activeTab === 'all' || activeTab === 'cover') ? renderKataPengantar(meta, kota, tahun) : ''}
-        ${(activeTab === 'all' || activeTab === 'cover') ? renderDaftarIsi() : ''}
+        ${(activeTab === 'all' || activeTab === 'cover') ? renderDaftarIsi(meta) : ''}
 
         ${(activeTab === 'all' || activeTab === 'bab') ? renderBab1(data.bab_1_pendahuluan) : ''}
         ${(activeTab === 'all' || activeTab === 'bab') ? renderBab2(data.bab_2_kajian_konseptual) : ''}
-        ${(activeTab === 'all' || activeTab === 'bab') ? renderBab3(data.bab_3_rencana_program) : ''}
+        ${(activeTab === 'all' || activeTab === 'bab') ? renderBab3(data.bab_3_rencana_program, meta, data) : ''}
         ${(activeTab === 'all' || activeTab === 'bab') ? renderBab4(data.bab_4_monitoring_evaluasi) : ''}
         ${(activeTab === 'all' || activeTab === 'bab') ? renderBab5(data.bab_5_penutup) : ''}
 
@@ -253,7 +253,15 @@ function renderKataPengantar(meta, kota, tahun) {
 }
 
 // 4. DAFTAR ISI
-function renderDaftarIsi() {
+function renderDaftarIsi(meta = {}) {
+  const isKaldik = meta?.template_id === 'kalender-sekolah';
+  const lampiran2Title = isKaldik
+    ? '    Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan'
+    : '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci';
+  const lampiran3Title = isKaldik
+    ? '    Lampiran 3: Jadwal PHBI & Kegiatan Karakter Purwakarta'
+    : '    Lampiran 3: Format Instrumen & Jurnal Siswa';
+
   const items = [
     { title: 'HALAMAN COVER', page: 'i' },
     { title: 'LEMBAR PENGESAHAN', page: 'ii' },
@@ -267,9 +275,9 @@ function renderDaftarIsi() {
     { title: '    E. Manfaat Program', page: '4' },
     { title: 'BAB II KAJIAN KONSEPTUAL DAN LANDASAN TEORITIS', page: '5', bold: true },
     { title: 'BAB III RENCANA PROGRAM DAN STRATEGI PELAKSANAAN', page: '7', bold: true },
-    { title: '    A. Rincian Kegiatan dan Aksi Nyata', page: '7' },
+    { title: isKaldik ? '    A. Kalender Satuan Pendidikan & Agenda Kegiatan' : '    A. Rincian Kegiatan dan Aksi Nyata', page: '7' },
     { title: '    B. Struktur Organisasi dan Tim Pelaksana', page: '9' },
-    { title: '    C. Matriks Rencana Aksi (Action Plan 12 Bulan)', page: '10' },
+    { title: isKaldik ? '    C. Matriks Rincian Pekan & Hari Efektif Belajar (RPE)' : '    C. Matriks Rencana Aksi (Action Plan 12 Bulan)', page: '10' },
     { title: '    D. Dukungan Sarana, Prasarana, dan Anggaran', page: '11' },
     { title: 'BAB IV MONITORING, EVALUASI, DAN TINDAK LANJUT', page: '12', bold: true },
     { title: '    A. Mekanisme Pemantauan Program', page: '12' },
@@ -281,8 +289,8 @@ function renderDaftarIsi() {
     { title: '    B. Saran dan Rekomendasi', page: '15' },
     { title: 'LAMPIRAN-LAMPIRAN (TERINTEGRASI 1 FILE)', page: '16', bold: true },
     { title: '    Lampiran 1: Surat Keputusan (SK) Tim Pelaksana', page: '16' },
-    { title: '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci', page: '17' },
-    { title: '    Lampiran 3: Format Instrumen & Jurnal Siswa', page: '18' },
+    { title: lampiran2Title, page: '17' },
+    { title: lampiran3Title, page: '18' },
   ];
 
   return `
@@ -1418,6 +1426,335 @@ function renderTemplateSpecificLampiranHtml(templateId, meta) {
                 <td class="p-2 border-r border-slate-300 font-semibold">3. Kepedulian Sosial & Kedermawanan</td>
                 <td class="p-2 border-r border-slate-300 text-slate-600">Rutin menyisihkan infaq Jumat serta memiliki kepekaan membantu teman yang kesulitan.</td>
                 <td class="p-2 text-slate-400 italic">Aktif berinfaq</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else if (templateId === 'kalender-sekolah') {
+    return `
+      <!-- Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan -->
+      <div class="mb-10 bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h4 class="font-bold text-base text-slate-900">LAMPIRAN 2: MATRIKS RINCIAN PEKAN EFEKTIF (RPE) 12 BULAN TAHUN AJARAN ${meta.tahun_ajaran || '2026/2027'}</h4>
+            <p class="text-xs text-slate-500 font-sans mt-0.5">
+              Acuan Yuridis: Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026 &amp; Permendikdasmen RI No. 13 Tahun 2025
+            </p>
+          </div>
+          <span class="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded font-semibold font-sans">
+            Total 36 Pekan Efektif Belajar
+          </span>
+        </div>
+        <p class="text-xs text-slate-600 mb-4 text-justify">
+          Berdasarkan ketentuan Disdik Purwakarta, perhitungan pekan efektif mensyaratkan minimal 3 hari belajar efektif dalam satu pekan kalender. Matriks berikut merinci perhitungan pekan efektif per semester untuk Tahun Ajaran 2026/2027:
+        </p>
+
+        <!-- Tabel RPE Semester 1 (Ganjil) -->
+        <div class="mb-5 overflow-x-auto bg-white rounded-lg border border-slate-300 shadow-2xs">
+          <div class="bg-indigo-900 text-white px-3 py-1.5 text-xs font-bold font-sans flex items-center justify-between">
+            <span>SEMESTER 1 (GANJIL) • JULI - DESEMBER 2026</span>
+            <span class="text-indigo-200 font-normal">Target: 18 Pekan Efektif</span>
+          </div>
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-300">
+              <tr>
+                <th class="p-2 border-r border-slate-300 w-8 text-center">No</th>
+                <th class="p-2 border-r border-slate-300 w-28">Bulan</th>
+                <th class="p-2 border-r border-slate-300 w-20 text-center">Jml Pekan</th>
+                <th class="p-2 border-r border-slate-300 w-24 text-center text-emerald-800 bg-emerald-50/60">Pekan Efektif</th>
+                <th class="p-2 border-r border-slate-300 w-24 text-center text-rose-800 bg-rose-50/60">Tdk Efektif</th>
+                <th class="p-2">Keterangan Agenda &amp; Alasan Tidak Efektif</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">1</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Juli 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">2</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">3</td>
+                <td class="p-2 text-slate-600 text-[11px]">Libur Akhir TP 2025/2026 (1-10 Jul), MPLS Ramah Anak (13-17 Jul), Peringatan Hari Jadi Purwakarta ke-195 (20 Jul)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">2</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Agustus 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-slate-400 bg-rose-50/30">0</td>
+                <td class="p-2 text-slate-600 text-[11px]">KBM Efektif penuh; Hari Pramuka ke-65 (14 Agu), HUT RI ke-81 (17 Agu), Peringatan Maulid Nabi Muhammad SAW (25 Agu)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">3</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">September 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">1</td>
+                <td class="p-2 text-slate-600 text-[11px]">Hari Udara Bersih TdBA (7 Sep), Hari Bambu TdBA (18 Sep), Asesmen Sumatif Tengah Semester / STS Ganjil (21-25 Sep)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">4</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Oktober 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-slate-400 bg-rose-50/30">0</td>
+                <td class="p-2 text-slate-600 text-[11px]">KBM Efektif; Hari Kesaktian Pancasila (1 Okt), Peringatan Hari Sumpah Pemuda (28 Okt)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">5</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">November 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-slate-400 bg-rose-50/30">0</td>
+                <td class="p-2 text-slate-600 text-[11px]">KBM Efektif; Hari Pahlawan Nasional (10 Nov), Hari Guru Nasional (HGN) &amp; HUT PGRI ke-81 (25 Nov)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">6</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Desember 2026</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-slate-400 bg-emerald-50/30">0</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">5</td>
+                <td class="p-2 text-slate-600 text-[11px]">Asesmen Sumatif Akhir Semester / SAS Ganjil (1-10 Des), Pembagian Rapor (18 Des), Libur Smt 1 (21-31 Des), Natal (25 Des)</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-indigo-50 font-bold border-t-2 border-indigo-200">
+              <tr>
+                <td colspan="2" class="p-2 text-right border-r border-slate-300 uppercase tracking-wider text-indigo-900">JUMLAH SEMESTER 1 (GANJIL):</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-indigo-900">27</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-emerald-800 bg-emerald-100/70 text-sm">18 PEKAN</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-rose-800 bg-rose-100/70 text-sm">9 PEKAN</td>
+                <td class="p-2 text-slate-700 text-[11px] font-semibold">Target minimal 18 pekan efektif semester ganjil terpenuhi (100%)</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Tabel RPE Semester 2 (Genap) -->
+        <div class="mb-4 overflow-x-auto bg-white rounded-lg border border-slate-300 shadow-2xs">
+          <div class="bg-indigo-900 text-white px-3 py-1.5 text-xs font-bold font-sans flex items-center justify-between">
+            <span>SEMESTER 2 (GENAP) • JANUARI - JUNI 2027</span>
+            <span class="text-indigo-200 font-normal">Target: 18 Pekan Efektif (16 Pekan Kelas 6)</span>
+          </div>
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-300">
+              <tr>
+                <th class="p-2 border-r border-slate-300 w-8 text-center">No</th>
+                <th class="p-2 border-r border-slate-300 w-28">Bulan</th>
+                <th class="p-2 border-r border-slate-300 w-20 text-center">Jml Pekan</th>
+                <th class="p-2 border-r border-slate-300 w-24 text-center text-emerald-800 bg-emerald-50/60">Pekan Efektif</th>
+                <th class="p-2 border-r border-slate-300 w-24 text-center text-rose-800 bg-rose-50/60">Tdk Efektif</th>
+                <th class="p-2">Keterangan Agenda &amp; Alasan Tidak Efektif</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">1</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Januari 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">1</td>
+                <td class="p-2 text-slate-600 text-[11px]">Tahun Baru 2027 (1 Jan), Libur Smt 1 (1-8 Jan), Hari Pertama KBM Smt 2 (11 Jan)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">2</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Februari 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">3</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">1</td>
+                <td class="p-2 text-slate-600 text-[11px]">Peringatan Isra Mi'raj / Rajaban (5 Feb), Libur Awal Ramadhan 1448 H (8-10 Feb), Masantren di Sakola Ramadhan (11-28 Feb)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">3</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Maret 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">3</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">2</td>
+                <td class="p-2 text-slate-600 text-[11px]">Lanjutan Masantren Ramadhan (1-5 Mar), Libur Idul Fitri 1448 H (8-19 Mar), STS Genap (22-26 Mar)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">4</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">April 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-slate-400 bg-rose-50/30">0</td>
+                <td class="p-2 text-slate-600 text-[11px]">KBM Efektif penuh; Peringatan Hari Kartini (21 Apr), Peringatan Hari Bumi Sedunia (TdBA) (22 Apr)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">5</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Mei 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">5</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-emerald-700 bg-emerald-50/30">4</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">1</td>
+                <td class="p-2 text-slate-600 text-[11px]">Hardiknas (2 Mei), PSAJ Kelas 6 (10-14 Mei), Hari Raya Idul Adha 1448 H (16 Mei), Harkitnas (20 Mei)</td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">6</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">Juni 2027</td>
+                <td class="p-2 border-r border-slate-300 text-center">4</td>
+                <td class="p-2 border-r border-slate-300 text-center font-bold text-slate-400 bg-emerald-50/30">0</td>
+                <td class="p-2 border-r border-slate-300 text-center text-rose-600 bg-rose-50/30">4</td>
+                <td class="p-2 text-slate-600 text-[11px]">Hari Lahir Pancasila (1 Jun), ASAT Genap (7-15 Jun), 1 Muharram 1449 H (16 Jun), Pembagian Rapor (25 Jun), Libur Akhir TP (28-30 Jun)</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-indigo-50 font-bold border-t-2 border-indigo-200">
+              <tr>
+                <td colspan="2" class="p-2 text-right border-r border-slate-300 uppercase tracking-wider text-indigo-900">JUMLAH SEMESTER 2 (GENAP):</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-indigo-900">27</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-emerald-800 bg-emerald-100/70 text-sm">18 PEKAN</td>
+                <td class="p-2 border-r border-slate-300 text-center font-mono font-black text-rose-800 bg-rose-100/70 text-sm">9 PEKAN</td>
+                <td class="p-2 text-slate-700 text-[11px] font-semibold">Target 18 pekan terpenuhi (Kelas 6: 16 pekan efektif karena PSAJ &amp; kelulusan)</td>
+              </tr>
+              <tr class="bg-indigo-900 text-white font-black">
+                <td colspan="2" class="p-2 text-right border-r border-indigo-700 uppercase tracking-wider">TOTAL 1 TAHUN AJARAN:</td>
+                <td class="p-2 border-r border-indigo-700 text-center font-mono">54</td>
+                <td class="p-2 border-r border-indigo-700 text-center font-mono text-emerald-300 text-sm">36 PEKAN EFEKTIF</td>
+                <td class="p-2 border-r border-indigo-700 text-center font-mono text-rose-300 text-sm">18 PEKAN</td>
+                <td class="p-2 text-indigo-100 text-[11px] font-bold">100% Memenuhi Standar Nasional Kemendikdasmen (Min. 36 Pekan Efektif)</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Alokasi Beban Jam Pelajaran (JP) -->
+        <div class="mt-4 p-3 bg-indigo-50/70 rounded-lg border border-indigo-200 text-xs text-indigo-950">
+          <div class="font-bold mb-1">Distribusi Alokasi Jam Belajar Efektif (Kurikulum Merdeka 2026/2027):</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+            <div>• <strong>Fase A (Kelas 1-2):</strong> 32 JP/Pekan × 36 Pekan = <strong>1.152 JP/Tahun</strong></div>
+            <div>• <strong>Fase B (Kelas 3-4):</strong> 36 JP/Pekan × 36 Pekan = <strong>1.296 JP/Tahun</strong></div>
+            <div>• <strong>Fase C (Kelas 5-6):</strong> 36 JP/Pekan × 36 Pekan = <strong>1.296 JP/Tahun</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lampiran 3: Jadwal PHBI & Kegiatan Karakter Purwakarta -->
+      <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h4 class="font-bold text-base text-slate-900">LAMPIRAN 3: JADWAL PERINGATAN HARI BESAR ISLAM (PHBI) &amp; KARAKTER PURWAKARTA ISTIMEWA</h4>
+            <p class="text-xs text-slate-500 font-sans mt-0.5">
+              Integrasi Kalender Hijriah 1448 H, Muatan Karakter 7 Poé Atikan, dan Gerakan Tatanen di Bale Atikan (TdBA)
+            </p>
+          </div>
+          <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-semibold font-sans">
+            Agenda Karakter &amp; Spiritual
+          </span>
+        </div>
+        <p class="text-xs text-slate-600 mb-3 text-justify">
+          Matriks jadwal peringatan hari besar keagamaan dan kegiatan pembiasaan karakter khas Kabupaten Purwakarta sepanjang Tahun Ajaran 2026/2027:
+        </p>
+
+        <div class="overflow-x-auto bg-white rounded-lg border border-slate-300 shadow-2xs">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-100 font-bold text-slate-800 border-b border-slate-300">
+              <tr>
+                <th class="p-2 border-r border-slate-300 w-8 text-center">No</th>
+                <th class="p-2 border-r border-slate-300 w-44">Nama Kegiatan &amp; Tanggal</th>
+                <th class="p-2 border-r border-slate-300 w-28 text-center">Kategori</th>
+                <th class="p-2 border-r border-slate-300">Bentuk Edukasi &amp; Pembiasaan Murid</th>
+                <th class="p-2 w-32 text-center">Sasaran &amp; PIC</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">1</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Peringatan Hari Jadi Purwakarta (HJP ke-195)<br>
+                  <span class="text-[11px] font-normal text-indigo-700">20 Juli 2026</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-800">Purwakarta</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Pawai budaya Sunda, mengenakan busana adat khas Purwakarta (Kamis Nyanding Wawangi), dan penguatan nilai 7 Poé Atikan Purwakarta Istimewa.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Siswa &amp; Guru<br><span class="font-medium text-slate-800">Koord. Kesiswaan</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">2</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Peringatan Maulid Nabi Muhammad SAW<br>
+                  <span class="text-[11px] font-normal text-emerald-700">25 Agustus 2026 (12 Rabiul Awal 1448 H)</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">PHBI Islam</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Tabligh akbar siswa, pembacaan sholawat barzanji, lomba adzan, pildacil bertema keteladanan akhlak Rasulullah SAW, serta infaq peduli sesama.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Murid Muslim<br><span class="font-medium text-slate-800">Guru PAI &amp; DKM</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">3</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Hari Udara Bersih &amp; Hari Bambu TdBA<br>
+                  <span class="text-[11px] font-normal text-sky-700">7 &amp; 18 September 2026</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-800">TdBA Purwakarta</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Aksi menanam pohon peneduh, pemanfaatan tanaman bambu ramah lingkungan, dan pembuatan anyaman kerajinan tangan khas Sunda di kebun TdBA sekolah.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Siswa Fase B &amp; C<br><span class="font-medium text-slate-800">Tim TdBA Sekolah</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">4</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Peringatan Isra Mi'raj Nabi / Rajaban<br>
+                  <span class="text-[11px] font-normal text-emerald-700">5 Februari 2027 (27 Rajab 1448 H)</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">PHBI Islam</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Kajian sirah keagungan perintah sholat 5 waktu, praktek sholat khusyuk berjamaah di sekolah, santunan anak yatim piatu dhuafa sekolah.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Siswa &amp; Guru<br><span class="font-medium text-slate-800">Guru PAI</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">5</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Masantren di Sakola Ramadhan 1448 H<br>
+                  <span class="text-[11px] font-normal text-emerald-700">11 Feb - 5 Maret 2027</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">Keagamaan Khusus</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Tadarus Al-Qur’an bersama, pembiasaan sholat Dhuha harian, kajian fiqih puasa, buka puasa bersama ceria, serta pengelolaan dan penyaluran Zakat Fitrah sekolah.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Komunitas Sekolah<br><span class="font-medium text-slate-800">Panitia Ramadhan</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">6</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Idul Fitri &amp; Halal Bihalal Satuan Pendidikan<br>
+                  <span class="text-[11px] font-normal text-indigo-700">16 - 19 Maret 2027</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800">Silaturahmi</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Apel Halal Bihalal, budaya saling memaafkan antarwarga sekolah, rekonsiliasi keakraban siswa, dan penguatan harmoni kebersamaan.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Siswa, Guru &amp; Ortu<br><span class="font-medium text-slate-800">Kepala Sekolah &amp; Komite</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">7</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Hari Kartini &amp; Hari Bumi (Aksi TdBA)<br>
+                  <span class="text-[11px] font-normal text-rose-700">21 - 22 April 2027</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800">Nasional &amp; Lingkungan</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Lomba busana nusantara &amp; literasi biografi tokoh perempuan, aksi nyata pemilahan sampah organik/anorganik dan konservasi air di sekolah.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Siswa<br><span class="font-medium text-slate-800">Wali Kelas &amp; Pokja TdBA</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">8</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Peringatan Hari Raya Idul Adha 1448 H<br>
+                  <span class="text-[11px] font-normal text-emerald-700">16 Mei 2027 (10 Dzulhijjah 1448 H)</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">PHBI Islam</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Penyembelihan hewan qurban edukatif, pemaknaan keikhlasan dan kepedulian sosial Nabi Ibrahim &amp; Ismail AS, pembagian daging qurban bagi warga sekitar sekolah yang membutuhkan.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Komite, Guru, &amp; Murid<br><span class="font-medium text-slate-800">Panitia Qurban</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">9</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Peringatan Tahun Baru Islam 1449 H<br>
+                  <span class="text-[11px] font-normal text-emerald-700">16 Juni 2027 (1 Muharram 1449 H)</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">PHBI Islam</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Pawai ta'aruf obor elektrik murid, muhasabah pergantian tahun hijriah, penetapan resolusi ibadah baru, dan santunan yatim piatu Muharram ceria.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Warga Sekolah<br><span class="font-medium text-slate-800">Guru PAI</span></td>
+              </tr>
+              <tr>
+                <td class="p-2 border-r border-slate-300 text-center font-mono">10</td>
+                <td class="p-2 border-r border-slate-300 font-semibold text-slate-900">
+                  Gelar Karya Panen Belajar &amp; Pentas Seni Sunda<br>
+                  <span class="text-[11px] font-normal text-purple-700">Juni 2027 (Pekan Pembagian Rapor)</span>
+                </td>
+                <td class="p-2 border-r border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800">Gelar Budaya &amp; P5</span></td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-[11px]">Pameran produk inovasi murid hasil kokurikuler P5 / 7 Poé Atikan, pementasan seni tari Jaipong, degung Sunda, kaulinan barudak lembur, serta apresiasi murid berprestasi.</td>
+                <td class="p-2 text-center text-slate-600 text-[11px]">Seluruh Siswa, Ortu, Komite<br><span class="font-medium text-slate-800">Tim P5 &amp; Kesenian</span></td>
               </tr>
             </tbody>
           </table>

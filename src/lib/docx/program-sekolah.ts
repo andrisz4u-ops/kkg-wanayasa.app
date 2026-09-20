@@ -965,6 +965,130 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
       new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: borderLight, rows: [akhlakHeaders, ...akhlakRows] })
     );
 
+  } else if (templateId === 'kalender-sekolah') {
+    // Lampiran 2: Matriks Rincian Pekan Efektif (RPE) Resmi Disdik Purwakarta
+    elements.push(
+      new Paragraph({
+        spacing: { before: 400, after: 100 },
+        children: [
+          new TextRun({
+            text: 'LAMPIRAN 2: MATRIKS RINCIAN PEKAN EFEKTIF (RPE) RESMI TAHUN AJARAN 2026/2027',
+            bold: true,
+            font: FONT_NAME,
+            size: SIZE_SUB_HEADER,
+          }),
+        ],
+      }),
+      createBodyParagraph(
+        'Rekapitulasi pekan kalender, pekan efektif KBM, dan pekan tidak efektif mengacu pada Surat Edaran Kadisdik Purwakarta No. 400.3.5/2367-Dikdas/2026 (Aturan minimal 3 hari efektif KBM per pekan):'
+      )
+    );
+
+    const rpeHeaders = new TableRow({
+      children: [
+        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Bulan / Semester', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Total Pekan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pekan Efektif', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tidak Efektif', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Keterangan Agenda Utama', bold: true, font: FONT_NAME, size: 16 })] })] }),
+      ],
+    });
+
+    const rpeRowsData = [
+      // SEMESTER 1
+      { no: '1', bulan: 'Juli 2026', total: '5', kbm: '2', non: '3', ket: 'MPLS Ramah Anak & Libur TP Lalu' },
+      { no: '2', bulan: 'Agustus 2026', total: '5', kbm: '4', non: '1', ket: 'HUT RI ke-81 & Maulid Nabi SAW' },
+      { no: '3', bulan: 'September 2026', total: '5', kbm: '4', non: '1', ket: 'Sumatif Tengah Semester (STS) 1' },
+      { no: '4', bulan: 'Oktober 2026', total: '5', kbm: '4', non: '1', ket: 'Hari Sumpah Pemuda & Cadangan' },
+      { no: '5', bulan: 'November 2026', total: '5', kbm: '4', non: '1', ket: 'Hari Guru Nasional & Mulai SAS 1' },
+      { no: '6', bulan: 'Desember 2026', total: '5', kbm: '0', non: '5', ket: 'SAS 1, Rapor & Libur Semester 1' },
+      { no: 'Σ1', bulan: 'SEMESTER 1 (GANJIL)', total: '30', kbm: '18', non: '12', ket: '18 Pekan Efektif KBM Terpilih' },
+      // SEMESTER 2
+      { no: '7', bulan: 'Januari 2027', total: '5', kbm: '3', non: '2', ket: 'Lanjutan Libur & Masuk 11 Jan' },
+      { no: '8', bulan: 'Februari 2027', total: '5', kbm: '3', non: '2', ket: 'Rajaban, Libur Ramadhan & Masantren' },
+      { no: '9', bulan: 'Maret 2027', total: '5', kbm: '3', non: '2', ket: 'Masantren di Sakola & Libur Idul Fitri' },
+      { no: '10', bulan: 'April 2027', total: '5', kbm: '4', non: '1', ket: 'KBM Efektif Penuh & Hari Kartini' },
+      { no: '11', bulan: 'Mei 2027', total: '5', kbm: '5', non: '0', ket: 'KBM / PSAJ Khusus Kelas 6' },
+      { no: '12', bulan: 'Juni 2027', total: '5', kbm: '0', non: '5', ket: 'ASAT Kenaikan Kelas, Rapor, Libur TP' },
+      { no: 'Σ2', bulan: 'SEMESTER 2 (GENAP)', total: '30', kbm: '18', non: '12', ket: '18 Pekan Efektif KBM (16 Kls 6)' },
+      { no: 'TOTAL', bulan: 'TAHUN AJARAN 2026/2027', total: '60', kbm: '36', non: '24', ket: 'Standar Min. 36 Pekan BSKAP/Pusat' },
+    ];
+
+    const rpeRows = rpeRowsData.map(r => {
+      const isSubtotal = r.no.startsWith('Σ') || r.no === 'TOTAL';
+      const bgColor = r.no === 'TOTAL' ? 'E0E7FF' : (isSubtotal ? 'F1F5F9' : undefined);
+      return new TableRow({
+        children: [
+          new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.no, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
+          new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ children: [new TextRun({ text: r.bulan, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
+          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.total, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
+          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.kbm, bold: isSubtotal, color: isSubtotal ? '4338CA' : undefined, font: FONT_NAME, size: 16 })] })] }),
+          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.non, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
+          new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ children: [new TextRun({ text: r.ket, bold: isSubtotal, font: FONT_NAME, size: 14 })] })] }),
+        ],
+      });
+    });
+
+    elements.push(
+      new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: borderLight, rows: [rpeHeaders, ...rpeRows] })
+    );
+
+    // Lampiran 3: Agenda Kegiatan Keagamaan (PHBI) & Karakter Purwakarta
+    elements.push(
+      new Paragraph({
+        spacing: { before: 300, after: 100 },
+        children: [
+          new TextRun({
+            text: 'LAMPIRAN 3: DAFTAR PERINGATAN HARI BESAR ISLAM (PHBI) & KEGIATAN KARAKTER PURWAKARTA',
+            bold: true,
+            font: FONT_NAME,
+            size: SIZE_SUB_HEADER,
+          }),
+        ],
+      }),
+      createBodyParagraph(
+        'Jadwal pelaksanaan kegiatan keagamaan, peringatan hari besar Islam, dan pembiasaan budaya kearifan lokal satuan pendidikan:'
+      )
+    );
+
+    const phbiHeaders = new TableRow({
+      children: [
+        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hari / Tanggal', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Kegiatan / Peringatan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kategori Agenda', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Penanggung Jawab', bold: true, font: FONT_NAME, size: 16 })] })] }),
+      ],
+    });
+
+    const phbiData = [
+      { no: 1, tgl: '20 Juli 2026', nama: 'Peringatan Hari Jadi Purwakarta (HJP ke-195) & 7 Poé Atikan', kat: 'Kearifan Lokal', pic: 'Koord. 7 Poé Atikan' },
+      { no: 2, tgl: '14 Agustus 2026', nama: 'Peringatan Hari Pramuka Nasional ke-65', kat: 'Karakter/Pramuka', pic: 'Pembina Pramuka' },
+      { no: 3, tgl: '17 Agustus 2026', nama: 'HUT Kemerdekaan Republik Indonesia ke-81', kat: 'Nasional', pic: 'Panitia HUT RI' },
+      { no: 4, tgl: '25 Agustus 2026', nama: 'Peringatan Maulid Nabi Muhammad SAW 1448 H (PHBI)', kat: 'Keagamaan (PHBI)', pic: 'Guru PAI & DKM' },
+      { no: 5, tgl: '18 September 2026', nama: 'Peringatan Hari Bambu Sedunia (World Bamboo Day - TdBA)', kat: 'Kearifan Lokal TdBA', pic: 'Pokja TdBA' },
+      { no: 6, tgl: '25 November 2026', nama: 'Hari Guru Nasional (HGN) & HUT PGRI ke-81', kat: 'Kegiatan Sekolah', pic: 'Tim Kombel Guru' },
+      { no: 7, tgl: '5 Februari 2027', nama: 'Peringatan Isra Mi\'raj Nabi Muhammad SAW / Rajaban 1448 H', kat: 'Keagamaan (PHBI)', pic: 'Guru PAI & DKM' },
+      { no: 8, tgl: '11 Feb - 5 Mar 2027', nama: 'Program Pembiasaan Karakter "Masantren di Sakola" Ramadhan', kat: 'Keagamaan/Karakter', pic: 'Tim Masantren Ramadhan' },
+      { no: 9, tgl: '17 Mei 2027', nama: 'Hari Raya Idul Adha 1448 H & Latihan Ibadah Qurban', kat: 'Keagamaan (PHBI)', pic: 'Guru PAI & Komite' },
+      { no: 10, tgl: '21 - 25 Juni 2027', nama: 'Pentas Seni / Gelar Karya Profil Lulusan & Pembagian Rapor', kat: 'Kokurikuler & Rapor', pic: 'Wali Kelas & Tim P5' },
+    ];
+
+    const phbiRows = phbiData.map(p => new TableRow({
+      children: [
+        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(p.no), font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.tgl, font: FONT_NAME, size: 14 })] })] }),
+        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.nama, bold: true, font: FONT_NAME, size: 16 })] })] }),
+        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: p.kat, font: FONT_NAME, size: 14 })] })] }),
+        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.pic, font: FONT_NAME, size: 14 })] })] }),
+      ],
+    }));
+
+    elements.push(
+      new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: borderLight, rows: [phbiHeaders, ...phbiRows] })
+    );
+
   } else {
     // Kustom / Generic
     // Lampiran 2: Monitoring Keterlaksanaan

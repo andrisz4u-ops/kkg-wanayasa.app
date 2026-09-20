@@ -959,6 +959,26 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(data.capaian_elemen.some(el => el.elemen === 'Geometri')).toBe(true);
     });
 
+    it('getOfficialCpDocumentData returns accurate data for Seni Rupa Kelas 5', () => {
+      const data = getOfficialCpDocumentData('Seni Rupa', 'Kelas 5');
+      expect(data).toBeDefined();
+      expect(data.mata_pelajaran).toContain('Seni Rupa');
+      expect(data.fase).toBe('Fase C');
+      expect(data.capaian_elemen.some(el => el.elemen.includes('Mengalami'))).toBe(true);
+      expect(data.capaian_elemen.some(el => el.elemen.includes('Menciptakan'))).toBe(true);
+      expect(data.capaian_umum).not.toContain('bilangan');
+    });
+
+    it('getOfficialCpDocumentData returns accurate data for Koding dan Kecerdasan Artifisial Kelas 5', () => {
+      const data = getOfficialCpDocumentData('Koding dan Kecerdasan Artifisial', 'Kelas 5');
+      expect(data).toBeDefined();
+      expect(data.mata_pelajaran).toContain('Koding');
+      expect(data.fase).toBe('Fase C');
+      expect(data.capaian_elemen.some(el => el.elemen.includes('Berpikir Komputasional'))).toBe(true);
+      expect(data.capaian_elemen.some(el => el.elemen.includes('Literasi Digital'))).toBe(true);
+      expect(data.capaian_umum).not.toContain('bilangan');
+    });
+
     it('generates DOCX buffer for Capaian Pembelajaran document', async () => {
       const mockInput: AnalisisCpDocxInput = {
         metadata: {

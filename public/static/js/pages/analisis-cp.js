@@ -1209,8 +1209,7 @@ export function updatePreviewDataCp(mapel, kelas) {
   const badgeFase = document.getElementById('badge-cp-fase');
   if (!summaryEl) return;
 
-  try {
-    const cpData = getOfficialCpDocumentDataClient(mapel, kelas);
+  const applyCpData = (cpData) => {
     if (!cpData) return;
 
     if (badgeFase) {
@@ -1237,6 +1236,21 @@ export function updatePreviewDataCp(mapel, kelas) {
         </div>
       `).join('');
     }
+  };
+
+  try {
+    // 1. Terapkan data lokal secara instan (tanpa flicker/delay)
+    const localData = getOfficialCpDocumentDataClient(mapel, kelas);
+    applyCpData(localData);
+
+    // 2. Sinkronkan dengan server (jika ada data database kustom)
+    api(`/analisis-cp/official-cp?mapel=${encodeURIComponent(mapel || '')}&kelas=${encodeURIComponent(kelas || '')}`)
+      .then(res => {
+        if (res && res.success && res.data) {
+          applyCpData(res.data);
+        }
+      })
+      .catch(() => {});
   } catch (err) {
     console.error('Error updating preview Data CP:', err);
   }

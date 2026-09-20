@@ -1543,7 +1543,277 @@ export function getOfficialCpDocumentDataClient(mataPelajaran = 'Matematika', je
     };
   }
 
-  // Default: Matematika
+  if (mapelLower.includes('seni rupa') || mapelLower.includes('rupa')) {
+    return {
+      mata_pelajaran: 'Seni Rupa',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'Seni Rupa merupakan wadah pengembangan sensibilitas visual, imajinasi kreatif, keterampilan motorik halus, serta apresiasi nilai keindahan karya seni dan alam sekitar untuk memperkaya kesejahteraan emosional murid.',
+      tujuan: [
+        'Mengembangkan kepekaan mengamati unsur-unsur rupa dan prinsip estetika di lingkungan sekitar.',
+        'Mengekspresikan ide, perasaan, dan imajinasi melalui ragam media dan teknik seni rupa.',
+        'Mengapresiasi karya seni diri sendiri dan teman dengan sikap saling menghargai.',
+        'Menghasilkan karya seni yang mencerminkan rasa syukur dan kepedulian terhadap lingkungan.'
+      ],
+      karakteristik: 'Pembelajaran Seni Rupa berpusat pada eksplorasi bahan, visual thinking, dan siklus kreasi artistik yang mencakup 5 (lima) elemen utama.',
+      elemen_deskripsi: [
+        { elemen: 'Mengalami (Experiencing)', deskripsi: 'Mengamati, mengidentifikasi, dan merasakan unsur rupa (garis, bidang, warna, tekstur) pada objek visual dan karya seni di sekitar.' },
+        { elemen: 'Merefleksikan (Reflecting)', deskripsi: 'Menghargai, menilai, dan mengevaluasi karya seni rupa diri dan teman menggunakan kosakata seni yang sesuai.' },
+        { elemen: 'Berpikir dan Bekerja Artistik', deskripsi: 'Mengenali dan menguji coba variasi alat, bahan, dan teknik berkarya seni secara mandiri, aman, dan kreatif.' },
+        { elemen: 'Menciptakan (Making/Creating)', deskripsi: 'Membuat karya seni rupa dua atau tiga dimensi berdasarkan pengalaman nyata, pengamatan lingkungan, dan imajinasi kreatif.' },
+        { elemen: 'Berdampak (Impacting)', deskripsi: 'Menghasilkan karya seni yang memberikan kepuasan batin bagi murid dan menyampaikan pesan positif bagi orang lain/lingkungan.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Pada akhir Fase A, murid mampu mengenali unsur rupa di lingkungan sekitar, mengapresiasi karyanya, mencoba ragam alat dan bahan gambar, serta membuat karya 2D/3D sederhana secara kreatif.'
+        : fase === 'Fase B'
+          ? 'Pada akhir Fase B, murid mampu mengidentifikasi unsur rupa dan prinsip desain di lingkungan sekitar, merefleksikan karya dengan kosakata seni, menguji coba variasi bahan, dan menciptakan karya rupa kreatif yang berdampak positif.'
+          : 'Pada akhir Fase C, murid mampu menjelaskan unsur rupa dan prinsip desain (keseimbangan, proporsi, ritme) dalam karya seni rupa secara analitis, bereksperimen dengan teknik rupa tingkat lanjut, serta menciptakan karya yang berdampak sosial/ekologis.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Mengalami (Experiencing)', cp: fase === 'Fase A' ? 'Mengenali dan menyebutkan unsur-unsur rupa (garis, bentuk, warna) dalam benda-benda di sekitar dan karya seni rupa.' : fase === 'Fase B' ? 'Mengidentifikasi unsur rupa dan prinsip desain (ritme, pola berulang) dalam benda-benda di sekitar atau karya seni rupa.' : 'Menjelaskan unsur rupa dan prinsip desain (keseimbangan, proporsi, ritme, kontras) dalam benda-benda di sekitar dan karya seni rupa.' },
+        { no: 2, elemen: 'Merefleksikan (Reflecting)', cp: fase === 'Fase A' ? 'Merefleksikan dan mengapresiasi karya diri sendiri dengan kata-kata sederhana.' : fase === 'Fase B' ? 'Merefleksikan dan mengapresiasi karya diri sendiri dan teman sekelas menggunakan kosakata seni rupa yang sesuai.' : 'Merefleksikan dan mengapresiasi karya diri sendiri dan teman sekelas menggunakan kosakata seni rupa yang sesuai dan objektif.' },
+        { no: 3, elemen: 'Berpikir dan Bekerja Artistik', cp: fase === 'Fase A' ? 'Mengenali, menguji coba, dan menggunakan alat serta bahan rupa secara aman.' : fase === 'Fase B' ? 'Mengenali, menguji coba, dan menerapkan variasi alat, media, dan teknik berkarya seni rupa.' : 'Mengenali dan menguji coba variasi teknik penggunaan alat, bahan, dan media seni rupa tingkat lanjut.' },
+        { no: 4, elemen: 'Menciptakan (Making/Creating)', cp: fase === 'Fase A' ? 'Membuat karya seni rupa dua dimensi dan tiga dimensi berdasarkan pengalaman dan hasil pengamatan lingkungan.' : fase === 'Fase B' ? 'Membuat karya seni rupa 2D dan 3D berdasarkan pengalaman dan pengamatan terhadap lingkungan sekitar.' : 'Membuat karya seni rupa berdasarkan pengalaman nyata, pengamatan lingkungan, dan pengembangan imajinasi kreatif.' },
+        { no: 5, elemen: 'Berdampak (Impacting)', cp: fase === 'Fase A' ? 'Menghasilkan karya seni rupa yang berdampak positif pada perasaan dirinya.' : fase === 'Fase B' ? 'Menghasilkan karya seni rupa yang berdampak pada perasaan atau mewakili harapannya.' : 'Menghasilkan karya seni rupa yang mewakili minat pribadi serta memberikan dampak positif bagi lingkungan sekitar.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('koding') || mapelLower.includes('kecerdasan artifisial') || mapelLower.includes('ai')) {
+    return {
+      mata_pelajaran: 'Koding dan Kecerdasan Artifisial',
+      fase: 'Fase C',
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'Koding dan Kecerdasan Artifisial (KA) membekali generasi muda dengan kompetensi berpikir komputasional, pemecahan masalah algoritmis, literasi kecerdasan artifisial, dan kesadaran etika digital di era revolusi industri 4.0 dan Society 5.0.',
+      tujuan: [
+        'Mengembangkan pola pikir komputasional (dekomposisi, pengenalan pola, abstraksi, dan algoritma) dalam menyelesaikan masalah.',
+        'Memahami konsep dasar sistem komputasi, perangkat digital, dan pemanfaatan internet secara aman dan bertanggung jawab.',
+        'Memahami prinsip kerja dan pemanfaatan teknologi Kecerdasan Artifisial (KA) untuk kesejahteraan manusia.',
+        'Menumbuhkan etika digital, empati, perlindungan data pribadi, dan integritas berkarya di ruang siber.'
+      ],
+      karakteristik: 'Pembelajaran disajikan dengan metode unplugged (tanpa gawai) dan plugged (berbantuan aplikasi visual koding) yang berfokus pada logika dan nalar kritis.',
+      elemen_deskripsi: [
+        { elemen: 'Berpikir Komputasional', deskripsi: 'Penerapan pemecahan masalah secara terstruktur melalui dekomposisi persoalan, pengenalan pola, abstraksi, dan penulisan algoritma logis.' },
+        { elemen: 'Literasi Digital', deskripsi: 'Pemahaman sistem digital, pemanfaatan internet sehat, keamanan informasi pribadi, dan etika komunikasi siber.' },
+        { elemen: 'Literasi dan Etika Kecerdasan Artifisial', deskripsi: 'Pemahaman konsep KA, perbedaan kecerdasan manusia dan mesin, etika pemanfaatan KA, dan dampak sosialnya.' },
+        { elemen: 'Pemanfaatan dan Pengembangan Kecerdasan Artifisial', deskripsi: 'Simulasi cara kerja KA dalam mengenali pola data konkret, klasifikasi objek, dan evaluasi hasil prediksi cerdas.' }
+      ],
+      capaian_umum: 'Pada akhir Fase C, murid mampu merumuskan langkah pemecahan masalah secara logis terstruktur; mengoperasikan aplikasi digital dan mengamankan data pribadi; memahami etika dasar pemanfaatan AI; serta menyimulasikan cara kerja model AI sederhana dalam mengenali pola data kehidupan nyata.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Berpikir Komputasional', cp: 'Menerapkan pemecahan masalah secara terstruktur melalui dekomposisi persoalan nyata, pengenalan pola, abstraksi informasi esensial, dan perumusan algoritma langkah demi langkah secara runtut baik secara unplugged maupun plugged.' },
+        { no: 2, elemen: 'Literasi Digital', cp: 'Mengoperasikan perangkat keras dan lunak digital secara aman, mempraktikkan etika komunikasi siber, menjaga privasi data pribadi, dan menyaring informasi di dunia maya secara kritis.' },
+        { no: 3, elemen: 'Literasi dan Etika Kecerdasan Artifisial', cp: 'Memahami konsep dasar kecerdasan artifisial, membedakan proses belajar manusia dengan model komputasi cerdas, serta menerapkan etika pemanfaatan AI yang jujur dan bertanggung jawab.' },
+        { no: 4, elemen: 'Pemanfaatan dan Pengembangan Kecerdasan Artifisial', cp: 'Mengeksplorasi penggunaan aplikasi cerdas untuk mengenali pola suara/gambar, menyimulasikan klasifikasi data visual, serta mengevaluasi keluaran prediksi AI secara mandiri.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('jasmani') || mapelLower.includes('pjok') || mapelLower.includes('olahraga')) {
+    return {
+      mata_pelajaran: 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'PJOK merupakan sarana esensial untuk membentuk kebiasaan beraktivitas jasmani secara teratur, meningkatkan kebugaran jasmani, menumbuhkan sportivitas, serta mengembangkan pemahaman komprehensif tentang pola hidup bersih dan sehat sepanjang hayat.',
+      tujuan: [
+        'Mengembangkan keterampilan gerak dasar fundamental hingga variasi dan kombinasi gerak terstruktur.',
+        'Meningkatkan derajat kebugaran jasmani dan ketahanan motorik murid.',
+        'Menanamkan nilai sportivitas, disiplin, kerja sama, respek, dan fair play.',
+        'Membiasakan pola hidup sehat, konsumsi gizi seimbang, dan keselamatan diri.'
+      ],
+      karakteristik: 'Pembelajaran PJOK memadukan aktivitas fisik langsung, permainan edukatif, dan literasi kesehatan melalui 4 (empat) elemen kompetensi.',
+      elemen_deskripsi: [
+        { elemen: 'Keterampilan Gerak', deskripsi: 'Penguasaan gerak lokomotor, nonlokomotor, manipulatif, senam, gerak berirama, dan aktivitas air.' },
+        { elemen: 'Pengetahuan Gerak', deskripsi: 'Pemahaman konsep, prinsip, dan mekanika gerak untuk efisiensi dan keamanan aktivitas jasmani.' },
+        { elemen: 'Pemanfaatan Gerak', deskripsi: 'Penerapan aktivitas fisik untuk memelihara kebugaran jasmani, postur tubuh, dan pola hidup sehat.' },
+        { elemen: 'Pengembangan Karakter dan Nilai-nilai Gerak', deskripsi: 'Internalisasi nilai tanggung jawab personal dan sosial, kepemimpinan, dan etika berolahraga.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Pada akhir Fase A, murid mempraktikkan gerak fundamental dalam situasi bermain, mematuhi aturan sederhana, memilih makanan bergizi, dan mengenali situasi aman untuk beraktivitas.'
+        : fase === 'Fase B'
+          ? 'Pada akhir Fase B, murid memperhalus variasi dan kombinasi gerak dasar, menyesuaikan strategi gerak permainan, berpartisipasi aktif dalam tim, serta mempraktikkan P3K sederhana.'
+          : 'Pada akhir Fase C, murid menguasai pola gerak kompleks, memodifikasi aturan untuk permainan fair play, mengaitkan aktivitas jasmani dengan pencegahan penyakit sedenter, serta mengelola kebugaran diri.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Keterampilan Gerak', cp: fase === 'Fase A' ? 'Mempraktikkan gerak fundamental lokomotor, nonlokomotor, dan manipulatif dalam situasi bermain teratur.' : fase === 'Fase B' ? 'Mempraktikkan variasi dan kombinasi pola gerak dasar secara lancar dalam permainan beregu dan aktivitas kebugaran.' : 'Mempraktikkan modifikasi pola gerak dasar kompleks dalam permainan bola besar, bola kecil, atletik, dan senam lantai.' },
+        { no: 2, elemen: 'Pengetahuan Gerak', cp: fase === 'Fase A' ? 'Memahami prosedur melakukan gerak fundamental dalam permainan sederhana.' : fase === 'Fase B' ? 'Memahami konsep variasi dan kombinasi pola gerak dasar serta strategi gerak sederhana.' : 'Menganalisis prinsip dan mekanika gerak untuk meningkatkan efektivitas gerak dalam berbagai cabang olahraga.' },
+        { no: 3, elemen: 'Pemanfaatan Gerak', cp: fase === 'Fase A' ? 'Membiasakan aktivitas fisik harian dan mengenal makanan bergizi seimbang.' : fase === 'Fase B' ? 'Memantau kebugaran jasmani pribadi dan mempraktikkan pertolongan pertama pada cedera ringan.' : 'Mengukur kebugaran jasmani mandiri dan mengaitkannya dengan pencegahan penyakit perilaku sedenter.' },
+        { no: 4, elemen: 'Pengembangan Karakter dan Nilai-nilai Gerak', cp: fase === 'Fase A' ? 'Menunjukkan perilaku patuh aturan, kerja sama, dan percaya diri saat beraktivitas jasmani.' : fase === 'Fase B' ? 'Menunjukkan sportivitas, menerima kemenangan dan kekalahan, serta menghargai teman dalam aktivitas tim.' : 'Menunjukkan kepemimpinan, integritas etika fair play, dan tanggung jawab sosial dalam aktivitas jasmani beregu.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('inggris')) {
+    return {
+      mata_pelajaran: 'Bahasa Inggris',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Kepala BSKAP Kemendikbudristek No. 046 Tahun 2025',
+      rasional: 'Bahasa Inggris di sekolah dasar membekali murid dengan rasa percaya diri, keterampilan interaksi verbal dasar, dan wawasan antarbudaya dalam bahasa komunikasi global melalui aktivitas yang menyenangkan, kontekstual, dan bermakna.',
+      tujuan: [
+        'Menumbuhkan minat dan keberanian berkomunikasi dalam Bahasa Inggris pada ranah kehidupan sehari-hari.',
+        'Mengembangkan kecakapan reseptif (menyimak, membaca) dan produktif (berbicara, menulis) secara terpadu.',
+        'Membangun pemahaman kosakata dasar dan struktur kalimat fungsional sederhana.'
+      ],
+      karakteristik: 'Pembelajaran Bahasa Inggris di SD berpusat pada pemerolehan bahasa secara alami melalui lagu, cerita, permainan, dan media visual interaktif.',
+      elemen_deskripsi: [
+        { elemen: 'Menyimak – Berbicara (Listening – Speaking)', deskripsi: 'Kemampuan memahami tuturan lisan guru/rekan dan merespons secara verbal/non-verbal dalam percakapan sehari-hari.' },
+        { elemen: 'Membaca – Memirsa (Reading – Viewing)', deskripsi: 'Kemampuan membaca dan memahami teks tertulis bergambar atau visual multimodal pendek.' },
+        { elemen: 'Menulis – Mempresentasikan (Writing – Presenting)', deskripsi: 'Kemampuan menulis kata atau kalimat pendek terpandu dan menyampaikan ide secara lisan.' }
+      ],
+      capaian_umum: fase === 'Fase B'
+        ? 'Pada akhir Fase B, murid dapat memahami dan merespons teks lisan sederhana tentang diri dan lingkungan, membaca teks bergambar pendek, serta menulis kalimat sederhana sesuai konteks.'
+        : 'Pada akhir Fase C, murid dapat memahami alur informasi teks lisan secara runtut, merespons percakapan topik sehari-hari dengan kalimat sederhana yang percaya diri, membaca beragam teks pendek, serta menuliskan ide dan pengalamannya secara mandiri.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Menyimak – Berbicara (Listening – Speaking)', cp: fase === 'Fase B' ? 'Memahami dan merespons teks lisan atau teks multimodal sederhana tentang kehidupan sehari-hari secara verbal atau non-verbal sesuai konteks.' : 'Memahami alur informasi teks secara keseluruhan dan merespons teks lisan topik sehari-hari secara lisan dengan kalimat pendek dan runtut.' },
+        { no: 2, elemen: 'Membaca – Memirsa (Reading – Viewing)', cp: fase === 'Fase B' ? 'Memahami teks tulis pendek sederhana atau teks multimodal tentang kehidupan sehari-hari dan meresponsnya sesuai konteks.' : 'Memahami alur ide pokok dan informasi rinci dari beragam teks pendek bergambar dan meresponsnya secara tertulis/lisan.' },
+        { no: 3, elemen: 'Menulis – Mempresentasikan (Writing – Presenting)', cp: fase === 'Fase B' ? 'Mengomunikasikan gagasan tentang topik sehari-hari dalam teks tulis pendek atau teks visual sederhana.' : 'Mengomunikasikan ide dan pengalamannya melalui berbagai jenis teks tulis sederhana dan mempresentasikannya dengan percaya diri.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('agama') || mapelLower.includes('paibp') || mapelLower.includes('pai') || mapelLower.includes('islam')) {
+    return {
+      mata_pelajaran: 'Pendidikan Agama dan Budi Pekerti',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Keputusan Dirjen Pendidikan Islam / Kepka BKPDM No. 020 Tahun 2026',
+      rasional: 'Pendidikan Agama dan Budi Pekerti membimbing murid memperkokoh keimanan dan ketakwaan kepada Allah Swt., berakhlak mulia (akhlakul karimah) kepada sesama dan alam ciptaan, serta menumbuhkan sikap moderasi beragama dalam kebinekaan bangsa.',
+      tujuan: [
+        'Membaca, menulis, menghafal, dan memahami pesan pokok Al-Qur\'an dan hadis Nabi saw.',
+        'Meyakini rukun iman dan meneladani sifat-sifat mulia Allah Swt. dan para rasul.',
+        'Membiasakan akhlak terpuji terhadap Allah Swt., diri sendiri, sesama manusia, dan alam semesta.',
+        'Memahami dan mempraktikkan tata cara ibadah fardu dan sunah secara tertib dan benar.'
+      ],
+      karakteristik: 'Pembelajaran agama mengintegrasikan pemahaman teologis, pembiasaan ibadah praktis, dan keteladanan moral melalui 5 (lima) elemen pokok keagamaan.',
+      elemen_deskripsi: [
+        { elemen: 'Al-Qur’an Hadis', deskripsi: 'Kemampuan membaca ayat-ayat Al-Qur\'an dan hadis dengan tajwid yang baik, menulis, menghafal, serta memahami kandungan maknanya.' },
+        { elemen: 'Akidah', deskripsi: 'Pemahaman dan keyakinan teguh terhadap rukun iman, asmaulhusna, dan dimensi keimanan islam.' },
+        { elemen: 'Akhlak', deskripsi: 'Penerapan adab dan akhlakul karimah kepada Allah, sesama manusia, orang tua, guru, dan pelestarian lingkungan.' },
+        { elemen: 'Fikih', deskripsi: 'Ketentuan hukum ibadah: bersuci (thaharah), salat fardu/sunah, puasa, zakat, infak, dan sedekah.' },
+        { elemen: 'Sejarah Peradaban Islam', deskripsi: 'Kisah keteladanan para nabi, rasul, sahabat, dan khulafaurasyidin sebagai inspirasi hidup.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Pada akhir Fase A, murid mengenal huruf hijaiah bersambung, menghafal surah pendek, meyakini rukun iman, membiasakan akhlak mulia, mempraktikkan tata cara bersuci dan salat fardu, serta meneladani kisah nabi.'
+        : fase === 'Fase B'
+          ? 'Pada akhir Fase B, murid fasih membaca Al-Qur\'an dan hadis tentang silaturahmi, meyakini kitab suci dan rasul, menerapkan akhlak terpuji kepada orang tua dan guru, melaksanakan salat jumat/sunah, serta memahami masa kerasulan Nabi di Makkah.'
+          : 'Pada akhir Fase C, murid memahami surah pilihan, meyakini hari akhir dan qada/qadar, mengamalkan akhlak terpuji dan toleransi, mempraktikkan puasa, zakat, dan sedekah, serta menjelaskan dakwah Nabi periode Madinah dan khulafaurasyidin.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Al-Qur’an Hadis', cp: fase === 'Fase A' ? 'Membaca dan membedakan huruf hijaiah berharakat, huruf hijaiah bersambung; menghafal Surah al-Fatihah dan surah-surah pendek pilihan.' : fase === 'Fase B' ? 'Membaca, menulis, menghafal, dan menjelaskan beberapa surah pendek serta hadis tentang kewajiban salat dan silaturahmi.' : 'Membaca Al-Qur’an dengan tartil, menulis ayat pilihan, dan menjelaskan kandungan surah-surah pendek tentang tolong-menolong dan keadilan.' },
+        { no: 2, elemen: 'Akidah', cp: fase === 'Fase A' ? 'Menjelaskan dan meyakini rukun iman, iman kepada Allah Swt., beberapa asmaulhusna, dan iman kepada malaikat.' : fase === 'Fase B' ? 'Menjelaskan dan meyakini sifat-sifat Allah Swt., iman kepada kitab-kitab suci Allah Swt., dan iman kepada rasul-rasul Allah Swt.' : 'Menjelaskan dan meyakini asmaulhusna pilihan, iman kepada hari akhir, serta iman kepada qada dan qadar.' },
+        { no: 3, elemen: 'Akhlak', cp: fase === 'Fase A' ? 'Membiasakan akhlak mulia terhadap Allah Swt., diri sendiri, orang tua, dan teman di lingkungan sekolah.' : fase === 'Fase B' ? 'Menerapkan akhlak terpuji kepada orang tua, keluarga, guru, serta menjaga kerukunan antar sesama.' : 'Menerapkan akhlak terpuji kepada Allah Swt., bertawakal, toleran dalam perbedaan, dan menjaga kelestarian lingkungan.' },
+        { no: 4, elemen: 'Fikih', cp: fase === 'Fase A' ? 'Menerapkan rukun Islam, syahadatain, tata cara bersuci (wudu), dan salat fardu lima waktu.' : fase === 'Fase B' ? 'Menerapkan tata cara salat jumat, salat sunah berjemaah, dan memahami tanda-tanda usia balig.' : 'Menerapkan ketentuan puasa wajib dan sunah, zakat, infak, sedekah, serta makanan dan minuman yang halal dan berkah.' },
+        { no: 5, elemen: 'Sejarah Peradaban Islam', cp: fase === 'Fase A' ? 'Menceritakan kisah keteladanan Nabi Adam a.s., Nabi Nuh a.s., dan Nabi Ibrahim a.s.' : fase === 'Fase B' ? 'Menceritakan dan meneladani kisah perjuangan Nabi Muhammad saw. periode awal dakwah di Makkah.' : 'Menceritakan peristiwa hijrah Nabi Muhammad saw. ke Madinah serta keteladanan Khulafaur Rasyidin.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('sunda')) {
+    return {
+      mata_pelajaran: 'Bahasa Sunda (Mulok)',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Peraturan Gubernur Jawa Barat / Kurikulum Muatan Lokal',
+      rasional: 'Pangajaran Basa jeung Sastra Sunda miboga fungsi pikeun ngaraksa, ngariksa, tur ngamumulé ajén-inajén budaya luhur Sunda, ngaronjatkeun kamampuh komunikasi santun maké tatakrama basa, sarta ngajembaran wawasan kearifan lokal urang Sunda.',
+      tujuan: [
+        'Mampuh komunikasi dina basa Sunda kalawan bener, merenah, tur sopan luyu jeung undak-usuk basa.',
+        'Mikareueus jeung mikanyaah kana basa, sastra, jeung aksara Sunda minangka warisan budaya karuhun.',
+        'Ngagali ajén kearifan lokal tina dongéng, pupuh, jeung kasenian Sunda pikeun ngawangun karakter murid nu nyunda.'
+      ],
+      karakteristik: 'Pangajaran basa Sunda museur kana kaparigelan ngagunakeun basa dina kahirupan sapopoé ngaliwatan 4 (opat) aspék kaparigelan basa.',
+      elemen_deskripsi: [
+        { elemen: 'Ngaregepkeun', deskripsi: 'Kaparigelan mikaharti jeung nyurahan eusi omongan, dongéng, guguritan, atawa warta anu kadéngé.' },
+        { elemen: 'Maca jeung Miarsa', deskripsi: 'Kaparigelan maca téks kalayan lafal jeung lentong anu merenah sarta mikaharti pesenna.' },
+        { elemen: 'Nyarita jeung Midangkeun', deskripsi: 'Kaparigelan ngedalkeun pamikiran jeung rasa sacara lisan maké tatakrama basa (loma jeung lemes).' },
+        { elemen: 'Nulis', deskripsi: 'Kaparigelan nuliskeun kecap, kalimah, jeung karangan dina aksara Latén atawa aksara Sunda kalawan bener.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Dina ahir Fase A, murid mampuh ngaregepkeun jeung ngaréspons caritaan basajan ngeunaan diri jeung kulawarga, maca kecap basajan kalawan lancar, sarta nuliskeun aksara jeung kecap kalawan rapih.'
+        : fase === 'Fase B'
+          ? 'Dina ahir Fase B, murid mampuh nyurahan eusi dongéng jeung carita, cumarita ngagunakeun tatakrama basa Sunda anu luyu, sarta nyusun karangan dheskripsi pondok dumasar pangalaman pribadi.'
+          : 'Dina ahir Fase C, murid mampuh nganalisis téks aural basa Sunda (warta, pupuh), nepikeun biantara atawa pamadegan kalayan tartib tur sopan, sarta nulis rupa-rupa karangan narasi atawa éksposisi kalayan merenah.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Ngaregepkeun', cp: 'Kaparigelan mikaharti jeung nyurahan eusi dongeng, pupuh, guguritan, atawa pedaran basa Sunda kalawan saregep.' },
+        { no: 2, elemen: 'Maca jeung Miarsa', cp: 'Kaparigelan maca rupa-rupa wacana basa Sunda kalawan lentong, intonasi, jeung artikulasi anu merenah.' },
+        { no: 3, elemen: 'Nyarita jeung Midangkeun', cp: 'Kaparigelan ngedalkeun pamadegan, rasa, jeung pangalaman lisan ngagunakeun undak-usuk basa Sunda sacara santun.' },
+        { no: 4, elemen: 'Nulis', cp: 'Kaparigelan nyusun kalimah, paragraf, karangan pondok, atawa aksara Sunda kalawan tartib jeung merenah.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('tatanen') || mapelLower.includes('tdba') || mapelLower.includes('bale atikan')) {
+    return {
+      mata_pelajaran: 'Tatanen di Bale Atikan (TdBA)',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Peraturan Bupati Purwakarta No. 69 Tahun 2021 tentang Pendidikan Berkarakter TdBA',
+      rasional: 'Tatanen di Bale Atikan (TdBA) nyaéta gerakan atikan transformatif dumasar kana falsafah Panca Niti nu ngahijikeun budidaya tatanén alami (permakultur), konservasi lingkungan, jeung penumbuhan karakter murid pikeun mulih deui ka alam (back to nature) demi karaharjaan babarengan.',
+      tujuan: [
+        'Ngahudang kasadaran ékologis jeung kacintaan kana taneuh, cai, tutuwuhan, sarta sakabéh ciptaan Gusti.',
+        'Ngalatih kaparigelan tatanén alami organik, daur ulang runtah organik, jeung ngahasilkeun pangan sehat di sakola.',
+        'Ngamalkeun falsafah Panca Niti (Niti Harti, Niti Surti, Niti Bukti, Niti Bakti, Niti Sajati) dina kabiasaan sapopoé.'
+      ],
+      karakteristik: 'Pembelajaran berbasis aksi nyata di kebun sekolah dan laboratorium alam yang mengintegrasikan sains tanah, mikroorganisme, dan etika lingkungan.',
+      elemen_deskripsi: [
+        { elemen: 'Niti Harti', deskripsi: 'Mikanyaho jeung mikaharti konsép dasar taneuh subur, cai beresih, tutuwuhan, siklus hara, jeung ékosistem tatanén alami.' },
+        { elemen: 'Niti Surti', deskripsi: 'Miboga rasa empati jeung kapekaeun kana kaayaan lingkungan, runtah, polusi, sarta bahaya bahan kimia.' },
+        { elemen: 'Niti Bukti', deskripsi: 'Prak-prakan ngolah taneuh, nyieun kompos jeung POC, melak binih, ngarawat pepelakan, sarta panén sacara mandiri.' },
+        { elemen: 'Niti Bakti', deskripsi: 'Méré mangpaat tina hasil panén pikeun kasehatan diri, babagi ka sasama, sarta miara kelestarian bumi.' },
+        { elemen: 'Niti Sajati', deskripsi: 'Kasaimbangan diri jeung alam, ngahontal kaharmonisan hirup anu pinuh ku rasa sukur ka Gusti Nu Maha Suci.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Murid mikawanoh rupa-rupa tutuwuhan sakola, bagean awak pepelakan, nyiram pepelakan rutin, miara kaberesihan kebon, sarta syukur ka ciptaan Gusti.'
+        : fase === 'Fase B'
+          ? 'Murid mikaharti hubungan kasuburan taneuh jeung cai, milah runtah organik/anorganik, nyieun kompos basajan, nyemai bibit, sarta ngonsumsi pangan sehat.'
+          : 'Murid paham prinsip permakultur jeung konservasi, ngarancang siklus tatanen lengkep (media tanam organik, POC, eco-enzyme), panen mandiri, jeung bazaar ekologis.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Niti Harti', cp: 'Mikaharti unsur kasuburan taneuh, mikroorganisme organik, daur hidrologi, sarta kaanekaragaman hayati tutuwuhan.' },
+        { no: 2, elemen: 'Niti Surti', cp: 'Numbuhkeun kapekaan kana kaseimbangan alam, ngariksa lingkungan sabudeureun sakola tina polusi kimiawi.' },
+        { no: 3, elemen: 'Niti Bukti', cp: 'Prak-prakan melak bibit, nyieun kompos organik, ngarawat pepelakan, sarta metik hasil panen sacara gotong royong.' },
+        { no: 4, elemen: 'Niti Bakti', cp: 'Mangpaatkeun hasil tatanen pikeun ngarojong program gizi sehat sakola sarta babagi ka warga masarakat.' },
+        { no: 5, elemen: 'Niti Sajati', cp: 'Refleksi spiritual sukur ka Gusti Nu Maha Asih sarta komitmen ngajaga kalumangsungan bumi.' }
+      ]
+    };
+  }
+
+  if (mapelLower.includes('akpk') || mapelLower.includes('atikan karakter')) {
+    return {
+      mata_pelajaran: 'AKPK Purwakarta',
+      fase,
+      kelas: jenjangKelas,
+      regulasi: 'Peraturan Daerah / Kebijakan Atikan Karakter Purwakarta',
+      rasional: 'Atikan Karakter Purwakarta (AKPK) mangrupakeun pondasi ngawangun jati diri generasi emas nu mibanda karakter luhur dumasar kana ajén Pancasila jeung kearifan kabudayaan Sunda ngaliwatan pola pembiasaan Tujuh Poe Atikan Istimewa.',
+      tujuan: [
+        'Ngukuhkeun karakter mulia murid dumasar kana nilai-nilai kearifan budaya Sunda jeung falsafah Pancasila.',
+        'Ngadidik kabiasaan hirup disiplin, mandiri, tanggung jawab, welas asih, jeung produktif ngaliwatan Tujuh Poe Atikan.',
+        'Ngajaga kasaimbangan spiritual, intelektual, émosional, jeung fisik murid sacara holistik.'
+      ],
+      karakteristik: 'Pembelajaran reflektif terintegrasi dalam pembiasaan harian 7 Poe Atikan (Senen Ajeg Nusantara, Salasa Mapag Buana, Rebo Maneh, Kemis Nyanding Rasa, Jumaah Nyucikeun Diri, Saptu-Minggu Betah di Imah).',
+      elemen_deskripsi: [
+        { elemen: 'Ajeg Nusantara', deskripsi: 'Ngemban karakter cinta tanah air, wawasan kabangsaan, jeung ngamalkeun nilai-nilai luhur Pancasila.' },
+        { elemen: 'Mapag Buana', deskripsi: 'Nyiapkeun diri nyanghareupan kamajuan dunya kalawan wawasan global, literasi, jeung téknologi.' },
+        { elemen: 'Maneh', deskripsi: 'Miboga kamandirian, mikawanoh potensi diri, kasadaran emosi, jeung pamikiran kritis.' },
+        { elemen: 'Nyanding Rasa', deskripsi: 'Miboga rasa empati, welas asih, gotong royong, apresiasi seni budaya, jeung toleransi.' },
+        { elemen: 'Nyucikeun Diri', deskripsi: 'Ngaronjatkeun kataqwaan ka Gusti, kaberesihan hate, ucapan jujur, jeung ibadah harian.' },
+        { elemen: 'Betah di Imah & Reureuh', deskripsi: 'Ngukuhkeun tatali asih jeung kulawarga, bakti ka kolot, sarta istirahat anu seimbang.' }
+      ],
+      capaian_umum: fase === 'Fase A'
+        ? 'Murid némbongkeun rasa reueus ka tanah air, mikawanoh kabiasaan hadé diri sorangan, nyaah ka babaturan, hormat ka guru/kolot, sarta getol ibadah.'
+        : fase === 'Fase B'
+          ? 'Murid ngamalkeun wawasan diajar aktif, literasi dasar, gotong royong dina rupa-rupa kabudayaan, disiplin ibadah, jeung komunikasi harmonis di kulawarga.'
+          : 'Murid miboga wawasan nusantara kuat, literasi digital tanggung jawab, kepemimpinan diri berintegritas, filantropi sosial, jeung ketahanan mental tangguh.',
+      capaian_elemen: [
+        { no: 1, elemen: 'Ajeg Nusantara', cp: 'Ngemban rasa patriotik, mikacinta lambang nagara, jeung ngamalkeun nilai-nilai Pancasila dina kahirupan sapopoé.' },
+        { no: 2, elemen: 'Mapag Buana', cp: 'Ngaronjatkeun literasi élmu pangaweruh, téknologi, sarta kabiasaan maca pikeun nyanghareupan kamajuan jaman.' },
+        { no: 3, elemen: 'Maneh', cp: 'Mikawanoh poténsi diri, mibanda kapercayaan diri, mandiri, sarta tanggung jawab kana sagala tugas.' },
+        { no: 4, elemen: 'Nyanding Rasa', cp: 'Némbongkeun sikep welas asih, silih tulungan, empati, sarta ngajénan karagaman kasenian jeung budaya.' },
+        { no: 5, elemen: 'Nyucikeun Diri', cp: 'Ngaronjatkeun ibadah ritual ka Gusti, ngajaga kasucian badan, kaberesihan lingkungan, jeung kajujuran lampah.' },
+        { no: 6, elemen: 'Betah di Imah & Reureuh', cp: 'Bakti ka ibu-rama, ngaraketkeun duduluran di kulawarga, sarta ngamangpaatkeun waktu istirahat kalawan produktif.' }
+      ]
+    };
+  }
+
+  // Matematika (Default jika nama mapel mengandung matematika atau fallback umum)
   return {
     mata_pelajaran: 'Matematika',
     fase,
@@ -1579,13 +1849,14 @@ export function getOfficialCpDocumentDataClient(mataPelajaran = 'Matematika', je
   };
 }
 
+
 /**
  * 4d. RENDER DOKUMEN CAPAIAN PEMBELAJARAN (CP) AWAL RESMI
  */
 export function renderDataCpView(data, inputData = {}) {
   const metadata = data?.metadata || {};
-  const mapel = metadata.mata_pelajaran || inputData?.mataPelajaran || 'Matematika';
-  const jenjangKelas = metadata.kelas || inputData?.jenjangKelas || '5';
+  const mapel = metadata.mata_pelajaran || inputData?.mataPelajaran || document.getElementById('select-mata-pelajaran')?.value || 'Matematika';
+  const jenjangKelas = metadata.kelas || inputData?.jenjangKelas || document.getElementById('select-jenjang-kelas')?.value || '5';
   
   const cpDoc = getOfficialCpDocumentDataClient(mapel, jenjangKelas);
 

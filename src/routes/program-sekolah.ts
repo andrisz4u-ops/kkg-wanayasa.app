@@ -1086,121 +1086,240 @@ export function validateAndRepairProgramResult(raw: any, input: any): ProgramSek
     { no: 12, kegiatan: 'ASAT Kenaikan Kelas, Gelar Karya P5, Bagi Rapor Smt 2 & Libur TP', bulan: [12], pic: 'Seluruh Tim' },
   ];
 
+  const defaultKokurikulerKegiatan = [
+    {
+      nama: 'Tahap Pengenalan Tema & Diagnostik Kesiapan Murid',
+      deskripsi: 'Fasilitator mengenalkan tema projek kokurikuler, mengeksplorasi konsep 8 Dimensi Profil Lulusan, dan memetakan pemahaman awal serta kesiapan belajar murid.',
+      tahapan: [
+        'Pra-Kegiatan: Menyiapkan media pemantik kontekstual dan rubrik asesmen diagnostik 8 dimensi.',
+        'Pelaksanaan: Diskusi terbimbing, pemutaran video inspiratif, dan curah gagasan isu lingkungan sekitar sekolah.',
+        'Output: Peta profil kesiapan awal murid dan terbentuknya tim kelompok projek kokurikuler.',
+      ],
+      tujuan: 'Membangun pemahaman awal, rasa ingin tahu, dan keterikatan bermakna murid terhadap tema projek.',
+      waktu: 'Pekan ke-1 s.d ke-2 Pelaksanaan',
+      sasaran: 'Seluruh Murid ' + metadata.fase_jenjang,
+      pic: 'Koordinator Kokurikuler & Guru Kelas',
+    },
+    {
+      nama: 'Tahap Kontekstualisasi Isu & Observasi Lingkungan Nyata',
+      deskripsi: 'Murid melakukan pengamatan langsung di lingkungan sekolah dan sekitarnya guna menemukan tantangan nyata yang berkaitan dengan tema projek.',
+      tahapan: [
+        'Pra-Kegiatan: Penyusunan panduan observasi dan koordinasi pendampingan fasilitator kelompok.',
+        'Pelaksanaan: Investigasi lapangan, wawancara sederhana dengan warga sekolah/masyarakat, dan pendokumentasian fakta.',
+        'Output: Lembar catatan fakta observasi dan rumusan masalah utama kelompok.',
+      ],
+      tujuan: 'Menumbuhkan nalar kritis, kepekaan sosial, dan kepedulian murid terhadap lingkungan hidup.',
+      waktu: 'Pekan ke-3 s.d ke-4 Pelaksanaan',
+      sasaran: 'Kelompok Murid Kokurikuler',
+      pic: 'Fasilitator Pendamping Kelompok',
+    },
+    {
+      nama: 'Tahap Perancangan Ide & Prototyping Aksi Nyata Berkelompok',
+      deskripsi: 'Murid secara kolaboratif merancang solusi kreatif, membagi peran kerja tim secara adil, dan membuat rancangan awal (prototype) produk atau kampanye aksi.',
+      tahapan: [
+        'Pra-Kegiatan: Menyiapkan alat, bahan daur ulang/ramah lingkungan, dan lembar rencana kerja tim.',
+        'Pelaksanaan: Diskusi perancangan ide produk, pembuatan purwarupa karya, dan konsultasi rutin dengan fasilitator.',
+        'Output: Desain purwarupa produk/solusi dan jadwal kerja kelompok yang disepakati.',
+      ],
+      tujuan: 'Mengasah kreativitas inovatif, komunikasi efektif, dan kerja sama gotong royong.',
+      waktu: 'Pekan ke-5 s.d ke-6 Pelaksanaan',
+      sasaran: 'Kelompok Belajar Murid',
+      pic: 'Tim Fasilitator & Guru Pendamping',
+    },
+    {
+      nama: 'Tahap Pelaksanaan Aksi Nyata Berdiferensiasi & Pembuatan Produk',
+      deskripsi: 'Implementasi aksi nyata terjadwal (memanfaatkan alokasi JP kokurikuler sesuai model jadwal yang dipilih: Model Blok, Reguler Mingguan, atau Model Parsial 1-2 Jam di Awal Belajar) untuk memproduksi karya nyata bermutu.',
+      tahapan: [
+        'Pra-Kegiatan: Pengkondisian sarana ruang kreasi dan instrumen pemantauan proses berkarya.',
+        'Pelaksanaan: Pembuatan karya secara mandiri dan refleksi kemajuan berkala bersama pembimbing.',
+        'Output: Produk kokurikuler tuntas dan portofolio proses perkembangan dimensi profil lulusan.',
+      ],
+      tujuan: 'Melatih kemandirian, ketangguhan mental, dan integritas dalam menyelesaikan tugas autentik.',
+      waktu: 'Pekan ke-7 s.d ke-10 Pelaksanaan',
+      sasaran: 'Seluruh Peserta Didik Pelaksana Projek',
+      pic: 'Wali Kelas & Fasilitator Tema',
+    },
+    {
+      nama: 'Gelar Karya Panen Belajar & Asesmen Autentik 8 Dimensi',
+      deskripsi: 'Pameran gelar karya hasil projek kokurikuler di hadapan orang tua dan warga sekolah, diiringi asesmen autentik 3 tingkat capaian (Berkembang, Cakap, Mahir).',
+      tahapan: [
+        'Pra-Kegiatan: Penataan stan pameran kelas, undangan komite/orang tua, dan penyiapan lembar asesmen rubrik.',
+        'Pelaksanaan: Presentasi mandiri karya oleh murid, apresiasi orang tua, dan pengisian lembar refleksi diri.',
+        'Output: Terlaksananya pameran karya, rekapitulasi capaian 8 Dimensi, dan jurnal refleksi siswa terisi 100%.',
+      ],
+      tujuan: 'Memberikan apresiasi pencapaian belajar dan memupuk rasa bangga berprestasi pada murid.',
+      waktu: 'Pekan ke-11 s.d ke-12 / Akhir Semester',
+      sasaran: 'Seluruh Murid, Orang Tua, dan Pendidik',
+      pic: 'Ketua Tim Kokurikuler & Kepala Sekolah',
+    },
+  ];
+
+  const defaultKokurikulerTim = [
+    {
+      no: 1,
+      jabatan: 'Pengarah / Penanggung Jawab',
+      nama: metadata.kepala_sekolah || 'Kepala Sekolah',
+      tugas: 'Menetapkan kebijakan umum kokurikuler, menerbitkan SK Tim Pelaksana, memfasilitasi kebutuhan sarana projek, dan melakukan supervisi mutu.',
+    },
+    {
+      no: 2,
+      jabatan: 'Koordinator Utama Kokurikuler',
+      nama: metadata.penyusun || 'Koordinator Program',
+      tugas: 'Menyusun rancangan alokasi JP, memetakan keterpaduan 8 dimensi profil lulusan, memimpin koordinasi fasilitator, dan menyusun laporan pertanggungjawaban.',
+    },
+    {
+      no: 3,
+      jabatan: 'Fasilitator Tema & Pendamping Murid',
+      nama: 'Guru Kelas / Tim Kurikulum',
+      tugas: 'Mendampingi kelompok murid sepanjang tahapan inkuiri, memfasilitasi eksplorasi tema, dan mencatat observasi perkembangan sikap.',
+    },
+    {
+      no: 4,
+      jabatan: 'Koordinator Sarpras & Gelar Karya',
+      nama: 'Guru PJOK / Staf Sarpras',
+      tugas: 'Menyiapkan area kerja berkarya, mengelola logistik bahan ramah lingkungan, dan memimpin tata ruang pameran Gelar Karya.',
+    },
+    {
+      no: 5,
+      jabatan: 'Tim Asesmen Autentik & Portofolio',
+      nama: 'Seluruh Wali Kelas 1 - 6',
+      tugas: 'Mengolah instrumen rubrik 3 tingkat (Berkembang, Cakap, Mahir), mengumpulkan lembar refleksi murid, dan menyusun deskripsi capaian rapor kokurikuler.',
+    },
+  ];
+
+  const defaultKokurikulerActionPlan = [
+    { no: 1, kegiatan: 'Sosialisasi Tema Projek & Asesmen Diagnostik Kesiapan Murid', bulan: [1, 2], pic: 'Koord. Kokurikuler' },
+    { no: 2, kegiatan: 'Kontekstualisasi Isu Lingkungan & Investigasi Lapangan', bulan: [2, 3], pic: 'Fasilitator Kelompok' },
+    { no: 3, kegiatan: 'Perancangan Prototipe Ide & Uji Coba Solusi Aksi', bulan: [3, 4], pic: 'Guru Pendamping' },
+    { no: 4, kegiatan: 'Pelaksanaan Aksi Nyata Terjadwal & Pembuatan Produk', bulan: [4, 5, 7, 8, 9, 10], pic: 'Seluruh Fasilitator' },
+    { no: 5, kegiatan: 'Pameran Gelar Karya Panen Belajar & Asesmen 8 Dimensi Smt 1', bulan: [6], pic: 'Panitia Gelar Karya' },
+    { no: 6, kegiatan: 'Refleksi Evaluasi Projek & Tindak Lanjut Semester 2', bulan: [7], pic: 'Tim Kurikulum' },
+    { no: 7, kegiatan: 'Gelar Karya Akhir Tahun & Pelaporan Rapor Kokurikuler', bulan: [12], pic: 'Seluruh Tim' },
+  ];
+
+  const isKokurikuler = templateId === 'kokurikuler-p5' || templateId === 'kokurikuler-profil-lulusan';
+
+  const defaultGeneralKegiatan = [
+    {
+      nama: 'Sosialisasi Program dan Pembekalan Jurnal Harian',
+      deskripsi: 'Pertemuan pengenalan tujuan program kerja, pembagian format jurnal kebiasaan siswa, dan penjelasan peran orang tua.',
+      tahapan: [
+        'Pra-Kegiatan: Menyiapkan instrumen jurnal dan materi presentasi komite.',
+        'Pelaksanaan: Sosialisasi tatap muka bersama seluruh orang tua dan dewan guru.',
+        'Output: Tersosialisasikannya jadwal program dan tersalurkannya jurnal siswa 100%.',
+      ],
+      tujuan: 'Membangun kesepahaman visi antara sekolah dan keluarga.',
+      waktu: 'Minggu ke-3 Juli 2025',
+      sasaran: 'Seluruh orang tua dan guru',
+      pic: 'Ketua Tim Program',
+    },
+    {
+      nama: 'Penerapan Pembiasaan Rutin Harian di Sekolah',
+      deskripsi: 'Kegiatan terpadu mulai dari penyambutan 5S di gerbang, apel pagi/literasi 15 menit, dan sholat berjamaah/doa bersama.',
+      tahapan: [
+        'Pra-Kegiatan: Pengkondisian guru piket dan absensi pagi.',
+        'Pelaksanaan: Pelaksanaan apel, pembacaan buku senyap 15 menit, dan doa khidmat.',
+        'Output: Keteraturan barisan siswa dan atmosfer sekolah yang tertib kondusif.',
+      ],
+      tujuan: 'Membiasakan anak datang tertib, beribadah tekun, dan cinta buku.',
+      waktu: 'Setiap Hari Efektif Sekolah',
+      sasaran: 'Seluruh siswa kelas 1-6',
+      pic: 'Wali Kelas & Guru Piket',
+    },
+    {
+      nama: 'Pojok Baca Inovatif & Tantangan Literasi Mingguan',
+      deskripsi: 'Mengoptimalkan sudut baca di tiap ruang kelas dengan rotasi buku mingguan dan pohon geulis membaca.',
+      tahapan: [
+        'Pra-Kegiatan: Menata koleksi buku bergizi ramah anak di rak pojok baca kelas.',
+        'Pelaksanaan: Membaca mandiri terarah dan menuliskan intisari bacaan pada daun pohon geulis.',
+        'Output: Pajangan pohon geulis kelas yang rimbun dengan resume buku.',
+      ],
+      tujuan: 'Meningkatkan minat baca dan daya analisis siswa.',
+      waktu: 'Setiap Jumat Pagi',
+      sasaran: 'Siswa kelas 1-6',
+      pic: 'Koordinator Literasi',
+    },
+    {
+      nama: 'Sabtu Bersih dan Aksi Sayang Lingkungan (Adiwiyata & TdBA)',
+      deskripsi: 'Gotong royong membersihkan kelas, memilah sampah organik/anorganik, dan merawat tanaman kebun sekolah.',
+      tahapan: [
+        'Pra-Kegiatan: Menyiapkan alat kebersihan dan kantong pemilahan sampah terpilah.',
+        'Pelaksanaan: Kerja bakti serentak, pembuatan pupuk kompos, dan penyiraman kebun TdBA.',
+        'Output: Lingkungan sekolah yang asri, bersih, dan bebas sampah plastik.',
+      ],
+      tujuan: 'Menumbuhkan kepedulian ekologis dan semangat gotong royong.',
+      waktu: 'Setiap Hari Sabtu Pekan ke-2 dan ke-4',
+      sasaran: 'Seluruh warga sekolah',
+      pic: 'Koordinator Lingkungan Hidup',
+    },
+    {
+      nama: 'Refleksi Tengah Semester dan Bintang Kebaikan',
+      deskripsi: 'Penilaian ketercapaian jurnal harian serta penyematan lencana apresiasi bagi murid teladan.',
+      tahapan: [
+        'Pra-Kegiatan: Merekapitulasi poin ketercapaian jurnal harian siswa selama 3 bulan.',
+        'Pelaksanaan: Penganugerahan pin Bintang Kebaikan saat upacara bendera hari Senin.',
+        'Output: Sertifikat apresiasi karakter dan peningkatan motivasi intrinsik murid.',
+      ],
+      tujuan: 'Memberikan penguatan psikologis positif bagi anak.',
+      waktu: 'Bulan Oktober dan Maret',
+      sasaran: 'Murid berprestasi karakter',
+      pic: 'Tim Monitoring & Wali Kelas',
+    },
+  ];
+
+  const defaultGeneralTim = [
+    {
+      no: 1,
+      jabatan: 'Penanggung Jawab / Pengarah',
+      nama: metadata.kepala_sekolah || 'Kepala Sekolah',
+      tugas: 'Menetapkan kebijakan umum, menyediakan sarana prasarana penunjang, dan melakukan supervisi mutu program.',
+    },
+    {
+      no: 2,
+      jabatan: 'Ketua Pelaksana Program',
+      nama: metadata.penyusun || 'Koordinator Program',
+      tugas: 'Mengkoordinasikan seluruh alur pelaksanaan aksi, memimpin rapat tim, dan menyusun laporan pertanggungjawaban.',
+    },
+    {
+      no: 3,
+      jabatan: 'Sekretaris & Pengelola Instrumen',
+      nama: 'Guru Kelas / Tim Kurikulum',
+      tugas: 'Menggandakan dan mengelola distribusi instrumen jurnal harian, lembar observasi, dan rekapitulasi data.',
+    },
+    {
+      no: 4,
+      jabatan: 'Koordinator Lapangan & Sarpras',
+      nama: 'Guru PJOK / Staf Sarpras',
+      tugas: 'Menyiapkan sarana teknis kegiatan harian, fasilitas pojok baca, dan ketertiban pembiasaan di lapangan.',
+    },
+    {
+      no: 5,
+      jabatan: 'Wali Kelas & Pendamping Siswa',
+      nama: 'Seluruh Wali Kelas 1 - 6',
+      tugas: 'Melakukan pemantauan langsung setiap pagi, memvalidasi jurnal anak, dan membina komunikasi aktif dengan orang tua.',
+    },
+  ];
+
+  const defaultGeneralActionPlan = [
+    { no: 1, kegiatan: 'Sosialisasi Program dan Pembagian Jurnal', bulan: [1, 2], pic: 'Ketua Tim' },
+    { no: 2, kegiatan: 'Pelaksanaan Pembiasaan Rutin Harian', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Wali Kelas' },
+    { no: 3, kegiatan: 'Aksi Bersih Lingkungan & Gotong Royong', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Koord. Sarpras' },
+    { no: 4, kegiatan: 'Monitoring dan Refleksi Triwulan I', bulan: [3], pic: 'Kepala Sekolah' },
+    { no: 5, kegiatan: 'Evaluasi Semester I & Gelar Apresiasi', bulan: [6], pic: 'Tim Program' },
+    { no: 6, kegiatan: 'Monitoring dan Refleksi Triwulan II', bulan: [9], pic: 'Tim Monitoring' },
+    { no: 7, kegiatan: 'Evaluasi Akhir Tahun & Diseminasi Praktik Baik', bulan: [12], pic: 'Ketua Tim & Komite' },
+  ];
+
   const bab_3_rencana_program = {
     kegiatan: Array.isArray(parsed.bab_3_rencana_program?.kegiatan) && parsed.bab_3_rencana_program.kegiatan.length > 0
       ? parsed.bab_3_rencana_program.kegiatan
-      : (templateId === 'kalender-sekolah' ? defaultKalenderKegiatan : [
-          {
-            nama: 'Sosialisasi Program dan Pembekalan Jurnal Harian',
-            deskripsi: 'Pertemuan pengenalan tujuan program kerja, pembagian format jurnal kebiasaan siswa, dan penjelasan peran orang tua.',
-            tahapan: [
-              'Pra-Kegiatan: Menyiapkan instrumen jurnal dan materi presentasi komite.',
-              'Pelaksanaan: Sosialisasi tatap muka bersama seluruh orang tua dan dewan guru.',
-              'Output: Tersosialisasikannya jadwal program dan tersalurkannya jurnal siswa 100%.',
-            ],
-            tujuan: 'Membangun kesepahaman visi antara sekolah dan keluarga.',
-            waktu: 'Minggu ke-3 Juli 2025',
-            sasaran: 'Seluruh orang tua dan guru',
-            pic: 'Ketua Tim Program',
-          },
-          {
-            nama: 'Penerapan Pembiasaan Rutin Harian di Sekolah',
-            deskripsi: 'Kegiatan terpadu mulai dari penyambutan 5S di gerbang, apel pagi/literasi 15 menit, dan sholat berjamaah/doa bersama.',
-            tahapan: [
-              'Pra-Kegiatan: Pengkondisian guru piket dan absensi pagi.',
-              'Pelaksanaan: Pelaksanaan apel, pembacaan buku senyap 15 menit, dan doa khidmat.',
-              'Output: Keteraturan barisan siswa dan atmosfer sekolah yang tertib kondusif.',
-            ],
-            tujuan: 'Membiasakan anak datang tertib, beribadah tekun, dan cinta buku.',
-            waktu: 'Setiap Hari Efektif Sekolah',
-            sasaran: 'Seluruh siswa kelas 1-6',
-            pic: 'Wali Kelas & Guru Piket',
-          },
-          {
-            nama: 'Pojok Baca Inovatif & Tantangan Literasi Mingguan',
-            deskripsi: 'Mengoptimalkan sudut baca di tiap ruang kelas dengan rotasi buku mingguan dan pohon geulis membaca.',
-            tahapan: [
-              'Pra-Kegiatan: Menata koleksi buku bergizi ramah anak di rak pojok baca kelas.',
-              'Pelaksanaan: Membaca mandiri terarah dan menuliskan intisari bacaan pada daun pohon geulis.',
-              'Output: Pajangan pohon geulis kelas yang rimbun dengan resume buku.',
-            ],
-            tujuan: 'Meningkatkan minat baca dan daya analisis siswa.',
-            waktu: 'Setiap Jumat Pagi',
-            sasaran: 'Siswa kelas 1-6',
-            pic: 'Koordinator Literasi',
-          },
-          {
-            nama: 'Sabtu Bersih dan Aksi Sayang Lingkungan (Adiwiyata & TdBA)',
-            deskripsi: 'Gotong royong membersihkan kelas, memilah sampah organik/anorganik, dan merawat tanaman kebun sekolah.',
-            tahapan: [
-              'Pra-Kegiatan: Menyiapkan alat kebersihan dan kantong pemilahan sampah terpilah.',
-              'Pelaksanaan: Kerja bakti serentak, pembuatan pupuk kompos, dan penyiraman kebun TdBA.',
-              'Output: Lingkungan sekolah yang asri, bersih, dan bebas sampah plastik.',
-            ],
-            tujuan: 'Menumbuhkan kepedulian ekologis dan semangat gotong royong.',
-            waktu: 'Setiap Hari Sabtu Pekan ke-2 dan ke-4',
-            sasaran: 'Seluruh warga sekolah',
-            pic: 'Koordinator Lingkungan Hidup',
-          },
-          {
-            nama: 'Refleksi Tengah Semester dan Bintang Kebaikan',
-            deskripsi: 'Penilaian ketercapaian jurnal harian serta penyematan lencana apresiasi bagi murid teladan.',
-            tahapan: [
-              'Pra-Kegiatan: Merekapitulasi poin ketercapaian jurnal harian siswa selama 3 bulan.',
-              'Pelaksanaan: Penganugerahan pin Bintang Kebaikan saat upacara bendera hari Senin.',
-              'Output: Sertifikat apresiasi karakter dan peningkatan motivasi intrinsik murid.',
-            ],
-            tujuan: 'Memberikan penguatan psikologis positif bagi anak.',
-            waktu: 'Bulan Oktober dan Maret',
-            sasaran: 'Murid berprestasi karakter',
-            pic: 'Tim Monitoring & Wali Kelas',
-          },
-        ]),
+      : (templateId === 'kalender-sekolah' ? defaultKalenderKegiatan : (isKokurikuler ? defaultKokurikulerKegiatan : defaultGeneralKegiatan)),
     tim_pelaksana: Array.isArray(parsed.bab_3_rencana_program?.tim_pelaksana) && parsed.bab_3_rencana_program.tim_pelaksana.length > 0
       ? parsed.bab_3_rencana_program.tim_pelaksana
-      : (templateId === 'kalender-sekolah' ? defaultKalenderTim : [
-          {
-            no: 1,
-            jabatan: 'Penanggung Jawab / Pengarah',
-            nama: metadata.kepala_sekolah || 'Kepala Sekolah',
-            tugas: 'Menetapkan kebijakan umum, menyediakan sarana prasarana penunjang, dan melakukan supervisi mutu program.',
-          },
-          {
-            no: 2,
-            jabatan: 'Ketua Pelaksana Program',
-            nama: metadata.penyusun || 'Koordinator Program',
-            tugas: 'Mengkoordinasikan seluruh alur pelaksanaan aksi, memimpin rapat tim, dan menyusun laporan pertanggungjawaban.',
-          },
-          {
-            no: 3,
-            jabatan: 'Sekretaris & Pengelola Instrumen',
-            nama: 'Guru Kelas / Tim Kurikulum',
-            tugas: 'Menggandakan dan mengelola distribusi instrumen jurnal harian, lembar observasi, dan rekapitulasi data.',
-          },
-          {
-            no: 4,
-            jabatan: 'Koordinator Lapangan & Sarpras',
-            nama: 'Guru PJOK / Staf Sarpras',
-            tugas: 'Menyiapkan sarana teknis kegiatan harian, fasilitas pojok baca, dan ketertiban pembiasaan di lapangan.',
-          },
-          {
-            no: 5,
-            jabatan: 'Wali Kelas & Pendamping Siswa',
-            nama: 'Seluruh Wali Kelas 1 - 6',
-            tugas: 'Melakukan pemantauan langsung setiap pagi, memvalidasi jurnal anak, dan membina komunikasi aktif dengan orang tua.',
-          },
-        ]),
+      : (templateId === 'kalender-sekolah' ? defaultKalenderTim : (isKokurikuler ? defaultKokurikulerTim : defaultGeneralTim)),
     action_plan: Array.isArray(parsed.bab_3_rencana_program?.action_plan) && parsed.bab_3_rencana_program.action_plan.length > 0
       ? parsed.bab_3_rencana_program.action_plan
-      : (templateId === 'kalender-sekolah' ? defaultKalenderActionPlan : [
-          { no: 1, kegiatan: 'Sosialisasi Program dan Pembagian Jurnal', bulan: [1, 2], pic: 'Ketua Tim' },
-          { no: 2, kegiatan: 'Pelaksanaan Pembiasaan Rutin Harian', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Wali Kelas' },
-          { no: 3, kegiatan: 'Aksi Bersih Lingkungan & Gotong Royong', bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], pic: 'Koord. Sarpras' },
-          { no: 4, kegiatan: 'Monitoring dan Refleksi Triwulan I', bulan: [3], pic: 'Kepala Sekolah' },
-          { no: 5, kegiatan: 'Evaluasi Semester I & Gelar Apresiasi', bulan: [6], pic: 'Tim Program' },
-          { no: 6, kegiatan: 'Monitoring dan Refleksi Triwulan II', bulan: [9], pic: 'Tim Monitoring' },
-          { no: 7, kegiatan: 'Evaluasi Akhir Tahun & Diseminasi Praktik Baik', bulan: [12], pic: 'Ketua Tim & Komite' },
-        ]),
+      : (templateId === 'kalender-sekolah' ? defaultKalenderActionPlan : (isKokurikuler ? defaultKokurikulerActionPlan : defaultGeneralActionPlan)),
     sarana_anggaran: parsed.bab_3_rencana_program?.sarana_anggaran || [
       'Dukungan sarana meliputi pengadaan buku jurnal pembiasaan siswa, banner dan poster edukasi karakter di setiap sudut kelas, perlengkapan sanitasi dan tempat sampah terpilah, serta koleksi buku bacaan bermutu.',
       'Anggaran pembiayaan bersumber dari dana Bantuan Operasional Satuan Pendidikan (BOSP) komponen pengembangan karakter dan kegiatan kokurikuler, serta dukungan swadaya komite sekolah sesuai ketentuan perundang-undangan.',

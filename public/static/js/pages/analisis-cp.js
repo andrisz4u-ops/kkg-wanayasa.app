@@ -732,13 +732,28 @@ export function initAnalisisCp() {
   });
 
   // Download DOCX button (tab-aware)
-  document.getElementById('btn-download-docx')?.addEventListener('click', () => {
-    downloadDocx(activeAnalysisTab, currentAnalysisData, currentInputData, activePromesSemester);
+  document.getElementById('btn-download-docx')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-download-docx');
+    if (btn?.disabled) return;
+    const origHtml = btn?.innerHTML;
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+    }
+    try {
+      await downloadDocx(activeAnalysisTab, currentAnalysisData, currentInputData, activePromesSemester);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        if (origHtml) btn.innerHTML = origHtml;
+      }
+    }
   });
 
-  // Download All 4 Documents
+  // Download All 7 Documents
   document.getElementById('btn-download-all-docs')?.addEventListener('click', () => {
-    downloadAllDocs(currentAnalysisData, currentInputData);
+    downloadAllDocs(currentAnalysisData, currentInputData, activePromesSemester);
   });
 
   document.getElementById('btn-print-analisis')?.addEventListener('click', () => {

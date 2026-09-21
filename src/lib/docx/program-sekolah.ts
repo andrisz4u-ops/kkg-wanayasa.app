@@ -12,6 +12,8 @@ import {
   VerticalAlign,
   ShadingType,
   PageOrientation,
+  TabStopType,
+  LeaderType,
 } from 'docx';
 import { sanitizeText, cleanMarkdownSymbols } from './helpers';
 
@@ -137,6 +139,33 @@ function toArray(val: string | string[] | undefined): string[] {
     .filter(Boolean);
 }
 
+// Helper: Multi-line TextRuns with proper Word line breaks (<w:br/>)
+function createMultiLineRuns(
+  text: string,
+  options: {
+    font?: string;
+    size?: number;
+    bold?: boolean;
+    italics?: boolean;
+    color?: string;
+    underline?: any;
+  } = {}
+): TextRun[] {
+  const lines = String(text || '').split('\n');
+  return lines.map((line, idx) => {
+    return new TextRun({
+      text: cleanMarkdownSymbols(line),
+      font: options.font || FONT_NAME,
+      size: options.size || SIZE_BODY,
+      bold: options.bold,
+      italics: options.italics,
+      color: options.color,
+      underline: options.underline,
+      break: idx > 0 ? 1 : undefined,
+    });
+  });
+}
+
 // Helper: Justified Paragraph with 1.5 line spacing and first line indent (1.27 cm = 720 twips)
 function createBodyParagraph(text: string, indent: boolean = true): Paragraph {
   const clean = cleanMarkdownSymbols(text);
@@ -170,6 +199,37 @@ function createListItem(numberPrefix: string, text: string): Paragraph {
       }),
       new TextRun({
         text: clean,
+        font: FONT_NAME,
+        size: SIZE_BODY,
+      }),
+    ],
+  });
+}
+
+// Helper: Scientific hierarchical sub-item (Level 3: a., b., c... with bold label and justified body)
+function createScientificSubItem(letterPrefix: string, label: string, value: string): Paragraph {
+  const cleanVal = cleanMarkdownSymbols(value)
+    .replace(/^(Tujuan|Sasaran|Waktu Pelaksanaan|Waktu|Penanggung Jawab|PIC)\s*:\s*/i, '')
+    .trim();
+  return new Paragraph({
+    alignment: AlignmentType.JUSTIFIED,
+    indent: { left: 720, hanging: 360 },
+    spacing: { before: 30, after: 30, line: LINE_SPACING },
+    children: [
+      new TextRun({
+        text: `${letterPrefix} `,
+        bold: true,
+        font: FONT_NAME,
+        size: SIZE_BODY,
+      }),
+      new TextRun({
+        text: `${label}: `,
+        bold: true,
+        font: FONT_NAME,
+        size: SIZE_BODY,
+      }),
+      new TextRun({
+        text: cleanVal,
         font: FONT_NAME,
         size: SIZE_BODY,
       }),
@@ -231,6 +291,52 @@ function createPageBreak(): Paragraph {
   });
 }
 
+// Helper: Uniform TableCell with standard margins and typography
+interface TableCellOptions {
+  width: number;
+  text?: string;
+  bold?: boolean;
+  italics?: boolean;
+  size?: number;
+  color?: string;
+  align?: (typeof AlignmentType)[keyof typeof AlignmentType];
+  shading?: string;
+  vAlign?: (typeof VerticalAlign)[keyof typeof VerticalAlign];
+  margins?: { top: number; bottom: number; left: number; right: number };
+  colSpan?: number;
+  children?: Paragraph[];
+}
+
+function createStyledTableCell(opts: TableCellOptions): TableCell {
+  const cellMargins = opts.margins || { top: 60, bottom: 60, left: 60, right: 60 };
+  const cellChildren = opts.children || [
+    new Paragraph({
+      alignment: opts.align || AlignmentType.LEFT,
+      children: opts.text !== undefined
+        ? [
+            new TextRun({
+              text: opts.text,
+              bold: opts.bold,
+              italics: opts.italics,
+              font: FONT_NAME,
+              size: opts.size || 16,
+              color: opts.color,
+            }),
+          ]
+        : [],
+    }),
+  ];
+
+  return new TableCell({
+    width: { size: opts.width, type: WidthType.PERCENTAGE },
+    columnSpan: opts.colSpan,
+    shading: opts.shading ? { fill: opts.shading, type: ShadingType.CLEAR } : undefined,
+    verticalAlign: opts.vAlign || VerticalAlign.CENTER,
+    margins: cellMargins,
+    children: cellChildren,
+  });
+}
+
 function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: string): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
 
@@ -254,12 +360,14 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const rubrikHeader = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Dimensi & Subdimensi Sasaran', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Berkembang (Menuju Standar)', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Cakap (Standar Kelulusan / SKL)', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Mahir (Melampaui Standar)', bold: true, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 28, text: 'Dimensi & Subdimensi Sasaran', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 22, text: 'Berkembang (Menuju Standar)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 16 }),
+        createStyledTableCell({ width: 22, text: 'Cakap (Standar Kelulusan / SKL)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 16 }),
+        createStyledTableCell({ width: 22, text: 'Mahir (Melampaui Standar)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 16 }),
       ],
     });
 
@@ -323,12 +431,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const rubrikRows = rubrikData.map(r => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(r.no), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.dimensi, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.berkembang, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.cakap, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.mahir, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: String(r.no), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 28, text: r.dimensi, bold: true, size: 16 }),
+        createStyledTableCell({ width: 22, text: r.berkembang, size: 15 }),
+        createStyledTableCell({ width: 22, text: r.cakap, size: 15 }),
+        createStyledTableCell({ width: 22, text: r.mahir, size: 15 }),
       ],
     }));
 
@@ -355,32 +464,35 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const refHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 54, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pernyataan Refleksi Siswa', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sangat Setuju', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Setuju', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Ragu-ragu', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tidak Setuju', bold: true, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 54, text: 'Pernyataan Refleksi Siswa', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 10, text: 'Sangat Setuju', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 14 }),
+        createStyledTableCell({ width: 10, text: 'Setuju', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 14 }),
+        createStyledTableCell({ width: 10, text: 'Ragu-ragu', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 14 }),
+        createStyledTableCell({ width: 10, text: 'Tidak Setuju', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 14 }),
       ],
     });
 
     const refQuestions = [
-      '1. Saya memahami tujuan dan kebermanfaatan tema projek ini bagi diri dan lingkungan.',
-      '2. Saya aktif terlibat dan membagi tugas secara adil bersama teman satu kelompok.',
-      '3. Saya berani mengemukakan ide dan mendengarkan masukan dari anggota kelompok lain.',
-      '4. Saya bangga dengan produk/aksi nyata yang dihasilkan oleh kelompok saya.',
-      '5. Saya bertekad melanjutkan kebiasaan positif yang dipelajari selama projek di kehidupan sehari-hari.',
+      'Saya memahami tujuan dan kebermanfaatan tema projek ini bagi diri dan lingkungan.',
+      'Saya aktif terlibat dan membagi tugas secara adil bersama teman satu kelompok.',
+      'Saya berani mengemukakan ide dan mendengarkan masukan dari anggota kelompok lain.',
+      'Saya bangga dengan produk/aksi nyata yang dihasilkan oleh kelompok saya.',
+      'Saya bertekad melanjutkan kebiasaan positif yang dipelajari selama projek di kehidupan sehari-hari.',
     ];
 
     const refRows = refQuestions.map((q, idx) => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx + 1), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 54, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: q, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: String(idx + 1), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 54, text: q, size: 16 }),
+        createStyledTableCell({ width: 10, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 10, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 10, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 10, text: '○', align: AlignmentType.CENTER, size: 16 }),
       ],
     }));
 
@@ -408,38 +520,71 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const jurnalHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Fokus Pembiasaan (7 KAIH & 7 Poé Atikan)', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sen\nAjeg', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sel\nMapag', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Rab\nManeuh', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kam\nNyanding', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jum\nNyucikeun', bold: true, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Catatan & Paraf Guru', bold: true, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 34, text: 'Fokus Pembiasaan (7 KAIH & 7 Poé Atikan)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({
+          width: 8,
+          align: AlignmentType.CENTER,
+          shading: 'F1F5F9',
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sen', bold: true, font: FONT_NAME, size: 14 }), new TextRun({ text: 'Ajeg', font: FONT_NAME, size: 12, color: '64748B', break: 1 })] })],
+        }),
+        createStyledTableCell({
+          width: 8,
+          align: AlignmentType.CENTER,
+          shading: 'F1F5F9',
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sel', bold: true, font: FONT_NAME, size: 14 }), new TextRun({ text: 'Mapag', font: FONT_NAME, size: 12, color: '64748B', break: 1 })] })],
+        }),
+        createStyledTableCell({
+          width: 8,
+          align: AlignmentType.CENTER,
+          shading: 'F1F5F9',
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Rab', bold: true, font: FONT_NAME, size: 14 }), new TextRun({ text: 'Maneuh', font: FONT_NAME, size: 12, color: '64748B', break: 1 })] })],
+        }),
+        createStyledTableCell({
+          width: 8,
+          align: AlignmentType.CENTER,
+          shading: 'F1F5F9',
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kam', bold: true, font: FONT_NAME, size: 14 }), new TextRun({ text: 'Nyanding', font: FONT_NAME, size: 12, color: '64748B', break: 1 })] })],
+        }),
+        createStyledTableCell({
+          width: 8,
+          align: AlignmentType.CENTER,
+          shading: 'F1F5F9',
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jum', bold: true, font: FONT_NAME, size: 14 }), new TextRun({ text: 'Nyucikeun', font: FONT_NAME, size: 12, color: '64748B', break: 1 })] })],
+        }),
+        createStyledTableCell({ width: 20, text: 'Catatan & Paraf Guru', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 14 }),
       ],
     });
 
     const kaihRows = [
-      '1. Bangun Pagi Mandiri & Ibadah Subuh (Jumat Nyucikeun Diri)',
-      '2. Berbakti pada Orang Tua & Budaya 5S (Senin Ajeg Nusantara)',
-      '3. Berolahraga Ceria, Makan Sehat & Bawa Tumbler (Selasa Mapag Buana)',
-      '4. Gemar Membaca Buku / Literasi 15 Menit (Rabu Maneuh di Sunda)',
-      '5. Rajin Belajar & Menjaga Kerapihan Diri (Kamis Nyanding Wawangi)',
-      '6. Peduli Lingkungan & Memilah Sampah Kelas (TdBA Karakter)',
-      '7. Istirahat Tepat Waktu & Kumpul Keluarga (Betah di Imah)',
+      'Bangun Pagi Mandiri & Ibadah Subuh (Jumat Nyucikeun Diri)',
+      'Berbakti pada Orang Tua & Budaya 5S (Senin Ajeg Nusantara)',
+      'Berolahraga Ceria, Makan Sehat & Bawa Tumbler (Selasa Mapag Buana)',
+      'Gemar Membaca Buku / Literasi 15 Menit (Rabu Maneuh di Sunda)',
+      'Rajin Belajar & Menjaga Kerapihan Diri (Kamis Nyanding Wawangi)',
+      'Peduli Lingkungan & Memilah Sampah Kelas (TdBA Karakter)',
+      'Istirahat Tepat Waktu & Kumpul Keluarga (Betah di Imah)',
     ];
 
     const kaihTableRows = kaihRows.map((kb, idx) => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx + 1), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: kb, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Paraf: .........', font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: String(idx + 1), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 34, text: kb, size: 15 }),
+        createStyledTableCell({ width: 8, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 8, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 8, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 8, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 8, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 20, text: 'Paraf: .........', align: AlignmentType.CENTER, size: 14 }),
       ],
     }));
 
@@ -478,25 +623,44 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const supHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Aspek Observasi Karakter', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Fakta & Catatan Pelaksanaan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Rencana Tindak Lanjut & Apresiasi', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 28, text: 'Aspek Observasi Karakter', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 42, text: 'Fakta & Catatan Pelaksanaan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 30, text: 'Rencana Tindak Lanjut & Apresiasi', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
-    const supAspects = [
-      '1. Ketertiban & Pembiasaan 5S di Gerbang Sekolah',
-      '2. Konsistensi Pengisian Jurnal 7 KAIH Mandiri',
-      '3. Keterlibatan & Validasi Orang Tua Setiap Akhir Pekan',
-      '4. Pengurangan Konflik & Penumbuhan Empati Antar Siswa',
+    const supAspectsData = [
+      {
+        aspek: '1. Ketertiban & Pembiasaan 5S di Gerbang Sekolah',
+        catatan: 'Guru piket mencatat 95% siswa hadir tepat waktu dan mempraktikkan senyum, sapa, salam secara antusias.',
+        rtl: 'Apresiasi mingguan saat upacara bendera dan tindak lanjut pendampingan bagi siswa terlambat.',
+      },
+      {
+        aspek: '2. Konsistensi Pengisian Jurnal 7 KAIH Mandiri',
+        catatan: 'Jurnal pembiasaan terisi rutin dan divalidasi paraf orang tua setiap akhir pekan rata-rata 92%.',
+        rtl: 'Pemberian Pin/Bintang Kebaikan kelas serta pembinaan berkala bagi siswa yang belum konsisten.',
+      },
+      {
+        aspek: '3. Keterlibatan & Kolaborasi Orang Tua Setiap Pekan',
+        catatan: 'Komunikasi paguyuban kelas aktif mendukung pembiasaan sarapan sehat, tidur tepat waktu, dan ibadah di rumah.',
+        rtl: 'Pertemuan parenting bulanan dan sharing praktik baik pendampingan karakter anak di rumah.',
+      },
+      {
+        aspek: '4. Pengurangan Konflik & Penumbuhan Empati Siswa',
+        catatan: 'Iklim kelas kondusif, budaya saling menghargai meningkat, tidak ada insiden perundungan (bullying).',
+        rtl: 'Penguatan duta anti-perundungan dan pembiasaan refleksi empati melingkar setiap Jumat.',
+      },
     ];
 
-    const supRows = supAspects.map(aspek => new TableRow({
+    const supRows = supAspectsData.map(item => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: aspek, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 28, text: item.aspek, bold: true, size: 15 }),
+        createStyledTableCell({ width: 42, text: item.catatan, italics: true, color: '64748B', size: 14 }),
+        createStyledTableCell({ width: 30, text: item.rtl, italics: true, color: '64748B', size: 14 }),
       ],
     }));
 
@@ -524,12 +688,14 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const kombelHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tahapan Siklus Kombel', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Fokus Topik Pembelajaran', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Temuan Masalah & Solusi Disepakati', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'PIC / RTL', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Tahapan Siklus Kombel', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 30, text: 'Fokus Topik Pembelajaran', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 30, text: 'Temuan Masalah & Solusi Disepakati', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 10, text: 'PIC / RTL', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -541,12 +707,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const kombelRows = kombelData.map(k => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(k.no), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: k.siklus, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: k.topik, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: k.solusi, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: k.pic, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: String(k.no), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 24, text: k.siklus, bold: true, size: 16 }),
+        createStyledTableCell({ width: 30, text: k.topik, size: 15 }),
+        createStyledTableCell({ width: 30, text: k.solusi, size: 15 }),
+        createStyledTableCell({ width: 10, text: k.pic, align: AlignmentType.CENTER, size: 14 }),
       ],
     }));
 
@@ -573,23 +740,26 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const hadirHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hari / Tanggal', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Pendidik / NIP', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jabatan / Kelas', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tanda Tangan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 8, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Hari / Tanggal', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 32, text: 'Nama Pendidik / NIP', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Jabatan / Kelas', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Tanda Tangan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
     const sampleHadir = [1, 2, 3, 4, 5];
     const hadirRows = sampleHadir.map(n => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 8, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(n), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 8, text: String(n), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 32, text: '' }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 20, text: '' }),
       ],
     }));
 
@@ -617,24 +787,27 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const litHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hari / Tanggal', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Judul Buku & Pengarang', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hal. Dibaca', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nilai Moral / Budi Pekerti', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Paraf Guru', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 16, text: 'Hari / Tanggal', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 30, text: 'Judul Buku & Pengarang', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 12, text: 'Hal. Dibaca', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Nilai Moral / Budi Pekerti', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 12, text: 'Paraf Guru', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
     const litSampleRows = [1, 2, 3, 4, 5].map(idx => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 12, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 6, text: String(idx), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 16, text: '' }),
+        createStyledTableCell({ width: 30, text: '' }),
+        createStyledTableCell({ width: 12, text: '' }),
+        createStyledTableCell({ width: 24, text: '' }),
+        createStyledTableCell({ width: 12, text: '' }),
       ],
     }));
 
@@ -661,11 +834,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const rubLitHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Aspek Keterampilan Literasi', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Kriteria Sangat Baik (SB)', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Kriteria Berkembang (B)', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Catatan & Rekomendasi Guru', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 25, text: 'Aspek Keterampilan Literasi', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 25, text: 'Kriteria Sangat Baik (SB)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 25, text: 'Kriteria Berkembang (B)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 25, text: 'Catatan & Rekomendasi Guru', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -676,11 +851,12 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const rubLitRows = rubLitRowsData.map(r => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.aspek, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.sb, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: r.b, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 25, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 25, text: r.aspek, bold: true, size: 16 }),
+        createStyledTableCell({ width: 25, text: r.sb, size: 14 }),
+        createStyledTableCell({ width: 25, text: r.b, size: 14 }),
+        createStyledTableCell({ width: 25, text: '' }),
       ],
     }));
 
@@ -708,24 +884,27 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const uksHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Murid', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'TB (cm) / BB (kg)', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Status Gizi', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kesehatan Gigi & Mata', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Catatan / Rujukan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Nama Murid', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 18, text: 'TB (cm) / BB (kg)', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 16, text: 'Status Gizi', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Kesehatan Gigi & Mata', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 16, text: 'Catatan / Rujukan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
     const uksSampleRows = [1, 2, 3, 4, 5].map(n => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(n), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 6, text: String(n), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 24, text: '' }),
+        createStyledTableCell({ width: 18, text: '' }),
+        createStyledTableCell({ width: 16, text: '' }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 16, text: '' }),
       ],
     }));
 
@@ -752,11 +931,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const sanitasiHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Komponen Lingkungan Sehat', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Standar Kelayakan UKS', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Hasil Temuan Lapangan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Status', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 28, text: 'Komponen Lingkungan Sehat', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 42, text: 'Standar Kelayakan UKS', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Hasil Temuan Lapangan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 10, text: 'Status', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -768,11 +949,12 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const sanRows = sanRowsData.map(s => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: s.komp, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: s.std, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 10, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 28, text: s.komp, bold: true, size: 16 }),
+        createStyledTableCell({ width: 42, text: s.std, size: 14 }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 10, text: '' }),
       ],
     }));
 
@@ -800,12 +982,14 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const adwHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Area Aksi Lingkungan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 36, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Indikator Keterlaksanaan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kondisi Lapangan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'RTL Perawatan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Area Aksi Lingkungan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 36, text: 'Indikator Keterlaksanaan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Kondisi Lapangan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'RTL Perawatan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -817,12 +1001,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const adwRows = adwRowsData.map(a => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(a.no), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: a.area, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 36, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: a.ind, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 6, text: String(a.no), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 24, text: a.area, bold: true, size: 16 }),
+        createStyledTableCell({ width: 36, text: a.ind, size: 14 }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 14, text: '' }),
       ],
     }));
 
@@ -849,11 +1034,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const sampahHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Kategori Sampah Sekolah', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Estimasi Vol / Pekan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Metode Pengolahan / Reduksi', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Penanggung Jawab', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 30, text: 'Kategori Sampah Sekolah', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 22, text: 'Estimasi Vol / Pekan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 30, text: 'Metode Pengolahan / Reduksi', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 18, text: 'Penanggung Jawab', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -864,11 +1051,12 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const sampahRows = sampahData.map(s => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: s.kat, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: s.vol, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: s.met, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: s.pic, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 30, text: s.kat, bold: true, size: 16 }),
+        createStyledTableCell({ width: 22, text: s.vol, align: AlignmentType.CENTER, size: 14 }),
+        createStyledTableCell({ width: 30, text: s.met, size: 14 }),
+        createStyledTableCell({ width: 18, text: s.pic, size: 14 }),
       ],
     }));
 
@@ -896,24 +1084,27 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const relHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hari / Tanggal', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sholat Fardhu 5 Waktu', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sholat Dhuha', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tadarus / Hafalan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Paraf Ortu', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 16, text: 'Hari / Tanggal', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 28, text: 'Sholat Fardhu 5 Waktu', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'Sholat Dhuha', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 22, text: 'Tadarus / Hafalan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'Paraf Ortu', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
     const relSampleRows = [1, 2, 3, 4, 5].map(idx => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sub / Dzu / Ash / Mag / Isy', font: FONT_NAME, size: 14, color: '94A3B8' })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '○', font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 6, text: String(idx), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 16, text: '' }),
+        createStyledTableCell({ width: 28, text: 'Sub / Dzu / Ash / Mag / Isy', align: AlignmentType.CENTER, color: '94A3B8', size: 14 }),
+        createStyledTableCell({ width: 14, text: '○', align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 22, text: '' }),
+        createStyledTableCell({ width: 14, text: '' }),
       ],
     }));
 
@@ -940,10 +1131,12 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const akhlakHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Indikator Akhlak Mulia', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Bentuk Perilaku Nyata yang Diamati', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Catatan Guru Pembimbing', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 30, text: 'Indikator Akhlak Mulia', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 42, text: 'Bentuk Perilaku Nyata yang Diamati', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 28, text: 'Catatan Guru Pembimbing', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -954,10 +1147,11 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const akhlakRows = akhlakData.map(a => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 30, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: a.ind, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: a.bentuk, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 30, text: a.ind, bold: true, size: 16 }),
+        createStyledTableCell({ width: 42, text: a.bentuk, size: 14 }),
+        createStyledTableCell({ width: 28, text: '' }),
       ],
     }));
 
@@ -985,13 +1179,15 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const rpeHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Bulan / Semester', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Total Pekan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Pekan Efektif', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tidak Efektif', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Keterangan Agenda Utama', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Bulan / Semester', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'Total Pekan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'Pekan Efektif', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 14, text: 'Tidak Efektif', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 28, text: 'Keterangan Agenda Utama', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -1019,13 +1215,14 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
       const isSubtotal = r.no.startsWith('Σ') || r.no === 'TOTAL';
       const bgColor = r.no === 'TOTAL' ? 'E0E7FF' : (isSubtotal ? 'F1F5F9' : undefined);
       return new TableRow({
+        cantSplit: true,
         children: [
-          new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.no, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
-          new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ children: [new TextRun({ text: r.bulan, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
-          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.total, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
-          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.kbm, bold: isSubtotal, color: isSubtotal ? '4338CA' : undefined, font: FONT_NAME, size: 16 })] })] }),
-          new TableCell({ width: { size: 14, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: r.non, bold: isSubtotal, font: FONT_NAME, size: 16 })] })] }),
-          new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, shading: bgColor ? { fill: bgColor, type: ShadingType.CLEAR } : undefined, children: [new Paragraph({ children: [new TextRun({ text: r.ket, bold: isSubtotal, font: FONT_NAME, size: 14 })] })] }),
+          createStyledTableCell({ width: 6, text: r.no, bold: isSubtotal, align: AlignmentType.CENTER, shading: bgColor, size: 16 }),
+          createStyledTableCell({ width: 24, text: r.bulan, bold: isSubtotal, shading: bgColor, size: 16 }),
+          createStyledTableCell({ width: 14, text: r.total, bold: isSubtotal, align: AlignmentType.CENTER, shading: bgColor, size: 16 }),
+          createStyledTableCell({ width: 14, text: r.kbm, bold: isSubtotal, color: isSubtotal ? '4338CA' : undefined, align: AlignmentType.CENTER, shading: bgColor, size: 16 }),
+          createStyledTableCell({ width: 14, text: r.non, bold: isSubtotal, align: AlignmentType.CENTER, shading: bgColor, size: 16 }),
+          createStyledTableCell({ width: 28, text: r.ket, bold: isSubtotal, shading: bgColor, size: 14 }),
         ],
       });
     });
@@ -1053,12 +1250,14 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const phbiHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Hari / Tanggal', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Kegiatan / Peringatan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Kategori Agenda', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Penanggung Jawab', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 22, text: 'Hari / Tanggal', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 34, text: 'Nama Kegiatan / Peringatan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 18, text: 'Kategori Agenda', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Penanggung Jawab', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -1076,12 +1275,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const phbiRows = phbiData.map(p => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(p.no), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.tgl, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.nama, bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: p.kat, font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: p.pic, font: FONT_NAME, size: 14 })] })] }),
+        createStyledTableCell({ width: 6, text: String(p.no), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 22, text: p.tgl, size: 14 }),
+        createStyledTableCell({ width: 34, text: p.nama, bold: true, size: 16 }),
+        createStyledTableCell({ width: 18, text: p.kat, align: AlignmentType.CENTER, size: 14 }),
+        createStyledTableCell({ width: 20, text: p.pic, size: 14 }),
       ],
     }));
 
@@ -1110,22 +1310,25 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const kustomHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Uraian Aksi Program', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sasaran Peserta', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Keterlaksanaan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Bukti Fisik / Dokumentasi', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 34, text: 'Uraian Aksi Program', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Sasaran Peserta', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 16, text: 'Keterlaksanaan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Bukti Fisik / Dokumentasi', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
     const kustomSampleRows = [1, 2, 3, 4].map(idx => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 6, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(idx), font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 34, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: `Kegiatan Program ${idx}`, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Siswa & Guru', font: FONT_NAME, size: 14 })] })] }),
-        new TableCell({ width: { size: 16, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Ya / Tidak', font: FONT_NAME, size: 14, color: '94A3B8' })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 6, text: String(idx), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 34, text: `Kegiatan Program ${idx}`, size: 16 }),
+        createStyledTableCell({ width: 20, text: 'Siswa & Guru', align: AlignmentType.CENTER, size: 14 }),
+        createStyledTableCell({ width: 16, text: 'Ya / Tidak', align: AlignmentType.CENTER, color: '94A3B8', size: 14 }),
+        createStyledTableCell({ width: 24, text: '' }),
       ],
     }));
 
@@ -1152,11 +1355,13 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     );
 
     const evHeaders = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Indikator Keberhasilan Program', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Target Capaian', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Realisasi Lapangan', bold: true, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', type: ShadingType.CLEAR }, children: [new Paragraph({ children: [new TextRun({ text: 'Rekomendasi Keberlanjutan', bold: true, font: FONT_NAME, size: 16 })] })] }),
+        createStyledTableCell({ width: 32, text: 'Indikator Keberhasilan Program', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 20, text: 'Target Capaian', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Realisasi Lapangan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 24, text: 'Rekomendasi Keberlanjutan', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
       ],
     });
 
@@ -1167,11 +1372,12 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
     ];
 
     const evRows = evRowsData.map(ev => new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ width: { size: 32, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [new TextRun({ text: ev, font: FONT_NAME, size: 16 })] })] }),
-        new TableCell({ width: { size: 20, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
-        new TableCell({ width: { size: 24, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [] })] }),
+        createStyledTableCell({ width: 32, text: ev, size: 16 }),
+        createStyledTableCell({ width: 20, text: '' }),
+        createStyledTableCell({ width: 24, text: '' }),
+        createStyledTableCell({ width: 24, text: '' }),
       ],
     }));
 
@@ -1392,9 +1598,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
       spacing: { before: 200, after: 200 },
       children: [
         new TextRun({
-          text: `Ditetapkan di: ${kota}\nPada tanggal: ${meta.tanggal_pengesahan || `Juli ${tahun}`}`,
+          text: `Ditetapkan di : ${kota}`,
           font: FONT_NAME,
           size: SIZE_BODY,
+        }),
+        new TextRun({
+          text: `Pada tanggal : ${meta.tanggal_pengesahan || `Juli ${tahun}`}`,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 1,
         }),
       ],
     })
@@ -1424,6 +1636,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     // 2 Tanda Tangan: Penyusun (kiri) & Kepala Sekolah (kanan)
     ttdRows = [
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 50, type: WidthType.PERCENTAGE },
@@ -1433,9 +1646,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { after: 800 },
                 children: [
                   new TextRun({
-                    text: `Penyusun / Koordinator,\n${meta.jabatan_penyusun || 'Guru / Tim Pengembang'}`,
+                    text: 'Penyusun / Koordinator Program,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: meta.jabatan_penyusun || 'Guru / Tim Pengembang Kurikulum',
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1471,9 +1690,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { after: 800 },
                 children: [
                   new TextRun({
-                    text: `Mengesahkan,\nKepala ${meta.nama_sekolah || 'Sekolah'}`,
+                    text: 'Mengesahkan,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: `Kepala ${meta.nama_sekolah || 'Sekolah'}`,
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1508,6 +1733,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     // Format Dinas Lengkap: 4 Tanda Tangan (Komite, Penyusun, Pengawas, Kepala Sekolah)
     ttdRows = [
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 50, type: WidthType.PERCENTAGE },
@@ -1517,9 +1743,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { after: 800 },
                 children: [
                   new TextRun({
-                    text: `Menyetujui,\nKetua Komite Sekolah`,
+                    text: 'Menyetujui,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: 'Ketua Komite Sekolah',
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1545,9 +1777,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { after: 800 },
                 children: [
                   new TextRun({
-                    text: `Penyusun / Koordinator,\n${meta.jabatan_penyusun || 'Guru / Tim Pengembang'}`,
+                    text: 'Penyusun / Koordinator Program,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: meta.jabatan_penyusun || 'Guru / Tim Pengembang Kurikulum',
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1578,6 +1816,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
         ],
       }),
       new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 50, type: WidthType.PERCENTAGE },
@@ -1587,9 +1826,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { before: 400, after: 800 },
                 children: [
                   new TextRun({
-                    text: `Mengetahui,\nPengawas Pembina`,
+                    text: 'Mengetahui,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: 'Pengawas Pembina',
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1625,9 +1870,15 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                 spacing: { before: 400, after: 800 },
                 children: [
                   new TextRun({
-                    text: `Mengesahkan,\nKepala ${meta.nama_sekolah || 'Sekolah'}`,
+                    text: 'Mengesahkan,',
                     font: FONT_NAME,
                     size: SIZE_BODY,
+                  }),
+                  new TextRun({
+                    text: `Kepala ${meta.nama_sekolah || 'Sekolah'}`,
+                    font: FONT_NAME,
+                    size: SIZE_BODY,
+                    break: 1,
                   }),
                 ],
               }),
@@ -1703,9 +1954,16 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
       spacing: { before: 300, after: 600 },
       children: [
         new TextRun({
-          text: `${kota}, Juli ${tahun}\n\nTim Penyusun`,
+          text: `${kota}, Juli ${tahun}`,
           font: FONT_NAME,
           size: SIZE_BODY,
+        }),
+        new TextRun({
+          text: 'Tim Penyusun',
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 2,
         }),
       ],
     })
@@ -1731,6 +1989,24 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     })
   );
 
+  let lampiran2Title = '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci';
+  let lampiran3Title = '    Lampiran 3: Format Evaluasi & Instrumen Jurnal Siswa';
+
+  const tId = meta.template_id || '';
+  if (tId === 'kokurikuler-p5' || tId === 'kokurikuler-profil-lulusan') {
+    lampiran2Title = '    Lampiran 2: Rubrik Asesmen Autentik 8 Dimensi Profil Lulusan (SK BSKAP 058/2025)';
+    lampiran3Title = '    Lampiran 3: Lembar Refleksi Diri Murid (Kokurikuler Profil Lulusan)';
+  } else if (tId === '7kaih') {
+    lampiran2Title = '    Lampiran 2: Jurnal Mingguan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH) & 7 Poé Atikan';
+    lampiran3Title = '    Lampiran 3: Lembar Observasi & Monitoring Supervisi Pembiasaan Siswa';
+  } else if (tId === 'hari-belajar-guru') {
+    lampiran2Title = '    Lampiran 2: Jurnal Refleksi Komunitas Belajar (Kombel) Guru';
+    lampiran3Title = '    Lampiran 3: Lembar Observasi Praktik Baik Pembelajaran';
+  } else if (tId === 'kalender-sekolah') {
+    lampiran2Title = '    Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan';
+    lampiran3Title = '    Lampiran 3: Jadwal PHBI & Kegiatan Karakter Purwakarta';
+  }
+
   const daftarIsiItems = [
     { text: 'HALAMAN COVER', page: 'i' },
     { text: 'LEMBAR PENGESAHAN', page: 'ii' },
@@ -1744,9 +2020,9 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     { text: '    E. Manfaat Program', page: '4' },
     { text: 'BAB II KAJIAN KONSEPTUAL DAN LANDASAN TEORITIS', page: '5', bold: true },
     { text: 'BAB III RENCANA PROGRAM DAN STRATEGI PELAKSANAAN', page: '7', bold: true },
-    { text: '    A. Rincian Kegiatan dan Aksi Nyata', page: '7' },
+    { text: tId === 'kalender-sekolah' ? '    A. Kalender Satuan Pendidikan & Agenda Kegiatan' : '    A. Rincian Kegiatan dan Aksi Nyata', page: '7' },
     { text: '    B. Struktur Organisasi dan Tim Pelaksana', page: '9' },
-    { text: '    C. Matriks Rencana Aksi (Action Plan 12 Bulan)', page: '10' },
+    { text: tId === 'kalender-sekolah' ? '    C. Matriks Rincian Pekan & Hari Efektif Belajar (RPE)' : '    C. Matriks Rencana Aksi (Action Plan 12 Bulan)', page: '10' },
     { text: '    D. Dukungan Sarana, Prasarana, dan Anggaran', page: '11' },
     { text: 'BAB IV MONITORING, EVALUASI, DAN TINDAK LANJUT', page: '12', bold: true },
     { text: '    A. Mekanisme Pemantauan Program', page: '12' },
@@ -1756,20 +2032,37 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     { text: 'BAB V PENUTUP', page: '15', bold: true },
     { text: '    A. Kesimpulan', page: '15' },
     { text: '    B. Saran dan Rekomendasi', page: '15' },
-    { text: 'LAMPIRAN-LAMPIRAN', page: '16', bold: true },
+    { text: 'LAMPIRAN-LAMPIRAN (TERINTEGRASI 1 FILE)', page: '16', bold: true },
     { text: '    Lampiran 1: Surat Keputusan (SK) Tim Pelaksana', page: '16' },
-    { text: '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci', page: '17' },
-    { text: '    Lampiran 3: Instrumen Evaluasi & Format Jurnal Siswa', page: '18' },
+    { text: lampiran2Title, page: '17' },
+    { text: lampiran3Title, page: '18' },
   ];
 
   daftarIsiItems.forEach(item => {
+    const isSub = item.text.startsWith('    ') || /^\s*Lampiran\s+\d/i.test(item.text.trim());
+    const displayText = item.text.trim();
+
     children.push(
       new Paragraph({
         alignment: AlignmentType.LEFT,
-        spacing: { before: 40, after: 40, line: 300 },
+        spacing: { before: item.bold ? 70 : 25, after: item.bold ? 50 : 25, line: 260 },
+        indent: isSub ? { left: 360 } : undefined,
+        tabStops: [
+          {
+            type: TabStopType.RIGHT,
+            position: 7930,
+            leader: LeaderType.DOT,
+          },
+        ],
         children: [
           new TextRun({
-            text: item.text,
+            text: displayText,
+            bold: !!item.bold,
+            font: FONT_NAME,
+            size: SIZE_BODY,
+          }),
+          new TextRun({
+            text: `\t${item.page || ''}`,
             bold: !!item.bold,
             font: FONT_NAME,
             size: SIZE_BODY,
@@ -1848,9 +2141,10 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
   children.push(createSubHeader('A', 'Rincian Kegiatan dan Aksi Nyata'));
   if (Array.isArray(b3.kegiatan) && b3.kegiatan.length > 0) {
     b3.kegiatan.forEach((kg, idx) => {
+      // Tingkat 2: 1. Nama Kegiatan
       children.push(
         new Paragraph({
-          spacing: { before: 120, after: 60 },
+          spacing: { before: 140, after: 60 },
           children: [
             new TextRun({
               text: `${idx + 1}. ${cleanMarkdownSymbols(kg.nama)}`,
@@ -1861,19 +2155,77 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
           ],
         })
       );
+
+      // Deskripsi Umum Kegiatan (Paragraf Berindentasi Rata Kanan-Kiri)
       if (kg.deskripsi) children.push(createBodyParagraph(kg.deskripsi, true));
+
+      // Tingkat 3: Sistematika Ilmiah a., b., c., d...
+      if (kg.tujuan) {
+        children.push(createScientificSubItem('a.', 'Tujuan Kegiatan', kg.tujuan));
+      }
+      if (kg.sasaran) {
+        children.push(createScientificSubItem('b.', 'Sasaran Peserta', kg.sasaran));
+      }
+      if (kg.waktu) {
+        children.push(createScientificSubItem('c.', 'Waktu Pelaksanaan', kg.waktu));
+      }
+      if (kg.pic) {
+        children.push(createScientificSubItem('d.', 'Penanggung Jawab (PIC)', kg.pic));
+      }
+
+      // Tingkat 3 e: Tahapan Pelaksanaan Kegiatan
       if (Array.isArray(kg.tahapan) && kg.tahapan.length > 0) {
-        kg.tahapan.forEach((th: string) => {
-          children.push(createListItem('–', th));
+        children.push(
+          new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            indent: { left: 720, hanging: 360 },
+            spacing: { before: 40, after: 30, line: LINE_SPACING },
+            children: [
+              new TextRun({
+                text: 'e. ',
+                bold: true,
+                font: FONT_NAME,
+                size: SIZE_BODY,
+              }),
+              new TextRun({
+                text: 'Tahapan Pelaksanaan Kegiatan:',
+                bold: true,
+                font: FONT_NAME,
+                size: SIZE_BODY,
+              }),
+            ],
+          })
+        );
+
+        kg.tahapan.forEach((th: string, thIdx: number) => {
+          // Bersihkan prefix kotor seperti "1. ", "– ", "- ", "• " agar tidak terjadi penomoran ganda
+          const cleanTh = cleanMarkdownSymbols(th)
+            .replace(/^[-–•*\d.\s]+(?=[A-Za-z])/, '')
+            .trim();
+
+          // Tingkat 4: 1), 2), 3) Berjenjang Rapi
+          children.push(
+            new Paragraph({
+              alignment: AlignmentType.JUSTIFIED,
+              indent: { left: 1080, hanging: 360 },
+              spacing: { before: 30, after: 40, line: LINE_SPACING },
+              children: [
+                new TextRun({
+                  text: `${thIdx + 1}) `,
+                  bold: true,
+                  font: FONT_NAME,
+                  size: SIZE_BODY,
+                }),
+                new TextRun({
+                  text: cleanTh,
+                  font: FONT_NAME,
+                  size: SIZE_BODY,
+                }),
+              ],
+            })
+          );
         });
       }
-      const details = [
-        kg.tujuan ? `Tujuan: ${kg.tujuan}` : '',
-        kg.waktu ? `Waktu Pelaksanaan: ${kg.waktu}` : '',
-        kg.sasaran ? `Sasaran: ${kg.sasaran}` : '',
-        kg.pic ? `Penanggung Jawab: ${kg.pic}` : '',
-      ].filter(Boolean);
-      details.forEach(d => children.push(createListItem('•', d)));
     });
   }
 
@@ -1887,47 +2239,63 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
   const timList = Array.isArray(b3.tim_pelaksana) ? b3.tim_pelaksana : [];
   if (timList.length > 0) {
     const timHeaderRow = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
         new TableCell({
-          width: { size: 8, type: WidthType.PERCENTAGE },
+          width: { size: 6, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
-          width: { size: 27, type: WidthType.PERCENTAGE },
+          width: { size: 28, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jabatan dalam Tim', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Jabatan dalam Tim', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
-          width: { size: 25, type: WidthType.PERCENTAGE },
+          width: { size: 26, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama / Pelaksana', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama / Pelaksana', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 40, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tugas Pokok & Tanggung Jawab', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Tugas Pokok & Tanggung Jawab', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
       ],
     });
 
     const timRows = timList.map((t, i) => new TableRow({
+      cantSplit: true,
       children: [
         new TableCell({
-          width: { size: 8, type: WidthType.PERCENTAGE },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(t.no || i + 1), font: FONT_NAME, size: SIZE_TABLE })] })],
+          width: { size: 6, type: WidthType.PERCENTAGE },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(t.no || i + 1), font: FONT_NAME, size: 17 })] })],
         }),
         new TableCell({
-          width: { size: 27, type: WidthType.PERCENTAGE },
-          children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(t.jabatan), bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          width: { size: 28, type: WidthType.PERCENTAGE },
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(t.jabatan), bold: true, font: FONT_NAME, size: 17 })] })],
         }),
         new TableCell({
-          width: { size: 25, type: WidthType.PERCENTAGE },
-          children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(t.nama), font: FONT_NAME, size: SIZE_TABLE })] })],
+          width: { size: 26, type: WidthType.PERCENTAGE },
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(t.nama), font: FONT_NAME, size: 17 })] })],
         }),
         new TableCell({
           width: { size: 40, type: WidthType.PERCENTAGE },
-          children: [new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: cleanMarkdownSymbols(t.tugas), font: FONT_NAME, size: SIZE_TABLE })] })],
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: cleanMarkdownSymbols(t.tugas), font: FONT_NAME, size: 17 })] })],
         }),
       ],
     }));
@@ -1953,26 +2321,36 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     const monthHeaders = ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
 
     const actHeaderRow = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
         new TableCell({
-          width: { size: 6, type: WidthType.PERCENTAGE },
+          width: { size: 5, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 16 })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 50, bottom: 50, left: 20, right: 20 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 15 })] })],
         }),
         new TableCell({
-          width: { size: 34, type: WidthType.PERCENTAGE },
+          width: { size: 37, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Kegiatan Program', bold: true, font: FONT_NAME, size: 16 })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 50, bottom: 50, left: 40, right: 40 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Nama Kegiatan Program', bold: true, font: FONT_NAME, size: 15 })] })],
         }),
         ...monthHeaders.map(m => new TableCell({
-          width: { size: 4, type: WidthType.PERCENTAGE },
+          width: { size: 3.75, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: m, bold: true, font: FONT_NAME, size: 14 })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 40, bottom: 40, left: 10, right: 10 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: m, bold: true, font: FONT_NAME, size: 13 })] })],
         })),
         new TableCell({
-          width: { size: 12, type: WidthType.PERCENTAGE },
+          width: { size: 13, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'PIC', bold: true, font: FONT_NAME, size: 16 })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 50, bottom: 50, left: 30, right: 30 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'PIC', bold: true, font: FONT_NAME, size: 15 })] })],
         }),
       ],
     });
@@ -1980,31 +2358,39 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     const actRows = actionList.map((a, i) => {
       const activeMonths = Array.isArray(a.bulan) ? a.bulan : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
       return new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
-            width: { size: 6, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(a.no || i + 1), font: FONT_NAME, size: 16 })] })],
+            width: { size: 5, type: WidthType.PERCENTAGE },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 40, bottom: 40, left: 20, right: 20 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(a.no || i + 1), font: FONT_NAME, size: 14 })] })],
           }),
           new TableCell({
-            width: { size: 34, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(a.kegiatan), font: FONT_NAME, size: 16 })] })],
+            width: { size: 37, type: WidthType.PERCENTAGE },
+            margins: { top: 40, bottom: 40, left: 40, right: 40 },
+            children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(a.kegiatan), font: FONT_NAME, size: 15 })] })],
           }),
           ...monthHeaders.map((_, mIdx) => {
             const isChecked = activeMonths.includes(mIdx + 1) || activeMonths.includes(mIdx + 7) || activeMonths.length === 12;
             return new TableCell({
-              width: { size: 4, type: WidthType.PERCENTAGE },
+              width: { size: 3.75, type: WidthType.PERCENTAGE },
               shading: isChecked ? { fill: 'E2E8F0', type: ShadingType.CLEAR } : undefined,
+              verticalAlign: VerticalAlign.CENTER,
+              margins: { top: 40, bottom: 40, left: 10, right: 10 },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: isChecked ? '✓' : '', bold: true, font: FONT_NAME, size: 16 })],
+                  children: [new TextRun({ text: isChecked ? '✓' : '', bold: true, font: FONT_NAME, size: 14 })],
                 }),
               ],
             });
           }),
           new TableCell({
-            width: { size: 12, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: cleanMarkdownSymbols(a.pic || 'Tim'), font: FONT_NAME, size: 14 })] })],
+            width: { size: 13, type: WidthType.PERCENTAGE },
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 40, bottom: 40, left: 30, right: 30 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: cleanMarkdownSymbols(a.pic || 'Tim'), font: FONT_NAME, size: 13 })] })],
           }),
         ],
       });
@@ -2042,36 +2428,50 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     );
 
     const rabHeaderRow = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
       children: [
         new TableCell({
           width: { size: 6, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 40, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Uraian Kebutuhan / Kegiatan', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Uraian Kebutuhan / Kegiatan', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 10, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Vol', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Vol', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 12, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Satuan', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Satuan', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 18, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Estimasi Biaya', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Estimasi Biaya', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
         new TableCell({
           width: { size: 14, type: WidthType.PERCENTAGE },
           shading: { fill: 'F1F5F9', type: ShadingType.CLEAR },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sumber Dana', bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Sumber Dana', bold: true, font: FONT_NAME, size: 18 })] })],
         }),
       ],
     });
@@ -2083,30 +2483,42 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
         if (!isNaN(n)) calculatedSum += n;
       }
       return new TableRow({
+        cantSplit: true,
         children: [
           new TableCell({
             width: { size: 6, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.no || idx + 1), font: FONT_NAME, size: SIZE_TABLE })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 70, bottom: 70, left: 60, right: 60 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.no || idx + 1), font: FONT_NAME, size: 17 })] })],
           }),
           new TableCell({
             width: { size: 40, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(item.uraian), font: FONT_NAME, size: SIZE_TABLE })] })],
+            margins: { top: 70, bottom: 70, left: 70, right: 70 },
+            children: [new Paragraph({ children: [new TextRun({ text: cleanMarkdownSymbols(item.uraian), font: FONT_NAME, size: 17 })] })],
           }),
           new TableCell({
             width: { size: 10, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.volume || '1'), font: FONT_NAME, size: SIZE_TABLE })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 70, bottom: 70, left: 60, right: 60 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.volume || '1'), font: FONT_NAME, size: 17 })] })],
           }),
           new TableCell({
             width: { size: 12, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.satuan || 'Paket'), font: FONT_NAME, size: SIZE_TABLE })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 70, bottom: 70, left: 60, right: 60 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.satuan || 'Paket'), font: FONT_NAME, size: 17 })] })],
           }),
           new TableCell({
             width: { size: 18, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: String(item.total || '-'), bold: true, font: FONT_NAME, size: SIZE_TABLE })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 70, bottom: 70, left: 60, right: 60 },
+            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: String(item.total || '-'), bold: true, font: FONT_NAME, size: 17 })] })],
           }),
           new TableCell({
             width: { size: 14, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.sumber || 'BOSP'), font: FONT_NAME, size: SIZE_TABLE })] })],
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 70, bottom: 70, left: 60, right: 60 },
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(item.sumber || 'BOSP'), font: FONT_NAME, size: 17 })] })],
           }),
         ],
       });
@@ -2115,11 +2527,14 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
     const totalAnggaranDisplay = b3.total_anggaran || (calculatedSum > 0 ? `Rp ${calculatedSum.toLocaleString('id-ID')}` : '-');
 
     const rabTotalRow = new TableRow({
+      cantSplit: true,
       children: [
         new TableCell({
           width: { size: 68, type: WidthType.PERCENTAGE },
           columnSpan: 4,
           shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 70, right: 70 },
           children: [
             new Paragraph({
               alignment: AlignmentType.RIGHT,
@@ -2128,7 +2543,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                   text: 'TOTAL ESTIMASI ANGGARAN:',
                   bold: true,
                   font: FONT_NAME,
-                  size: SIZE_TABLE,
+                  size: 18,
                 }),
               ],
             }),
@@ -2137,6 +2552,8 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
         new TableCell({
           width: { size: 18, type: WidthType.PERCENTAGE },
           shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
           children: [
             new Paragraph({
               alignment: AlignmentType.RIGHT,
@@ -2145,7 +2562,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
                   text: totalAnggaranDisplay,
                   bold: true,
                   font: FONT_NAME,
-                  size: SIZE_TABLE,
+                  size: 18,
                 }),
               ],
             }),
@@ -2154,6 +2571,8 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
         new TableCell({
           width: { size: 14, type: WidthType.PERCENTAGE },
           shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 70, bottom: 70, left: 60, right: 60 },
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
@@ -2261,7 +2680,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
   // Lampiran 1: SK Tim Pelaksana (Universal)
   children.push(
     new Paragraph({
-      spacing: { before: 200, after: 100 },
+      spacing: { before: 200, after: 120 },
       children: [
         new TextRun({
           text: 'LAMPIRAN 1: SURAT KEPUTUSAN (SK) TIM PELAKSANA PROGRAM',
@@ -2271,13 +2690,94 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
         }),
       ],
     }),
-    createBodyParagraph(
-      `SURAT KEPUTUSAN KEPALA ${meta.nama_sekolah || 'SEKOLAH'}\nNomor: 421.2/${tahun}/SK-PROG/01\nTENTANG\nPEMBENTUKAN TIM PELAKSANA ${(meta.judul_program || 'PROGRAM SEKOLAH').toUpperCase()}\nTAHUN AJARAN ${meta.tahun_ajaran || '2025/2026'}`
-    ),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 80, after: 60 },
+      children: [
+        new TextRun({
+          text: `KEPUTUSAN KEPALA ${sanitizeText(meta.nama_sekolah || 'SATUAN PENDIDIKAN').toUpperCase()}`,
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+        }),
+        new TextRun({
+          text: `Nomor: 421.2/${tahun}/SK-PROG/01`,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 1,
+        }),
+        new TextRun({
+          text: 'TENTANG',
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 1,
+        }),
+        new TextRun({
+          text: `PEMBENTUKAN TIM PELAKSANA ${(meta.judul_program || 'PROGRAM SEKOLAH').toUpperCase()}`,
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 1,
+        }),
+        new TextRun({
+          text: `TAHUN AJARAN ${meta.tahun_ajaran || '2025/2026'}`,
+          bold: true,
+          font: FONT_NAME,
+          size: SIZE_BODY,
+          break: 1,
+        }),
+      ],
+    }),
     createBodyParagraph(
       'Menimbang bahwa demi kelancaran, akuntabilitas, dan kesinambungan pelaksanaan program kerja di satuan pendidikan, maka dipandang perlu menetapkan susunan Tim Pelaksana melalui Keputusan Kepala Sekolah.'
     )
   );
+
+  if (timList.length > 0) {
+    children.push(
+      new Paragraph({
+        spacing: { before: 140, after: 80 },
+        children: [
+          new TextRun({
+            text: 'Susunan Personalia Tim Pelaksana:',
+            bold: true,
+            font: FONT_NAME,
+            size: SIZE_BODY,
+          }),
+        ],
+      })
+    );
+
+    const timSkHeaderRow = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
+      children: [
+        createStyledTableCell({ width: 6, text: 'No', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 28, text: 'Jabatan dalam Tim', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 26, text: 'Nama Pelaksana', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+        createStyledTableCell({ width: 40, text: 'Tugas Pokok & Tanggung Jawab', bold: true, align: AlignmentType.CENTER, shading: 'F1F5F9', size: 17 }),
+      ],
+    });
+
+    const timSkRows = timList.map((t, i) => new TableRow({
+      cantSplit: true,
+      children: [
+        createStyledTableCell({ width: 6, text: String(t.no || i + 1), align: AlignmentType.CENTER, size: 16 }),
+        createStyledTableCell({ width: 28, text: cleanMarkdownSymbols(t.jabatan), bold: true, size: 16 }),
+        createStyledTableCell({ width: 26, text: cleanMarkdownSymbols(t.nama), size: 16 }),
+        createStyledTableCell({ width: 40, text: cleanMarkdownSymbols(t.tugas), size: 16, align: AlignmentType.JUSTIFIED }),
+      ],
+    }));
+
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: borderLight,
+        rows: [timSkHeaderRow, ...timSkRows],
+      })
+    );
+  }
 
   // Lampiran 2 & 3: Template-Specific Dynamic Attachments
   const dynamicLampiranElements = buildTemplateSpecificLampiran(meta.template_id || 'kokurikuler-p5', meta, tahun);
@@ -2413,13 +2913,17 @@ export async function generateProgramLampiranOnlyDocxBuffer(
       borders: ttdBorder,
       rows: [
         new TableRow({
+          cantSplit: true,
           children: [
             new TableCell({
               width: { size: 33, type: WidthType.PERCENTAGE },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: 'Mengetahui,\nOrang Tua / Wali Murid', font: FONT_NAME, size: SIZE_BODY })],
+                  children: [
+                    new TextRun({ text: 'Mengetahui,', font: FONT_NAME, size: SIZE_BODY }),
+                    new TextRun({ text: 'Orang Tua / Wali Murid', font: FONT_NAME, size: SIZE_BODY, break: 1 }),
+                  ],
                 }),
                 new Paragraph({ spacing: { before: 700 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: '( ........................................ )', font: FONT_NAME, size: SIZE_BODY })] }),
               ],

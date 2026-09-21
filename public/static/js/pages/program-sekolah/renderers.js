@@ -528,13 +528,34 @@ function renderKataPengantar(meta, kota, tahun) {
 
 // 4. DAFTAR ISI
 function renderDaftarIsi(meta = {}) {
-  const isKaldik = meta?.template_id === 'kalender-sekolah';
-  const lampiran2Title = isKaldik
-    ? '    Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan'
-    : '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci';
-  const lampiran3Title = isKaldik
-    ? '    Lampiran 3: Jadwal PHBI & Kegiatan Karakter Purwakarta'
-    : '    Lampiran 3: Format Instrumen & Jurnal Siswa';
+  const templateId = meta?.template_id || '';
+  const isKaldik = templateId === 'kalender-sekolah';
+  
+  let lampiran2Title = '    Lampiran 2: Matriks Rencana Aksi 12 Bulan Terinci';
+  let lampiran3Title = '    Lampiran 3: Format Instrumen & Jurnal Siswa';
+
+  if (templateId === 'kokurikuler-p5' || templateId === 'kokurikuler-profil-lulusan') {
+    lampiran2Title = '    Lampiran 2: Rubrik Asesmen Autentik 8 Dimensi Profil Lulusan (SK BSKAP 058/2025)';
+    lampiran3Title = '    Lampiran 3: Lembar Refleksi Diri Murid (Kokurikuler Profil Lulusan)';
+  } else if (templateId === '7kaih') {
+    lampiran2Title = '    Lampiran 2: Jurnal Mingguan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH) & 7 Poé Atikan';
+    lampiran3Title = '    Lampiran 3: Lembar Observasi & Monitoring Supervisi Pembiasaan Siswa';
+  } else if (templateId === 'hari-belajar-guru') {
+    lampiran2Title = '    Lampiran 2: Jurnal Refleksi Komunitas Belajar (Kombel) Guru';
+    lampiran3Title = '    Lampiran 3: Lembar Observasi Praktik Baik Pembelajaran';
+  } else if (templateId === 'literasi') {
+    lampiran2Title = '    Lampiran 2: Jurnal Membaca Harian Siswa (Pohon Geulis)';
+    lampiran3Title = '    Lampiran 3: Rubrik Asesmen Resensi & Presentasi Bacaan';
+  } else if (templateId === 'uks') {
+    lampiran2Title = '    Lampiran 2: Lembar Skrining Kesehatan Fisik & Kebiasaan Sehat';
+    lampiran3Title = '    Lampiran 3: Instrumen Monitoring Sanitasi Lingkungan & Kantin';
+  } else if (templateId === 'adiwiyata') {
+    lampiran2Title = '    Lampiran 2: Lembar Monitoring Aksi PBLHS & TdBA';
+    lampiran3Title = '    Lampiran 3: Formulir Inventarisasi Reduksi Timbulan Sampah';
+  } else if (isKaldik) {
+    lampiran2Title = '    Lampiran 2: Matriks Rincian Pekan Efektif (RPE) 12 Bulan';
+    lampiran3Title = '    Lampiran 3: Jadwal PHBI & Kegiatan Karakter Purwakarta';
+  }
 
   const items = [
     { title: 'HALAMAN COVER', page: 'i' },
@@ -718,25 +739,55 @@ function renderBab3(b3 = {}) {
         <h3 class="text-lg font-bold uppercase tracking-wide text-slate-900">RENCANA PROGRAM DAN STRATEGI PELAKSANAAN</h3>
       </div>
 
-      <!-- A. Rincian Kegiatan -->
+      <!-- A. Rincian Kegiatan dan Aksi Nyata (Sistematika Ilmiah Kedinasan) -->
       <div class="mb-8">
         <h4 class="font-bold text-base text-slate-900 mb-3">A. Rincian Kegiatan dan Aksi Nyata</h4>
-        <div class="space-y-4">
+        <div class="space-y-6">
           ${kegiatan.map((kg, i) => `
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200 text-sm">
-              <h5 class="font-bold text-slate-900 mb-1 text-[15px]">${i + 1}. ${kg.nama}</h5>
-              ${kg.deskripsi ? `<p class="text-slate-700 text-justify mb-2 indent-6">${kg.deskripsi}</p>` : ''}
-              ${Array.isArray(kg.tahapan) && kg.tahapan.length > 0 ? `
-                <div class="mb-2.5 pl-3 py-1 border-l-2 border-indigo-400 bg-indigo-50/40 rounded-r-lg space-y-1 text-xs text-slate-700">
-                  <div class="font-bold text-indigo-900">Tahapan Aksi Nyata:</div>
-                  ${kg.tahapan.map(th => `<div class="leading-snug">• ${th}</div>`).join('')}
-                </div>
-              ` : ''}
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-600 pt-1 border-t border-slate-200">
-                ${kg.tujuan ? `<div><strong>Tujuan:</strong> ${kg.tujuan}</div>` : ''}
-                ${kg.waktu ? `<div><strong>Waktu:</strong> ${kg.waktu}</div>` : ''}
-                ${kg.sasaran ? `<div><strong>Sasaran:</strong> ${kg.sasaran}</div>` : ''}
-                ${kg.pic ? `<div><strong>PIC:</strong> ${kg.pic}</div>` : ''}
+            <div class="text-sm text-slate-800 space-y-2">
+              <h5 class="font-bold text-slate-900 text-[15px]">${i + 1}. ${kg.nama}</h5>
+              ${kg.deskripsi ? `<p class="text-slate-700 text-justify indent-8 leading-relaxed">${kg.deskripsi}</p>` : ''}
+              
+              <div class="space-y-1.5 pl-4 sm:pl-6 text-sm text-slate-800 leading-relaxed">
+                ${kg.tujuan ? `
+                  <div class="flex items-start gap-2">
+                    <span class="font-bold shrink-0 w-5">a.</span>
+                    <div><span class="font-bold">Tujuan Kegiatan:</span> ${kg.tujuan.replace(/^tujuan\s*:\s*/i, '')}</div>
+                  </div>` : ''}
+                ${kg.sasaran ? `
+                  <div class="flex items-start gap-2">
+                    <span class="font-bold shrink-0 w-5">b.</span>
+                    <div><span class="font-bold">Sasaran Peserta:</span> ${kg.sasaran.replace(/^sasaran\s*:\s*/i, '')}</div>
+                  </div>` : ''}
+                ${kg.waktu ? `
+                  <div class="flex items-start gap-2">
+                    <span class="font-bold shrink-0 w-5">c.</span>
+                    <div><span class="font-bold">Waktu Pelaksanaan:</span> ${kg.waktu.replace(/^waktu\s*:\s*/i, '')}</div>
+                  </div>` : ''}
+                ${kg.pic ? `
+                  <div class="flex items-start gap-2">
+                    <span class="font-bold shrink-0 w-5">d.</span>
+                    <div><span class="font-bold">Penanggung Jawab (PIC):</span> ${kg.pic.replace(/^(penanggung jawab|pic)\s*:\s*/i, '')}</div>
+                  </div>` : ''}
+                ${Array.isArray(kg.tahapan) && kg.tahapan.length > 0 ? `
+                  <div class="pt-1">
+                    <div class="flex items-start gap-2">
+                      <span class="font-bold shrink-0 w-5">e.</span>
+                      <span class="font-bold">Tahapan Pelaksanaan Kegiatan:</span>
+                    </div>
+                    <div class="pl-7 space-y-1.5 mt-1 text-slate-700">
+                      ${kg.tahapan.map((th, thIdx) => {
+                        const cleanTh = th.replace(/^[-–•*\d.\s]+(?=[A-Za-z])/, '').trim();
+                        return `
+                          <div class="flex items-start gap-2 text-justify">
+                            <span class="font-bold shrink-0 w-5 text-slate-900">${thIdx + 1})</span>
+                            <span>${cleanTh}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `).join('')}
@@ -1010,6 +1061,33 @@ function renderLampiran(data, meta, tahun) {
           <p class="indent-6">
             Menimbang bahwa demi kelancaran, akuntabilitas, dan kesinambungan pelaksanaan program kerja di satuan pendidikan, maka dipandang perlu menetapkan susunan Tim Pelaksana melalui Keputusan Kepala Sekolah.
           </p>
+          ${Array.isArray(data.bab_3_rencana_program?.tim_pelaksana) && data.bab_3_rencana_program.tim_pelaksana.length > 0 ? `
+            <div class="mt-4 pt-3 border-t border-slate-300">
+              <p class="font-bold text-slate-900 mb-2">Susunan Personalia Tim Pelaksana:</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left border border-slate-300 border-collapse bg-white">
+                  <thead class="bg-slate-100 uppercase font-bold text-slate-700 border-b border-slate-300">
+                    <tr>
+                      <th class="p-2 border-r border-slate-300 w-10 text-center">No</th>
+                      <th class="p-2 border-r border-slate-300 w-1/4">Jabatan dalam Tim</th>
+                      <th class="p-2 border-r border-slate-300 w-1/4">Nama Pelaksana</th>
+                      <th class="p-2">Tugas Pokok</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200">
+                    ${data.bab_3_rencana_program.tim_pelaksana.map((t, idx) => `
+                      <tr class="hover:bg-slate-50/60">
+                        <td class="p-2 border-r border-slate-300 text-center font-mono">${t.no || idx + 1}</td>
+                        <td class="p-2 border-r border-slate-300 font-bold text-slate-900">${t.jabatan}</td>
+                        <td class="p-2 border-r border-slate-300 text-slate-800">${t.nama}</td>
+                        <td class="p-2 text-justify text-slate-700 leading-snug">${t.tugas}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
 
@@ -1176,13 +1254,13 @@ function renderTemplateSpecificLampiranHtml(templateId, meta) {
     `;
   } else if (templateId === '7kaih') {
     const kebiasaanList = [
-      '1. Bangun Pagi Mandiri & Ibadah Subuh (Jumat Nyucikeun Diri)',
-      '2. Berbakti pada Orang Tua & Budaya 5S (Senin Ajeg Nusantara)',
-      '3. Berolahraga Ceria, Makan Sehat & Bawa Tumbler (Selasa Mapag Buana)',
-      '4. Gemar Membaca Buku / Literasi 15 Menit (Rabu Maneuh di Sunda)',
-      '5. Rajin Belajar & Menjaga Kerapihan Diri (Kamis Nyanding Wawangi)',
-      '6. Peduli Lingkungan & Memilah Sampah Kelas (TdBA Karakter)',
-      '7. Istirahat Tepat Waktu & Kumpul Keluarga (Betah di Imah)',
+      'Bangun Pagi Mandiri & Ibadah Subuh (Jumat Nyucikeun Diri)',
+      'Berbakti pada Orang Tua & Budaya 5S (Senin Ajeg Nusantara)',
+      'Berolahraga Ceria, Makan Sehat & Bawa Tumbler (Selasa Mapag Buana)',
+      'Gemar Membaca Buku / Literasi 15 Menit (Rabu Maneuh di Sunda)',
+      'Rajin Belajar & Menjaga Kerapihan Diri (Kamis Nyanding Wawangi)',
+      'Peduli Lingkungan & Memilah Sampah Kelas (TdBA Karakter)',
+      'Istirahat Tepat Waktu & Kumpul Keluarga (Betah di Imah)',
     ];
 
     return `
@@ -1250,23 +1328,23 @@ function renderTemplateSpecificLampiranHtml(templateId, meta) {
             <tbody class="divide-y divide-slate-200">
               <tr>
                 <td class="p-2 border-r border-slate-300 font-semibold">1. Ketertiban & Pembiasaan 5S di Gerbang Sekolah</td>
-                <td class="p-2 border-r border-slate-300 text-slate-400 italic text-[11px]">[Catatan observasi guru piket pagi]</td>
-                <td class="p-2 text-slate-400 italic text-[11px]">[Tindak lanjut pembinaan / apresiasi]</td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-xs">Guru piket mencatat 95% siswa hadir tepat waktu dan mempraktikkan senyum, sapa, salam secara antusias.</td>
+                <td class="p-2 text-slate-700 text-xs font-medium">Apresiasi mingguan saat upacara bendera dan tindak lanjut pendampingan bagi siswa terlambat.</td>
               </tr>
               <tr>
                 <td class="p-2 border-r border-slate-300 font-semibold">2. Konsistensi Pengisian Jurnal 7 KAIH Mandiri</td>
-                <td class="p-2 border-r border-slate-300 text-slate-400 italic text-[11px]">[Tingkat ketuntasan dan validasi paraf orang tua]</td>
-                <td class="p-2 text-slate-400 italic text-[11px]">[Pemberian Bintang Kebaikan]</td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-xs">Jurnal pembiasaan terisi rutin dan divalidasi paraf orang tua setiap akhir pekan rata-rata 92%.</td>
+                <td class="p-2 text-slate-700 text-xs font-medium">Pemberian Pin/Bintang Kebaikan kelas serta pembinaan berkala bagi siswa yang belum konsisten.</td>
               </tr>
               <tr>
-                <td class="p-2 border-r border-slate-300 font-semibold">3. Keterlibatan & Validasi Orang Tua Setiap Akhir Pekan</td>
-                <td class="p-2 border-r border-slate-300 text-slate-400 italic text-[11px]">[Catatan komunikasi grup paguyuban kelas]</td>
-                <td class="p-2 text-slate-400 italic text-[11px]">[Dialog reflektif wali murid]</td>
+                <td class="p-2 border-r border-slate-300 font-semibold">3. Keterlibatan & Kolaborasi Orang Tua Setiap Pekan</td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-xs">Komunikasi paguyuban kelas aktif mendukung pembiasaan sarapan sehat, tidur tepat waktu, dan ibadah di rumah.</td>
+                <td class="p-2 text-slate-700 text-xs font-medium">Pertemuan parenting bulanan dan sharing praktik baik pendampingan karakter anak di rumah.</td>
               </tr>
               <tr>
                 <td class="p-2 border-r border-slate-300 font-semibold">4. Pengurangan Konflik & Penumbuhan Empati Siswa</td>
-                <td class="p-2 border-r border-slate-300 text-slate-400 italic text-[11px]">[Perilaku tolong-menolong dan keharmonisan antarsiswa]</td>
-                <td class="p-2 text-slate-400 italic text-[11px]">[Penguatan budaya kelas ramah anak]</td>
+                <td class="p-2 border-r border-slate-300 text-slate-600 text-xs">Iklim kelas kondusif, budaya saling menghargai meningkat, tidak ada insiden perundungan (bullying).</td>
+                <td class="p-2 text-slate-700 text-xs font-medium">Penguatan duta anti-perundungan dan pembiasaan refleksi empati melingkar setiap Jumat.</td>
               </tr>
             </tbody>
           </table>
@@ -2158,7 +2236,7 @@ function renderTemplateSpecificLampiranHtml(templateId, meta) {
  */
 export function syncCanvasToProgramData(data) {
   if (!data) return;
-  const elements = document.querySelectorAll('#program-canvas-content [contenteditable="true"]');
+  const elements = document.querySelectorAll('#program-canvas-content [contenteditable="true"], #program-canvas [contenteditable="true"]');
   elements.forEach(el => {
     const path = el.getAttribute('data-path');
     if (!path) return;
@@ -2166,9 +2244,18 @@ export function syncCanvasToProgramData(data) {
     const parts = path.split('.');
     let cur = data;
     for (let i = 0; i < parts.length - 1; i++) {
-      if (!cur[parts[i]]) cur[parts[i]] = {};
+      const nextKey = parts[i + 1];
+      const isNextNumeric = /^\d+$/.test(nextKey);
+      if (!cur[parts[i]]) {
+        cur[parts[i]] = isNextNumeric ? [] : {};
+      }
       cur = cur[parts[i]];
     }
-    cur[parts[parts.length - 1]] = val;
+    const lastKey = parts[parts.length - 1];
+    if (/^\d+$/.test(lastKey) && Array.isArray(cur)) {
+      cur[parseInt(lastKey, 10)] = val;
+    } else {
+      cur[lastKey] = val;
+    }
   });
 }

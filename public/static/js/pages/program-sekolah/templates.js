@@ -48,6 +48,7 @@ export const PROGRAM_TEMPLATES = [
         options: [
           'Model Blok (2-3 Pekan Penuh Berturut-turut di Akhir Semester)',
           'Model Reguler Mingguan (1 Hari Penuh Setiap Pekan / Hari Jumat/Sabtu)',
+          'Model Parsial (1-2 Jam Pelajaran di Awal Setiap Hari Belajar)',
           'Model Parsial (1-2 Jam Pelajaran di Akhir Setiap Hari Belajar)',
         ],
         default: 'Model Blok (2-3 Pekan Penuh Berturut-turut di Akhir Semester)',

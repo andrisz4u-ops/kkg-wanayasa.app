@@ -238,6 +238,86 @@ describe('Program Sekolah Universal (AI) Tests', () => {
       const agm = validateAndRepairProgramResult({}, { template: 'keagamaan' });
       expect(agm.bab_2_kajian_konseptual.judul_bab).toContain('KEAGAMAAN');
     });
+
+    it('should provide Kokurikuler-specific default activities, team, and action plan instead of 7KAIH fallback', () => {
+      const kokur = validateAndRepairProgramResult({}, { template: 'kokurikuler-p5' });
+      expect(kokur.bab_3_rencana_program.kegiatan[0].nama).toContain('Tahap Pengenalan Tema');
+      expect(kokur.bab_3_rencana_program.kegiatan[0].tahapan).toBeDefined();
+      expect(kokur.bab_3_rencana_program.kegiatan[0].tahapan?.length).toBe(3);
+      expect(kokur.bab_3_rencana_program.tim_pelaksana[1].jabatan).toContain('Koordinator Utama Kokurikuler');
+      expect(kokur.bab_3_rencana_program.action_plan[0].kegiatan).toContain('Asesmen Diagnostik');
+    });
+
+    it('should generate DOCX for kokurikuler-p5 with dynamic Daftar Isi, clean reflection statements, and SK decree heading', async () => {
+      const kokur = validateAndRepairProgramResult({}, {
+        template: 'kokurikuler-p5',
+        identitas: {
+          namaSekolah: 'SDN 1 Wanayasa',
+          tahunAjaran: '2026/2027',
+          penyusun: 'Tim Kokurikuler',
+          kepalaSekolah: 'Hj. Nenden Laila, M.Pd.',
+        },
+      });
+
+      const buffer = await generateProgramDocxBuffer(kokur);
+      const zip = await JSZip.loadAsync(buffer);
+      const docXml = await zip.file('word/document.xml')!.async('string');
+
+      // Check dynamic Daftar Isi for Kokurikuler with dot leaders and page numbers
+      expect(docXml).toContain('Rubrik Asesmen Autentik 8 Dimensi Profil Lulusan');
+      expect(docXml).toContain('Lembar Refleksi Diri Murid (Kokurikuler Profil Lulusan)');
+      expect(docXml).toContain('w:leader="dot"');
+      expect(docXml).toContain('LAMPIRAN-LAMPIRAN (TERINTEGRASI 1 FILE)');
+      expect(docXml).toContain('\tiv');
+      expect(docXml).toContain('\t1');
+      expect(docXml).toContain('\t16');
+      expect(docXml).toContain('\t17');
+      expect(docXml).toContain('\t18');
+
+      // Check no duplicate numbering in reflection statements
+      expect(docXml).not.toContain('1. 1. Saya memahami');
+      expect(docXml).toContain('Saya memahami');
+
+      // Check SK Tim Pelaksana Lampiran 1 decree heading is present
+      expect(docXml).toContain('KEPUTUSAN KEPALA SDN 1 WANAYASA');
+    });
+
+    it('should generate DOCX for 7kaih with populated Lampiran 3 columns and clean headers in Lampiran 2', async () => {
+      const kaih = validateAndRepairProgramResult({}, {
+        template: '7kaih',
+        identitas: {
+          namaSekolah: 'SDN 1 Wanayasa',
+          tahunAjaran: '2026/2027',
+          penyusun: 'Siti Rahmawati, S.Pd.',
+          kepalaSekolah: 'Hj. Nenden Laila, M.Pd.',
+        },
+      });
+
+      const buffer = await generateProgramDocxBuffer(kaih);
+      const zip = await JSZip.loadAsync(buffer);
+      const docXml = await zip.file('word/document.xml')!.async('string');
+
+      // Check dynamic Daftar Isi for 7kaih
+      expect(docXml).toContain('Jurnal Mingguan 7 Kebiasaan Anak Indonesia Hebat (7 KAIH)');
+      expect(docXml).toContain('Lembar Observasi &amp; Monitoring Supervisi Pembiasaan Siswa');
+
+      // Check Lampiran 2 headers contain 7 Poe Atikan sub-labels
+      expect(docXml).toContain('Ajeg');
+      expect(docXml).toContain('Mapag');
+      expect(docXml).toContain('Maneuh');
+      expect(docXml).toContain('Nyanding');
+      expect(docXml).toContain('Nyucikeun');
+
+      // Check no duplicate numbering in 7kaih rows
+      expect(docXml).not.toContain('1. 1. Bangun Pagi');
+      expect(docXml).toContain('Bangun Pagi Mandiri');
+
+      // Check Lampiran 3 columns 2 and 3 are not empty and populated with observation and RTL
+      expect(docXml).toContain('Guru piket mencatat 95% siswa hadir tepat waktu');
+      expect(docXml).toContain('Apresiasi mingguan saat upacara bendera');
+      expect(docXml).toContain('Jurnal pembiasaan terisi rutin');
+      expect(docXml).toContain('Pemberian Pin/Bintang Kebaikan');
+    });
   });
 
   describe('Database Self-Healing Schema', () => {

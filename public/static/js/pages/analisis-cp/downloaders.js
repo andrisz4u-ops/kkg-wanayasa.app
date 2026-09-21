@@ -8,17 +8,20 @@ import { openArchiveDrawer } from '../../storage-archive.js';
 import { syncCanvasToAnalysisData } from './renderers.js';
 import { replacePesertaDidik } from './validator.js';
 
+let isBatchDownloading = false;
+
 /**
- * Unduh Dokumen Word (.docx) sesuai tab aktif
- * @param {string} type - 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp'
+ * Unduh Dokumen Word (.docx) sesuai tab aktif dengan auto-retry otomatis jika server sibuk (503)
+ * @param {string} type - 'analisis' | 'prota' | 'promes' | 'rpe' | 'kktp' | 'data-cp' | 'atp-elemen'
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
  * @param {string|number} activePromesSemester 
+ * @param {boolean} isBatch
  */
-export async function downloadDocx(type = 'analisis', currentAnalysisData, currentInputData, activePromesSemester = 'all') {
+export async function downloadDocx(type = 'analisis', currentAnalysisData, currentInputData, activePromesSemester = 'all', isBatch = false) {
   if (!currentAnalysisData) {
     showToast('Belum ada dokumen analisis yang dirakit', 'warning');
-    return;
+    return false;
   }
 
   // Sinkronkan editan teks pengguna di kanvas terlebih dahulu
@@ -33,93 +36,179 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
                     : type === 'atp-elemen' ? 'Alur Tujuan Pembelajaran (ATP Elemen)'
                     : 'Analisis CP, TP, dan ATP';
 
-  showToast(`Menyiapkan berkas Word ${docTypeName}...`, 'info');
-
-  try {
-    const origin = window.location.origin;
-    const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
-
-    const endpoint = type === 'data-cp' ? '/api/analisis-cp/docx/data-cp'
-                   : type === 'prota' ? '/api/analisis-cp/docx/prota'
-                   : type === 'promes' ? '/api/analisis-cp/docx/promes'
-                   : type === 'rpe' ? '/api/analisis-cp/docx/rpe'
-                   : type === 'kktp' ? '/api/analisis-cp/docx/kktp'
-                   : type === 'atp-elemen' ? '/api/analisis-cp/docx/atp-elemen'
-                   : '/api/analisis-cp/docx';
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        metadata: {
-          ...currentAnalysisData.metadata,
-          satuan_pendidikan: currentInputData?.namaSekolah || currentAnalysisData.metadata?.satuan_pendidikan,
-          mata_pelajaran: currentInputData?.mataPelajaran || currentAnalysisData.metadata?.mata_pelajaran,
-          kepala_sekolah: currentInputData?.namaKepalaSekolah,
-          nip_kepala_sekolah: currentInputData?.nipKepalaSekolah,
-          guru: currentInputData?.namaGuru,
-          nip_guru: currentInputData?.nipGuru,
-          kop_surat_url: kopSuratUrl,
-          sumber_buku: currentInputData?.sumberBuku
-        },
-        semesters: currentAnalysisData.semesters,
-        semester: activePromesSemester !== 'all' ? activePromesSemester : undefined
-      })
-    });
-
-    if (!res.ok) {
-      throw new Error(`Server returned ${res.status}`);
-    }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const mapelSafe = (currentInputData?.mataPelajaran || 'Mapel').replace(/\s+/g, '_');
-    const kelasSafe = (currentInputData?.jenjangKelas || 'Kelas_5').replace(/\s+/g, '_');
-    const prefix = type === 'data-cp' ? 'Capaian_Pembelajaran'
-                 : type === 'prota' ? 'PROTA'
-                 : type === 'promes' ? 'PROMES'
-                 : type === 'rpe' ? 'RPE'
-                 : type === 'kktp' ? 'KKTP'
-                 : type === 'atp-elemen' ? 'ATP_Elemen'
-                 : 'Analisis_CP_TP_ATP';
-
-    a.download = `${prefix}_${mapelSafe}_${kelasSafe}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showToast(`Berkas ${prefix} (.docx) berhasil diunduh!`, 'success');
-  } catch (err) {
-    console.error('Download DOCX Error:', err);
-    showToast('Gagal mengunduh berkas Word: ' + err.message, 'error');
+  if (!isBatch) {
+    showToast(`Menyiapkan berkas Word ${docTypeName}...`, 'info');
   }
+
+  const origin = window.location.origin;
+  const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
+
+  const endpoint = type === 'data-cp' ? '/api/analisis-cp/docx/data-cp'
+                 : type === 'prota' ? '/api/analisis-cp/docx/prota'
+                 : type === 'promes' ? '/api/analisis-cp/docx/promes'
+                 : type === 'rpe' ? '/api/analisis-cp/docx/rpe'
+                 : type === 'kktp' ? '/api/analisis-cp/docx/kktp'
+                 : type === 'atp-elemen' ? '/api/analisis-cp/docx/atp-elemen'
+                 : '/api/analisis-cp/docx';
+
+  const payload = {
+    metadata: {
+      ...currentAnalysisData.metadata,
+      satuan_pendidikan: currentInputData?.namaSekolah || currentAnalysisData.metadata?.satuan_pendidikan,
+      mata_pelajaran: currentInputData?.mataPelajaran || currentAnalysisData.metadata?.mata_pelajaran,
+      kepala_sekolah: currentInputData?.namaKepalaSekolah,
+      nip_kepala_sekolah: currentInputData?.nipKepalaSekolah,
+      guru: currentInputData?.namaGuru,
+      nip_guru: currentInputData?.nipGuru,
+      kop_surat_url: kopSuratUrl,
+      sumber_buku: currentInputData?.sumberBuku
+    },
+    semesters: currentAnalysisData.semesters,
+    semester: activePromesSemester !== 'all' ? activePromesSemester : undefined
+  };
+
+  const maxRetries = 2;
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        showToast(`Server sedang padat, mencoba ulang ${docTypeName} (${attempt}/${maxRetries})...`, 'warning');
+        await new Promise(r => setTimeout(r, attempt * 1200));
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        if ((res.status === 503 || res.status === 504 || res.status === 429) && attempt < maxRetries) {
+          lastError = new Error(`Server returned ${res.status}`);
+          continue;
+        }
+        throw new Error(`Server returned ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const mapelSafe = (currentInputData?.mataPelajaran || 'Mapel').replace(/\s+/g, '_');
+      const kelasSafe = (currentInputData?.jenjangKelas || 'Kelas_5').replace(/\s+/g, '_');
+      const prefix = type === 'data-cp' ? 'Capaian_Pembelajaran'
+                   : type === 'prota' ? 'PROTA'
+                   : type === 'promes' ? 'PROMES'
+                   : type === 'rpe' ? 'RPE'
+                   : type === 'kktp' ? 'KKTP'
+                   : type === 'atp-elemen' ? 'ATP_Elemen'
+                   : 'Analisis_CP_TP_ATP';
+
+      a.download = `${prefix}_${mapelSafe}_${kelasSafe}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (!isBatch) {
+        showToast(`Berkas ${prefix} (.docx) berhasil diunduh!`, 'success');
+      }
+      return true;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries && (String(err.message).includes('503') || String(err.message).includes('429') || String(err.message).includes('Failed to fetch'))) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  console.error(`Download DOCX Error (${type}):`, lastError);
+  showToast(`Gagal mengunduh berkas ${docTypeName}: ${lastError?.message || 'Koneksi terputus'}`, 'error');
+  return false;
 }
 
 /**
- * Unduh Semua 7 Paket Dokumen Word Sekaligus secara berurutan
+ * Unduh Semua 7 Paket Dokumen Word Sekaligus secara berurutan dengan proteksi kuota server
  * @param {object} currentAnalysisData 
  * @param {object} currentInputData 
+ * @param {string|number} activePromesSemester
  */
-export async function downloadAllDocs(currentAnalysisData, currentInputData) {
+export async function downloadAllDocs(currentAnalysisData, currentInputData, activePromesSemester = 'all') {
   if (!currentAnalysisData) {
     showToast('Belum ada dokumen analisis yang dirakit', 'warning');
     return;
   }
 
-  showToast('Memulai pengunduhan 7 paket dokumen Word (Capaian Pembelajaran, Analisis CP, ATP Elemen, Prota, Promes, RPE, KKTP)...', 'info');
-  const tabs = ['data-cp', 'analisis', 'atp-elemen', 'prota', 'promes', 'rpe', 'kktp'];
-
-  for (let i = 0; i < tabs.length; i++) {
-    await downloadDocx(tabs[i], currentAnalysisData, currentInputData);
-    if (i < tabs.length - 1) {
-      await new Promise(r => setTimeout(r, 450));
-    }
+  if (isBatchDownloading) {
+    showToast('Proses pengunduhan sedang berjalan, mohon tunggu...', 'warning');
+    return;
   }
 
-  showToast('Seluruh 7 paket dokumen berhasil diunduh!', 'success');
+  isBatchDownloading = true;
+  const btnDownloadAll = document.getElementById('btn-download-all-docs');
+  const btnDownloadSingle = document.getElementById('btn-download-docx');
+  const origAllText = btnDownloadAll ? btnDownloadAll.innerHTML : null;
+
+  if (btnDownloadAll) {
+    btnDownloadAll.disabled = true;
+    btnDownloadAll.classList.add('opacity-75', 'cursor-not-allowed');
+  }
+  if (btnDownloadSingle) {
+    btnDownloadSingle.disabled = true;
+  }
+
+  const tabsConfig = [
+    { type: 'data-cp', label: 'Capaian Pembelajaran (CP)' },
+    { type: 'analisis', label: 'Analisis CP-TP-ATP' },
+    { type: 'atp-elemen', label: 'ATP Elemen' },
+    { type: 'prota', label: 'Program Tahunan (PROTA)' },
+    { type: 'promes', label: 'Program Semester (PROMES)' },
+    { type: 'rpe', label: 'Rincian Pekan Efektif (RPE)' },
+    { type: 'kktp', label: 'Kriteria Ketercapaian (KKTP)' },
+  ];
+
+  let successCount = 0;
+  const failedDocs = [];
+
+  try {
+    for (let i = 0; i < tabsConfig.length; i++) {
+      const { type, label } = tabsConfig[i];
+      if (btnDownloadAll) {
+        btnDownloadAll.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> (${i + 1}/7) ${type.toUpperCase()}`;
+      }
+      showToast(`Mengunduh (${i + 1}/7): ${label}...`, 'info');
+
+      const ok = await downloadDocx(type, currentAnalysisData, currentInputData, activePromesSemester, true);
+      if (ok) {
+        successCount++;
+      } else {
+        failedDocs.push(label);
+      }
+
+      // Jeda 1100ms agar CPU isolate Cloudflare mendingin dan tidak ter-throttle
+      if (i < tabsConfig.length - 1) {
+        await new Promise(r => setTimeout(r, 1100));
+      }
+    }
+
+    if (successCount === tabsConfig.length) {
+      showToast('Seluruh 7 paket dokumen Word berhasil diunduh lengkap!', 'success');
+    } else {
+      showToast(`${successCount} dari 7 dokumen berhasil diunduh. Dokumen yang tertunda (${failedDocs.join(', ')}) dapat diunduh langsung lewat tabnya.`, 'warning');
+    }
+  } finally {
+    isBatchDownloading = false;
+    if (btnDownloadAll) {
+      btnDownloadAll.disabled = false;
+      btnDownloadAll.classList.remove('opacity-75', 'cursor-not-allowed');
+      if (origAllText) btnDownloadAll.innerHTML = origAllText;
+    }
+    if (btnDownloadSingle) {
+      btnDownloadSingle.disabled = false;
+    }
+  }
 }
 
 import { loadCpKolaboratifCountBadge } from './kolaboratif.js';

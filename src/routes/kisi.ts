@@ -121,7 +121,7 @@ kisi.get('/proxy-image', async (c) => {
             status: 200,
             headers: {
                 'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=86400',
+                'Cache-Control': 'public, max-age=604800, s-maxage=604800, stale-while-revalidate=86400, immutable',
                 'Access-Control-Allow-Origin': '*'
             }
         });

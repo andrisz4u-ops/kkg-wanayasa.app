@@ -2,7 +2,7 @@ import { api } from '../api.js';
 import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
-import { generateAsesmenDocx } from '../asesmen-docx.js';
+import { generateAsesmenDocx, preloadAsesmenImages } from '../asesmen-docx.js';
 import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
 
 export async function renderKisi() {
@@ -1760,6 +1760,9 @@ function renderResult(data, formData) {
   // Simpan formData dan raw data ke module scope untuk download handler
   _lastFormData = formData;
   _lastGeneratedData = data;
+
+  // Pre-load seluruh buffer gambar soal ke RAM secara senyap agar saat tombol unduh docx ditekan prosesnya instan
+  try { preloadAsesmenImages(data); } catch (_) {}
 
   // Bersihkan pilihan batch yang nomornya sudah tidak ada di data
   const validKeys = new Set([

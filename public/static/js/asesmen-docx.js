@@ -631,9 +631,35 @@ async function svgToPngDataUrl(svgUrlOrString, width = 480, height = 340) {
 }
 
 // ============================================================
-// HELPER: Convert URL / SVG to Base64/Buffer 
+// HELPER: Convert URL / SVG to Base64/Buffer (dengan Memory Cache)
 // ============================================================
+const imageBufferCache = new Map();
+
+/**
+ * Pre-fetch seluruh buffer gambar asesmen di latar belakang begitu soal selesai dibuat/ditampilkan.
+ * Saat tombol 'Unduh .docx' ditekan, seluruh buffer sudah siap di RAM sehingga pembuatan berkas sangat instan (< 300ms).
+ */
+export function preloadAsesmenImages(data) {
+  if (!data) return;
+  const allItems = [
+    ...(data.pg || []),
+    ...(data.isian?.data || []),
+    ...(data.uraian || [])
+  ].filter(q => q && q.gambar && (q.gambar.url || q.gambar.svg));
+
+  allItems.forEach(q => {
+    fetchSafeImageBuffer(q.gambar.url, q.gambar.svg).catch(err => {
+      console.debug('Background preload image skipped:', err);
+    });
+  });
+}
+
 async function fetchSafeImageBuffer(url, svgFallback) {
+  const cacheKey = url || svgFallback;
+  if (cacheKey && imageBufferCache.has(cacheKey)) {
+    return imageBufferCache.get(cacheKey);
+  }
+
   try {
     if (!url && !svgFallback) throw new Error('Image URL is empty');
 
@@ -649,7 +675,9 @@ async function fetchSafeImageBuffer(url, svgFallback) {
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        return { buffer: bytes.buffer, type: 'png' };
+        const res = { buffer: bytes.buffer, type: 'png' };
+        if (cacheKey) imageBufferCache.set(cacheKey, res);
+        return res;
       } catch (svgErr) {
         console.warn('Rasterize SVG failed, trying fallback:', svgErr);
       }
@@ -666,7 +694,9 @@ async function fetchSafeImageBuffer(url, svgFallback) {
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      return { buffer: bytes.buffer, type: imgType };
+      const res = { buffer: bytes.buffer, type: imgType };
+      if (cacheKey) imageBufferCache.set(cacheKey, res);
+      return res;
     }
 
     // 3. Handle HTTP / HTTPS URLs (Unsplash / Wikimedia / Vultr Serverless Inference / dsb)
@@ -705,7 +735,9 @@ async function fetchSafeImageBuffer(url, svgFallback) {
     }
 
     const isPng = url.toLowerCase().includes('.png');
-    return { buffer: buf, type: isPng ? 'png' : 'jpeg' };
+    const res = { buffer: buf, type: isPng ? 'png' : 'jpeg' };
+    if (cacheKey) imageBufferCache.set(cacheKey, res);
+    return res;
   } catch (e) {
     throw e;
   }

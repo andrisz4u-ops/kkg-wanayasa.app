@@ -14,9 +14,21 @@ pids
 *.seed
 *.pid.lock
 
-# dotenv environment variables file
+# Secrets, Credentials, and Environment files (NEVER COMMIT)
 .env
 .env.*
+*.env
+.dev.vars
+.dev.vars.*
+*.secret
+*.secrets
+*.pem
+*.key
+*.crt
+*credential*
+credentials.json
+supabase_*.json
+service-account*.json
 
 # PM2
 .pm2/

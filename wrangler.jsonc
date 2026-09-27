@@ -22,6 +22,8 @@
     "ai": {
         "binding": "AI"
     },
+    // PERINGATAN KEAMANAN: JANGAN masukkan secrets/API keys (seperti SUPABASE_KEY) di sini!
+    // Gunakan 'npx wrangler secret put <NAME>' atau file lokal '.dev.vars'.
     "vars": {
         "SUPABASE_URL": "https://mytonopqqqxlwywqbadt.supabase.co",
         "SUPABASE_BUCKET": "materi-kkg"

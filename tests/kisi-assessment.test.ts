@@ -698,4 +698,35 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             expect(data.error?.message).toContain('belum login');
         });
     });
+
+    describe('Image Proxy Endpoint (/proxy-image)', () => {
+        it('should reject request without url parameter with 400', async () => {
+            const kisiRoute = (await import('../src/routes/kisi')).default;
+            const res = await kisiRoute.request('/proxy-image');
+            expect(res.status).toBe(400);
+            const data = await res.json();
+            expect(data.error?.message).toContain('url wajib disertakan');
+        });
+
+        it('should reject non-http/https protocol with 400', async () => {
+            const kisiRoute = (await import('../src/routes/kisi')).default;
+            const res = await kisiRoute.request('/proxy-image?url=ftp://example.com/image.png');
+            expect(res.status).toBe(400);
+            const data = await res.json();
+            expect(data.error?.message).toContain('tidak didukung');
+        });
+
+        it('should reject SSRF attempts to localhost or internal IP with 403', async () => {
+            const kisiRoute = (await import('../src/routes/kisi')).default;
+            const localRes = await kisiRoute.request('/proxy-image?url=http://localhost:8787/secret');
+            expect(localRes.status).toBe(403);
+
+            const ipRes = await kisiRoute.request('/proxy-image?url=http://127.0.0.1:8787/secret');
+            expect(ipRes.status).toBe(403);
+
+            const privateRes = await kisiRoute.request('/proxy-image?url=http://192.168.1.1/admin');
+            expect(privateRes.status).toBe(403);
+        });
+    });
 });
+

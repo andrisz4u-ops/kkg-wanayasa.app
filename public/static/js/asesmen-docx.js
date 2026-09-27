@@ -669,7 +669,7 @@ async function fetchSafeImageBuffer(url, svgFallback) {
       return { buffer: bytes.buffer, type: imgType };
     }
 
-    // 3. Handle HTTP / HTTPS URLs (Unsplash / Wikimedia)
+    // 3. Handle HTTP / HTTPS URLs (Unsplash / Wikimedia / Vultr Serverless Inference / dsb)
     let fetchUrl = url;
     try {
       const parsed = new URL(url);
@@ -683,9 +683,27 @@ async function fetchSafeImageBuffer(url, svgFallback) {
       }
     } catch (_) {}
 
-    const resp = await fetch(fetchUrl);
-    if (!resp.ok) throw new Error('Fetch not ok: ' + resp.status);
-    const buf = await resp.arrayBuffer();
+    // Helper fetcher
+    async function doFetchBuffer(target) {
+      const resp = await fetch(target);
+      if (!resp.ok) throw new Error('Fetch status: ' + resp.status);
+      return await resp.arrayBuffer();
+    }
+
+    let buf;
+    // Jika URL berasal dari Vultr Object Storage yang memblokir CORS browser, langsung route lewat proxy
+    const isVultrOrCdn = fetchUrl.includes('vultrobjects.com') || fetchUrl.includes('vultrinference.com');
+    if (isVultrOrCdn) {
+      buf = await doFetchBuffer(`/api/kisi/proxy-image?url=${encodeURIComponent(fetchUrl)}`);
+    } else {
+      try {
+        buf = await doFetchBuffer(fetchUrl);
+      } catch (directErr) {
+        console.warn('Direct image fetch terblokir CORS / gagal, mencoba via /api/kisi/proxy-image:', directErr);
+        buf = await doFetchBuffer(`/api/kisi/proxy-image?url=${encodeURIComponent(fetchUrl)}`);
+      }
+    }
+
     const isPng = url.toLowerCase().includes('.png');
     return { buffer: buf, type: isPng ? 'png' : 'jpeg' };
   } catch (e) {
@@ -766,7 +784,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     // Pre-fetch dan rasterisasi seluruh gambar PG secara paralel agar ekspor Word sangat cepat (< 500ms)
     const pgImageBuffers = new Map();
     const imageTasks = data.pg
-      .filter(q => q.gambar && q.gambar.url)
+      .filter(q => q.gambar && (q.gambar.url || q.gambar.svg))
       .map(async (q) => {
         try {
           const imgData = await fetchSafeImageBuffer(q.gambar.url, q.gambar.svg);

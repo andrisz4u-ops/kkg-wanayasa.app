@@ -75,6 +75,61 @@ kisi.post('/visual-render', async (c) => {
     }
 });
 
+// Endpoint proxy image untuk bypass CORS pada ekspor DOCX / Client-side rendering (misal Vultr Serverless Inference)
+kisi.get('/proxy-image', async (c) => {
+    const targetUrl = c.req.query('url');
+    if (!targetUrl) {
+        return Errors.badRequest(c, 'Parameter url wajib disertakan');
+    }
+
+    try {
+        const parsed = new URL(targetUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return Errors.badRequest(c, 'Protokol URL tidak didukung');
+        }
+
+        // Cegah SSRF ke jaringan internal / private
+        const hostname = parsed.hostname.toLowerCase();
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0' ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('10.') ||
+            hostname.startsWith('172.16.') ||
+            hostname.endsWith('.local')
+        ) {
+            return Errors.forbidden(c, 'Akses ke sumber daya internal dilarang');
+        }
+
+        const resp = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+            },
+            signal: AbortSignal.timeout(15000)
+        });
+
+        if (!resp.ok) {
+            return c.text(`Gagal mengunduh gambar dari sumber eksternal (status: ${resp.status})`, 502);
+        }
+
+        const contentType = resp.headers.get('content-type') || 'image/jpeg';
+        const body = await resp.arrayBuffer();
+
+        return new Response(body, {
+            status: 200,
+            headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=86400',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (err: any) {
+        return Errors.internal(c, 'Proxy image error: ' + (err.message || 'unknown error'));
+    }
+});
+
 // Helper: normalisasi metadata kisi-kisi untuk setiap butir soal
 export const normalizeItemKisiMetadata = (item: any, defaultBentuk: string, defaultNo: number, fallbackCP: string, fallbackMateri: string) => {
     if (!item) return item;

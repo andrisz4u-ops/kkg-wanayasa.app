@@ -2,35 +2,15 @@ import { decrypt, isEncrypted } from '../lib/crypto';
 import { parseKeyPool } from './ai';
 
 type UnsplashEnv = {
-    UNSPLASH_ACCESS_KEY?: string;
-    UNSPLASH_API_KEY?: string;
     VULTR_API_KEY?: string;
     VULTR_BASE_URL?: string;
     VULTR_IMAGE_MODEL?: string;
-    AI?: any;
     DB?: any;
     [key: string]: any;
 };
 
-type UnsplashSearchResponse = {
-    results?: Array<{
-        id: string;
-        alt_description?: string | null;
-        description?: string | null;
-        urls?: {
-            regular?: string;
-        };
-        user?: {
-            name?: string;
-            links?: {
-                html?: string;
-            };
-        };
-    }>;
-};
-
 export interface UnsplashImagePayload {
-    source: 'unsplash' | 'cloudflare-ai' | 'vultr-ai';
+    source: 'unsplash' | 'vultr-ai';
     url: string;
     alt: string;
     query: string;
@@ -148,15 +128,11 @@ function isHistoricalFigureOrPlace(query: string, subjectContext?: string): bool
 }
 
 export class UnsplashService {
-    private accessKey?: string;
-    private cfAi?: any;
     private env: any;
     private db?: any;
 
     constructor(env: UnsplashEnv, db?: any) {
         this.env = env || {};
-        this.accessKey = env?.UNSPLASH_ACCESS_KEY || env?.UNSPLASH_API_KEY;
-        this.cfAi = env?.AI;
         this.db = db || env?.DB;
     }
 
@@ -181,7 +157,7 @@ export class UnsplashService {
             // 2. Check active provider in ai_providers table (from Admin Provider UI)
             try {
                 const row: any = await this.db.prepare(
-                    `SELECT * FROM ai_providers WHERE (slug LIKE '%vultr%' OR model LIKE '%z-image%' OR name LIKE '%vultr%') AND is_active = 1 ORDER BY priority ASC LIMIT 1`
+                    `SELECT * FROM ai_providers WHERE (capability = 'image' OR model LIKE '%z-image%' OR model LIKE '%flux%' OR model LIKE '%dall-e%') AND is_active = 1 ORDER BY priority ASC LIMIT 1`
                 ).first();
 
                 if (row?.api_key) {
@@ -360,7 +336,7 @@ export class UnsplashService {
             return vultrImg;
         }
 
-        // 2. Prioritas Kedua: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi jika Vultr tidak aktif)
+        // 2. Prioritas Kedua: Wikimedia Commons & Wikipedia (Foto/Diagram Otentik Resmi — khusus tokoh sejarah, candi, peta)
         const wikiImg = await searchWikimediaImage(cleanQuery, excludeUrls);
         if (wikiImg) {
             return {
@@ -374,158 +350,8 @@ export class UnsplashService {
             };
         }
 
-        // 3. Prioritas Ketiga: Cloudflare Workers AI (FLUX / SDXL)
-
-        if (this.cfAi && typeof this.cfAi.run === 'function') {
-            try {
-                const cfResult: any = await this.cfAi.run('@cf/black-forest-labs/flux-1-schnell', {
-                    prompt: visualPrompt,
-                    steps: 4,
-                }).catch(() => {
-                    return this.cfAi.run('@cf/bytedance/stable-diffusion-xl-lightning', {
-                        prompt: visualPrompt,
-                        steps: 4,
-                    });
-                });
-
-                if (cfResult) {
-                    let bytes: Uint8Array | null = null;
-                    if (cfResult instanceof Uint8Array) {
-                        bytes = cfResult;
-                    } else if (cfResult instanceof ArrayBuffer) {
-                        bytes = new Uint8Array(cfResult);
-                    } else if (typeof cfResult.getReader === 'function') {
-                        const reader = cfResult.getReader();
-                        const chunks: Uint8Array[] = [];
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-                            if (value) chunks.push(value);
-                        }
-                        const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
-                        bytes = new Uint8Array(totalLen);
-                        let offset = 0;
-                        for (const c of chunks) {
-                            bytes.set(c, offset);
-                            offset += c.length;
-                        }
-                    } else if (typeof cfResult === 'string' && cfResult.startsWith('data:')) {
-                        if (!excludeUrls || !excludeUrls.has(cfResult)) {
-                            return {
-                                source: 'cloudflare-ai',
-                                url: cfResult,
-                                alt: fallbackAlt || cleanQuery,
-                                query: cleanQuery,
-                                creditName: 'Cloudflare Workers AI (FLUX)',
-                                creditUrl: 'https://developers.cloudflare.com/workers-ai/',
-                                unsplashId: `cf_${Date.now()}`
-                            };
-                        }
-                    }
-
-                    if (bytes && bytes.length > 0) {
-                        let binary = '';
-                        const len = bytes.byteLength;
-                        for (let i = 0; i < len; i++) {
-                            binary += String.fromCharCode(bytes[i]);
-                        }
-                        const base64 = btoa(binary);
-                        const dataUrl = `data:image/jpeg;base64,${base64}`;
-                        if (!excludeUrls || !excludeUrls.has(dataUrl)) {
-                            return {
-                                source: 'cloudflare-ai',
-                                url: dataUrl,
-                                alt: fallbackAlt || cleanQuery,
-                                query: cleanQuery,
-                                creditName: 'Cloudflare Workers AI (FLUX)',
-                                creditUrl: 'https://developers.cloudflare.com/workers-ai/',
-                                unsplashId: `cf_${Date.now()}`
-                            };
-                        }
-                    }
-                }
-            } catch (cfErr) {
-                console.warn('Cloudflare Workers AI image run note (proceeding to visual engine):', cfErr);
-            }
-        }
-
-        // 3. Prioritas Ketiga: Unsplash API resmi jika token terkonfigurasi
-        if (this.accessKey) {
-            try {
-                const searchUrl = new URL('https://api.unsplash.com/search/photos');
-                searchUrl.searchParams.set('query', cleanQuery);
-                searchUrl.searchParams.set('page', '1');
-                searchUrl.searchParams.set('per_page', '15');
-                searchUrl.searchParams.set('orientation', 'landscape');
-                searchUrl.searchParams.set('content_filter', 'high');
-
-                const response = await fetch(searchUrl.toString(), {
-                    headers: {
-                        Authorization: `Client-ID ${this.accessKey}`,
-                        'Accept-Version': 'v1',
-                    },
-                });
-
-                if (response.ok) {
-                    const payload = await response.json() as UnsplashSearchResponse;
-
-                    // Helper: filter out irrelevant stock polluters
-                    const isStockPolluter = (item: any): boolean => {
-                        const uName = (item.user?.name || '').toLowerCase();
-                        const uUsername = (item.user?.username || '').toLowerCase();
-                        const desc = `${item.description || ''} ${item.alt_description || ''}`.toLowerCase();
-
-                        // Blocklist Andrey Sizov Russian technical diagram photo
-                        if (uName.includes('андрей') || uName.includes('сизов') || uName.includes('andrey sizov') || uUsername.includes('asizov')) {
-                            return true;
-                        }
-                        // Blocklist Cyrillic/Russian textbook pages
-                        if (/[\u0400-\u04FF]/.test(desc) || /[\u0400-\u04FF]/.test(uName)) {
-                            return true;
-                        }
-                        // Blocklist generic circuit boards / schematics unless question explicitly asks for electrical circuit
-                        const isCircuit = desc.includes('circuit') || desc.includes('schematic') || desc.includes('blueprint') || desc.includes('diagram');
-                        const queryAllowsCircuit = /listrik|rangkaian|elektronika|circuit/i.test(cleanQuery);
-                        if (isCircuit && !queryAllowsCircuit) {
-                            return true;
-                        }
-                        return false;
-                    };
-
-                    const candidate = payload.results?.find((item) => {
-                        if (!item.urls?.regular || !item.user?.name || !item.user?.links?.html) return false;
-                        const cleanUrl = item.urls.regular.split('?')[0];
-                        if (excludeUrls && (excludeUrls.has(item.urls.regular) || excludeUrls.has(cleanUrl))) return false;
-                        if (excludeIds && excludeIds.has(item.id)) return false;
-                        if (isStockPolluter(item)) return false;
-                        return true;
-                    });
-
-                    if (candidate?.urls?.regular && candidate.user?.name && candidate.user?.links?.html) {
-                        const creditUrl = new URL(candidate.user.links.html);
-                        creditUrl.searchParams.set('utm_source', 'kkg_slide_generator');
-                        creditUrl.searchParams.set('utm_medium', 'referral');
-
-                        const alt = (candidate.alt_description || candidate.description || fallbackAlt || 'Gambar pembelajaran').slice(0, 180);
-
-                        return {
-                            source: 'unsplash',
-                            url: candidate.urls.regular,
-                            alt,
-                            query: cleanQuery,
-                            creditName: candidate.user.name,
-                            creditUrl: creditUrl.toString(),
-                            unsplashId: candidate.id,
-                        };
-                    }
-                }
-            } catch (err) {
-                console.warn('Unsplash API search error:', err);
-            }
-        }
-
-        // Jika tidak ditemukan gambar otentik dari Wikimedia Commons, Cloudflare AI, atau Unsplash, kembalikan null
-        // Jangan gunakan URL generator acak yang lambat/gagal CORS demi kebersihan naskah ujian
+        // Cloudflare FLUX & Unsplash dihapus — hasilnya sering tidak relevan untuk konteks pendidikan Indonesia.
+        // Jika Vultr dan Wikimedia tidak menghasilkan gambar, lebih baik soal tanpa gambar daripada gambar kacau.
         return null;
     }
 }

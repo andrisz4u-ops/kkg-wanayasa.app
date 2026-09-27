@@ -186,7 +186,7 @@ export class AIService {
     async loadProviders(db: D1Database): Promise<void> {
         this.db = db;
         const result = await db.prepare(
-            `SELECT * FROM ai_providers WHERE is_active = 1 ORDER BY priority ASC`
+            `SELECT * FROM ai_providers WHERE is_active = 1 AND capability != 'image' ORDER BY priority ASC`
         ).all();
 
         const loaded: DBProvider[] = [];

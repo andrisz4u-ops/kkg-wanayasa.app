@@ -615,6 +615,7 @@ export const createAiProviderSchema = z.object({
     }, z.coerce.number().min(0, 'Temperature minimal 0').max(2, 'Temperature maksimal 2')).optional().default(0.7),
     extra_headers: z.preprocess(sanitizeJsonString, z.string().max(2000).optional()).default('{}'),
     extra_body: z.preprocess(sanitizeJsonString, z.string().max(2000).optional()).default('{}'),
+    capability: z.enum(['text', 'image', 'both'], { message: 'Tipe kapabilitas tidak valid' }).optional().default('text'),
 });
 
 export const updateAiProviderSchema = createAiProviderSchema.partial();

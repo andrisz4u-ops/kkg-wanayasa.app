@@ -229,33 +229,66 @@ describe('AI Providers Admin & Validation Tests', () => {
     });
 
     describe('Vultr Serverless Inference Integration', () => {
-        it('should validate Vultr provider creation with correct defaults', () => {
+        it('should validate Vultr provider creation with capability=image', () => {
             const vultrPayload = {
                 name: 'Vultr Serverless (Z-Image Turbo)',
-                slug: 'vultr-inference',
+                slug: 'vultr-image',
                 api_type: 'openai_compat',
                 base_url: 'https://api.vultrinference.com/v1',
                 model: 'z-image-turbo',
                 api_key: 'test-vultr-key-123',
                 max_tokens: 4096,
                 priority: 100,
-                is_active: 1
+                is_active: 1,
+                capability: 'image'
             };
 
             const parsed = createAiProviderSchema.safeParse(vultrPayload);
             expect(parsed.success).toBe(true);
             if (parsed.success) {
-                expect(parsed.data.slug).toBe('vultr-inference');
+                expect(parsed.data.slug).toBe('vultr-image');
                 expect(parsed.data.model).toBe('z-image-turbo');
                 expect(parsed.data.base_url).toBe('https://api.vultrinference.com/v1');
+                expect(parsed.data.capability).toBe('image');
             }
+        });
+
+        it('should default capability to text when not specified', () => {
+            const textPayload = {
+                name: 'Mistral Large',
+                slug: 'mistral',
+                api_type: 'openai_compat',
+                base_url: 'https://api.mistral.ai/v1',
+                model: 'mistral-large-latest',
+            };
+
+            const parsed = createAiProviderSchema.safeParse(textPayload);
+            expect(parsed.success).toBe(true);
+            if (parsed.success) {
+                expect(parsed.data.capability).toBe('text');
+            }
+        });
+
+        it('should validate all capability types', () => {
+            const base = {
+                name: 'Test',
+                slug: 'test-provider',
+                api_type: 'openai_compat',
+                base_url: 'https://api.example.com/v1',
+                model: 'test-model',
+            };
+
+            expect(createAiProviderSchema.safeParse({ ...base, capability: 'text' }).success).toBe(true);
+            expect(createAiProviderSchema.safeParse({ ...base, capability: 'image' }).success).toBe(true);
+            expect(createAiProviderSchema.safeParse({ ...base, capability: 'both' }).success).toBe(true);
+            expect(createAiProviderSchema.safeParse({ ...base, capability: 'video' }).success).toBe(false);
         });
 
         it('should identify image models correctly in provider checks', () => {
             const isImageModel = (model: string, slug: string) =>
                 /z-image|image|flux|diffusion/i.test(model || '') || /vultr/i.test(slug || '');
 
-            expect(isImageModel('z-image-turbo', 'vultr-inference')).toBe(true);
+            expect(isImageModel('z-image-turbo', 'vultr-image')).toBe(true);
             expect(isImageModel('flux.1-dev', 'custom-flux')).toBe(true);
             expect(isImageModel('gpt-4o', 'openai-gpt4o')).toBe(false);
             expect(isImageModel('gemini-2.0-flash', 'gemini-flash')).toBe(false);

@@ -1398,12 +1398,12 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
     }
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO ai_providers (name, slug, api_type, base_url, model, api_key, priority, is_active, max_tokens, temperature, extra_headers, extra_body)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO ai_providers (name, slug, api_type, base_url, model, api_key, priority, is_active, max_tokens, temperature, extra_headers, extra_body, capability)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       d.name, d.slug, d.api_type, d.base_url, d.model, storedKey,
       d.priority, d.is_active, d.max_tokens, d.temperature,
-      d.extra_headers || '{}', d.extra_body || '{}'
+      d.extra_headers || '{}', d.extra_body || '{}', d.capability || 'text'
     ).run();
 
     const currentUser: any = c.get('user');
@@ -1506,6 +1506,7 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
       model: d.model, api_key: d.api_key, priority: d.priority, is_active: d.is_active,
       max_tokens: d.max_tokens, temperature: d.temperature,
       extra_headers: d.extra_headers, extra_body: d.extra_body,
+      capability: d.capability,
     };
 
     for (const [key, val] of Object.entries(fields)) {

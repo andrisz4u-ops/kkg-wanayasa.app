@@ -1301,22 +1301,31 @@ export async function renderAdmin() {
             </div>
           </div>
 
-          <!-- Row 2: API Type & Priority -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Row 2: API Type, Capability & Priority -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="label">Tipe API <span class="text-rose-500">*</span></label>
               <select id="aip-api_type" class="input-field" onchange="onAiProviderTypeChange()">
-                <option value="openai_compat">OpenAI Compatible (Standard)</option>
-                <option value="anthropic">Anthropic Messages API</option>
-                <option value="gemini_sdk">Google Generative AI SDK</option>
+                <option value="openai_compat">OpenAI Compatible</option>
+                <option value="anthropic">Anthropic API</option>
+                <option value="gemini_sdk">Google Gemini SDK</option>
                 <option value="bedrock">AWS Bedrock</option>
                 <option value="custom_proxy">Custom HTTP Proxy</option>
               </select>
             </div>
             <div>
-              <label class="label">Prioritas Failover (1 = Utama)</label>
+              <label class="label">Kapabilitas</label>
+              <select id="aip-capability" class="input-field">
+                <option value="text">🤖 Text / LLM</option>
+                <option value="image">🎨 Image Gen</option>
+                <option value="both">🧠 Keduanya</option>
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">Teks (Soal/RPP) atau gambar (stimulus).</p>
+            </div>
+            <div>
+              <label class="label">Prioritas (1 = Utama)</label>
               <input type="number" id="aip-priority" min="1" max="999" value="100" class="input-field">
-              <p class="text-[11px] text-slate-400 mt-1">Urutan prioritas pemanggilan (angka kecil diprioritaskan).</p>
+              <p class="text-[11px] text-slate-400 mt-1">Angka kecil diprioritaskan.</p>
             </div>
           </div>
 

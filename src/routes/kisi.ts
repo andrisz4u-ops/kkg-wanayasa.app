@@ -468,13 +468,15 @@ export const resolveQuestionVisualStimulus = async (
     unsplash: UnsplashService | null,
     usedStimulusSignatures?: Set<string>,
     usedImageUrls?: Set<string>,
-    usedImageIds?: Set<string>
+    usedImageIds?: Set<string>,
+    forcePhotoOnly: boolean = false
 ): Promise<void> => {
     // 1. Cek visual stimulus eksplisit dari AI
-    let visualCfg = q.visual_stimulus;
+    let visualCfg = forcePhotoOnly ? null : q.visual_stimulus;
 
     // 1b. Jika visualCfg belum ada atau tidak punya type, coba ekstrak dari visual_stimulus {...} yang tertulis di teks soal
-    if (!visualCfg || !visualCfg.type) {
+    // SKIP jika forcePhotoOnly — langsung ke pencarian foto
+    if (!forcePhotoOnly && (!visualCfg || !visualCfg.type)) {
         const vsMatch = String(q.soal || '').match(/visual_stimulus\s*:?\s*\{/i);
         if (vsMatch && vsMatch.index !== undefined) {
             const startIdx = q.soal.indexOf('{', vsMatch.index);
@@ -503,7 +505,8 @@ export const resolveQuestionVisualStimulus = async (
     }
 
     // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal, opsi, & kunci jawaban
-    if (!visualCfg || !visualCfg.type) {
+    // SKIP jika forcePhotoOnly — tidak perlu auto-detect SVG
+    if (!forcePhotoOnly && (!visualCfg || !visualCfg.type)) {
         let fullContext = String(q.soal || '');
         if (q.opsi && typeof q.opsi === 'object') {
             fullContext += ' ' + Object.entries(q.opsi).map(([k, v]) => `${k}. ${v}`).join(' ');
@@ -534,7 +537,8 @@ export const resolveQuestionVisualStimulus = async (
     }
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
-    if (visualCfg && visualCfg.type && usedStimulusSignatures) {
+    // SKIP jika forcePhotoOnly
+    if (!forcePhotoOnly && visualCfg && visualCfg.type && usedStimulusSignatures) {
         const signature = buildStimulusSignature(visualCfg);
 
         if (usedStimulusSignatures.has(signature)) {
@@ -792,8 +796,8 @@ export const resolveQuestionVisualStimulus = async (
         }
     }
 
-    // 4. Jika visualCfg terdeteksi dan didukung oleh VisualEngine
-    if (visualCfg && visualCfg.type) {
+    // 4. Jika visualCfg terdeteksi dan didukung oleh VisualEngine (SKIP jika forcePhotoOnly)
+    if (!forcePhotoOnly && visualCfg && visualCfg.type) {
         const svgRes = generateVisualStimulus(visualCfg);
         if (svgRes) {
             const sig = buildStimulusSignature(visualCfg);
@@ -817,8 +821,8 @@ export const resolveQuestionVisualStimulus = async (
     if (unsplash) {
         const soalTextLower = String(q.soal || '').toLowerCase();
         // Guard: Soal yang membutuhkan stimulus diagram/skema presisi berlabel (tanda panah, huruf X, pola urutan, alur)
-        // DILARANG KERAS menggunakan foto stok Unsplash! Foto stok tidak memiliki tanda panah ke CPU atau pola warna khusus soal.
-        const requiresDiagram = /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
+        // Ketika forcePhotoOnly, skip guard ini — cari foto topik umum sebagai pelengkap visual
+        const requiresDiagram = !forcePhotoOnly && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
 
         if (requiresDiagram) {
             delete q.gambar;
@@ -839,26 +843,45 @@ export const resolveQuestionVisualStimulus = async (
             'soal', 'materi', 'asesmen', 'ujian', 'pelajaran', 'ilustrasi',
             'flowchart', 'skema', 'pola', 'pola warna', 'pola gambar', 'chart'
         ]);
-        let searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
-        if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
-            // Jika soal secara eksplisit menanyakan identitas objek/tokoh/rasa pada gambar, ambil dari kunci jawaban
-            if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|picture|image)|siapakah|nama\s+tokoh|nama\s+benda|tokoh\s+pada\s+gambar|what\s+is\s+the\s+(?:taste|name|food|drink|animal|object)/i.test(soalTextLower) && q.kunci && q.opsi && q.opsi[q.kunci]) {
+
+        let searchKeyword = '';
+
+        if (forcePhotoOnly) {
+            // Untuk slot foto, langsung gunakan topik atau kunci jawaban sebagai keyword
+            // karena gambar_keyword biasanya kosong (AI mengira akan pakai SVG)
+            if (q.kunci && q.opsi && q.opsi[q.kunci]) {
                 const answerText = String(q.opsi[q.kunci]).trim();
-                if (answerText.length >= 3) {
+                if (answerText.length >= 3 && !genericBlocklist.has(answerText.toLowerCase())) {
                     searchKeyword = answerText;
                 }
             }
-        }
-        if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
-            searchKeyword = topik || '';
+            if (!searchKeyword) {
+                searchKeyword = topik || '';
+            }
+        } else {
+            searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
+            if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+                if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|picture|image)|siapakah|nama\s+tokoh|nama\s+benda|tokoh\s+pada\s+gambar|what\s+is\s+the\s+(?:taste|name|food|drink|animal|object)/i.test(soalTextLower) && q.kunci && q.opsi && q.opsi[q.kunci]) {
+                    const answerText = String(q.opsi[q.kunci]).trim();
+                    if (answerText.length >= 3) {
+                        searchKeyword = answerText;
+                    }
+                }
+            }
+            if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+                searchKeyword = topik || '';
+            }
         }
 
         // Jika keyword tetap kosong atau terlalu generik, batalkan pencarian foto acak
         if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
+            console.warn(`[PhotoSlot] Soal ${q.no || '?'}: Keyword kosong/generik, skip foto`);
             delete q.gambar;
             delete q.visual_stimulus;
             return;
         }
+
+        console.log(`[PhotoSlot] Soal ${q.no || '?'}: Mencari foto "${searchKeyword}" (forcePhotoOnly=${forcePhotoOnly})`);
 
         const promptEn = q.gambar_prompt_en || bracketHint || `${searchKeyword}, educational textbook illustration, clean white background, 2D art`;
         const subjectContext = `${mataPelajaran} ${topik}`;
@@ -885,7 +908,7 @@ export const resolveQuestionVisualStimulus = async (
                 q.gambar = {
                     url: img.url,
                     credit: img.creditName,
-                    type: (img.source === 'cloudflare-ai' || (img.source as string) === 'vultr-ai') ? 'ai' : 'photo'
+                    type: (img.source as string) === 'vultr-ai' ? 'ai' : 'photo'
                 };
             } else {
                 delete q.gambar;
@@ -1341,33 +1364,68 @@ export async function enrichAndNormalizePG(
     deduped.forEach((q: any, i: number) => { q.no = i + 1; });
 
     // Enforce exact image count jika visual stimulus aktif
+    // SPLIT STRATEGY: Bagi kuota 50/50 antara SVG Dinamik dan Foto AI (Vultr/Wiki)
+    // Contoh: 10 PG → 2 visual = 1 SVG + 1 Foto, 15 PG → 3 visual = 2 SVG + 1 Foto
     if (isGambarEnabled && unsplash && exactImageCount > 0 && deduped.length > 0) {
+        const svgSlots = Math.ceil(exactImageCount / 2);   // SVG mendapat 50% (dibulatkan ke atas)
+        const photoSlots = exactImageCount - svgSlots;     // Foto mendapat sisanya
+
         const scoredQuestions = deduped.map((q: any, index: number) => {
             let score = 0;
+            let svgAffinity = 0;   // Semakin tinggi = lebih cocok untuk SVG
+            let photoAffinity = 0; // Semakin tinggi = lebih cocok untuk Foto
             const soalText = String(q.soal || '').toLowerCase();
-            if (q.visual_stimulus && q.visual_stimulus.type) score += 20;
-            if (q.gambar_keyword && q.gambar_keyword.trim() !== '') score += 10;
-            // Prioritas tertinggi (+35): Soal yang naskahnya secara intrinsik merujuk pada gambar (wajib punya gambar agar bisa dijawab)
+
+            if (q.visual_stimulus && q.visual_stimulus.type) { score += 20; svgAffinity += 30; }
+            if (q.gambar_keyword && q.gambar_keyword.trim() !== '') { score += 10; photoAffinity += 25; }
+            if (q.gambar_prompt_en && q.gambar_prompt_en.trim() !== '') { photoAffinity += 15; }
+
+            // Prioritas tertinggi (+35): Soal yang naskahnya secara intrinsik merujuk pada gambar
             if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|foto|diagram|ilustrasi|picture|image)|(?:pada\s+gambar|in\s+the\s+picture|based\s+on\s+the\s+picture)|gambar\s+di\s+bawah/i.test(soalText)) score += 35;
             if (soalText.includes('gambar') || soalText.includes('picture') || soalText.includes('image') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta') || soalText.includes('tabel')) score += 5;
             if (soalText.includes('perhatikan') || soalText.includes('look at') || soalText.includes('berikut') || soalText.includes('amatilah')) score += 3;
-            return { q, index, score };
+
+            // SVG affinity: konten diagram, geometri, siklus, organ, rangkaian
+            if (/diagram|bangun|sudut|pecahan|siklus|organ|rangkaian|grafik|tabel|jam|waktu|termometer|peta|kompas|tata surya|alur/i.test(soalText)) svgAffinity += 20;
+            // Photo affinity: konten objek konkret, hewan, tumbuhan, tokoh, alat
+            if (/hewan|tumbuhan|buah|sayur|makanan|minuman|olahraga|alat|bola|raket|tokoh|pahlawan|profesi|baju|rumah|kendaraan|food|drink|animal|taste/i.test(soalText)) photoAffinity += 20;
+
+            return { q, index, score, svgAffinity, photoAffinity };
         });
 
+        // Langkah 1: Pilih top N berdasarkan score umum
         scoredQuestions.sort((a: any, b: any) => b.score - a.score);
-        const targetSelected = new Set(scoredQuestions.slice(0, exactImageCount).map((item: any) => item.q));
+        const topCandidates = scoredQuestions.slice(0, exactImageCount);
+
+        // Langkah 2: Assign slot tipe (SVG vs Photo) berdasarkan affinity
+        // Urutkan kandidat: yang paling cocok SVG di atas
+        const sorted = [...topCandidates].sort((a, b) => (b.svgAffinity - b.photoAffinity) - (a.svgAffinity - a.photoAffinity));
+        const svgSet = new Set(sorted.slice(0, svgSlots).map(item => item.q));
+        const photoSet = new Set(sorted.slice(svgSlots).map(item => item.q));
+        const targetSelected = new Set([...svgSet, ...photoSet]);
+
+        console.log(`[VisualSplitter] Kuota: ${exactImageCount} total → ${svgSlots} SVG + ${photoSlots} Foto`);
+
         const usedStimulusSignatures = new Set<string>();
         const usedImageUrls = new Set<string>();
         const usedImageIds = new Set<string>();
 
         for (const q of deduped) {
-            if (targetSelected.has(q)) {
-                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds);
-            } else {
+            if (!targetSelected.has(q)) {
                 delete q.gambar;
                 delete q.gambar_keyword;
                 delete q.gambar_prompt_en;
                 delete q.visual_stimulus;
+                continue;
+            }
+
+            if (svgSet.has(q)) {
+                // Slot SVG: Proses visual_stimulus → SVG parametrik. Jika gagal, fallback ke foto.
+                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds, false);
+            } else {
+                // Slot Foto: Skip SVG sepenuhnya, langsung cari foto AI (Vultr) / Wikimedia
+                delete q.visual_stimulus; // Bersihkan data SVG dari AI
+                await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds, true);
             }
         }
 

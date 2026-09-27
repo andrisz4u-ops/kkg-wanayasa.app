@@ -129,6 +129,14 @@ function renderProviderCard(p, idx) {
 
   const badge = typeBadges[p.api_type] || { label: p.api_type, color: 'bg-slate-100 text-slate-600 border-slate-200' };
 
+  // Capability badge
+  const capBadges = {
+    text: { label: '🤖 LLM Text', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    image: { label: '🎨 Image Gen', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+    both: { label: '🧠 LLM + Image', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  };
+  const capBadge = capBadges[p.capability] || capBadges.text;
+
   // Status check styling
   let statusBadge = '<span class="inline-flex items-center text-[10px] text-slate-400 font-medium"><span class="w-2 h-2 rounded-full bg-slate-300 mr-1.5"></span>Belum diuji</span>';
   if (p.last_check_ok === 1) {
@@ -176,6 +184,9 @@ function renderProviderCard(p, idx) {
       <div class="flex flex-wrap items-center gap-1.5 mb-3">
         <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.color}">
           ${badge.label}
+        </span>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${capBadge.color}">
+          ${capBadge.label}
         </span>
         <span class="text-[10px] font-mono bg-slate-50 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200/60 truncate max-w-[180px]" title="${escapeHtml(p.model)}">
           <i class="fas fa-cube text-[9px] mr-1 text-slate-400"></i>${escapeHtml(p.model)}
@@ -609,6 +620,8 @@ window.showAddAiProviderModal = function showAddAiProviderModal(preset) {
   document.getElementById('aip-extra_headers').value = '{}';
   document.getElementById('aip-extra_body').value = '{}';
   document.getElementById('aip-api_type').value = 'openai_compat';
+  const capSelect = document.getElementById('aip-capability');
+  if (capSelect) capSelect.value = 'text';
 
   // Prevent accidental submit when typing in input and pressing Enter
   const form = document.getElementById('ai-provider-form');
@@ -665,6 +678,9 @@ window.showEditAiProviderModal = function showEditAiProviderModal(id) {
     document.getElementById('aip-priority').value = p.priority ?? 100;
     document.getElementById('aip-max_tokens').value = p.max_tokens || 8192;
     document.getElementById('aip-temperature').value = p.temperature ?? 0.7;
+
+    const capSelect = document.getElementById('aip-capability');
+    if (capSelect) capSelect.value = p.capability || 'text';
 
     // Unwrap any multi-level JSON stringification bugs
     const cleanHeaders = unwrapNestedJson(p.extra_headers);
@@ -770,11 +786,12 @@ const PRESETS = {
   },
   vultr_inference: {
     name: 'Vultr Serverless (Z-Image Turbo)',
-    slug: 'vultr-inference',
+    slug: 'vultr-image',
     api_type: 'openai_compat',
     base_url: 'https://api.vultrinference.com/v1',
     model: 'z-image-turbo',
     max_tokens: 4096,
+    capability: 'image',
   },
   ollama_local: {
     name: 'Ollama (Lokal)',
@@ -796,6 +813,8 @@ window.applyAiPreset = function applyAiPreset(presetKey) {
   document.getElementById('aip-base_url').value = preset.base_url;
   document.getElementById('aip-model').value = preset.model;
   document.getElementById('aip-max_tokens').value = preset.max_tokens;
+  const capSel = document.getElementById('aip-capability');
+  if (capSel) capSel.value = preset.capability || 'text';
   moduleToast('Preset', `Preset ${preset.name} diterapkan! Masukkan API Key Anda.`, 'info');
 };
 
@@ -970,9 +989,11 @@ window.saveAiProvider = async function saveAiProvider(e) {
     }
     extra_body = Object.keys(bodyObj).length ? JSON.stringify(bodyObj) : '{}';
 
+    const capability = document.getElementById('aip-capability')?.value || 'text';
+
     const payload = {
       name, slug, api_type, base_url, model, api_key,
-      priority, max_tokens, temperature, extra_headers, extra_body
+      priority, max_tokens, temperature, extra_headers, extra_body, capability
     };
 
     if (id) {

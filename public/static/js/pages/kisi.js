@@ -1031,8 +1031,8 @@ function cleanPromptDebris(text) {
   let s = String(text);
 
   // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
-  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
-  s = s.replace(/\[[^\]]*\]/g, '');
+  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]\s*:?\s*/gi, '');
+  s = s.replace(/\[[^\]]*\]\s*:?\s*/g, '');
 
   // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
   let safetyCounter = 0;
@@ -1115,7 +1115,10 @@ function cleanPromptDebris(text) {
   s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
   s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
 
-  // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+  // 5. Bersihkan titik dua yatim di awal baris akibat tag prompt yang terhapus (misal ": Karbon dioksida...")
+  s = s.replace(/^[ \t]*:[ \t]*/gm, '');
+
+  // 6. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
   s = s.replace(/[ \t]+/g, ' ');
   s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
 
@@ -1918,8 +1921,8 @@ function renderResult(data, formData) {
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 6px 0 8px 0; text-align:left;">
-                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background:#fff;">
-                      <img src="${q.gambar.url}" style="max-width:240px; max-height:160px; width:auto; height:auto; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
+                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px; background:#fff; max-width: 100%;">
+                      <img src="${q.gambar.url}" style="max-width:480px; width:100%; height:auto; max-height:320px; object-fit:contain; display:block; border-radius:6px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
                       ${q.gambar.credit ? `
                         <div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
                           <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>

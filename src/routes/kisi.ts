@@ -121,12 +121,12 @@ export const cleanPromptDebris = (text: string): string => {
     let s = String(text);
 
     // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
-    s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^\]]*\]/gi, '');
-    s = s.replace(/\[[^\]]*\]/g, '');
+    s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^\]]*\]\s*:?\s*/gi, '');
+    s = s.replace(/\[[^\]]*\]\s*:?\s*/g, '');
 
     // 1b. Hapus tag kurung biasa yang berisi deskripsi gambar buatan AI:
     // Contoh: "(Gambar dengan pola: Merah, Kuning, ...)" atau "(Gambar komputer dengan panah menunjuk CPU)"
-    s = s.replace(/\((?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^)]*\)/gi, '');
+    s = s.replace(/\((?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan|bagan)[^)]*\)\s*:?\s*/gi, '');
 
     // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
     let safetyCounter = 0;
@@ -209,7 +209,10 @@ export const cleanPromptDebris = (text: string): string => {
     s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
     s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
 
-    // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+    // 5. Bersihkan titik dua yatim di awal baris akibat tag prompt yang terhapus (misal ": Karbon dioksida...")
+    s = s.replace(/^[ \t]*:[ \t]*/gm, '');
+
+    // 6. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
     s = s.replace(/[ \t]+/g, ' ');
     s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
 
@@ -1397,14 +1400,45 @@ export async function enrichAndNormalizePG(
         scoredQuestions.sort((a: any, b: any) => b.score - a.score);
         const topCandidates = scoredQuestions.slice(0, exactImageCount);
 
-        // Langkah 2: Assign slot tipe (SVG vs Photo) berdasarkan affinity
-        // Urutkan kandidat: yang paling cocok SVG di atas
-        const sorted = [...topCandidates].sort((a, b) => (b.svgAffinity - b.photoAffinity) - (a.svgAffinity - a.photoAffinity));
-        const svgSet = new Set(sorted.slice(0, svgSlots).map(item => item.q));
-        const photoSet = new Set(sorted.slice(svgSlots).map(item => item.q));
+        // Kriteria apakah butir soal MEMBUTUHKAN diagram struktural / skema berlabel (tanda panah, huruf X, proses siklus):
+        const requiresDiagramStructure = (q: any): boolean => {
+            const text = String(q.soal || '').toLowerCase();
+            if (q.visual_stimulus && q.visual_stimulus.type) return true;
+            return /diagram|skema|bagan|alur|siklus|rantai\s+makanan|jaring|organ|rangkaian|bangun|sudut|pecahan|garis\s+bilangan|tanda\s+panah|huruf\s+[a-dx]|tanda\s+x/i.test(text);
+        };
+
+        const prefersPhoto = (q: any): boolean => {
+            const text = String(q.soal || '').toLowerCase();
+            if (requiresDiagramStructure(q)) return false;
+            if (q.gambar_keyword && q.gambar_keyword.trim() !== '') return true;
+            return /hewan|tumbuhan|buah|sayur|makanan|minuman|olahraga|alat|bola|raket|tokoh|pahlawan|profesi|baju|rumah|kendaraan|food|drink|animal/i.test(text);
+        };
+
+        // Langkah 2: Distribusi cerdas antara SVG dan Foto
+        // Prioritas utama: Butir yang butuh diagram struktural (tanda X, siklus, skema) HARUS dapat slot SVG
+        const svgList: any[] = [];
+        const photoList: any[] = [];
+
+        for (const item of topCandidates) {
+            if (requiresDiagramStructure(item.q)) {
+                svgList.push(item.q);
+            } else if (prefersPhoto(item.q)) {
+                photoList.push(item.q);
+            } else {
+                // Netral: seimbangkan antara SVG dan Foto
+                if (svgList.length <= photoList.length) {
+                    svgList.push(item.q);
+                } else {
+                    photoList.push(item.q);
+                }
+            }
+        }
+
+        const svgSet = new Set(svgList);
+        const photoSet = new Set(photoList);
         const targetSelected = new Set([...svgSet, ...photoSet]);
 
-        console.log(`[VisualSplitter] Kuota: ${exactImageCount} total → ${svgSlots} SVG + ${photoSlots} Foto`);
+        console.log(`[VisualSplitter] Kuota: ${exactImageCount} total → ${svgSet.size} SVG + ${photoSet.size} Foto`);
 
         const usedStimulusSignatures = new Set<string>();
         const usedImageUrls = new Set<string>();
@@ -1420,11 +1454,11 @@ export async function enrichAndNormalizePG(
             }
 
             if (svgSet.has(q)) {
-                // Slot SVG: Proses visual_stimulus → SVG parametrik. Jika gagal, fallback ke foto.
+                // Slot SVG: Proses visual_stimulus → SVG parametrik. Jika gagal, fallback otomatis ke foto.
                 await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds, false);
             } else {
-                // Slot Foto: Skip SVG sepenuhnya, langsung cari foto AI (Vultr) / Wikimedia
-                delete q.visual_stimulus; // Bersihkan data SVG dari AI
+                // Slot Foto: Butir non-diagram konkret langsung cari foto AI (Vultr) / Wikimedia
+                delete q.visual_stimulus;
                 await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds, true);
             }
         }

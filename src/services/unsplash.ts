@@ -246,7 +246,7 @@ export class UnsplashService {
                     prompt: promptText.slice(0, 1500),
                     model: config.model || 'z-image-turbo',
                     size: '512x512',
-                    response_format: 'b64_json'
+                    response_format: 'url'
                 }),
                 signal: AbortSignal.timeout(25000)
             });
@@ -261,10 +261,10 @@ export class UnsplashService {
             const imgItem = data?.data?.[0];
             let finalUrl: string | null = null;
 
-            if (imgItem?.b64_json) {
-                finalUrl = `data:image/jpeg;base64,${imgItem.b64_json}`;
-            } else if (imgItem?.url) {
+            if (imgItem?.url) {
                 finalUrl = imgItem.url;
+            } else if (imgItem?.b64_json) {
+                finalUrl = `data:image/jpeg;base64,${imgItem.b64_json}`;
             }
 
             const durationMs = Date.now() - startTime;

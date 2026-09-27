@@ -198,8 +198,8 @@ function cleanPromptDebris(text) {
   let s = String(text);
 
   // 1. Hapus tag kurung siku prompt: [gambar: ...], [visual_stimulus: ...], [diagram: ...], dsb.
-  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]/gi, '');
-  s = s.replace(/\[[^\]]*\]/g, '');
+  s = s.replace(/\[(?:visual_stimulus|stimulus|visual|gambar|foto|diagram|ilustrasi|deskripsi|keterangan)[^\]]*\]\s*:?\s*/gi, '');
+  s = s.replace(/\[[^\]]*\]\s*:?\s*/g, '');
 
   // 2. Hapus blok visual_stimulus { ... } (dengan balanced brace counting untuk mendukung nested object/array)
   let safetyCounter = 0;
@@ -282,7 +282,10 @@ function cleanPromptDebris(text) {
   s = s.replace(/^[ \t]*gambar_prompt_en\s*:?[^\n\r]*\r?\n?/gim, '');
   s = s.replace(/gambar_prompt_en\s*:[^\n\r]*/gi, '');
 
-  // 5. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
+  // 5. Bersihkan titik dua yatim di awal baris akibat tag prompt yang terhapus (misal ": Karbon dioksida...")
+  s = s.replace(/^[ \t]*:[ \t]*/gm, '');
+
+  // 6. Bersihkan spasi horizontal berlebih dan baris kosong berlebih
   s = s.replace(/[ \t]+/g, ' ');
   s = s.replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
 
@@ -803,28 +806,19 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
              verticalAlign: window.docx.VerticalAlign.TOP
           });
 
+          const cell2Children = [];
+          cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
+          cell2Children.push(new Paragraph({
+             alignment: AlignmentType.LEFT,
+             spacing: { before: PT(6), after: PT(8) },
+             children: [new ImageRun({ data: imgData.buffer, transformation: { width: 300, height: 200 }, type: imgData.type || 'jpeg' })]
+          }));
+          cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
+
           const cell2 = new window.docx.TableCell({
-             children: [
-                new Paragraph({
-                   alignment: AlignmentType.LEFT,
-                   spacing: { before: PT(4) },
-                   children: [new ImageRun({ data: imgData.buffer, transformation: { width: 160, height: 120 }, type: imgData.type || 'jpeg' })]
-                })
-             ],
+             children: cell2Children,
              borders: NO_BORDERS,
-             width: { size: 25, type: window.docx.WidthType.PERCENTAGE },
-             margins: { top: 0, bottom: 0, left: 0, right: CM(0.2) },
-             verticalAlign: window.docx.VerticalAlign.TOP
-          });
-
-          const cell3Children = [];
-          cell3Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
-          cell3Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
-
-          const cell3 = new window.docx.TableCell({
-             children: cell3Children,
-             borders: NO_BORDERS,
-             width: { size: 70, type: window.docx.WidthType.PERCENTAGE },
+             width: { size: 95, type: window.docx.WidthType.PERCENTAGE },
              margins: { top: 0, bottom: 0, left: CM(0.2), right: 0 },
              verticalAlign: window.docx.VerticalAlign.TOP
           });
@@ -832,7 +826,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           children.push(new window.docx.Table({
              width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
              borders: NO_BORDERS,
-             rows: [new window.docx.TableRow({ children: [cell1, cell2, cell3] })]
+             rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
           }));
           children.push(makePara('', { spaceAfter: 8 }));
           

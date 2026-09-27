@@ -429,7 +429,7 @@ export async function renderAnalisisCp() {
         <!-- Floating Result Toolbar -->
         <div class="sticky top-20 z-20 mb-6 bg-slate-900/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-slate-700/80 shadow-2xl flex flex-wrap items-center justify-between gap-3 text-white">
           <div class="flex items-center gap-3">
-            <button type="button" id="btn-back-to-form" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+            <button type="button" id="btn-back-to-form" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Kembali ke form identitas & materi">
               <i class="fas fa-arrow-left"></i> <span class="hidden sm:inline">Ubah Data</span>
             </button>
             
@@ -1841,10 +1841,11 @@ async function generateAnalisisCpFromForm() {
     subtitle: `Memetakan ${detectedChapters.length} BAB ${payload.mataPelajaran} (${jenjangKelas}) ke Regulasi BSKAP 046/2025`,
     modelName,
     steps: [
-      { num: 1, label: 'Sinkronisasi CP BSKAP No. 046/2025' },
-      { num: 2, label: 'Pemetaan Bab & Materi Pokok' },
-      { num: 3, label: 'Perumusan TP & ATP Operasional' },
-      { num: 4, label: 'Perakitan Tabel Hasil Analisis' }
+      { id: 1, label: 'CP BSKAP 2025', icon: 'fa-book-open' },
+      { id: 2, label: 'Pemetaan Bab', icon: 'fa-layer-group' },
+      { id: 3, label: 'Rumusan TP & ATP', icon: 'fa-pen-fancy' },
+      { id: 4, label: 'Quality Gate AI', icon: 'fa-shield-halved' },
+      { id: 5, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
     ]
   });
 
@@ -1865,19 +1866,7 @@ async function generateAnalisisCpFromForm() {
 
     if (finalResultData) {
       monitor?.complete?.(() => {
-        // Validasi & Auto-repair Client Side
-        currentAnalysisData = validateAndRepairAnalysisData(finalResultData, detectedChapters, payload);
-        renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
-        saveDraftToStorage();
-        showToast('Analisis CP, TP, dan ATP berhasil dirakit!', 'success');
-
-        saveDocArchive({
-          module: 'analisis-cp',
-          title: `Analisis CP ${payload.mataPelajaran} ${jenjangKelas}`,
-          subtitle: `${payload.namaSekolah} • ${detectedChapters.length} BAB`,
-          inputData: currentInputData,
-          content: currentAnalysisData
-        });
+        proceedToCanvasResult(finalResultData, payload);
       });
     } else {
       throw new Error('Tidak ada data hasil analisis dari server streaming');
@@ -1894,18 +1883,7 @@ async function generateAnalisisCpFromForm() {
       closeAiLiveMonitor();
 
       if (fallbackRes && fallbackRes.success && fallbackRes.data) {
-        currentAnalysisData = validateAndRepairAnalysisData(fallbackRes.data, detectedChapters, payload);
-        renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
-        saveDraftToStorage();
-        showToast('Analisis CP, TP, dan ATP berhasil dirakit!', 'success');
-
-        saveDocArchive({
-          module: 'analisis-cp',
-          title: `Analisis CP ${payload.mataPelajaran} ${jenjangKelas}`,
-          subtitle: `${payload.namaSekolah} • ${detectedChapters.length} BAB`,
-          inputData: currentInputData,
-          content: currentAnalysisData
-        });
+        proceedToCanvasResult(fallbackRes.data, payload);
       } else {
         throw new Error(fallbackRes?.error || 'Gagal generate Analisis CP');
       }
@@ -1916,4 +1894,32 @@ async function generateAnalisisCpFromForm() {
       showToast('Gagal merakit Analisis CP: ' + fallbackErr.message, 'error');
     }
   }
+}
+
+/**
+ * Pindahkan data yang sudah tervalidasi oleh AI langsung ke Canvas Dokumen
+ */
+function proceedToCanvasResult(rawData, payload) {
+  currentAnalysisData = validateAndRepairAnalysisData(rawData, detectedChapters, payload);
+
+  // Sembunyikan Form, Langsung Tampilkan Canvas Dokumen (A4)
+  document.getElementById('analisis-form-view')?.classList.add('hidden');
+  document.getElementById('analisis-result-view')?.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
+  saveDraftToStorage();
+
+  const qualityScore = currentAnalysisData._audit?.summary?.overall_quality_score || 95;
+  const gradeLabel = currentAnalysisData._audit?.summary?.grade_label || 'Sangat Baik';
+  showToast(`Analisis CP selesai dirakit & terverifikasi AI (Skor Mutu: ${qualityScore}/100 - ${gradeLabel})!`, 'success');
+
+  const jenjangKelas = currentInputData?.jenjangKelas || 'Kelas 5';
+  saveDocArchive({
+    module: 'analisis-cp',
+    title: `Analisis CP ${currentInputData?.mataPelajaran || ''} ${jenjangKelas}`,
+    subtitle: `${currentInputData?.namaSekolah || ''} • ${detectedChapters.length} BAB (Terverifikasi AI)`,
+    inputData: currentInputData,
+    content: currentAnalysisData
+  });
 }

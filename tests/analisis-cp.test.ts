@@ -10,8 +10,10 @@ import {
   replacePesertaDidik,
   repairAndEnrichIpasBabCp,
   repairAndEnrichMatematikaBabCp,
+  runCpQualityGate,
   default as analisisCpRoutes
 } from '../src/routes/analisis-cp';
+import { extractKkoFromTp, checkBloomLevelFase } from '../src/lib/cp-validator';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import { generateAtpElemenDocxBuffer, groupAnalysisDataByElements } from '../src/lib/docx/atp-elemen';
 import { generateCapaianPembelajaranDocxBuffer } from '../src/lib/docx/capaian-pembelajaran';
@@ -1198,6 +1200,152 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(res.headers.get('Content-Disposition')).toContain('ATP_Elemen_Matematika_Kelas_5.docx');
       const arrayBuffer = await res.arrayBuffer();
       expect(arrayBuffer.byteLength).toBeGreaterThan(1000);
+    });
+
+    it('groupAnalysisDataByElements ensures IPAS Keterampilan Proses is populated with 6 inquiry skills and Terintegrasi', async () => {
+      const mockIpasInput: any = {
+        metadata: {
+          satuan_pendidikan: 'SDN 2 Nangerang',
+          mata_pelajaran: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+          kelas: '5',
+          fase: 'Fase C',
+          tahun_pembelajaran: '2026/2027'
+        },
+        semesters: [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: [
+              {
+                no: 1,
+                bab: 'Bab 1: Di Mana Indonesia Berada?',
+                cp: '[Pemahaman IPAS]\nMenjelaskan letak geografis...\n\n[Keterampilan Proses]\nMengamati peta...',
+                materi_list: ['Letak geografis', 'Kondisi maritim'],
+                items: [
+                  { kode_tp: '5.1', tp: 'Murid mampu mendeskripsikan letak kepulauan Indonesia.', materi_pokok: 'Letak geografis', alokasi_waktu: '6 JP' },
+                  { kode_tp: '5.2', tp: 'Murid mampu mengidentifikasi keanekaragaman hayati.', materi_pokok: 'Kondisi maritim', alokasi_waktu: '6 JP' }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const groups = groupAnalysisDataByElements(mockIpasInput);
+      expect(groups.length).toBe(2);
+
+      const pemahaman = groups.find(g => g.elemen.includes('Pemahaman IPAS'));
+      expect(pemahaman).toBeDefined();
+      expect(pemahaman!.items.length).toBe(2);
+
+      const proses = groups.find(g => g.elemen.includes('Keterampilan Proses'));
+      expect(proses).toBeDefined();
+      // Keterampilan Proses MUST NOT BE EMPTY!
+      expect(proses!.items.length).toBe(6);
+      expect(proses!.lingkup_materi.length).toBe(6);
+      expect(proses!.items[0].kode_tp).toBe('5.KP.1');
+      expect(proses!.items[0].alokasi_waktu).toBe('Terintegrasi');
+
+      // Test Word DOCX generation
+      const docxBuf = await generateAtpElemenDocxBuffer(mockIpasInput);
+      expect(docxBuf).toBeDefined();
+      expect(docxBuf.length).toBeGreaterThan(1000);
+    });
+  });
+
+  describe('Analisis CP - Quality Gate & Verification Engine', () => {
+    it('accurately identifies KKO and Bloom levels from TP text', () => {
+      const c2 = extractKkoFromTp('Murid mampu menjelaskan sifat-sifat bunyi.');
+      expect(c2.isOperasional).toBe(true);
+      expect(c2.kko).toBe('menjelaskan');
+      expect(c2.bloomCode).toBe('C2');
+
+      const c4 = extractKkoFromTp('Murid mampu menganalisis hubungan antar makhluk hidup.');
+      expect(c4.isOperasional).toBe(true);
+      expect(c4.kko).toBe('menganalisis');
+      expect(c4.bloomCode).toBe('C4');
+
+      const passive = extractKkoFromTp('Murid mampu memahami konsep ekosistem.');
+      expect(passive.isOperasional).toBe(false);
+      expect(passive.kko).toBe('memahami');
+    });
+
+    it('validates Bloom cognitive level suitability against Fase A, B, C', () => {
+      const faseAHigh = checkBloomLevelFase('C5', 'Fase A');
+      expect(faseAHigh.matches).toBe(false);
+      expect(faseAHigh.recommendation).toContain('Fase A');
+
+      const faseCLow = checkBloomLevelFase('C1', 'Fase C');
+      expect(faseCLow.matches).toBe(false);
+      expect(faseCLow.recommendation).toContain('Fase C');
+
+      const faseCOk = checkBloomLevelFase('C4', 'Fase C');
+      expect(faseCOk.matches).toBe(true);
+    });
+
+    it('auto-heals passive KKO (memahami -> menganalisis/menerapkan) and calculates Quality Score', async () => {
+      const rawData = {
+        metadata: {
+          satuan_pendidikan: 'SDN 1 Wanayasa',
+          mata_pelajaran: 'IPAS',
+          kelas: '5',
+          fase: 'Fase C',
+          tahun_pembelajaran: '2025/2026'
+        },
+        semesters: [
+          {
+            semester: 1,
+            semester_label: 'SEMESTER 1',
+            babs: [
+              {
+                no: 1,
+                bab: 'Bab 1: Cahaya dan Penglihatan',
+                cp: '[Pemahaman IPAS] Murid menjelaskan fenomena gelombang cahaya.',
+                items: [
+                  {
+                    kode_tp: '5.1',
+                    tp: 'Murid mampu memahami sifat-sifat cahaya dan cermin.',
+                    materi_pokok: 'Sifat Cahaya',
+                    alokasi_waktu: '4 JP'
+                  },
+                  {
+                    kode_tp: '5.2',
+                    tp: 'Peserta didik mampu menyelidiki perambatan cahaya.',
+                    materi_pokok: 'Perambatan Cahaya',
+                    alokasi_waktu: '4 JP'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const { data, audit } = await runCpQualityGate(rawData, [], {
+        mataPelajaran: 'IPAS',
+        jenjangKelas: 'Kelas 5',
+        fase: 'Fase C'
+      });
+
+      expect(audit).toBeDefined();
+      expect(audit.summary.total_tp).toBe(2);
+      expect(audit.summary.overall_quality_score).toBeGreaterThanOrEqual(90);
+      expect(audit.summary.grade).toBe('A');
+
+      // Check item 1 auto-healed from "memahami" to active KKO
+      const item1 = data.semesters[0].babs[0].items[0];
+      expect(item1.tp).not.toContain('memahami');
+      expect(item1.tp).toContain('menganalisis dan menerapkan');
+
+      // Check item 2 terminology sanitized from "Peserta didik" to "Murid"
+      const item2 = data.semesters[0].babs[0].items[1];
+      expect(item2.tp).not.toContain('Peserta didik');
+      expect(item2.tp).toContain('Murid');
+
+      // Check audit items breakdown
+      expect(audit.items).toHaveLength(2);
+      expect(audit.items[0].status).toBe('repaired');
+      expect(audit.items[1].status).toBe('repaired'); // repaired because of terminology sanitization
     });
   });
 });

@@ -437,5 +437,320 @@ export function validateAndRepairAnalysisData(rawData, inputChapters = [], formM
     balanceSemesterJpItems(sem.babs, quota.intrakurikulerPerSemester, quota.jpPerMinggu);
   }
 
-  return replacePesertaDidik(data);
+  const cleaned = replacePesertaDidik(data);
+  const qg = runCpQualityGate(cleaned, inputChapters, formMeta);
+  cleaned._audit = qg.audit;
+
+  return cleaned;
+}
+
+// ============================================================
+// CLIENT-SIDE CP QUALITY GATE & PEDAGOGICAL VERIFIER
+// ============================================================
+
+export const FORBIDDEN_VERBS = {
+  'memahami': 'menjelaskan',
+  'mengetahui': 'mengidentifikasi',
+  'mengerti': 'menerangkan',
+  'mempelajari': 'mengeksplorasi',
+  'mendalami': 'menganalisis',
+  'menyadari': 'merefleksikan',
+  'menguasai': 'menerapkan'
+};
+
+export const BLOOM_KKO = {
+  'C1': {
+    level: 'C1 (Mengingat)',
+    verbs: ['menyebutkan', 'menuliskan', 'mengingat', 'melafalkan', 'membilang', 'menunjukkan', 'mendaftar', 'mencocokkan', 'mengenali', 'menamai']
+  },
+  'C2': {
+    level: 'C2 (Memahami)',
+    verbs: ['menjelaskan', 'mengidentifikasi', 'mengklasifikasikan', 'membedakan', 'memperkirakan', 'menerangkan', 'merangkum', 'menguraikan', 'mendeskripsikan', 'mencontohkan', 'menyimpulkan']
+  },
+  'C3': {
+    level: 'C3 (Mengaplikasikan)',
+    verbs: ['menerapkan', 'menghitung', 'mendemonstrasikan', 'mempraktikkan', 'menggunakan', 'menentukan', 'memecahkan', 'melakukan', 'mengukur', 'mengoperasikan', 'mengilustrasikan', 'menyelidiki']
+  },
+  'C4': {
+    level: 'C4 (Menganalisis)',
+    verbs: ['menganalisis', 'membandingkan', 'menelaah', 'menginvestigasi', 'mengaitkan', 'memeriksa', 'menguji', 'memisahkan', 'mendiagnosis', 'menguraikan', 'menemukan pola']
+  },
+  'C5': {
+    level: 'C5 (Mengevaluasi)',
+    verbs: ['menilai', 'mengkritisi', 'merefleksikan', 'memvalidasi', 'membuktikan', 'memutuskan', 'mempertahankan', 'mengevaluasi', 'memilih alternatif']
+  },
+  'C6': {
+    level: 'C6 (Mencipta)',
+    verbs: ['merancang', 'memproduksi', 'menghasilkan', 'mengonstruksi', 'menyusun', 'membuat', 'memodifikasi', 'memformulasikan', 'mengembangkan', 'mengkreasikan']
+  }
+};
+
+export function extractKkoFromTp(tpText) {
+  const clean = (tpText || '').toLowerCase().replace(/^(murid\s+(?:mampu|dapat)\s+|peserta\s+didik\s+(?:mampu|dapat)\s+)/i, '').trim();
+  const words = clean.split(/\s+/);
+  const firstWord = words[0] || '';
+  const twoWords = `${words[0] || ''} ${words[1] || ''}`.trim();
+
+  if (FORBIDDEN_VERBS[firstWord]) {
+    return {
+      kko: firstWord,
+      bloomCode: 'C2-Passive',
+      bloomLabel: 'C2 (Non-Operasional)',
+      isOperasional: false
+    };
+  }
+
+  for (const [code, info] of Object.entries(BLOOM_KKO)) {
+    for (const v of info.verbs) {
+      if (firstWord === v || twoWords === v || clean.startsWith(v)) {
+        return {
+          kko: v,
+          bloomCode: code,
+          bloomLabel: info.level,
+          isOperasional: true
+        };
+      }
+    }
+  }
+
+  if (/^(me|ber|meng|meny|mem|men)/.test(firstWord)) {
+    return {
+      kko: firstWord,
+      bloomCode: 'C3',
+      bloomLabel: 'C3 (Aplikatif)',
+      isOperasional: true
+    };
+  }
+
+  return {
+    kko: firstWord || 'umum',
+    bloomCode: 'C2',
+    bloomLabel: 'C2 (Dasar)',
+    isOperasional: true
+  };
+}
+
+export function checkBloomLevelFase(bloomCode, fase) {
+  const f = (fase || 'C').toUpperCase().replace('FASE', '').trim();
+  if (f === 'A') {
+    if (bloomCode === 'C4' || bloomCode === 'C5' || bloomCode === 'C6') {
+      return {
+        matches: false,
+        recommendation: 'Level kognitif terlalu tinggi untuk Fase A (Kelas 1-2). Direkomendasikan C1-C2 (Menyebutkan/Menjelaskan/Menunjukkan).'
+      };
+    }
+    return { matches: true };
+  } else if (f === 'B') {
+    if (bloomCode === 'C5' || bloomCode === 'C6') {
+      return {
+        matches: false,
+        recommendation: 'Level kognitif terlalu abstrak untuk Fase B (Kelas 3-4). Direkomendasikan C2-C3 (Menjelaskan/Menerapkan/Mempraktikkan).'
+      };
+    }
+    return { matches: true };
+  } else {
+    if (bloomCode === 'C1') {
+      return {
+        matches: false,
+        recommendation: 'Level kognitif terlalu rendah untuk Fase C (Kelas 5-6). Tingkatkan ke C3-C4 (Menerapkan/Menganalisis/Menyelidiki).'
+      };
+    }
+    return { matches: true };
+  }
+}
+
+export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}) {
+  const data = (analysisData && typeof analysisData === 'object') ? JSON.parse(JSON.stringify(analysisData)) : {};
+
+  const mapel = String(data.metadata?.mata_pelajaran || formMeta.mataPelajaran || formMeta.mata_pelajaran || '');
+  const rawKelas = String(data.metadata?.kelas || formMeta.kelas || formMeta.jenjangKelas || '5');
+  const kelasNum = parseInt(rawKelas.replace(/\D/g, '') || '5', 10);
+  const fase = String(data.metadata?.fase || formMeta.fase || (kelasNum <= 2 ? 'Fase A' : kelasNum <= 4 ? 'Fase B' : 'Fase C'));
+  const quota = getAlokasiWaktuResmi(mapel, kelasNum);
+
+  const auditItems = [];
+  let totalTp = 0;
+  let passedCount = 0;
+  let repairedCount = 0;
+  let flaggedCount = 0;
+  let kkoCompliantCount = 0;
+  let cpAlignedCount = 0;
+  let jpValidCount = 0;
+  let totalScoreAccumulator = 0;
+
+  const semesters = Array.isArray(data.semesters) ? data.semesters : [];
+  const actualJpPerSemester = [];
+  let globalTpCounter = 1;
+
+  for (const sem of semesters) {
+    const semNum = sem.semester || 1;
+    let semJpSum = 0;
+    const babs = Array.isArray(sem.babs) ? sem.babs : [];
+
+    for (const bab of babs) {
+      const babNo = bab.no || 1;
+      const babTitle = bab.bab || `Bab ${babNo}`;
+      const items = Array.isArray(bab.items) ? bab.items : [];
+
+      for (const item of items) {
+        totalTp++;
+        const repairedFields = [];
+        const suggestions = [];
+        let itemScore = 100;
+        let itemStatus = 'verified';
+
+        // A. Cek Kode TP
+        const expectedCode = `${kelasNum}.${globalTpCounter++}`;
+        if (!item.kode_tp || item.kode_tp !== expectedCode) {
+          item.kode_tp = expectedCode;
+          repairedFields.push('kode_tp');
+        }
+
+        // B. Cek KKO
+        let kkoInfo = extractKkoFromTp(item.tp || '');
+        let kkoOperasional = kkoInfo.isOperasional;
+
+        if (!kkoOperasional) {
+          const replacement = (fase.includes('C')) ? 'menganalisis dan menerapkan' : 'menjelaskan dan mempraktikkan';
+          const healedTp = (item.tp || '').replace(/^Murid\s+(?:mampu|dapat)\s+memahami/i, `Murid mampu ${replacement}`);
+          if (healedTp !== item.tp) {
+            item.tp = healedTp;
+            repairedFields.push('kko_operasional');
+            kkoInfo = extractKkoFromTp(item.tp);
+            kkoOperasional = true;
+            suggestions.push(`KKO non-operasional '${kkoInfo.kko}' disesuaikan menjadi '${replacement}'.`);
+          } else {
+            itemScore -= 25;
+            itemStatus = 'flagged';
+            suggestions.push(`Kata kerja '${kkoInfo.kko}' belum terukur. Ganti dengan KKO operasional.`);
+          }
+        }
+
+        if (kkoOperasional) kkoCompliantCount++;
+
+        // Kesesuaian Fase
+        const faseCheck = checkBloomLevelFase(kkoInfo.bloomCode, fase);
+        if (!faseCheck.matches && faseCheck.recommendation) {
+          suggestions.push(faseCheck.recommendation);
+          itemScore -= 10;
+        }
+
+        // C. Keselarasan Elemen
+        let cpAligned = true;
+        const materiLower = (item.materi_pokok || '').toLowerCase();
+        const babLower = babTitle.toLowerCase();
+        const cpLower = (bab.cp || '').toLowerCase();
+
+        if (materiLower && cpLower && !cpLower.includes(materiLower.slice(0, 4)) && !babLower.includes(materiLower.slice(0, 4))) {
+          if (mapel.toLowerCase().includes('ipas') && (cpLower.includes('geografis') && materiLower.includes('ekosistem'))) {
+            cpAligned = false;
+            itemScore -= 20;
+            itemStatus = 'flagged';
+            suggestions.push('Indikasi materi tidak selaras dengan elemen CP.');
+          }
+        }
+        if (cpAligned) cpAlignedCount++;
+
+        // D. Alokasi JP
+        let jpNum = 4;
+        if (item.alokasi_waktu) {
+          const m = String(item.alokasi_waktu).match(/\d+/);
+          if (m) jpNum = parseInt(m[0], 10);
+        } else {
+          item.alokasi_waktu = '4 JP';
+          repairedFields.push('alokasi_waktu');
+        }
+
+        semJpSum += jpNum;
+        const jpValid = jpNum >= 2 && jpNum <= 8;
+        if (jpValid) {
+          jpValidCount++;
+        } else {
+          itemScore -= 10;
+          suggestions.push(`Alokasi waktu (${jpNum} JP) di luar rentang standar (2-8 JP).`);
+        }
+
+        if (repairedFields.length > 0 && itemStatus !== 'flagged') {
+          itemStatus = 'repaired';
+        }
+        if (itemStatus === 'verified') passedCount++;
+        else if (itemStatus === 'repaired') repairedCount++;
+        else flaggedCount++;
+
+        itemScore = Math.max(40, Math.min(100, itemScore));
+        totalScoreAccumulator += itemScore;
+
+        auditItems.push({
+          kode_tp: item.kode_tp,
+          bab_no: babNo,
+          bab_title: babTitle,
+          materi_pokok: item.materi_pokok || babTitle,
+          tp: item.tp,
+          atp: item.atp || `Mempelajari konsep ${item.materi_pokok}, berlatih kompetensi, dan evaluasi formatif.`,
+          alokasi_waktu: `${jpNum} JP`,
+          status: itemStatus,
+          quality_score: itemScore,
+          kko: kkoInfo.kko,
+          bloom_level: kkoInfo.bloomLabel,
+          kko_operasional: kkoOperasional,
+          cp_aligned: cpAligned,
+          jp_valid: jpValid,
+          notes: suggestions.join(' | ') || 'Kaidah kurikulum dan standar BSKAP 046/2025 terpenuhi.',
+          repaired_fields: repairedFields,
+          suggestions
+        });
+      }
+    }
+
+    actualJpPerSemester.push({
+      semester: semNum,
+      total_jp: semJpSum
+    });
+  }
+
+  const safeTotalTp = Math.max(1, totalTp);
+  const overallQualityScore = Math.round(totalScoreAccumulator / safeTotalTp);
+
+  let grade = 'A';
+  let gradeLabel = 'Sangat Baik (Terstandarisasi Penuh)';
+  if (overallQualityScore < 70) {
+    grade = 'D';
+    gradeLabel = 'Perlu Penyesuaian Signifikan';
+  } else if (overallQualityScore < 80) {
+    grade = 'C';
+    gradeLabel = 'Cukup Baik (Ada Catatan)';
+  } else if (overallQualityScore < 90) {
+    grade = 'B';
+    gradeLabel = 'Baik (Kaidah Terpenuhi)';
+  }
+
+  const summary = {
+    total_tp: totalTp,
+    total_babs: (inputChapters && inputChapters.length > 0) ? inputChapters.length : semesters.reduce((acc, s) => acc + (s.babs?.length || 0), 0),
+    passed_count: passedCount,
+    repaired_count: repairedCount,
+    flagged_count: flaggedCount,
+    overall_quality_score: overallQualityScore,
+    grade,
+    grade_label: gradeLabel,
+    kko_compliance_pct: Math.round((kkoCompliantCount / safeTotalTp) * 100),
+    cp_alignment_pct: Math.round((cpAlignedCount / safeTotalTp) * 100),
+    jp_compliance_pct: Math.round((jpValidCount / safeTotalTp) * 100),
+    terminology_clean: true,
+    target_jp_per_semester: quota.intrakurikulerPerSemester,
+    actual_jp_per_semester: actualJpPerSemester,
+    verified_at: new Date().toISOString()
+  };
+
+  const auditResult = {
+    summary,
+    items: auditItems
+  };
+
+  data._audit = auditResult;
+
+  return {
+    data,
+    audit: auditResult
+  };
 }

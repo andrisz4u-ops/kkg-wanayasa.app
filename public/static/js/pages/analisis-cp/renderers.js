@@ -1224,6 +1224,79 @@ export function groupAnalysisDataByElementsClient(data) {
       { name: "Menciptakan (Making/Creating)", cp: "Membuat karya seni rupa dua atau tiga dimensi berdasarkan pengalaman dan pengamatan terhadap lingkungan sekitar." },
       { name: "Berdampak (Impacting)", cp: "Menghasilkan karya seni rupa yang berdampak positif pada perasaan dirinya atau menyampaikan pesan kepedulian lingkungan." }
     ];
+  } else if (mapel.includes('seni musik') || mapel.includes('musik')) {
+    elementDefs = [
+      { name: "Mengalami (Experiencing)", cp: "Mengenali dan menerapkan unsur-unsur musik (nada, irama, melodi) menggunakan alat musik ritmis dan melodis." },
+      { name: "Merefleksikan (Reflecting)", cp: "Melakukan umpan balik mengenai karya dan kemampuan bermusik diri sendiri atau orang lain menggunakan istilah musik yang tepat." },
+      { name: "Berpikir dan Bekerja Artistik", cp: "Mengeksplorasi variasi pola irama, tempo, dan melodi dengan alat musik serta merawat instrumen musik." },
+      { name: "Menciptakan (Creating)", cp: "Membuat dan mengembangkan pola irama dan melodi menggunakan anggota tubuh atau instrumen musik yang tersedia." },
+      { name: "Berdampak (Impacting)", cp: "Menunjukkan minat, ekspresi estetis, dan rasa ingin tahu dalam kegiatan bermusik bersama." }
+    ];
+  } else if (mapel.includes('seni tari') || mapel.includes('tari')) {
+    elementDefs = [
+      { name: "Mengalami (Experiencing)", cp: "Mengamati dan mengeksplorasi bentuk gerak tari tradisi dan kreasi melalui unsur utama tari (ruang, tenaga, waktu)." },
+      { name: "Merefleksikan (Reflecting)", cp: "Mengidentifikasi unsur pendukung tari serta menghargai hasil pencapaian karya tari diri dan orang lain." },
+      { name: "Berpikir dan Bekerja Artistik", cp: "Meragakan rangkaian gerak tari menggunakan unsur pendukung tari dengan menunjukkan kerja sama kelompok." },
+      { name: "Menciptakan (Creating)", cp: "Merangkai gerak tari yang berpijak pada tradisi atau kreasi dengan menerapkan desain kelompok yang harmonis." },
+      { name: "Berdampak (Impacting)", cp: "Menumbuhkan rasa cinta budaya, antusiasme, dan kepedulian lingkungan melalui penyajian karya tari." }
+    ];
+  } else if (mapel.includes('seni teater') || mapel.includes('teater')) {
+    elementDefs = [
+      { name: "Mengalami (Experiencing)", cp: "Melakukan eksplorasi gerak tubuh, olah vokal, mimesis, dan improvisasi aksi-reaksi peran dalam elaborasi lakon cerita." },
+      { name: "Merefleksikan (Reflecting)", cp: "Menceritakan dan mengapresiasi pendapat tentang sebuah penokohan dan lakon cerita teater sederhana." },
+      { name: "Berpikir dan Bekerja Artistik", cp: "Mengidentifikasi dan menggunakan properti/tata panggung sederhana berdasarkan karakter lakon yang dimainkan." },
+      { name: "Menciptakan (Creating)", cp: "Mengenal dan memainkan ragam peran lakon cerita berdasarkan hasil pengamatan dan imajinasi." },
+      { name: "Berdampak (Impacting)", cp: "Menunjukkan rasa percaya diri, empati, dan kerja sama dalam memerankan lakon kelompok." }
+    ];
+  } else if (mapel.includes('seni')) {
+    elementDefs = [
+      { name: "Mengalami (Experiencing)", cp: "Mengidentifikasi dan mengamati unsur seni dan estetika pada karya di lingkungan sekitar." },
+      { name: "Merefleksikan (Reflecting)", cp: "Merefleksikan dan mengapresiasi proses serta hasil karya seni diri sendiri dan teman." },
+      { name: "Berpikir dan Bekerja Artistik", cp: "Mengenali dan mengeksplorasi variasi alat, media, dan teknik berkarya seni." },
+      { name: "Menciptakan (Creating)", cp: "Membuat karya seni yang orisinal berdasarkan pengalaman dan pengembangan imajinasi." },
+      { name: "Berdampak (Impacting)", cp: "Menghasilkan karya seni yang berdampak positif pada perasaan diri dan lingkungan sekitar." }
+    ];
+  } else if (mapel.includes('inggris') || mapel.includes('english')) {
+    elementDefs = [
+      { name: "Menyimak – Berbicara (Listening – Speaking)", cp: "Memahami dan merespon teks lisan atau multimodal sederhana tentang topik sehari-hari secara verbal atau non-verbal sesuai konteks." },
+      { name: "Membaca – Memirsa (Reading – Viewing)", cp: "Memahami alur informasi teks, gagasan utama, dan informasi rinci dari beragam teks pendek atau multimodal sederhana." },
+      { name: "Menulis – Mempresentasikan (Writing – Presenting)", cp: "Mengomunikasikan ide dan pengalamannya melalui berbagai jenis teks tulis pendek atau teks multimodal sesuai konteks." }
+    ];
+  } else if (mapel.includes('pjok') || mapel.includes('jasmani') || mapel.includes('penjas') || mapel.includes('olahraga')) {
+    elementDefs = [
+      { name: "Keterampilan Gerak", cp: "Mempraktikkan dan menghaluskan pola gerak dasar fundamental, kombinasi gerak lokomotor, non-lokomotor, dan manipulatif dalam situasi permainan olahraga modifikasi." },
+      { name: "Pengetahuan Gerak", cp: "Menerapkan konsep, prinsip, dan strategi gerak sederhana serta menaati aturan (fair play) dalam aktivitas jasmani." },
+      { name: "Pemanfaatan Gerak & Kebugaran", cp: "Mempraktikkan aktivitas jasmani untuk kebugaran jasmani, memahami pola hidup sehat, nutrisi bergizi, serta penanganan cedera ringan." },
+      { name: "Pengembangan Karakter & Nilai Gerak", cp: "Menunjukkan perilaku bertanggung jawab, sportivitas, gotong royong, disiplin, dan percaya diri dalam berolahraga." }
+    ];
+  } else if (mapel.includes('koding') || mapel.includes('kecerdasan artifisial') || mapel.includes('ka')) {
+    elementDefs = [
+      { name: "Berpikir Komputasional", cp: "Memahami permasalahan sederhana dalam kehidupan sehari-hari, menerapkan pemecahan masalah secara sistematis, serta menuliskan instruksi logis dan terstruktur menggunakan sekumpulan kosakata atau simbol." },
+      { name: "Literasi Digital", cp: "Memahami konsep dasar teknologi digital, sistem komputer pradasar, pengamanan informasi pribadi, pemanfaatan internet, dan produksi konten digital." },
+      { name: "Literasi dan Etika Kecerdasan Artifisial", cp: "Memahami konsep KA sederhana, manfaat, dampak, dan etika dasar penggunaan KA yang berorientasi pada kebaikan manusia dan empati." },
+      { name: "Pemanfaatan dan Pengembangan Kecerdasan Artifisial", cp: "Menyimulasikan cara kerja KA mengenali pola, mengklasifikasikan data konkret, dan memprediksi luaran berdasarkan masukan informasi." }
+    ];
+  } else if (mapel.includes('sunda')) {
+    elementDefs = [
+      { name: "Ngaregepkeun", cp: "Mampuh ngaregepkeun, mikaharti, jeung nganalisis informasi tina rupa-rupa téks aural basa Sunda (warta, carita, paguneman)." },
+      { name: "Maca jeung Miarsa", cp: "Mampuh maca lancar tur nyangkem eusi téks sastra jeung nonsastra Sunda kalawan kritis tur méré pamadegan." },
+      { name: "Nyarita jeung Midangkeun", cp: "Mampuh nepikeun gagasan, pamadegan, jeung pangalaman sacara lisan kalawan tartib ngagunakeun tatakrama undak-usuk basa Sunda anu merenah." },
+      { name: "Nulis", cp: "Mampuh nuliskeun aksara, kecap, kalimah, jeung rupa-rupa karangan basa Sunda ngagunakeun éjahan jeung tanda baca anu merenah." }
+    ];
+  } else if (mapel.includes('tatanen') || mapel.includes('tdba')) {
+    elementDefs = [
+      { name: "Hidup Berkelanjutan", cp: "Memahami pentingnya menjaga keseimbangan ekosistem dan mempraktikkan pengelolaan sampah serta konservasi lingkungan sekitar." },
+      { name: "Permakultur", cp: "Mempraktikkan teknik budidaya tanaman ramah lingkungan (penyemaian, perawatan, panen) serta pemanfaatan pekarangan sekolah." },
+      { name: "Pola Hidup Sehat", cp: "Membiasakan mengonsumsi makanan bergizi hasil pertanian lokal serta menjaga kebersihan dan kesehatan diri." },
+      { name: "Kecakapan Hidup (Life Skills)", cp: "Mengembangkan kepedulian sosial, gotong royong merawat bumi, kreativitas, dan jiwa wirausaha berwawasan kearifan lokal." }
+    ];
+  } else if (mapel.includes('akpk')) {
+    elementDefs = [
+      { name: "Ajeg Nusantara", cp: "Menumbuhkan rasa bangga dan cinta tanah air Indonesia, memperkokoh wawasan kebangsaan, dan keteladanan pahlawan." },
+      { name: "Mapag Buana & Maneh", cp: "Mengembangkan wawasan global yang adaptif, literasi digital yang bertanggung jawab, serta membangun kemandirian dan integritas diri." },
+      { name: "Nyanding Rasa & Nyucikeun Diri", cp: "Mengimplementasikan kepedulian sosial, toleransi dalam keberagaman, kejujuran budi pekerti, dan ketakwaan spiritual." },
+      { name: "Betah di Imah & Reureuh", cp: "Memperkuat ketahanan keluarga melalui bakti kepada orang tua serta membudayakan hidup seimbang dan bahagia (Tujuh Poe Atikan)." }
+    ];
   } else {
     // Fallback: ambil elemen unik dari bab-bab yang ada
     const fallbackMap = new Map();
@@ -1344,12 +1417,30 @@ export function groupAnalysisDataByElementsClient(data) {
       }
     }
 
-    if (cleanElem.includes('menyimak') && (combined.includes('simak') || combined.includes('dengar') || combined.includes('aural') || combined.includes('audio'))) score += 25;
-    if ((cleanElem.includes('membaca') || cleanElem.includes('memirsa')) && (combined.includes('baca') || combined.includes('memirsa') || combined.includes('teks visual') || combined.includes('kosakata'))) score += 25;
-    if ((cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) && (combined.includes('bicara') || combined.includes('presentasi') || combined.includes('lisan') || combined.includes('diskusi'))) score += 25;
-    if (cleanElem.includes('menulis') && (combined.includes('tulis') || combined.includes('kalimat') || combined.includes('paragraf') || combined.includes('karangan') || combined.includes('ejaan'))) score += 25;
+    if (cleanElem.includes('menyimak') && (combined.includes('simak') || combined.includes('dengar') || combined.includes('aural') || combined.includes('audio') || combined.includes('listening'))) score += 25;
+    if ((cleanElem.includes('membaca') || cleanElem.includes('memirsa')) && (combined.includes('baca') || combined.includes('memirsa') || combined.includes('teks visual') || combined.includes('kosakata') || combined.includes('reading') || combined.includes('viewing'))) score += 25;
+    if ((cleanElem.includes('berbicara') || cleanElem.includes('mempresentasikan')) && (combined.includes('bicara') || combined.includes('presentasi') || combined.includes('lisan') || combined.includes('diskusi') || combined.includes('speaking') || combined.includes('presenting'))) score += 25;
+    if (cleanElem.includes('menulis') && (combined.includes('tulis') || combined.includes('kalimat') || combined.includes('paragraf') || combined.includes('karangan') || combined.includes('ejaan') || combined.includes('writing'))) score += 25;
     if (cleanElem.includes('pemahaman ipas') && !combined.includes('keterampilan proses')) score += 25;
-    if (cleanElem.includes('keterampilan proses') && (combined.includes('keterampilan proses') || combined.includes('mengamati') || combined.includes('penyelidikan') || combined.includes('percobaan'))) score += 25;
+    if (cleanElem.includes('keterampilan proses') && (combined.includes('keterampilan proses') || combined.includes('mengamati') || combined.includes('penyelidikan') || combined.includes('percobaan') || combined.includes('eksperimen'))) score += 25;
+
+    // PJOK
+    if (cleanElem.includes('keterampilan gerak') && (combined.includes('gerak') || combined.includes('lokomotor') || combined.includes('manipulatif') || combined.includes('senam') || combined.includes('atletik') || combined.includes('bola') || combined.includes('renang'))) score += 25;
+    if (cleanElem.includes('pengetahuan gerak') && (combined.includes('konsep gerak') || combined.includes('strategi') || combined.includes('taktik') || combined.includes('aturan') || combined.includes('fair play'))) score += 25;
+    if (cleanElem.includes('pemanfaatan gerak') || cleanElem.includes('kebugaran') && (combined.includes('kebugaran') || combined.includes('daya tahan') || combined.includes('makanan sehat') || combined.includes('gizi') || combined.includes('cedera') || combined.includes('kesehatan'))) score += 25;
+
+    // Koding & KA
+    if (cleanElem.includes('komputasional') && (combined.includes('komputasional') || combined.includes('algoritma') || combined.includes('logika') || combined.includes('pola') || combined.includes('instruksi') || combined.includes('flowchart'))) score += 25;
+    if (cleanElem.includes('literasi digital') && (combined.includes('komputer') || combined.includes('internet') || combined.includes('digital') || combined.includes('perangkat') || combined.includes('keamanan data'))) score += 25;
+    if (cleanElem.includes('etika') && (combined.includes('etika') || combined.includes('ka') || combined.includes('ai') || combined.includes('kecerdasan artifisial') || combined.includes('mesin cerdas'))) score += 25;
+    if (cleanElem.includes('pemanfaatan dan pengembangan') && (combined.includes('simulasi') || combined.includes('prediksi') || combined.includes('model') || combined.includes('prompt') || combined.includes('klasifikasi'))) score += 25;
+
+    // B. Sunda
+    if (cleanElem.includes('ngaregepkeun') && (combined.includes('ngaregepkeun') || combined.includes('ngadenge') || combined.includes('dongeng') || combined.includes('warta') || combined.includes('pupuh') || combined.includes('kawih'))) score += 25;
+    if (cleanElem.includes('maca') && (combined.includes('maca') || combined.includes('miarsa') || combined.includes('aksara') || combined.includes('bacaan'))) score += 25;
+    if (cleanElem.includes('nyarita') && (combined.includes('nyarita') || combined.includes('midangkeun') || combined.includes('guneman') || combined.includes('paguneman') || combined.includes('biantara'))) score += 25;
+    if (cleanElem.includes('nulis') && (combined.includes('nulis') || combined.includes('ngarang') || combined.includes('nuliskeun') || combined.includes('ejahan'))) score += 25;
+
     return score;
   };
 
@@ -1388,10 +1479,318 @@ export function groupAnalysisDataByElementsClient(data) {
     });
   });
 
+  // Penanganan komprehensif jika elemen memiliki 0 item (Terintegrasi / Lintas Semester / Kelas)
+  const kelasNum = (String(kelas).match(/\d+/) || ['5'])[0];
+  const faseCode = metadata.fase ? metadata.fase.replace(/^Fase\s*/i, '').trim() : 'C';
+
+  buckets.forEach((b, idx) => {
+    if (b.items.length === 0) {
+      const fallback = resolveEmptyElementFallbackClient({
+        elemName: b.elemen,
+        elemIdx: idx,
+        cpText: b.cp,
+        mataPelajaran: mapel,
+        jenjangKelas: kelas,
+        fase: `Fase ${faseCode}`
+      });
+
+      b.is_integrated = fallback.alokasi_label === 'Terintegrasi';
+      b.alokasi_label = fallback.alokasi_label;
+      fallback.lingkup_materi.forEach(m => b.lingkup_materi.add(m));
+      b.items = fallback.items;
+    }
+  });
+
   return buckets.map(b => ({
     ...b,
+    is_integrated: b.is_integrated || false,
+    alokasi_label: b.alokasi_label || (b.total_jp > 0 ? `${b.total_jp} JP` : '-'),
     lingkup_materi: Array.from(b.lingkup_materi)
   }));
+}
+
+/**
+ * Helper client: Resolver cerdas untuk elemen yang tidak memiliki bab terpisah dalam buku teks
+ */
+export function resolveEmptyElementFallbackClient(params) {
+  const { elemName, elemIdx, cpText, mataPelajaran, jenjangKelas, fase } = params;
+  const mapelLower = (mataPelajaran || '').toLowerCase();
+  const elemLower = (elemName || '').toLowerCase();
+  const kelasNum = (String(jenjangKelas).match(/\d+/) || ['5'])[0];
+  const isFaseB = (fase || '').includes('B') || ['3', '4'].includes(kelasNum);
+  const isFaseA = (fase || '').includes('A') || ['1', '2'].includes(kelasNum);
+
+  // 1. IPAS: Keterampilan Proses
+  if (elemLower.includes('keterampilan proses')) {
+    const lingkup = isFaseB ? [
+      'Mengamati fenomena dan peristiwa lingkungan sekitar secara sederhana',
+      'Mempertanyakan dan membuat prediksi ilmiah berdasarkan pengetahuan awal',
+      'Merencanakan dan melakukan penyelidikan terpandu dengan pengukuran sederhana',
+      'Memproses dan mengorganisasikan data hasil observasi (turus dan diagram gambar)',
+      'Mengevaluasi dan refleksi terhadap penyelidikan yang sudah dilakukan',
+      'Mengomunikasikan hasil penyelidikan secara lisan dan tertulis'
+    ] : [
+      'Mengamati fenomena sains, peristiwa alam/sosial, dan pemetaan geografis',
+      'Mempertanyakan dan membuat prediksi ilmiah yang dapat diselidiki',
+      'Merencanakan dan melakukan penyelidikan/eksperimen ilmiah secara mandiri',
+      'Memproses serta menganalisis data (tabel dan grafik) dan mengidentifikasi pola hubungan',
+      'Mengevaluasi dan refleksi kritis terhadap prosedur serta hasil penyelidikan',
+      'Mengomunikasikan hasil penyelidikan ilmiah secara utuh dengan argumen logis'
+    ];
+
+    const items = isFaseB ? [
+      { kode_tp: `${kelasNum}.KP.1`, tp: 'Mengamati fenomena dan peristiwa secara sederhana dan mencatat hasil pengamatannya menggunakan panca indra.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.2`, tp: 'Mengajukan pertanyaan tentang hal-hal yang ingin diketahui saat melakukan pengamatan dan membuat prediksi secara mandiri.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.3`, tp: 'Membuat rencana dan melakukan langkah-langkah operasional penyelidikan menggunakan alat bantu pengukuran sederhana dengan panduan pendidik.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.4`, tp: 'Mengorganisasikan data dalam bentuk turus dan diagram gambar untuk menyajikan serta mengidentifikasi pola hubungan antar fenomena.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.5`, tp: 'Melakukan refleksi terhadap penyelidikan yang telah dilakukan dan membandingkan hasil pengamatan dengan prediksi awal.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.6`, tp: 'Mengomunikasikan hasil penyelidikan secara lisan dan tertulis dalam berbagai media secara percaya diri.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' }
+    ] : [
+      { kode_tp: `${kelasNum}.KP.1`, tp: 'Mengamati fenomena dan peristiwa alam maupun sosial secara cermat, mencatat hasil pengamatannya, serta mencari persamaan dan perbedaannya.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.2`, tp: 'Mengidentifikasi pertanyaan yang dapat diselidiki secara ilmiah dan menyusun prediksi logis berdasarkan pengetahuan yang dimiliki sebelumnya.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.3`, tp: 'Merencanakan dan melakukan langkah-langkah operasional penyelidikan untuk menjawab pertanyaan dengan menggunakan alat bantu pengukuran sederhana secara mandiri.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.4`, tp: 'Mengolah data dalam bentuk tabel dan grafik, serta menjelaskan hasil pengamatan dan pola hubungan pada data berdasarkan bukti empiris.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.5`, tp: 'Melakukan refleksi kritis dan memberikan saran perbaikan terhadap prosedur dan hasil penyelidikan yang sudah dilakukan.', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' },
+      { kode_tp: `${kelasNum}.KP.6`, tp: 'Mengomunikasikan hasil penyelidikan secara utuh yang ditunjang dengan argumen ilmiah dalam berbagai media (lisan, tulisan, poster, atau presentasi digital).', materi_pokok: 'Keterampilan Proses Sains', alokasi_waktu: 'Terintegrasi' }
+    ];
+
+    return { lingkup_materi: lingkup, items, alokasi_label: 'Terintegrasi' };
+  }
+
+  // 2. MATEMATIKA: Aljabar Kelas 5
+  if (mapelLower.includes('matematika') && elemLower.includes('aljabar') && kelasNum === '5') {
+    return {
+      lingkup_materi: ['(Diprogramkan di Kelas 6 - Rasio dan Proporsi)'],
+      items: [
+        {
+          kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+          tp: 'Kompetensi Elemen Aljabar Fase C (Rasio & Proporsi) diprogramkan pada pembelajaran Kelas 6 sesuai struktur kurikulum resmi BSKAP Kemendikbudristek.',
+          materi_pokok: 'Rasio dan Proporsi',
+          alokasi_waktu: 'Kelas 6'
+        }
+      ],
+      alokasi_label: 'Kelas 6'
+    };
+  }
+
+  // 3. MATEMATIKA: Analisis Data Kelas 1
+  if (mapelLower.includes('matematika') && (elemLower.includes('analisis data') || elemLower.includes('peluang')) && kelasNum === '1') {
+    return {
+      lingkup_materi: ['Pengurutan dan penyortiran data konkret', 'Piktogram dan turus sederhana (maksimal 4 kategori)'],
+      items: [
+        {
+          kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+          tp: 'Mengurutkan, menyortir, dan mengelompokkan data dari benda konkret menggunakan turus atau piktogram sederhana (maksimal 4 kategori) pada Semester 2.',
+          materi_pokok: 'Pengenalan Data Sederhana',
+          alokasi_waktu: 'Semester 2'
+        }
+      ],
+      alokasi_label: 'Semester 2'
+    };
+  }
+
+  // 4. SENI (Rupa, Musik, Tari, Teater): Elemen Proses Artistik Terpadu
+  if (mapelLower.includes('seni')) {
+    if (elemLower.includes('refleksi') || elemLower.includes('reflecting')) {
+      return {
+        lingkup_materi: ['Apresiasi karya diri sendiri dan teman', 'Refleksi pengalaman dan perasaan dalam berkarya seni', 'Penggunaan kosakata apresiasi seni yang santun'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Merefleksikan dan mengapresiasi proses serta hasil karya seni diri sendiri dan teman sekelas secara santun menggunakan kosakata seni yang sesuai.',
+            materi_pokok: 'Refleksi dan Apresiasi Seni',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('berpikir') || elemLower.includes('artistik')) {
+      return {
+        lingkup_materi: ['Eksplorasi alat, media, dan bahan berkarya seni', 'Penerapan teknik dasar dan keselamatan dalam berkreasi', 'Kreativitas pemecahan masalah artistik'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Mengenali, menguji coba, dan mengeksplorasi variasi alat, bahan, dan teknik berkarya seni yang aman sesuai kaidah artistik.',
+            materi_pokok: 'Eksplorasi Alat dan Bahan',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('berdampak') || elemLower.includes('impacting')) {
+      return {
+        lingkup_materi: ['Ekspresi minat dan respon emosi positif melalui karya seni', 'Kepedulian terhadap lingkungan sekitar melalui karya seni'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Menghasilkan karya seni yang mencerminkan minat diri, perasaan positif, serta menyampaikan kepedulian terhadap lingkungan sekitar.',
+            materi_pokok: 'Dampak dan Makna Karya Seni',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('mengalami') || elemLower.includes('experiencing')) {
+      return {
+        lingkup_materi: ['Pengamatan unsur-unsur dasar dan prinsip seni di lingkungan sekitar', 'Kepekaan estetika terhadap objek pengamatan'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Mengamati, mengidentifikasi, dan menjelaskan unsur-unsur dan prinsip desain/keindahan pada objek dan fenomena di lingkungan sekitar.',
+            materi_pokok: 'Pengamatan Estetis',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('menciptakan') || elemLower.includes('creating')) {
+      return {
+        lingkup_materi: ['Pembuatan karya seni dua/tiga dimensi atau komposisi musik/tari', 'Pengembangan imajinasi dan pengalaman dalam karya nyata'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Merancang dan membuat karya seni yang orisinal berdasarkan pengalaman, hasil pengamatan lingkungan, dan pengembangan imajinasi.',
+            materi_pokok: 'Penciptaan Karya Seni',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+  }
+
+  // 5. BAHASA INDONESIA: Menyimak atau Berbicara
+  if (mapelLower.includes('indonesia')) {
+    if (elemLower.includes('menyimak')) {
+      return {
+        lingkup_materi: ['Pemahaman isi teks aural (teks yang dibacakan/didengarkan)', 'Pencatatan ide pokok dan pesan penting dari teks lisan'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Menyimak dengan konsentrasi serta menganalisis informasi, ide pokok, dan pesan moral dari teks nonsastra dan sastra aural yang dibacakan.',
+            materi_pokok: 'Keterampilan Menyimak Kritis',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('berbicara') || elemLower.includes('mempresentasikan')) {
+      return {
+        lingkup_materi: ['Penyampaian gagasan secara lisan dengan santun', 'Presentasi hasil karya dan tanggapan diskusi dengan gestur yang tepat'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Menyampaikan gagasan, tanggapan, dan mempresentasikan hasil kerja secara lisan dengan intonasi tepat, santun, dan percaya diri.',
+            materi_pokok: 'Keterampilan Berbicara & Presentasi',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+  }
+
+  // 6. PENDIDIKAN PANCASILA: Bhinneka Tunggal Ika / NKRI
+  if (mapelLower.includes('pancasila') || mapelLower.includes('pkn')) {
+    if (elemLower.includes('bhinneka')) {
+      return {
+        lingkup_materi: ['Keragaman suku, budaya, bahasa, dan agama di Indonesia', 'Sikap toleransi dan melestarikan keberagaman dalam Bhinneka Tunggal Ika'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Mengidentifikasi, menghargai, dan menyajikan sikap menghormati serta melestarikan keberagaman budaya dalam bingkai Bhinneka Tunggal Ika.',
+            materi_pokok: 'Keragaman Budaya & Toleransi',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+    if (elemLower.includes('nkri') || elemLower.includes('kesatuan')) {
+      return {
+        lingkup_materi: ['Wilayah tempat tinggal dan lingkungan sekitar dalam bingkai NKRI', 'Perilaku gotong royong dan persatuan sebagai wujud cinta tanah air'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: 'Mengenal karakteristik wilayah tempat tinggal dan menunjukkan perilaku gotong royong menjaga persatuan bangsa sebagai wujud bela negara.',
+            materi_pokok: 'Persatuan & Keutuhan NKRI',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+  }
+
+  // 7. PENDIDIKAN AGAMA ISLAM (PAIBP): Sejarah Peradaban Islam
+  if (mapelLower.includes('agama') || mapelLower.includes('paibp') || mapelLower.includes('pai')) {
+    if (elemLower.includes('sejarah') || elemLower.includes('spi')) {
+      const materiSpi = isFaseA 
+        ? 'Kisah keteladanan beberapa nabi dan rasul (Nabi Adam, Nuh, Ibrahim, dan Muhammad saw.)'
+        : isFaseB 
+          ? 'Kisah perjuangan dakwah Nabi Muhammad saw. periode Makkah' 
+          : 'Kisah perjuangan dakwah Nabi Muhammad saw. periode Madinah dan Khulafaurasyidin';
+      return {
+        lingkup_materi: [materiSpi, 'Pengambilan ibrah dan keteladanan akhlak mulia dari sejarah'],
+        items: [
+          {
+            kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+            tp: `Menceritakan dan meneladani ${materiSpi.toLowerCase()} untuk diterapkan dalam kehidupan sehari-hari.`,
+            materi_pokok: 'Sejarah Peradaban Islam',
+            alokasi_waktu: 'Terintegrasi'
+          }
+        ],
+        alokasi_label: 'Terintegrasi'
+      };
+    }
+  }
+
+  // 8. UNIVERSAL FALLBACK: Ekstrak klausa operasional langsung dari CP resmi
+  const cleanCp = (cpText || '').trim();
+  const sentences = cleanCp
+    .split(/[;.]\s+/)
+    .map(s => s.trim().replace(/^•\s*/, ''))
+    .filter(s => s.length > 15);
+
+  const derivedItems = [];
+  const derivedMateri = [];
+
+  if (sentences.length > 0) {
+    sentences.slice(0, 3).forEach((sent, sIdx) => {
+      const formattedTp = sent.startsWith('Murid') || sent.startsWith('Men') || sent.startsWith('Mem') || sent.startsWith('Meng')
+        ? sent
+        : `Murid mampu ${sent.charAt(0).toLowerCase()}${sent.slice(1)}`;
+      
+      const cleanTp = formattedTp.endsWith('.') ? formattedTp : `${formattedTp}.`;
+      
+      derivedItems.push({
+        kode_tp: `${kelasNum}.${elemIdx + 1}.${sIdx + 1}`,
+        tp: cleanTp,
+        materi_pokok: elemName,
+        alokasi_waktu: 'Terintegrasi'
+      });
+      derivedMateri.push(sent.slice(0, 60).trim() + (sent.length > 60 ? '...' : ''));
+    });
+  } else {
+    derivedItems.push({
+      kode_tp: `${kelasNum}.${elemIdx + 1}.1`,
+      tp: `Mencapai kompetensi esensial elemen ${elemName} sesuai standar capaian pembelajaran fase ${fase}.`,
+      materi_pokok: elemName,
+      alokasi_waktu: 'Terintegrasi'
+    });
+    derivedMateri.push(`Kompetensi esensial ${elemName}`);
+  }
+
+  return {
+    lingkup_materi: derivedMateri,
+    items: derivedItems,
+    alokasi_label: 'Terintegrasi'
+  };
 }
 
 /**
@@ -1445,7 +1844,16 @@ export function renderAtpElemenTable(data, inputData = {}) {
   `;
 
   groups.forEach(group => {
+    const isKeterampilanProses = group.elemen.toLowerCase().includes('keterampilan proses');
     const isAljabarKelas5 = group.elemen.toLowerCase().includes('aljabar') && (String(jenjangKelas).includes('5'));
+
+    const alokasiText = group.total_jp > 0
+      ? `${group.total_jp} JP`
+      : group.alokasi_label
+        ? `<span class="italic text-slate-600 font-sans">${escapeHtml(group.alokasi_label)}</span>`
+        : (isKeterampilanProses || group.is_integrated)
+          ? '<span class="italic text-slate-600 font-sans">Terintegrasi</span>'
+          : '-';
 
     const materiHtml = (group.lingkup_materi && group.lingkup_materi.length > 0)
       ? group.lingkup_materi.map(m => `<div class="mb-1">• ${escapeHtml(m)}</div>`).join('')
@@ -1468,7 +1876,7 @@ export function renderAtpElemenTable(data, inputData = {}) {
         <td class="border border-slate-900 p-2.5 align-top text-justify leading-relaxed">${escapeHtml(group.cp)}</td>
         <td class="border border-slate-900 p-2.5 align-top">${materiHtml}</td>
         <td class="border border-slate-900 p-2.5 align-top">${tpHtml}</td>
-        <td class="border border-slate-900 p-2 text-center align-top font-bold text-slate-900">${group.total_jp > 0 ? `${group.total_jp} JP` : '-'}</td>
+        <td class="border border-slate-900 p-2 text-center align-top font-bold text-slate-900">${alokasiText}</td>
       </tr>
     `;
   });

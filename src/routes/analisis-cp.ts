@@ -14,9 +14,10 @@ import { generateAtpElemenDocxBuffer, groupAnalysisDataByElements } from '../lib
 import { generateCapaianPembelajaranDocxBuffer } from '../lib/docx/capaian-pembelajaran';
 import { getOfficialCpDocumentData } from '../lib/cp-document-data';
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from '../lib/alokasi-waktu';
+import { runCpQualityGate } from '../lib/cp-validator';
 import { type AppBindings } from '../types/env';
 
-export { groupAnalysisDataByElements, getOfficialCpDocumentData };
+export { groupAnalysisDataByElements, getOfficialCpDocumentData, runCpQualityGate };
 
 const analisisCp = new Hono<{ Bindings: AppBindings }>();
 
@@ -1230,6 +1231,19 @@ analisisCp.post('/generate', async (c) => {
       baseCP: officialCP
     });
 
+    // Run Quality Gate Verification & Audit
+    const { data: auditedResult, audit } = runCpQualityGate(result, distributedChapters, {
+      namaSekolah,
+      namaGuru,
+      mataPelajaran,
+      jenjangKelas,
+      fase: faseCode,
+      tahunAjaran,
+      targetSemester,
+      bookCoverage,
+      baseCP: officialCP
+    });
+
     // Telemetry log
     try {
       const sessionId = getCookie(c.req.header('Cookie'), 'session');
@@ -1246,7 +1260,7 @@ analisisCp.post('/generate', async (c) => {
       });
     } catch (_) {}
 
-    return successResponse(c, result);
+    return successResponse(c, auditedResult);
   } catch (e: any) {
     console.error('Analisis CP Gen Error:', e);
     return Errors.internal(c, e.message);
@@ -1305,10 +1319,10 @@ analisisCp.post('/generate-stream', async (c) => {
           event: 'step',
           data: JSON.stringify({
             step: 1,
-            totalSteps: 4,
+            totalSteps: 5,
             title: `Sinkronisasi CP ${regTitle}`,
             message: `Memvalidasi capaian pembelajaran resmi untuk ${mataPelajaran} (${jenjangKelas})...`,
-            percent: 25
+            percent: 20
           })
         });
 
@@ -1316,10 +1330,10 @@ analisisCp.post('/generate-stream', async (c) => {
           event: 'step',
           data: JSON.stringify({
             step: 2,
-            totalSteps: 4,
+            totalSteps: 5,
             title: 'Pemetaan Bab & Materi Pokok',
             message: `Memetakan ${distributedChapters.length} BAB ke CP dan Elemen Kurikulum...`,
-            percent: 50
+            percent: 40
           })
         });
 
@@ -1336,10 +1350,10 @@ analisisCp.post('/generate-stream', async (c) => {
           event: 'step',
           data: JSON.stringify({
             step: 3,
-            totalSteps: 4,
-            title: 'Perumusan TP & ATP',
+            totalSteps: 5,
+            title: 'Perumusan TP & ATP Operasional',
             message: `Menyusun kode TP berurutan dan alur aktivitas pembelajaran operasional...`,
-            percent: 75
+            percent: 65
           })
         });
 
@@ -1355,6 +1369,56 @@ analisisCp.post('/generate-stream', async (c) => {
           bookCoverage,
           baseCP: officialCP
         });
+
+        // Step 4: AI Verifikator & Quality Gate (Audit Forensik Mutu & Kaidah BSKAP 046/2025)
+        await stream.writeSSE({
+          event: 'step',
+          data: JSON.stringify({
+            step: 4,
+            totalSteps: 5,
+            title: 'AI Verifikator & Quality Gate',
+            message: 'Memulai audit mutu KKO Taksonomi Bloom & BSKAP 046/2025...',
+            percent: 80
+          })
+        });
+
+        const { data: auditedResult, audit } = await runCpQualityGate(
+          result,
+          distributedChapters,
+          {
+            namaSekolah,
+            namaGuru,
+            mataPelajaran,
+            jenjangKelas,
+            fase: faseCode,
+            tahunAjaran,
+            targetSemester,
+            bookCoverage,
+            baseCP: officialCP
+          },
+          {
+            ai,
+            preferredSlug,
+            onProgress: async (msg, pct) => {
+              try {
+                await stream.writeSSE({
+                  event: 'step',
+                  data: JSON.stringify({
+                    step: 4,
+                    totalSteps: 5,
+                    title: 'AI Verifikator & Quality Gate',
+                    message: msg,
+                    percent: pct
+                  })
+                });
+                await stream.writeSSE({
+                  event: 'token',
+                  data: JSON.stringify({ text: `\n🛡️ [QualityGate AI] ${msg}\n` })
+                });
+              } catch (_) {}
+            }
+          }
+        );
 
         // Telemetry log
         try {
@@ -1372,13 +1436,14 @@ analisisCp.post('/generate-stream', async (c) => {
           });
         } catch (_) {}
 
+        // Step 5: Finalisasi & Perakitan Hasil
         await stream.writeSSE({
           event: 'step',
           data: JSON.stringify({
-            step: 4,
-            totalSteps: 4,
-            title: 'Finalisasi Dokumen Analisis',
-            message: 'Tabel Analisis CP, TP, dan ATP berhasil dirakit!',
+            step: 5,
+            totalSteps: 5,
+            title: 'Finalisasi & Perakitan Hasil',
+            message: `Audit Selesai: Skor Mutu ${audit.summary.overall_quality_score}/100 (${audit.summary.grade_label}) • ${audit.summary.passed_count} Lolos, ${audit.summary.repaired_count} Diperbaiki`,
             percent: 100
           })
         });
@@ -1387,7 +1452,8 @@ analisisCp.post('/generate-stream', async (c) => {
           event: 'done',
           data: JSON.stringify({
             success: true,
-            data: result
+            data: auditedResult,
+            audit
           })
         });
       } catch (err: any) {

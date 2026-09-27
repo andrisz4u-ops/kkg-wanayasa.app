@@ -107,6 +107,7 @@ export async function renderSlide() {
     config: {
       topik: '',
       slideCount: 8,
+      aspectRatio: '16:9',
       aiProvider: '',
       extraInstructions: ''
     }
@@ -500,8 +501,8 @@ function renderEditorView() {
                <i class="fas fa-chevron-right"></i>
             </button>
 
-            <!-- 16:9 Aspect Ratio Canvas -->
-            <div class="w-full max-w-4xl aspect-[16/9] bg-white shadow-2xl rounded-2xl relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10 flex flex-col transition-all duration-300" id="sg-slide-render-area">
+            <!-- Dynamic Aspect Ratio Canvas -->
+            <div class="w-full ${s.config.aspectRatio === '4:3' ? 'max-w-2xl aspect-[4/3]' : 'max-w-4xl aspect-[16/9]'} bg-white shadow-2xl rounded-2xl relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10 flex flex-col transition-all duration-300" id="sg-slide-render-area">
                <!-- Slide Content Injected Dynamically -->
             </div>
             
@@ -1676,12 +1677,12 @@ function toggleFullscreenPresentation() {
 // ==========================================
 async function exportToPPTX() {
   const s = window.slideGenState;
-  if (!s || !s.slides.length) {
+  if (!s || !s.slides || !s.slides.length) {
     showToast('Tidak ada slide untuk diexport', 'error');
     return;
   }
 
-  showLoading('Mengexport presentasi ke PowerPoint (.pptx)...');
+  showLoading('Mengexport presentasi premium ke PowerPoint (.pptx)...');
 
   try {
     if (!window.PptxGenJS) {
@@ -1689,21 +1690,47 @@ async function exportToPPTX() {
     }
 
     const pptx = new window.PptxGenJS();
-    pptx.layout = 'LAYOUT_16x9';
+    const is4x3 = s.config.aspectRatio === '4:3';
+    pptx.layout = is4x3 ? 'LAYOUT_4x3' : 'LAYOUT_16x9';
+    const totalW = is4x3 ? 10.0 : 13.33;
+    const safeW = totalW - 1.6;
+
     pptx.title = s.slides[0]?.title || s.config.topik || 'Presentasi Pembelajaran';
     pptx.author = state.user?.nama || 'Guru Pengampu';
-    pptx.company = state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG';
+    pptx.company = state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG Wanayasa';
 
     const tpl = slideTemplates[s.template] || slideTemplates['minimalist-dark'];
-    const colorScheme = tpl.colorScheme;
-    const cleanPrimary = colorScheme.primary.replace('#', '');
-    const cleanSecondary = colorScheme.secondary.replace('#', '');
-    const cleanBg = colorScheme.background.replace('#', '');
-    const cleanCardBg = colorScheme.cardBg.replace('#', '');
-    const cleanText = colorScheme.text.replace('#', '');
+    const cs = tpl.colorScheme;
+    const cleanHex = hex => (hex || '').replace('#', '').trim();
+
+    function isHexDark(hex) {
+      if (!hex) return true;
+      const c = cleanHex(hex);
+      if (c.length < 6) return true;
+      const r = parseInt(c.substring(0, 2), 16) || 0;
+      const g = parseInt(c.substring(2, 4), 16) || 0;
+      const b = parseInt(c.substring(4, 6), 16) || 0;
+      return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+    }
+
+    const primary = cleanHex(cs.primary) || '0284C7';
+    const secondary = cleanHex(cs.secondary) || '0EA5E9';
+    const accent = cleanHex(cs.accent) || primary;
+    const bg = cleanHex(cs.background) || '0F172A';
+    const cardBg = cleanHex(cs.cardBg) || '1E293B';
+    const text = cleanHex(cs.text) || 'F8FAFC';
+    const subtext = cleanHex(cs.subtext) || '94A3B8';
+
+    const isDark = isHexDark(cs.background);
+    const softCardFill = cardBg;
+    const coverBg = isDark ? bg : primary;
+    const coverText = isHexDark(coverBg) ? 'FFFFFF' : '0F172A';
+    const coverSubtext = isHexDark(coverBg) ? 'CBD5E1' : '475569';
+
+    const FONT_HEAD = 'Segoe UI';
+    const FONT_BODY = 'Segoe UI';
 
     const imageCache = new Map();
-
     async function imageUrlToDataUri(url) {
       if (!url) return null;
       if (imageCache.has(url)) return imageCache.get(url);
@@ -1722,148 +1749,844 @@ async function exportToPPTX() {
       return promise;
     }
 
-    const baseAutoFit = { autoFit: true, breakLine: true };
+    function cleanTextStr(str) {
+      if (!str) return '';
+      return String(str).replace(/\*\*/g, '').trim();
+    }
 
-    for (let i = 0; i < s.slides.length; i++) {
+    function parseLeadIn(str) {
+      if (!str) return { lead: '', body: '' };
+      const cleaned = cleanTextStr(str);
+      const colonIdx = cleaned.indexOf(':');
+      if (colonIdx > 0 && colonIdx < 45) {
+        return {
+          lead: cleaned.substring(0, colonIdx).trim(),
+          body: cleaned.substring(colonIdx + 1).trim()
+        };
+      }
+      return { lead: '', body: cleaned };
+    }
+
+    function addHeaderAndFooter(pptSlide, slide, index, total) {
+      let tagText = s.config.mataPelajaran 
+        ? `${s.config.mataPelajaran.toUpperCase()} ${s.config.jenjangKelas ? '· ' + s.config.jenjangKelas.toUpperCase() : ''}`
+        : 'KURIKULUM MERDEKA';
+
+      if (slide.layout === 'quiz') tagText = '❓ EVALUASI FORMATIF · KUIS';
+      else if (slide.layout === 'activity') tagText = '🎯 TANTANGAN KELAS · AKTIVITAS';
+      else if (slide.layout === 'summary') tagText = '📌 RANGKUMAN & REFLEKSI';
+      else if (slide.layout === 'timeline') tagText = '⏱️ ALUR PEMBELAJARAN';
+      else if (slide.layout === 'stats') tagText = '💡 FAKTA & INDIKATOR';
+      else if (slide.layout === 'twoColumn' || slide.layout === 'comparison') tagText = '⚖️ KOMPARASI KONSEP';
+      else if (slide.layout === 'flipcard') tagText = '🏷️ KARTU KONSEP POKOK';
+      else if (slide.layout === 'imageText') tagText = '🖼️ VISUALISASI MATERI';
+
+      // Category Pill Badge
+      const badgeW = Math.min(3.8, safeW * 0.42);
+      pptSlide.addShape(pptx.ShapeType.roundRect, {
+        x: 0.8, y: 0.45, w: badgeW, h: 0.32,
+        fill: { color: primary, transparency: isDark ? 40 : 85 },
+        rectRadius: 0.06
+      });
+      pptSlide.addText(tagText, {
+        x: 0.85, y: 0.45, w: badgeW - 0.1, h: 0.32,
+        fontFace: FONT_HEAD, fontSize: 9.5, bold: true, color: primary,
+        valign: 'middle'
+      });
+
+      // Slide Title
+      pptSlide.addText(cleanTextStr(slide.title || 'Materi Pembelajaran'), {
+        x: 0.8, y: 0.82, w: safeW, h: 0.7,
+        fontFace: FONT_HEAD, fontSize: is4x3 ? 21 : 24, bold: true, color: primary,
+        breakLine: true, autoFit: true
+      });
+
+      // Subtle Accent Stripe Line
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0.8, y: 1.55, w: safeW, h: 0.02,
+        fill: { color: secondary, transparency: 60 }
+      });
+
+      // Footer
+      const schoolName = state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG Wanayasa';
+      const topicName = s.config.topik || s.prompt || 'Materi Pembelajaran';
+      pptSlide.addText(`${topicName} · ${schoolName}`, {
+        x: 0.8, y: 7.05, w: safeW - 2.2, h: 0.3,
+        fontFace: FONT_BODY, fontSize: 10, color: subtext
+      });
+      pptSlide.addText(`Hal. ${index + 1} / ${total}`, {
+        x: 0.8 + safeW - 2.0, y: 7.05, w: 2.0, h: 0.3,
+        fontFace: FONT_BODY, fontSize: 10, bold: true, color: primary, align: 'right'
+      });
+    }
+
+    const totalSlides = s.slides.length;
+
+    for (let i = 0; i < totalSlides; i++) {
       const slide = s.slides[i];
       const pptSlide = pptx.addSlide();
       const layout = slide.layout || 'content';
 
-      // Background
+      // 1. Slide Background
       if (layout === 'title' || layout === 'thankyou' || layout === 'quote') {
-        pptSlide.background = { color: cleanPrimary };
+        pptSlide.background = { color: coverBg };
       } else {
-        pptSlide.background = { color: cleanBg };
+        pptSlide.background = { color: bg };
       }
 
-      // Title & Header (Grid Safety Box)
+      // 2. Header and Footer (Content slides only)
       if (layout !== 'title' && layout !== 'thankyou' && layout !== 'quote') {
-        pptSlide.addText(slide.title || 'Materi Pembelajaran', {
-          x: 0.8, y: 0.5, w: 11.5, h: 0.8,
-          fontSize: 28, bold: true, color: cleanPrimary, ...baseAutoFit
-        });
-        // Footer Stamp
-        pptSlide.addText(`${s.config.mataPelajaran || 'Materi'} · ${state.user?.sekolah || state.settings?.nama_kkg || 'Portal KKG'} | Hal. ${i + 1}`, {
-          x: 0.8, y: 6.9, w: 11.5, h: 0.3,
-          fontSize: 10, color: '888888', align: 'right'
-        });
+        addHeaderAndFooter(pptSlide, slide, i, totalSlides);
       }
 
-      // Layout specific content mapping
+      // 3. Layout Specific Renderers
       switch (layout) {
-        case 'title':
-          pptSlide.addText(slide.title || s.config.topik || 'Presentasi', {
-            x: 1.0, y: 2.2, w: 11.3, h: 2.0,
-            fontSize: 44, bold: true, color: 'FFFFFF', align: 'center', ...baseAutoFit
+        case 'title': {
+          // Decorative glow circles
+          pptSlide.addShape(pptx.ShapeType.oval, {
+            x: -1.0, y: -1.0, w: 4.5, h: 4.5,
+            fill: { color: primary, transparency: isDark ? 80 : 90 }
           });
-          pptSlide.addText(slide.subtitle || `${s.config.mataPelajaran || ''} · ${s.config.jenjangKelas || ''}`, {
-            x: 1.5, y: 4.3, w: 10.3, h: 1.0,
-            fontSize: 20, color: 'E2E8F0', align: 'center', ...baseAutoFit
+          pptSlide.addShape(pptx.ShapeType.oval, {
+            x: totalW - 3.5, y: 4.0, w: 4.5, h: 4.5,
+            fill: { color: secondary, transparency: isDark ? 85 : 92 }
+          });
+
+          // Curriculum Pill Badge
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.4, w: 2.8, h: 0.42,
+            fill: { color: 'FFFFFF', transparency: isDark ? 85 : 20 },
+            rectRadius: 0.08
+          });
+          pptSlide.addText('🌟  KURIKULUM MERDEKA', {
+            x: 0.85, y: 1.4, w: 2.7, h: 0.42,
+            fontFace: FONT_HEAD, fontSize: 11, bold: true, color: 'FFFFFF',
+            valign: 'middle'
+          });
+
+          // Title & Subtitle
+          const mainTitle = cleanTextStr(slide.title || s.config.topik || 'Presentasi Pembelajaran');
+          pptSlide.addText(mainTitle, {
+            x: 0.8, y: 2.0, w: safeW, h: 2.0,
+            fontFace: FONT_HEAD, fontSize: is4x3 ? 34 : 40, bold: true, color: coverText,
+            breakLine: true, autoFit: true
+          });
+
+          const sub = cleanTextStr(slide.subtitle || `${s.config.mataPelajaran || 'Mata Pelajaran'} · ${s.config.jenjangKelas || 'Fase Pembelajaran'}`);
+          pptSlide.addText(sub, {
+            x: 0.8, y: 4.1, w: safeW, h: 0.8,
+            fontFace: FONT_BODY, fontSize: is4x3 ? 16 : 18, color: coverSubtext,
+            breakLine: true, autoFit: true
+          });
+
+          // Accent bar
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 4.95, w: Math.min(3.5, safeW * 0.4), h: 0.08,
+            fill: { color: accent },
+            rectRadius: 0.04
+          });
+
+          // Metadata Card Container
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 5.35, w: safeW, h: 1.35,
+            fill: { color: isDark ? cardBg : 'FFFFFF', transparency: isDark ? 30 : 15 },
+            rectRadius: 0.12
+          });
+
+          const teacher = state.user?.nama || 'Guru Pengampu';
+          const school = state.user?.sekolah || state.settings?.nama_kkg || 'SD Negeri Binaan';
+          pptSlide.addText([
+            { text: '👨‍🏫 Guru Pengampu: ', options: { bold: true, color: primary } },
+            { text: teacher + '    ', options: { color: isDark ? 'FFFFFF' : '0F172A' } },
+            { text: '🏫 Satuan Pendidikan: ', options: { bold: true, color: primary } },
+            { text: school, options: { color: isDark ? 'FFFFFF' : '0F172A' } },
+          ], {
+            x: 1.1, y: 5.5, w: safeW - 0.6, h: 0.5,
+            fontFace: FONT_BODY, fontSize: is4x3 ? 10.5 : 12
+          });
+
+          pptSlide.addText([
+            { text: '🎯 Materi Pokok: ', options: { bold: true, color: primary } },
+            { text: (s.config.topik || 'Pembelajaran Interaktif') + '    ', options: { color: isDark ? 'FFFFFF' : '0F172A' } },
+            { text: '📅 Alokasi: ', options: { bold: true, color: primary } },
+            { text: (s.config.alokasiWaktu || '2 JP (2 x 35 Menit)'), options: { color: isDark ? 'FFFFFF' : '0F172A' } }
+          ], {
+            x: 1.1, y: 6.0, w: safeW - 0.6, h: 0.5,
+            fontFace: FONT_BODY, fontSize: is4x3 ? 10.5 : 12
           });
           break;
+        }
 
         case 'twoColumn':
-        case 'comparison':
-          // Left Card Container
-          pptSlide.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 1.5, w: 5.5, h: 5.0, fill: { color: cleanCardBg }, line: { color: cleanPrimary, width: 1 } });
-          pptSlide.addText(slide.leftTitle || 'Konsep A', { x: 1.1, y: 1.8, w: 4.9, h: 0.6, fontSize: 20, bold: true, color: cleanPrimary });
-          if (slide.leftContent && Array.isArray(slide.leftContent)) {
-            const leftItems = slide.leftContent.map(t => ({ text: t, options: { bullet: true, color: cleanText, fontSize: 16 } }));
-            pptSlide.addText(leftItems, { x: 1.1, y: 2.5, w: 4.9, h: 3.8, ...baseAutoFit });
-          }
+        case 'comparison': {
+          const colW = (safeW - 0.4) / 2;
+          const colH = 4.8;
+          const col2X = 0.8 + colW + 0.4;
 
-          // Right Card Container
-          pptSlide.addShape(pptx.ShapeType.roundRect, { x: 6.8, y: 1.5, w: 5.5, h: 5.0, fill: { color: cleanCardBg }, line: { color: cleanSecondary, width: 1 } });
-          pptSlide.addText(slide.rightTitle || 'Konsep B', { x: 7.1, y: 1.8, w: 4.9, h: 0.6, fontSize: 20, bold: true, color: cleanSecondary });
-          if (slide.rightContent && Array.isArray(slide.rightContent)) {
-            const rightItems = slide.rightContent.map(t => ({ text: t, options: { bullet: true, color: cleanText, fontSize: 16 } }));
-            pptSlide.addText(rightItems, { x: 7.1, y: 2.5, w: 4.9, h: 3.8, ...baseAutoFit });
-          }
-          break;
+          // Left Column Card
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: colW, h: colH,
+            fill: { color: softCardFill },
+            rectRadius: 0.12
+          });
+          // Left Header Band
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: colW, h: 0.7,
+            fill: { color: primary },
+            rectRadius: 0.08
+          });
+          pptSlide.addText(cleanTextStr(slide.leftTitle || 'Konsep A'), {
+            x: 1.05, y: 1.8, w: colW - 0.5, h: 0.7,
+            fontFace: FONT_HEAD, fontSize: 16, bold: true, color: 'FFFFFF',
+            valign: 'middle'
+          });
 
-        case 'timeline':
-          const steps = slide.timeline || [];
-          const stepW = Math.min(3.5, 11.5 / Math.max(1, steps.length));
-          steps.forEach((st, sIdx) => {
-            const startX = 0.8 + (sIdx * (stepW + 0.3));
-            pptSlide.addShape(pptx.ShapeType.roundRect, { x: startX, y: 1.8, w: stepW, h: 4.6, fill: { color: cleanCardBg }, line: { color: cleanPrimary, width: 1 } });
-            pptSlide.addText(st.step || `Tahap ${sIdx + 1}`, { x: startX + 0.2, y: 2.0, w: stepW - 0.4, h: 0.5, fontSize: 16, bold: true, color: cleanPrimary });
-            pptSlide.addText(st.title || '', { x: startX + 0.2, y: 2.6, w: stepW - 0.4, h: 0.8, fontSize: 14, bold: true, color: cleanText, ...baseAutoFit });
-            pptSlide.addText(st.desc || '', { x: startX + 0.2, y: 3.5, w: stepW - 0.4, h: 2.6, fontSize: 12, color: cleanText, ...baseAutoFit });
+          let leftItems = Array.isArray(slide.leftContent) ? slide.leftContent : (slide.content ? [slide.content[0]] : []);
+          leftItems.slice(0, 4).forEach((item, idx) => {
+            const parsed = parseLeadIn(item);
+            const iy = 2.7 + (idx * 0.95);
+            pptSlide.addShape(pptx.ShapeType.rect, {
+              x: 1.05, y: iy, w: 0.08, h: 0.65,
+              fill: { color: primary }
+            });
+            const textRuns = parsed.lead
+              ? [{ text: parsed.lead + ': ', options: { bold: true, color: primary, fontSize: 13 } }, { text: parsed.body, options: { color: text, fontSize: 12 } }]
+              : [{ text: parsed.body, options: { color: text, fontSize: 13 } }];
+            pptSlide.addText(textRuns, {
+              x: 1.25, y: iy - 0.05, w: colW - 0.6, h: 0.8,
+              fontFace: FONT_BODY, autoFit: true, breakLine: true
+            });
+          });
+
+          // Right Column Card
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: col2X, y: 1.8, w: colW, h: colH,
+            fill: { color: softCardFill },
+            rectRadius: 0.12
+          });
+          // Right Header Band
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: col2X, y: 1.8, w: colW, h: 0.7,
+            fill: { color: secondary },
+            rectRadius: 0.08
+          });
+          pptSlide.addText(cleanTextStr(slide.rightTitle || 'Konsep B'), {
+            x: col2X + 0.25, y: 1.8, w: colW - 0.5, h: 0.7,
+            fontFace: FONT_HEAD, fontSize: 16, bold: true, color: 'FFFFFF',
+            valign: 'middle'
+          });
+
+          let rightItems = Array.isArray(slide.rightContent) ? slide.rightContent : (slide.content ? slide.content.slice(1) : []);
+          rightItems.slice(0, 4).forEach((item, idx) => {
+            const parsed = parseLeadIn(item);
+            const iy = 2.7 + (idx * 0.95);
+            pptSlide.addShape(pptx.ShapeType.rect, {
+              x: col2X + 0.25, y: iy, w: 0.08, h: 0.65,
+              fill: { color: secondary }
+            });
+            const textRuns = parsed.lead
+              ? [{ text: parsed.lead + ': ', options: { bold: true, color: secondary, fontSize: 13 } }, { text: parsed.body, options: { color: text, fontSize: 12 } }]
+              : [{ text: parsed.body, options: { color: text, fontSize: 13 } }];
+            pptSlide.addText(textRuns, {
+              x: col2X + 0.45, y: iy - 0.05, w: colW - 0.6, h: 0.8,
+              fontFace: FONT_BODY, autoFit: true, breakLine: true
+            });
           });
           break;
+        }
 
-        case 'stats':
-          const stats = slide.stats || [];
-          const statW = Math.min(3.6, 11.5 / Math.max(1, stats.length));
-          stats.forEach((st, sIdx) => {
-            const startX = 0.8 + (sIdx * (statW + 0.4));
-            pptSlide.addShape(pptx.ShapeType.roundRect, { x: startX, y: 2.0, w: statW, h: 4.2, fill: { color: cleanCardBg }, line: { color: cleanPrimary, width: 1 } });
-            pptSlide.addText(st.value || '100%', { x: startX + 0.2, y: 2.4, w: statW - 0.4, h: 1.2, fontSize: 36, bold: true, color: cleanPrimary, align: 'center' });
-            pptSlide.addText(st.label || '', { x: startX + 0.2, y: 3.7, w: statW - 0.4, h: 0.6, fontSize: 16, bold: true, color: cleanSecondary, align: 'center' });
-            pptSlide.addText(st.desc || '', { x: startX + 0.2, y: 4.4, w: statW - 0.4, h: 1.5, fontSize: 12, color: cleanText, align: 'center', ...baseAutoFit });
+        case 'timeline': {
+          const steps = (slide.timeline && slide.timeline.length) ? slide.timeline : [
+            { step: '1', title: 'Pengenalan Konsep', desc: 'Memahami konsep dasar materi pembelajaran.' },
+            { step: '2', title: 'Eksplorasi Aktif', desc: 'Mencoba latihan dan mengamati contoh nyata.' },
+            { step: '3', title: 'Refleksi Bersama', desc: 'Menyimpulkan poin-poin utama materi.' }
+          ];
+          const count = Math.min(4, Math.max(1, steps.length));
+          const gap = is4x3 ? 0.25 : 0.35;
+          const cardW = (safeW - (count - 1) * gap) / count;
+
+          steps.slice(0, count).forEach((st, sIdx) => {
+            const startX = 0.8 + (sIdx * (cardW + gap));
+            // Card Base
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: startX, y: 1.9, w: cardW, h: 4.8,
+              fill: { color: softCardFill },
+              rectRadius: 0.12
+            });
+            // Top Accent Line
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: startX, y: 1.9, w: cardW, h: 0.1,
+              fill: { color: primary },
+              rectRadius: 0.05
+            });
+
+            // Circular Number Badge
+            pptSlide.addShape(pptx.ShapeType.oval, {
+              x: startX + (cardW / 2) - 0.45, y: 2.25, w: 0.9, h: 0.9,
+              fill: { color: primary }
+            });
+            pptSlide.addText(`0${sIdx + 1}`, {
+              x: startX + (cardW / 2) - 0.45, y: 2.25, w: 0.9, h: 0.9,
+              fontFace: FONT_HEAD, fontSize: 16, bold: true, color: 'FFFFFF',
+              align: 'center', valign: 'middle'
+            });
+
+            // Step Title
+            pptSlide.addText(cleanTextStr(st.title || `Tahap ${sIdx + 1}`), {
+              x: startX + 0.15, y: 3.35, w: cardW - 0.3, h: 0.7,
+              fontFace: FONT_HEAD, fontSize: is4x3 ? 13 : 15, bold: true, color: primary,
+              align: 'center', autoFit: true
+            });
+
+            // Step Desc
+            pptSlide.addText(cleanTextStr(st.desc || ''), {
+              x: startX + 0.2, y: 4.15, w: cardW - 0.4, h: 2.3,
+              fontFace: FONT_BODY, fontSize: is4x3 ? 11 : 12, color: text,
+              align: 'center', breakLine: true, autoFit: true
+            });
           });
           break;
+        }
 
-        case 'quiz':
-          pptSlide.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 1.5, w: 11.5, h: 1.2, fill: { color: cleanCardBg }, line: { color: cleanPrimary, width: 1 } });
-          pptSlide.addText(slide.question || slide.title || 'Pertanyaan Kuis:', { x: 1.0, y: 1.6, w: 11.1, h: 1.0, fontSize: 18, bold: true, color: cleanPrimary, ...baseAutoFit });
+        case 'stats': {
+          const stats = (slide.stats && slide.stats.length) ? slide.stats : [
+            { value: '📌', label: 'Fakta Utama', desc: 'Poin kunci materi yang wajib diingat siswa.' },
+            { value: '💡', label: 'Tahukah Kamu?', desc: 'Fakta menarik untuk memancing rasa ingin tahu.' },
+            { value: '🎯', label: 'Target Belajar', desc: 'Pemahaman tuntas seluruh konsep inti.' }
+          ];
+          const count = Math.min(3, Math.max(1, stats.length));
+          const gap = is4x3 ? 0.3 : 0.4;
+          const cardW = (safeW - (count - 1) * gap) / count;
 
-          const opts = slide.quizOptions || [];
-          opts.forEach((opt, oIdx) => {
+          stats.slice(0, count).forEach((st, sIdx) => {
+            const startX = 0.8 + (sIdx * (cardW + gap));
+            // Card Base
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: startX, y: 2.0, w: cardW, h: 4.6,
+              fill: { color: softCardFill },
+              rectRadius: 0.12
+            });
+            // Top Accent Bar
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: startX, y: 2.0, w: cardW, h: 0.12,
+              fill: { color: primary },
+              rectRadius: 0.05
+            });
+
+            // Big Metric Value
+            pptSlide.addText(cleanTextStr(st.value || '100%'), {
+              x: startX + 0.15, y: 2.4, w: cardW - 0.3, h: 1.3,
+              fontFace: FONT_HEAD, fontSize: is4x3 ? 30 : 36, bold: true, color: primary,
+              align: 'center', autoFit: true
+            });
+
+            // Label
+            pptSlide.addText(cleanTextStr(st.label || 'Indikator').toUpperCase(), {
+              x: startX + 0.15, y: 3.8, w: cardW - 0.3, h: 0.6,
+              fontFace: FONT_HEAD, fontSize: is4x3 ? 12.5 : 14, bold: true, color: secondary,
+              align: 'center'
+            });
+
+            // Description
+            pptSlide.addText(cleanTextStr(st.desc || ''), {
+              x: startX + 0.2, y: 4.5, w: cardW - 0.4, h: 1.8,
+              fontFace: FONT_BODY, fontSize: is4x3 ? 11 : 12, color: text,
+              align: 'center', breakLine: true, autoFit: true
+            });
+          });
+          break;
+        }
+
+        case 'quiz': {
+          // Question Banner Card
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: safeW, h: 1.3,
+            fill: { color: primary },
+            rectRadius: 0.12
+          });
+          pptSlide.addText('❓ KUIS PEMANTIK KELAS', {
+            x: 1.1, y: 1.9, w: safeW - 0.6, h: 0.3,
+            fontFace: FONT_HEAD, fontSize: 10, bold: true, color: 'FFFFFF'
+          });
+          pptSlide.addText(cleanTextStr(slide.question || slide.title || 'Pertanyaan Kuis Evaluasi:'), {
+            x: 1.1, y: 2.2, w: safeW - 0.6, h: 0.8,
+            fontFace: FONT_HEAD, fontSize: is4x3 ? 15 : 17, bold: true, color: 'FFFFFF',
+            breakLine: true, autoFit: true
+          });
+
+          // 4 Option Buttons (2x2 Grid)
+          const opts = (slide.quizOptions && slide.quizOptions.length >= 2) ? slide.quizOptions : [
+            'A. Pilihan jawaban pertama',
+            'B. Pilihan jawaban kedua',
+            'C. Pilihan jawaban ketiga',
+            'D. Pilihan jawaban keempat'
+          ];
+          const colW = (safeW - 0.4) / 2;
+          const col2X = 0.8 + colW + 0.4;
+          const optH = 1.25;
+
+          opts.slice(0, 4).forEach((opt, oIdx) => {
             const col = oIdx % 2;
             const row = Math.floor(oIdx / 2);
-            const ox = col === 0 ? 0.8 : 6.8;
-            const oy = 3.0 + (row * 1.5);
-            pptSlide.addShape(pptx.ShapeType.roundRect, { x: ox, y: oy, w: 5.5, h: 1.2, fill: { color: cleanCardBg }, line: { color: cleanSecondary, width: 1 } });
-            pptSlide.addText(opt, { x: ox + 0.3, y: oy + 0.2, w: 4.9, h: 0.8, fontSize: 14, color: cleanText, ...baseAutoFit });
+            const ox = col === 0 ? 0.8 : col2X;
+            const oy = 3.3 + (row * 1.45);
+
+            // Option Container Card
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: ox, y: oy, w: colW, h: optH,
+              fill: { color: softCardFill },
+              rectRadius: 0.1
+            });
+
+            // Letter Pill
+            pptSlide.addShape(pptx.ShapeType.oval, {
+              x: ox + 0.2, y: oy + 0.25, w: 0.75, h: 0.75,
+              fill: { color: secondary }
+            });
+            pptSlide.addText(String.fromCharCode(65 + oIdx), {
+              x: ox + 0.2, y: oy + 0.25, w: 0.75, h: 0.75,
+              fontFace: FONT_HEAD, fontSize: 14, bold: true, color: 'FFFFFF',
+              align: 'center', valign: 'middle'
+            });
+
+            // Option Text
+            pptSlide.addText(cleanTextStr(opt.replace(/^[A-D][\.\:\)]\s*/, '')), {
+              x: ox + 1.1, y: oy + 0.15, w: colW - 1.25, h: 0.95,
+              fontFace: FONT_BODY, fontSize: is4x3 ? 11.5 : 13, color: text,
+              valign: 'middle', breakLine: true, autoFit: true
+            });
+          });
+
+          // Student Collaboration Prompt Banner (Answer key protected for Presenter Notes)
+          const qAns = cleanTextStr(slide.quizAnswer || 'A');
+          const qExp = cleanTextStr(slide.quizExplanation || 'Bahas bersama siswa di kelas.');
+          
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 6.25, w: safeW, h: 0.65,
+            fill: { color: softCardFill },
+            rectRadius: 0.08
+          });
+          pptSlide.addText([
+            { text: '💬 Diskusi Kelas: ', options: { bold: true, color: primary } },
+            { text: 'Pilih jawaban terbaik bersama temanmu. Kunci jawaban & ulasan akan dibahas bersama guru!', options: { color: subtext } }
+          ], {
+            x: 1.1, y: 6.28, w: safeW - 0.6, h: 0.6,
+            fontFace: FONT_BODY, fontSize: 11, valign: 'middle'
+          });
+
+          // Presenter Notes get the answer key and rationale
+          const quizNote = `[KUNCI JAWABAN KUIS]: Pilihan ${qAns}\n[PEMBAHASAN GURU]: ${qExp}`;
+          slide.speakerNotes = slide.speakerNotes ? `${slide.speakerNotes}\n\n${quizNote}` : quizNote;
+          break;
+        }
+
+        case 'flipcard': {
+          const cards = (slide.flipcards && slide.flipcards.length) ? slide.flipcards : [
+            { front: 'Konsep Pokok 1', back: 'Penjelasan penting konsep pertama.' },
+            { front: 'Konsep Pokok 2', back: 'Penjelasan penting konsep kedua.' },
+            { front: 'Konsep Pokok 3', back: 'Penjelasan penting konsep ketiga.' },
+            { front: 'Konsep Pokok 4', back: 'Penjelasan penting konsep keempat.' }
+          ];
+          const colW = (safeW - 0.4) / 2;
+          const col2X = 0.8 + colW + 0.4;
+          const cardH = 2.3;
+
+          cards.slice(0, 4).forEach((fc, idx) => {
+            const col = idx % 2;
+            const row = Math.floor(idx / 2);
+            const cx = col === 0 ? 0.8 : col2X;
+            const cy = 1.85 + (row * 2.5);
+
+            // Card Base
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: cx, y: cy, w: colW, h: cardH,
+              fill: { color: softCardFill },
+              rectRadius: 0.12
+            });
+
+            // Card Header Strip
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: cx, y: cy, w: colW, h: 0.6,
+              fill: { color: primary },
+              rectRadius: 0.08
+            });
+            pptSlide.addText(`🏷️  ${cleanTextStr(fc.front || `Konsep ${idx + 1}`)}`, {
+              x: cx + 0.25, y: cy, w: colW - 0.5, h: 0.6,
+              fontFace: FONT_HEAD, fontSize: is4x3 ? 12.5 : 14, bold: true, color: 'FFFFFF',
+              valign: 'middle'
+            });
+
+            // Card Body (Explanation)
+            pptSlide.addText(cleanTextStr(fc.back || ''), {
+              x: cx + 0.25, y: cy + 0.75, w: colW - 0.5, h: 1.4,
+              fontFace: FONT_BODY, fontSize: is4x3 ? 11 : 12, color: text,
+              breakLine: true, autoFit: true
+            });
           });
           break;
+        }
 
-        case 'imageText':
-          if (slide.content && Array.isArray(slide.content)) {
-            const contentItems = slide.content.map(t => ({ text: t, options: { bullet: true, color: cleanText, fontSize: 16 } }));
-            pptSlide.addText(contentItems, { x: 0.8, y: 1.6, w: 6.0, h: 4.8, ...baseAutoFit });
-          }
+        case 'activity': {
+          // Banner
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: safeW, h: 1.0,
+            fill: { color: primary },
+            rectRadius: 0.12
+          });
+          pptSlide.addText('🎯 TANTANGAN BELAJAR KELAS (AKTIVITAS SISWA)', {
+            x: 1.1, y: 1.9, w: safeW - 0.6, h: 0.3,
+            fontFace: FONT_HEAD, fontSize: 10, bold: true, color: 'FFFFFF'
+          });
+          pptSlide.addText(cleanTextStr(slide.title || 'Petunjuk Tugas Kelompok'), {
+            x: 1.1, y: 2.2, w: safeW - 0.6, h: 0.5,
+            fontFace: FONT_HEAD, fontSize: is4x3 ? 15 : 17, bold: true, color: 'FFFFFF',
+            autoFit: true
+          });
+
+          // 3 Metadata Chips
+          const chips = [
+            { icon: '⏱️', label: 'Waktu:', val: cleanTextStr(slide.time || '15 Menit') },
+            { icon: '👥', label: 'Kelompok:', val: cleanTextStr(slide.groupSize || 'Kelompok 4 Siswa') },
+            { icon: '📦', label: 'Alat & Bahan:', val: cleanTextStr(slide.materials || 'Buku & Alat Tulis') }
+          ];
+          const chipGap = 0.3;
+          const chipW = (safeW - (2 * chipGap)) / 3;
+          chips.forEach((ch, cIdx) => {
+            const chX = 0.8 + (cIdx * (chipW + chipGap));
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: chX, y: 2.95, w: chipW, h: 0.7,
+              fill: { color: softCardFill },
+              rectRadius: 0.08
+            });
+            pptSlide.addText(`${ch.icon} ${ch.label} ${ch.val}`, {
+              x: chX + 0.15, y: 2.95, w: chipW - 0.3, h: 0.7,
+              fontFace: FONT_BODY, fontSize: is4x3 ? 10.5 : 12, bold: true, color: primary,
+              valign: 'middle'
+            });
+          });
+
+          // Instruction Card
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 3.8, w: safeW, h: 3.0,
+            fill: { color: softCardFill },
+            rectRadius: 0.12
+          });
+          pptSlide.addText('📋 LANGKAH KERJA SISWA:', {
+            x: 1.1, y: 4.0, w: safeW - 0.6, h: 0.4,
+            fontFace: FONT_HEAD, fontSize: 13, bold: true, color: primary
+          });
+
+          const instructionText = cleanTextStr(slide.instruction || (slide.content ? slide.content.join('\n') : 'Diskusikan bersama kelompok dan tuliskan hasilnya di lembar kerja.'));
+          pptSlide.addText(instructionText, {
+            x: 1.1, y: 4.4, w: safeW - 0.6, h: 2.2,
+            fontFace: FONT_BODY, fontSize: is4x3 ? 12 : 13, color: text,
+            breakLine: true, autoFit: true
+          });
+          break;
+        }
+
+        case 'imageText': {
+          // Left Content Cards
+          const contentList = Array.isArray(slide.content) ? slide.content : [slide.content || 'Materi pembelajaran'];
+          const colW = safeW * 0.54;
+          const imgW = safeW * 0.42;
+          const imgX = 0.8 + colW + (safeW * 0.04);
+
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: colW, h: 5.0,
+            fill: { color: softCardFill },
+            rectRadius: 0.12
+          });
+
+          contentList.slice(0, 4).forEach((item, idx) => {
+            const parsed = parseLeadIn(item);
+            const iy = 2.1 + (idx * 1.15);
+            // Circle Badge
+            pptSlide.addShape(pptx.ShapeType.oval, {
+              x: 1.1, y: iy, w: 0.5, h: 0.5,
+              fill: { color: primary }
+            });
+            pptSlide.addText(String(idx + 1), {
+              x: 1.1, y: iy, w: 0.5, h: 0.5,
+              fontFace: FONT_HEAD, fontSize: 11, bold: true, color: 'FFFFFF',
+              align: 'center', valign: 'middle'
+            });
+
+            const textRuns = parsed.lead
+              ? [{ text: parsed.lead + '\n', options: { bold: true, color: primary, fontSize: 13 } }, { text: parsed.body, options: { color: text, fontSize: 11 } }]
+              : [{ text: parsed.body, options: { color: text, fontSize: 12 } }];
+
+            pptSlide.addText(textRuns, {
+              x: 1.75, y: iy - 0.05, w: colW - 1.1, h: 1.0,
+              fontFace: FONT_BODY, breakLine: true, autoFit: true
+            });
+          });
+
+          // Right Image Container
+          const imgH = 4.5;
           if (slide.image?.url) {
-            const imgData = await imageUrlToDataUri(slide.image.url);
-            pptSlide.addImage({ data: imgData || slide.image.url, x: 7.2, y: 1.6, w: 5.1, h: 3.8 });
-            pptSlide.addText(`Foto: ${slide.image.creditName || 'Unsplash'} via Unsplash`, { x: 7.2, y: 5.5, w: 5.1, h: 0.3, fontSize: 9, color: '888888' });
+            let imgSuccess = false;
+            try {
+              const imgData = await imageUrlToDataUri(slide.image.url);
+              if (imgData) {
+                pptSlide.addImage({
+                  data: imgData,
+                  x: imgX, y: 1.8, w: imgW, h: imgH,
+                  sizing: { type: 'cover', w: imgW, h: imgH }
+                });
+                imgSuccess = true;
+              } else {
+                pptSlide.addImage({
+                  path: slide.image.url,
+                  x: imgX, y: 1.8, w: imgW, h: imgH,
+                  sizing: { type: 'cover', w: imgW, h: imgH }
+                });
+                imgSuccess = true;
+              }
+            } catch (imgErr) {
+              console.warn('Failed to embed slide image in PPTX:', imgErr);
+              imgSuccess = false;
+            }
+
+            if (imgSuccess) {
+              pptSlide.addText(`📷 Foto: ${cleanTextStr(slide.image.creditName || 'Unsplash')} via Unsplash`, {
+                x: imgX, y: 6.4, w: imgW, h: 0.3,
+                fontFace: FONT_BODY, fontSize: 9, color: subtext
+              });
+            } else {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: imgX, y: 1.8, w: imgW, h: imgH,
+                fill: { color: softCardFill },
+                rectRadius: 0.12
+              });
+              pptSlide.addText('🖼️\n\nVisualisasi Konsep Materi', {
+                x: imgX, y: 3.2, w: imgW, h: 1.5,
+                fontFace: FONT_HEAD, fontSize: 16, color: primary,
+                align: 'center'
+              });
+            }
+          } else {
+            // Visual placeholder card
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: imgX, y: 1.8, w: imgW, h: imgH,
+              fill: { color: softCardFill },
+              rectRadius: 0.12
+            });
+            pptSlide.addText('🖼️\n\nVisualisasi Konsep Materi', {
+              x: imgX, y: 3.2, w: imgW, h: 1.5,
+              fontFace: FONT_HEAD, fontSize: 16, color: primary,
+              align: 'center'
+            });
           }
           break;
+        }
 
-        case 'quote':
-          pptSlide.addText(`"${slide.quote || slide.title || ''}"`, {
-            x: 1.5, y: 2.2, w: 10.3, h: 2.5,
-            fontSize: 32, italic: true, bold: true, color: 'FFFFFF', align: 'center', ...baseAutoFit
+        case 'quote': {
+          // Centered Quote Card
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: 1.8, w: safeW, h: 4.8,
+            fill: { color: isDark ? cardBg : 'FFFFFF', transparency: isDark ? 20 : 10 },
+            rectRadius: 0.16
           });
-          pptSlide.addText(`— ${slide.author || 'Tokoh'}`, {
-            x: 1.5, y: 4.8, w: 10.3, h: 0.8,
-            fontSize: 20, color: 'E2E8F0', align: 'center'
+
+          // Quotation Mark
+          pptSlide.addText('“', {
+            x: 1.0, y: 2.1, w: safeW - 0.4, h: 0.8,
+            fontFace: 'Georgia', fontSize: 64, bold: true, color: primary,
+            align: 'center'
+          });
+
+          // Quote Text
+          const quoteStr = cleanTextStr(slide.quote || slide.title || '');
+          pptSlide.addText(`"${quoteStr}"`, {
+            x: 1.2, y: 2.9, w: safeW - 0.8, h: 2.2,
+            fontFace: FONT_HEAD, fontSize: is4x3 ? 22 : 26, italic: true, bold: true, color: 'FFFFFF',
+            align: 'center', breakLine: true, autoFit: true
+          });
+
+          // Author Pill
+          const authorStr = cleanTextStr(slide.author || 'Tokoh Pendidikan');
+          const pillW = Math.min(4.3, safeW * 0.5);
+          const pillX = 0.8 + (safeW / 2) - (pillW / 2);
+          pptSlide.addShape(pptx.ShapeType.roundRect, {
+            x: pillX, y: 5.3, w: pillW, h: 0.5,
+            fill: { color: primary },
+            rectRadius: 0.08
+          });
+          pptSlide.addText(`— ${authorStr}`, {
+            x: pillX, y: 5.3, w: pillW, h: 0.5,
+            fontFace: FONT_BODY, fontSize: 13, bold: true, color: 'FFFFFF',
+            align: 'center', valign: 'middle'
           });
           break;
+        }
 
-        case 'thankyou':
-          pptSlide.addText('🙏 Terima Kasih!', {
-            x: 1.5, y: 2.2, w: 10.3, h: 1.5,
-            fontSize: 44, bold: true, color: 'FFFFFF', align: 'center'
+        case 'thankyou': {
+          // Center Thank You Slide
+          const centerX = (totalW / 2) - 1.0;
+          pptSlide.addShape(pptx.ShapeType.oval, {
+            x: centerX, y: 1.8, w: 2.0, h: 2.0,
+            fill: { color: 'FFFFFF', transparency: 85 }
           });
-          pptSlide.addText(slide.message || 'Semoga bermanfaat!', {
-            x: 1.5, y: 3.8, w: 10.3, h: 1.2,
-            fontSize: 20, color: 'E2E8F0', align: 'center', ...baseAutoFit
+          pptSlide.addText('🙏', {
+            x: centerX, y: 1.8, w: 2.0, h: 2.0,
+            fontSize: 48, align: 'center', valign: 'middle'
+          });
+
+          pptSlide.addText('Terima Kasih!', {
+            x: 0.8, y: 3.9, w: safeW, h: 1.2,
+            fontFace: FONT_HEAD, fontSize: is4x3 ? 38 : 44, bold: true, color: 'FFFFFF',
+            align: 'center'
+          });
+
+          const msg = cleanTextStr(slide.message || 'Semoga materi pembelajaran hari ini membawa inspirasi dan manfaat.');
+          pptSlide.addText(msg, {
+            x: 1.0, y: 5.0, w: safeW - 0.4, h: 1.0,
+            fontFace: FONT_BODY, fontSize: is4x3 ? 16 : 18, color: coverSubtext,
+            align: 'center', breakLine: true, autoFit: true
           });
           break;
+        }
 
-        case 'summary':
+        case 'summary': {
+          // Checklist Rangkuman Card
+          const items = Array.isArray(slide.content) ? slide.content : [slide.content || 'Materi pembelajaran'];
+          const cardH = 1.15;
+          const gapY = 0.2;
+          items.slice(0, 4).forEach((item, idx) => {
+            const cy = 1.85 + (idx * (cardH + gapY));
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: 0.8, y: cy, w: safeW, h: cardH,
+              fill: { color: softCardFill },
+              rectRadius: 0.1
+            });
+            // Left Accent Stripe
+            pptSlide.addShape(pptx.ShapeType.roundRect, {
+              x: 0.8, y: cy, w: 0.12, h: cardH,
+              fill: { color: primary },
+              rectRadius: 0.04
+            });
+            // Checkmark Circle Badge
+            pptSlide.addShape(pptx.ShapeType.oval, {
+              x: 1.15, y: cy + (cardH / 2) - 0.32, w: 0.65, h: 0.65,
+              fill: { color: primary }
+            });
+            pptSlide.addText('✓', {
+              x: 1.15, y: cy + (cardH / 2) - 0.32, w: 0.65, h: 0.65,
+              fontFace: FONT_HEAD, fontSize: 14, bold: true, color: 'FFFFFF',
+              align: 'center', valign: 'middle'
+            });
+
+            const parsed = parseLeadIn(item);
+            const textRuns = parsed.lead
+              ? [{ text: parsed.lead + ': ', options: { bold: true, color: primary, fontSize: 13.5 } }, { text: parsed.body, options: { color: text, fontSize: 12.5 } }]
+              : [{ text: parsed.body, options: { color: text, fontSize: 13 } }];
+
+            pptSlide.addText(textRuns, {
+              x: 2.05, y: cy + 0.1, w: safeW - 1.5, h: cardH - 0.2,
+              fontFace: FONT_BODY, valign: 'middle', breakLine: true, autoFit: true
+            });
+          });
+          break;
+        }
+
         case 'content':
-        default:
-          if (slide.content && Array.isArray(slide.content)) {
-            const bulletItems = slide.content.map(t => ({ text: t, options: { bullet: true, color: cleanText, fontSize: 18 } }));
-            pptSlide.addText(bulletItems, { x: 0.8, y: 1.6, w: 11.5, h: 4.8, ...baseAutoFit });
+        default: {
+          // Modern Stacked Content Cards (Zero Raw Bullets)
+          const items = Array.isArray(slide.content) ? slide.content : [slide.content || 'Materi pembelajaran'];
+          const itemCount = Math.min(items.length, 4);
+
+          if (itemCount <= 3) {
+            // 3 Horizontal Cards Stacked Vertically
+            const cardH = 1.35;
+            const gapY = 0.25;
+            items.slice(0, 3).forEach((item, idx) => {
+              const cy = 1.9 + (idx * (cardH + gapY));
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 0.8, y: cy, w: safeW, h: cardH,
+                fill: { color: softCardFill },
+                rectRadius: 0.1
+              });
+
+              // Left Accent Stripe
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: 0.8, y: cy, w: 0.1, h: cardH,
+                fill: { color: primary },
+                rectRadius: 0.04
+              });
+
+              // Number Pill Badge
+              pptSlide.addShape(pptx.ShapeType.oval, {
+                x: 1.15, y: cy + (cardH / 2) - 0.35, w: 0.7, h: 0.7,
+                fill: { color: primary }
+              });
+              pptSlide.addText(`0${idx + 1}`, {
+                x: 1.15, y: cy + (cardH / 2) - 0.35, w: 0.7, h: 0.7,
+                fontFace: FONT_HEAD, fontSize: 13, bold: true, color: 'FFFFFF',
+                align: 'center', valign: 'middle'
+              });
+
+              const parsed = parseLeadIn(item);
+              const textRuns = parsed.lead
+                ? [{ text: parsed.lead + ': ', options: { bold: true, color: primary, fontSize: 14 } }, { text: parsed.body, options: { color: text, fontSize: 13 } }]
+                : [{ text: parsed.body, options: { color: text, fontSize: 13 } }];
+
+              pptSlide.addText(textRuns, {
+                x: 2.1, y: cy + 0.15, w: safeW - 1.6, h: cardH - 0.3,
+                fontFace: FONT_BODY, valign: 'middle', breakLine: true, autoFit: true
+              });
+            });
+          } else {
+            // 4 Items in 2x2 Grid
+            const colW = (safeW - 0.4) / 2;
+            const col2X = 0.8 + colW + 0.4;
+            const cardH = 2.2;
+            items.slice(0, 4).forEach((item, idx) => {
+              const col = idx % 2;
+              const row = Math.floor(idx / 2);
+              const cx = col === 0 ? 0.8 : col2X;
+              const cy = 1.9 + (row * 2.45);
+
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: cx, y: cy, w: colW, h: cardH,
+                fill: { color: softCardFill },
+                rectRadius: 0.1
+              });
+
+              // Top Accent Line
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: cx, y: cy, w: colW, h: 0.08,
+                fill: { color: idx % 2 === 0 ? primary : secondary },
+                rectRadius: 0.04
+              });
+
+              // Number Badge
+              pptSlide.addShape(pptx.ShapeType.oval, {
+                x: cx + 0.25, y: cy + 0.25, w: 0.55, h: 0.55,
+                fill: { color: idx % 2 === 0 ? primary : secondary }
+              });
+              pptSlide.addText(String(idx + 1), {
+                x: cx + 0.25, y: cy + 0.25, w: 0.55, h: 0.55,
+                fontFace: FONT_HEAD, fontSize: 12, bold: true, color: 'FFFFFF',
+                align: 'center', valign: 'middle'
+              });
+
+              const parsed = parseLeadIn(item);
+              const textRuns = parsed.lead
+                ? [{ text: parsed.lead + '\n', options: { bold: true, color: primary, fontSize: 13 } }, { text: parsed.body, options: { color: text, fontSize: 12 } }]
+                : [{ text: parsed.body, options: { color: text, fontSize: 12 } }];
+
+              pptSlide.addText(textRuns, {
+                x: cx + 0.95, y: cy + 0.2, w: colW - 1.15, h: cardH - 0.4,
+                fontFace: FONT_BODY, breakLine: true, autoFit: true
+              });
+            });
           }
+          break;
+        }
       }
 
-      // Speaker Notes
+      // 4. Native Speaker Notes
       if (slide.speakerNotes) {
         pptSlide.addNotes(slide.speakerNotes);
       }
@@ -1871,10 +2594,10 @@ async function exportToPPTX() {
 
     const filename = `${(s.config.topik || s.prompt || 'presentasi').replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pptx`;
     await pptx.writeFile({ fileName: filename });
-    showToast('PowerPoint (.pptx) berhasil didownload!', 'success');
+    showToast('🎉 PowerPoint Premium (.pptx) berhasil didownload!', 'success');
   } catch (err) {
     console.error('PPTX export error:', err);
-    showToast('Gagal mengeksport PowerPoint (.pptx)', 'error');
+    showToast('Gagal mengeksport PowerPoint (.pptx): ' + (err.message || err), 'error');
   } finally {
     hideLoading();
   }
@@ -2196,6 +2919,29 @@ function showAISettingsModal() {
             </div>
           </div>
 
+          <!-- Aspect Ratio Selection -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <i class="fas fa-expand text-teal-600 dark:text-teal-400"></i> Rasio Layar / Format Presentasi
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:border-teal-500 transition-all">
+                <input type="radio" name="sg-modal-aspect" value="16:9" ${(s.config.aspectRatio !== '4:3') ? 'checked' : ''} class="accent-teal-600">
+                <div class="text-xs">
+                  <div class="font-bold text-gray-800 dark:text-gray-200">16:9 Widescreen</div>
+                  <div class="text-[10px] text-gray-400">Monitor & Proyektor Baru</div>
+                </div>
+              </label>
+              <label class="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:border-teal-500 transition-all">
+                <input type="radio" name="sg-modal-aspect" value="4:3" ${(s.config.aspectRatio === '4:3') ? 'checked' : ''} class="accent-teal-600">
+                <div class="text-xs">
+                  <div class="font-bold text-gray-800 dark:text-gray-200">4:3 Standar</div>
+                  <div class="text-[10px] text-gray-400">Proyektor Sekolah (XGA)</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Extra Instructions / Tone -->
           <div class="space-y-1.5">
             <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
@@ -2254,13 +3000,19 @@ function showAISettingsModal() {
     if (aiSelect) s.config.aiProvider = aiSelect.value;
     const count = parseInt(countRange?.value) || 8;
     const extra = modalContainer.querySelector('#sg-modal-extra-notes')?.value.trim();
+    const aspect = modalContainer.querySelector('input[name="sg-modal-aspect"]:checked')?.value || '16:9';
 
     s.config.slideCount = count;
     s.config.extraInstructions = extra;
+    s.config.aspectRatio = aspect;
 
     const landingSelect = document.getElementById('sg-landing-model-select');
     if (landingSelect && aiSelect) {
       landingSelect.value = aiSelect.value;
+    }
+
+    if (s.slides && s.slides.length > 0) {
+      renderSlide();
     }
 
     showToast('Parameter AI berhasil disimpan!', 'success');

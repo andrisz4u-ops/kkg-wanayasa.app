@@ -810,8 +810,8 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
           cell2Children.push(new Paragraph({
              alignment: AlignmentType.LEFT,
-             spacing: { before: PT(6), after: PT(8) },
-             children: [new ImageRun({ data: imgData.buffer, transformation: { width: 300, height: 200 }, type: imgData.type || 'jpeg' })]
+             spacing: { before: PT(3), after: PT(4) },
+             children: [new ImageRun({ data: imgData.buffer, transformation: { width: 220, height: 145 }, type: imgData.type || 'jpeg' })]
           }));
           cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
 

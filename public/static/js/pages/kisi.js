@@ -837,6 +837,15 @@ export async function renderKisi() {
         .soal-image-container.image-load-failed {
           display: none !important;
         }
+        .soal-image-container {
+          border: none !important;
+          padding: 2px 0 !important;
+          margin: 3px 0 4px 0 !important;
+        }
+        .soal-image-container img {
+          max-width: 270px !important;
+          max-height: 170px !important;
+        }
         #asesmen-form-view,
         .asesmen-result-toolbar,
         .asesmen-edit-banner,
@@ -1920,9 +1929,9 @@ function renderResult(data, formData) {
                 <td style="vertical-align:top; padding:1px 0;">
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
-                  <div style="margin: 6px 0 8px 0; text-align:left;">
-                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px; background:#fff; max-width: 100%;">
-                      <img src="${q.gambar.url}" style="max-width:480px; width:100%; height:auto; max-height:320px; object-fit:contain; display:block; border-radius:6px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
+                  <div style="margin: 4px 0 6px 0; text-align:left;">
+                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background:#fff; max-width: 100%;">
+                      <img src="${q.gambar.url}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
                       ${q.gambar.credit ? `
                         <div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
                           <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>

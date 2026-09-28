@@ -2295,10 +2295,10 @@ function renderResult(data, formData) {
             <th style="border:1px solid #475569; padding:6px 4px; width:4%;">No</th>
             <th style="border:1px solid #475569; padding:6px 8px; width:22%;">Capaian Pembelajaran (CP)</th>
             <th style="border:1px solid #475569; padding:6px 8px; width:15%;">Materi Pokok</th>
-            <th style="border:1px solid #475569; padding:6px 8px; width:26%;">Indikator Soal</th>
+            <th style="border:1px solid #475569; padding:6px 8px; width:25%;">Indikator Soal</th>
             <th style="border:1px solid #475569; padding:6px 4px; width:7%;">Level</th>
             <th style="border:1px solid #475569; padding:6px 4px; width:9%;">Bentuk</th>
-            <th style="border:1px solid #475569; padding:6px 4px; width:5%;">No.</th>
+            <th style="border:1px solid #475569; padding:6px 4px; width:6%;">No.Soal</th>
             <th style="border:1px solid #475569; padding:6px 6px; width:12%;">Kunci</th>
           </tr>
         </thead>

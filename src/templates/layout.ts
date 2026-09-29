@@ -155,13 +155,18 @@ export function renderHTML(initialTheme: string = 'teal'): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RuangKKG - Platform AI EdTech & Komunitas Pendidik</title>
-  <meta name="description" content="RuangKKG - Platform EdTech AI untuk Perangkat Ajar Kurikulum Merdeka, Modul Ajar, Asesmen HOTS, dan Komunitas Pendidik">
+  <title>RuangKKG Digital &mdash; Platform AI EdTech SaaS Pendidik Indonesia</title>
+  <meta name="description" content="RuangKKG Digital adalah platform AI EdTech SaaS untuk otomatisasi Kurikulum Merdeka, Modul Ajar berdiferensiasi, Asesmen HOTS, dan manajemen kurikulum sekolah terpadu.">
+  <meta name="author" content="RuangKKG Digital">
+  <meta property="og:title" content="RuangKKG Digital &mdash; Platform AI EdTech SaaS">
+  <meta property="og:description" content="Platform AI EdTech SaaS terdepan untuk otomatisasi Kurikulum Merdeka, Modul Ajar, dan Asesmen HOTS sekolah di Indonesia.">
+  <meta property="og:url" content="https://ruangkkg.my.id">
+  <meta property="og:site_name" content="RuangKKG Digital">
   <meta name="theme-color" content="${theme.primary}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RuangKKG">
+  <meta name="apple-mobile-web-app-title" content="RuangKKG Digital">
 
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
@@ -197,28 +202,207 @@ export function renderHTML(initialTheme: string = 'teal'): string {
 </head>
 <body class="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] antialiased selection:bg-primary-500 selection:text-white">
   <div id="app">
-    <div class="fixed inset-0 flex flex-col items-center justify-center bg-[#f8fdfd] z-50">
-      <div class="relative mb-8">
-        <div class="w-20 h-20 border-[3px] rounded-full animate-spin" style="border-color: ${theme.cardLight}; border-top-color: ${theme.primary};"></div>
-        <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-8 h-8 rounded-xl animate-pulse" style="background: linear-gradient(135deg, ${theme.primary} 0%, ${theme.dark} 100%);"></div>
+    <!-- Pre-rendered Semantic Landing Page for Crawlers, SEO & First Contentful Paint -->
+    <div class="min-h-screen flex flex-col bg-[#f8fdfd] text-slate-800">
+      <!-- Top Navigation -->
+      <header class="bg-white/95 border-b border-slate-200/80 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 text-white flex items-center justify-center font-black text-xl shadow-md">
+              <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div>
+              <span class="text-xl font-display font-black tracking-tight text-slate-900 block leading-tight">RuangKKG Digital</span>
+              <span class="text-[10px] font-bold text-teal-700 uppercase tracking-widest block">AI-Powered EdTech SaaS Platform</span>
+            </div>
+          </div>
+          <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+            <a href="#fitur" class="hover:text-teal-600 transition-colors">Fitur Platform</a>
+            <a href="#solusi" class="hover:text-teal-600 transition-colors">Kurikulum Merdeka</a>
+            <a href="#tentang" class="hover:text-teal-600 transition-colors">Tentang Perusahaan</a>
+            <a href="#kontak" class="hover:text-teal-600 transition-colors">Kontak</a>
+          </nav>
+          <div class="flex items-center gap-3">
+            <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition-all">
+              Masuk Akun
+            </a>
+          </div>
         </div>
-      </div>
-      <h2 class="text-2xl font-display font-extrabold text-slate-900 tracking-tight mb-2" id="splash-title">Portal Digital KKG</h2>
-      <p id="loading-status" class="text-sm text-slate-400 font-medium animate-pulse">Memuat Aplikasi...</p>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-6 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold bg-teal-500/10 text-teal-800 border border-teal-500/30 mb-6">
+              <i class="fas fa-sparkles text-teal-600"></i>
+              <span>RUANGKKG DIGITAL &bull; AI EDTECH SAAS PLATFORM</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-black text-slate-900 tracking-tight leading-[1.1] mb-6">
+              RuangKKG Digital
+            </h1>
+            <p class="text-lg text-slate-600 leading-relaxed mb-8">
+              Platform AI EdTech SaaS terdepan untuk sekolah dan pendidik di Indonesia. Mengotomatisasi penyusunan administrasi Kurikulum Merdeka (Modul Ajar berdiferensiasi, Capaian Pembelajaran CP/TP/ATP, Program Tahunan &amp; Semester, dan Kisi-kisi Asesmen HOTS) dengan integrasi model kecerdasan buatan canggih.
+            </p>
+            <div class="flex flex-wrap items-center gap-4 mb-10">
+              <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="px-7 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-base shadow-lg shadow-teal-600/30 transition-all">
+                Buka Aplikasi Web
+              </a>
+              <a href="#tentang" class="px-6 py-3.5 rounded-2xl bg-white border border-slate-300 text-slate-700 font-bold text-base hover:bg-slate-50 transition-all">
+                Profil Perusahaan
+              </a>
+            </div>
+            <div class="grid grid-cols-3 gap-6 pt-6 border-t border-slate-200">
+              <div>
+                <p class="text-2xl font-black text-teal-700">100%</p>
+                <p class="text-xs text-slate-500 font-semibold">Kurikulum Merdeka</p>
+              </div>
+              <div>
+                <p class="text-2xl font-black text-teal-700">&lt; 5 Menit</p>
+                <p class="text-xs text-slate-500 font-semibold">Generate Dokumen AI</p>
+              </div>
+              <div>
+                <p class="text-2xl font-black text-teal-700">Multi-Sekolah</p>
+                <p class="text-xs text-slate-500 font-semibold">Arsitektur Cloud SaaS</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Illustration Card -->
+          <div class="bg-gradient-to-br from-teal-50 to-emerald-100/60 border border-teal-200/80 rounded-3xl p-8 shadow-xl">
+            <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 mb-6">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                <span class="text-xs font-mono text-slate-400 ml-2">ruangkkg.my.id/ai-engine</span>
+              </div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 rounded-xl bg-teal-50 border border-teal-100">
+                  <span class="text-xs font-bold text-teal-900"><i class="fas fa-wand-magic-sparkles text-teal-600 mr-2"></i>AI Modul Ajar Generator</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-200 text-teal-800">Ready</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span class="text-xs font-bold text-slate-800"><i class="fas fa-chart-pie text-indigo-600 mr-2"></i>Analisis CP, TP &amp; ATP BSKAP 046</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">Automated</span>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span class="text-xs font-bold text-slate-800"><i class="fas fa-list-check text-emerald-600 mr-2"></i>Kisi-Kisi &amp; Rubrik HOTS</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Compliant</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-center text-teal-900 font-semibold">
+              Infrastruktur Cloud berstandar global dengan komputasi edge dan model AI termutakhir.
+            </p>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="fitur" class="bg-white border-y border-slate-200/80 py-20">
+          <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+              <span class="text-xs font-extrabold text-teal-600 uppercase tracking-widest block mb-2">Solusi Unggulan</span>
+              <h2 class="text-3xl sm:text-4xl font-display font-bold text-slate-900 tracking-tight mb-4">Fitur Inti RuangKKG Digital</h2>
+              <p class="text-slate-600 text-base">Dirancang khusus untuk memenuhi standar Kurikulum Merdeka Kemendikbudristek secara menyeluruh.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+              <div class="p-8 rounded-3xl bg-[#f8fdfd] border border-teal-100 shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-teal-600/20">
+                  <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-3">Generator Modul Ajar AI</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Menghasilkan RPP Berdiferensiasi dan Modul Ajar lengkap sesuai karakteristik peserta didik dan standar BSKAP 046/H/KR/2025.</p>
+              </div>
+              <div class="p-8 rounded-3xl bg-[#f8fdfd] border border-teal-100 shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-indigo-600/20">
+                  <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-3">Analisis CP, TP &amp; ATP</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Mendekomposisi Capaian Pembelajaran semua fase dan mata pelajaran menjadi alur tujuan pembelajaran beserta alokasi waktu JP akurat.</p>
+              </div>
+              <div class="p-8 rounded-3xl bg-[#f8fdfd] border border-teal-100 shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-emerald-600/20">
+                  <i class="fas fa-list-check"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-3">Engine Asesmen &amp; Kisi-Kisi HOTS</h3>
+                <p class="text-slate-600 text-sm leading-relaxed">Menyusun instrumen penilaian autentik, rubrik KKTP, kartu soal berbobot Taksonomi Bloom (C4-C6), dan bank soal kolaboratif.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- About Company Section (CRITICAL FOR AWS ACTIVATION AUDIT) -->
+        <section id="tentang" class="py-20 max-w-7xl mx-auto px-6">
+          <div class="p-10 md:p-14 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-2xl">
+            <div class="grid md:grid-cols-2 gap-10 items-center">
+              <div>
+                <span class="text-xs font-bold text-teal-400 uppercase tracking-widest block mb-2">Profil Startup / Entitas Bisnis</span>
+                <h2 class="text-3xl font-display font-bold text-white mb-6">Tentang RuangKKG Digital</h2>
+                <p class="text-slate-300 text-base leading-relaxed mb-6">
+                  <strong>RuangKKG Digital</strong> adalah inisiatif pengembang teknologi pendidikan (EdTech Startup) yang berdedikasi membangun ekosistem perangkat lunak cerdas untuk mendigitalisasi perencanaan dan administrasi kurikulum guru di Indonesia.
+                </p>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                  Platform ini mengintegrasikan cloud serverless edge computing, database relasional terdistribusi, serta model AI generative mutakhir guna menghadirkan akses perangkat ajar berkualitas tinggi bagi seluruh sekolah secara merata.
+                </p>
+              </div>
+              <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700/80 space-y-4 text-sm">
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                  <span class="text-slate-400">Nama Perusahaan:</span>
+                  <span class="font-bold text-white">RuangKKG Digital</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                  <span class="text-slate-400">Website Resmi:</span>
+                  <a href="https://ruangkkg.my.id" class="font-bold text-teal-400 hover:underline">https://ruangkkg.my.id</a>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                  <span class="text-slate-400">Email Bisnis:</span>
+                  <a href="mailto:admin@ruangkkg.my.id" class="font-bold text-teal-400 hover:underline">admin@ruangkkg.my.id</a>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                  <span class="text-slate-400">Fokus Industri:</span>
+                  <span class="font-bold text-white">EdTech &amp; Artificial Intelligence (AI)</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-slate-700">
+                  <span class="text-slate-400">Kantor Operasional:</span>
+                  <span class="font-bold text-white">Purwakarta, Jawa Barat, Indonesia</span>
+                </div>
+                <div class="flex justify-between py-2">
+                  <span class="text-slate-400">Status Produk:</span>
+                  <span class="font-bold text-emerald-400">Active Live Production (SaaS MVP)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="kontak" class="py-12 bg-white border-t border-slate-200">
+          <div class="max-w-7xl mx-auto px-6 text-center">
+            <h3 class="text-2xl font-bold text-slate-900 mb-2">Hubungi Tim RuangKKG Digital</h3>
+            <p class="text-slate-500 text-sm mb-6">Pertanyaan kemitraan, implementasi sekolah, dan informasi teknologi.</p>
+            <a href="mailto:admin@ruangkkg.my.id" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition-all">
+              <i class="fas fa-envelope"></i>
+              <span>admin@ruangkkg.my.id</span>
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="bg-slate-950 text-slate-400 py-10 border-t border-slate-800 text-xs">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <span class="font-bold text-white text-sm">RuangKKG Digital</span> &mdash; Platform AI EdTech SaaS Pendidik Indonesia.
+          </div>
+          <div>
+            &copy; 2026 RuangKKG Digital. Hak Cipta Dilindungi.
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
-  
-  <div id="toast-container"></div>
-  
-  <noscript>
-    <div class="fixed inset-0 flex items-center justify-center bg-white z-[9999] text-center p-4">
-      <div>
-        <h1 class="text-2xl font-bold text-red-600 mb-2">JavaScript Diperlukan</h1>
-        <p class="text-gray-600">Aplikasi ini memerlukan JavaScript untuk berjalan. Mohon aktifkan JavaScript di browser Anda.</p>
-      </div>
-    </div>
-  </noscript>
 
   <script>window.__APP_VERSION__ = '${APP_VERSION}';</script>
   <script src="/static/js/profil-lulusan-data.js?v=${APP_VERSION}"></script>

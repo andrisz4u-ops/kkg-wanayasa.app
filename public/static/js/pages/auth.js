@@ -21,8 +21,8 @@ export function renderLogin() {
           <div class="inline-flex items-center justify-center w-20 h-20 bg-white border border-[var(--color-border-subtle)] rounded-3xl mb-6 shadow-sm mx-auto">
             <i class="fas fa-graduation-cap text-3xl text-[#111111]"></i>
           </div>
-          <h1 id="kkg-name" class="font-display text-4xl font-semibold text-[var(--color-text-primary)] tracking-tighter mb-2">Portal Digital KKG</h1>
-          <p id="kkg-address-subtitle" class="text-[var(--color-text-tertiary)] font-light tracking-wide uppercase text-xs">Portal Guru & KKG</p>
+          <h1 id="kkg-name" class="font-display text-4xl font-semibold text-[var(--color-text-primary)] tracking-tighter mb-2">RuangKKG Digital</h1>
+          <p id="kkg-address-subtitle" class="text-[var(--color-text-tertiary)] font-medium tracking-wide uppercase text-xs">AI EdTech SaaS Platform</p>
         </div>
 
         <div class="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] p-8 md:p-10 border border-[var(--color-border-subtle)] relative overflow-hidden group">

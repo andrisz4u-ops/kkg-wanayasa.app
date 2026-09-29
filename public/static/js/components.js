@@ -42,8 +42,8 @@ export function renderNavbar() {
               <i class="fas fa-graduation-cap"></i>
             </div>
             <div class="hidden sm:block">
-              <div class="font-display font-bold text-[var(--color-text-primary)]">Portal KKG</div>
-              <div class="text-[var(--color-text-tertiary)] text-xs truncate max-w-[160px]">${escapeHtml(state.settings?.nama_kkg || 'Portal Digital')}</div>
+              <div class="font-display font-bold text-[var(--color-text-primary)]">RuangKKG</div>
+              <div class="text-[var(--color-text-tertiary)] text-xs truncate max-w-[160px]">${escapeHtml(state.settings?.nama_kkg || 'Platform Digital Pendidik')}</div>
             </div>
           </a>
 
@@ -150,7 +150,7 @@ export function renderFooter() {
                 <i class="fas fa-graduation-cap text-sm"></i>
               </div>
               <div>
-                <div class="font-display font-extrabold text-slate-900 tracking-tight">${escapeHtml(state.settings?.nama_kkg || 'Portal Digital KKG')}</div>
+                <div class="font-display font-extrabold text-slate-900 tracking-tight">RuangKKG • ${escapeHtml(state.settings?.nama_kkg || 'Platform Digital')}</div>
                 <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">${state.settings?.kecamatan ? `Kecamatan ${escapeHtml(state.settings.kecamatan)}` : 'Pusat Kegiatan Guru'}</div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export function renderFooter() {
                 <i class="fas fa-map-marker-alt mt-1 text-teal-500"></i>
               </li>
               <li class="flex md:justify-end items-center gap-3">
-                <span>${escapeHtml(state.settings?.email_kkg || state.settings?.email || 'admin@portal-kkg.id')}</span>
+                <a href="mailto:admin@ruangkkg.my.id" class="hover:text-teal-600 transition-colors">${escapeHtml(state.settings?.email_kkg || state.settings?.email || 'admin@ruangkkg.my.id')}</a>
                 <i class="fas fa-envelope text-teal-500"></i>
               </li>
             </ul>

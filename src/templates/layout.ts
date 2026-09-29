@@ -155,13 +155,13 @@ export function renderHTML(initialTheme: string = 'teal'): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal Digital KKG</title>
-  <meta name="description" content="Portal Digital Kelompok Kerja Guru (KKG)">
+  <title>RuangKKG - Platform AI EdTech & Komunitas Pendidik</title>
+  <meta name="description" content="RuangKKG - Platform EdTech AI untuk Perangkat Ajar Kurikulum Merdeka, Modul Ajar, Asesmen HOTS, dan Komunitas Pendidik">
   <meta name="theme-color" content="${theme.primary}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Portal KKG">
+  <meta name="apple-mobile-web-app-title" content="RuangKKG">
 
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">

@@ -1344,14 +1344,17 @@ async function renderPublicHome() {
               <i class="fas fa-graduation-cap text-white text-sm"></i>
             </div>
             <div>
-              <div class="text-sm font-extrabold text-slate-900 tracking-tight">${escapeHtml(namaKkg)}</div>
-              <p class="text-[11px] text-slate-400 font-medium">Kecamatan ${escapeHtml(kecamatan)}, Kabupaten ${escapeHtml(kabupaten)} &copy; ${new Date().getFullYear()}</p>
+              <div class="text-sm font-extrabold text-slate-900 tracking-tight">RuangKKG • ${escapeHtml(namaKkg)}</div>
+              <p class="text-[11px] text-slate-400 font-medium">Platform EdTech AI & Komunitas Pendidik • ${escapeHtml(kecamatan ? `Kecamatan ${kecamatan}` : 'Jawa Barat')} &copy; ${new Date().getFullYear()}</p>
             </div>
           </div>
-          <div class="flex items-center gap-4 text-xs font-semibold text-slate-500">
-            <span class="inline-flex items-center gap-1 text-teal-700 font-bold">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Sistem Aktif & Terlindungi
+          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
+            <a href="mailto:admin@ruangkkg.my.id" class="inline-flex items-center gap-1.5 text-slate-600 hover:text-teal-600 transition-colors">
+              <i class="fas fa-envelope text-teal-600"></i> admin@ruangkkg.my.id
+            </a>
+            <span class="inline-flex items-center gap-1.5 text-teal-700 font-bold bg-teal-50 px-3 py-1 rounded-full border border-teal-200/60">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Sistem Cloud Aktif
             </span>
           </div>
         </div>

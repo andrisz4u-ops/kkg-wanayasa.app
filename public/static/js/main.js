@@ -316,10 +316,14 @@ const pages = {
   slide: async () => (await loadPageModule('slide')).renderSlide(),
   tts: async () => (await loadPageModule('games')).renderGames({ tab: 'tts' }),
   games: async () => (await loadPageModule('games')).renderGames(),
+  'privacy-policy': async () => (await loadPageModule('legal')).renderPrivacyPolicy(),
+  privacy: async () => (await loadPageModule('legal')).renderPrivacyPolicy(),
+  terms: async () => (await loadPageModule('legal')).renderTermsOfService(),
+  'terms-of-service': async () => (await loadPageModule('legal')).renderTermsOfService(),
 };
 
 // Pages that have their own full layout (no main wrapper)
-const customLayoutPages = ['admin', 'surat', 'proker', 'laporan'];
+const customLayoutPages = ['admin', 'surat', 'proker', 'laporan', 'privacy-policy', 'privacy', 'terms', 'terms-of-service'];
 
 // Protected pages (require authentication)
 const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications'];
@@ -924,11 +928,27 @@ async function render() {
   };
   const currentMeta = pageMetadata[page] || { title: `Portal ${namaKkg}`, icon: 'fa-graduation-cap', category: 'Aplikasi' };
 
-  if (isAuthPage || isCustomLayout) {
-    // Auth pages and Admin pages handle their own full layout
+  const isPublicHome = page === 'home' && (!state.user || state.showPublicLanding);
+
+  if (isPublicHome) {
+    document.body.classList.add('rk-landing');
+    document.title = 'RuangKKG — Platform SaaS Administrasi & Modul Ajar AI untuk Guru Indonesia';
+  } else {
+    document.body.classList.remove('rk-landing');
+    if (isCustomLayout) {
+      document.title = `${currentMeta.title} — RuangKKG Digital`;
+    } else if (isAuthPage) {
+      document.title = `${currentMeta.title} — RuangKKG Digital`;
+    } else {
+      document.title = `${currentMeta.title} — ${namaKkg} | RuangKKG`;
+    }
+  }
+
+  if (isAuthPage || isCustomLayout || isPublicHome) {
+    // Auth pages, legal pages, and Public Landing Page handle their own full layout (NO SIDEBAR)
     app.innerHTML = content;
   } else {
-    // Main layout
+    // Main layout with Sidebar for logged-in educators
     app.innerHTML = `
       <div class="flex h-screen bg-[#f8fdfd] transition-colors duration-500 overflow-hidden selection:bg-teal-500/30">
         <!-- Organic BG Blobs -->
@@ -1456,8 +1476,15 @@ async function init() {
   await Promise.allSettled([sessionPromise, settingsPromise, tenantPromise, sekolahPromise, csrfPromise]);
 
   // Set dynamic browser page title
-  const activeOrgName = state.settings?.nama_kkg || state.tenant?.nama || 'KKG';
-  document.title = `Portal Digital ${activeOrgName}`;
+  if (!state.user || state.currentPage === 'home') {
+    document.title = 'RuangKKG — Platform SaaS Administrasi & Modul Ajar AI untuk Guru Indonesia';
+  } else {
+    const activeOrgName = state.settings?.nama_kkg || state.tenant?.nama || 'Portal KKG';
+    document.title = `Portal ${activeOrgName} | RuangKKG`;
+  }
+
+  // Bind router handler
+  initRouter(render);
 
   // Finally, render once with all data ready
   await render();

@@ -89,11 +89,17 @@ export function getThemeCss(themeKey: string = 'teal'): string {
         radial-gradient(ellipse 500px 500px at 10% 80%, ${t.glow}, transparent) !important;
     }
     /* Buttons */
-    .btn-primary, button.bg-teal-500, a.bg-teal-500, .bg-teal-500, .bg-primary-500 {
+    .btn-primary, button.bg-teal-500, a.bg-teal-500, .bg-teal-500, .bg-primary-500, .rk-landing a.btn-primary, .rk-landing .btn-primary {
       background-color: ${t.primary} !important;
+      color: #ffffff !important;
     }
-    .btn-primary:hover, button.bg-teal-500:hover, a.bg-teal-500:hover, .hover\\:bg-teal-600:hover, .bg-teal-600, .bg-primary-600 {
+    .btn-primary svg, .rk-landing a.btn-primary svg, .rk-landing .btn-primary svg {
+      stroke: #ffffff !important;
+      color: #ffffff !important;
+    }
+    .btn-primary:hover, button.bg-teal-500:hover, a.bg-teal-500:hover, .hover\\:bg-teal-600:hover, .bg-teal-600, .bg-primary-600, .rk-landing a.btn-primary:hover {
       background-color: ${t.dark} !important;
+      color: #ffffff !important;
     }
     .hover\\:bg-teal-700:hover, .bg-teal-700 {
       background-color: ${t.accent} !important;
@@ -196,6 +202,16 @@ export function renderHTML(initialTheme: string = 'teal'): string {
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/landing-redesign.css?v=${APP_VERSION}">
 
+  <style>
+    .btn-primary, .btn-primary *, a.btn-primary, a.btn-primary *, button.btn-primary, button.btn-primary *, .hero-cta .btn-primary, .hero-cta a.btn-primary, .rk-landing a.btn-primary, .rk-landing .btn-primary {
+      color: #ffffff !important;
+    }
+    .btn-primary svg, a.btn-primary svg, button.btn-primary svg, .hero-cta .btn-primary svg, .hero-cta a.btn-primary svg, .rk-landing a.btn-primary svg {
+      stroke: #ffffff !important;
+      color: #ffffff !important;
+    }
+  </style>
+
   <script defer src="https://cdn.jsdelivr.net/npm/docx@7.1.0/build/index.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -224,7 +240,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
     </nav>
     <div class="head-cta">
       <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-ghost btn-sm">Masuk</a>
-      <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary btn-sm">Coba Gratis</a>
+      <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary btn-sm" style="color:#ffffff !important;">Coba Gratis</a>
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="mobileNav" aria-label="Buka menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
       </button>
@@ -238,7 +254,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
   <a href="#harga">Harga</a>
   <a href="#testimoni">Testimoni</a>
   <a href="#faq">FAQ</a>
-  <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary" style="width:100%; margin-top:0.8rem;">Coba Gratis 30 Hari</a>
+  <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary" style="width:100%; margin-top:0.8rem; color:#ffffff !important;">Coba Gratis 30 Hari</a>
 </nav>
 
 <main>
@@ -251,8 +267,8 @@ export function renderHTML(initialTheme: string = 'teal'): string {
         <h1 class="rv rv-d1">Satu perintah guru,<br />jadi <span class="hl">RPP lengkap<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9c40-5 90-6.5 194-4" stroke="#e9a51b" stroke-width="5" stroke-linecap="round"/></svg></span> dalam hitungan menit.</h1>
         <p class="lede rv rv-d2">RuangKKG adalah Asisten AI untuk guru Indonesia — Analisis CP, Buat RPP, Buat Asesmen, Slide Presentasi, sampai Game Edukasi. Satu alur kerja, dari dokumen kurikulum sampai kelas yang hidup.</p>
         <div class="hero-cta rv rv-d3">
-          <a class="btn btn-primary" href="#harga">Coba Gratis
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <a class="btn btn-primary" href="#harga" style="color:#ffffff !important;">Coba Gratis
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
           <a class="btn btn-ghost" href="#fitur">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -375,9 +391,9 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="mod-wf-step">Langkah 1 dari 5 · Fondasi Kurikulum</span>
             <span class="mod-wf-title">Alur: Analisis CP → Buat RPP</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-rpp">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-rpp" style="color:#ffffff !important;">
             Lanjut ke Modul 2: Buat RPP
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -413,9 +429,9 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="mod-wf-step">Langkah 2 dari 5 · Rencana Pembelajaran</span>
             <span class="mod-wf-title">Alur: RPP → Buat Asesmen</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-asesmen">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-asesmen" style="color:#ffffff !important;">
             Lanjut ke Modul 3: Buat Asesmen
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -455,9 +471,9 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="mod-wf-step">Langkah 3 dari 5 · Evaluasi Pembelajaran</span>
             <span class="mod-wf-title">Alur: Asesmen → Slide Presentasi</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-slide">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-slide" style="color:#ffffff !important;">
             Lanjut ke Modul 4: Slide Presentasi
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -496,9 +512,9 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="mod-wf-step">Langkah 4 dari 5 · Media Mengajar</span>
             <span class="mod-wf-title">Alur: Slide Presentasi → Game Edukasi</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-game">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-game" style="color:#ffffff !important;">
             Lanjut ke Modul 5: Game Edukasi
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -688,7 +704,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Buku kas, SPJ siap cetak, arsip 100 GB</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Prioritas CS &amp; pendampingan pengurus</li>
         </ul>
-        <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary" style="width:100%;">Coba Gratis 30 Hari</a>
+        <a href="/login" onclick="window.navigate && window.navigate('login'); return false;" class="btn btn-primary" style="width:100%; color:#ffffff !important;">Coba Gratis 30 Hari</a>
       </div>
 
       <div class="price rv rv-d2">

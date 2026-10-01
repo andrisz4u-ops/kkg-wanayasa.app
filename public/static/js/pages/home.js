@@ -748,12 +748,12 @@ async function renderPublicHome() {
     </nav>
     <div class="head-cta">
       ${state.user ? `
-        <button onclick="window.togglePublicLanding()" class="btn btn-primary btn-sm" style="background:var(--brand-strong); color:#fff; border-radius:12px;">
+        <button onclick="window.togglePublicLanding()" class="btn btn-primary btn-sm" style="background:var(--brand-strong); color:#ffffff !important; border-radius:12px;">
           <i class="fas fa-arrow-left" style="margin-right:4px;"></i> Workspace Saya
         </button>
       ` : `
         <button onclick="navigate('login')" class="btn btn-ghost btn-sm" style="cursor:pointer;">Masuk</button>
-        <button onclick="navigate('login')" class="btn btn-primary btn-sm" style="cursor:pointer;">Coba Gratis</button>
+        <button onclick="navigate('login')" class="btn btn-primary btn-sm" style="cursor:pointer; color:#ffffff !important;">Coba Gratis</button>
       `}
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="mobileNav" aria-label="Buka menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
@@ -769,10 +769,10 @@ async function renderPublicHome() {
   <a href="#testimoni">Testimoni</a>
   <a href="#faq">FAQ</a>
   ${state.user ? `
-    <button onclick="window.togglePublicLanding()" class="btn btn-primary" style="width:100%; margin-top:0.8rem;">Ke Workspace Saya</button>
+    <button onclick="window.togglePublicLanding()" class="btn btn-primary" style="width:100%; margin-top:0.8rem; color:#ffffff !important;">Ke Workspace Saya</button>
   ` : `
     <button onclick="navigate('login')" class="btn btn-ghost" style="width:100%; margin-top:0.8rem;">Masuk</button>
-    <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Coba Gratis 30 Hari</button>
+    <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; margin-top:0.5rem; color:#ffffff !important;">Coba Gratis 30 Hari</button>
   `}
 </nav>
 
@@ -786,8 +786,8 @@ async function renderPublicHome() {
         <h1 class="rv rv-d1">Satu perintah guru,<br />jadi <span class="hl">RPP lengkap<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9c40-5 90-6.5 194-4" stroke="#e9a51b" stroke-width="5" stroke-linecap="round"/></svg></span> dalam hitungan menit.</h1>
         <p class="lede rv rv-d2">RuangKKG adalah Asisten AI untuk guru Indonesia — Analisis CP, Buat RPP, Buat Asesmen, Slide Presentasi, sampai Game Edukasi. Satu alur kerja, dari dokumen kurikulum sampai kelas yang hidup.</p>
         <div class="hero-cta rv rv-d3">
-          <a class="btn btn-primary" href="#harga">Coba Gratis
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <a class="btn btn-primary" href="#harga" style="color:#ffffff !important;">Coba Gratis
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
           <a class="btn btn-ghost" href="#fitur">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -910,9 +910,9 @@ async function renderPublicHome() {
             <span class="mod-wf-step">Langkah 1 dari 5 · Fondasi Kurikulum</span>
             <span class="mod-wf-title">Alur: Analisis CP → Buat RPP</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-rpp">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-rpp" style="color:#ffffff !important;">
             Lanjut ke Modul 2: Buat RPP
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -948,9 +948,9 @@ async function renderPublicHome() {
             <span class="mod-wf-step">Langkah 2 dari 5 · Rencana Pembelajaran</span>
             <span class="mod-wf-title">Alur: RPP → Buat Asesmen</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-asesmen">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-asesmen" style="color:#ffffff !important;">
             Lanjut ke Modul 3: Buat Asesmen
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -990,9 +990,9 @@ async function renderPublicHome() {
             <span class="mod-wf-step">Langkah 3 dari 5 · Evaluasi Pembelajaran</span>
             <span class="mod-wf-title">Alur: Asesmen → Slide Presentasi</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-slide">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-slide" style="color:#ffffff !important;">
             Lanjut ke Modul 4: Slide Presentasi
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -1031,9 +1031,9 @@ async function renderPublicHome() {
             <span class="mod-wf-step">Langkah 4 dari 5 · Media Mengajar</span>
             <span class="mod-wf-title">Alur: Slide Presentasi → Game Edukasi</span>
           </div>
-          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-game">
+          <button type="button" class="btn btn-sm btn-primary mod-next-btn" data-next-tab="mod-game" style="color:#ffffff !important;">
             Lanjut ke Modul 5: Game Edukasi
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
       </div>
@@ -1223,7 +1223,7 @@ async function renderPublicHome() {
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Buku kas, SPJ siap cetak, arsip 100 GB</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Prioritas CS &amp; pendampingan pengurus</li>
         </ul>
-        <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; cursor:pointer;">Coba Gratis 30 Hari</button>
+        <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; cursor:pointer; color:#ffffff !important;">Coba Gratis 30 Hari</button>
       </div>
 
       <div class="price rv rv-d2">

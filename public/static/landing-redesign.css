@@ -102,9 +102,50 @@ h3 { font-size: 1.28rem; }
   transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, color .18s ease;
 }
 .btn svg { width: 1.15em; height: 1.15em; flex: none; }
-.btn-primary { background: var(--brand); color: #fff; box-shadow: 0 10px 24px -10px rgba(10,107,77,.6); }
-.btn-primary:hover { background: var(--brand-strong); transform: translateY(-1px); }
-@media (prefers-color-scheme: dark) { .btn-primary { color: #06271c; } }
+.btn-primary, 
+.rk-landing a.btn-primary, 
+.rk-landing .btn-primary,
+.hero-cta .btn-primary,
+a.btn-primary,
+button.btn-primary { 
+  background: var(--brand); 
+  color: #ffffff !important; 
+  box-shadow: 0 10px 24px -10px rgba(10,107,77,.6); 
+}
+.btn-primary:hover, 
+.rk-landing a.btn-primary:hover, 
+.rk-landing .btn-primary:hover,
+.hero-cta .btn-primary:hover,
+a.btn-primary:hover,
+button.btn-primary:hover { 
+  background: var(--brand-strong); 
+  color: #ffffff !important; 
+  transform: translateY(-1px); 
+}
+.btn-primary svg, 
+.rk-landing a.btn-primary svg, 
+.rk-landing .btn-primary svg,
+.hero-cta .btn-primary svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+@media (prefers-color-scheme: dark) { 
+  .btn-primary, 
+  .rk-landing a.btn-primary, 
+  .rk-landing .btn-primary,
+  .hero-cta .btn-primary,
+  a.btn-primary,
+  button.btn-primary { 
+    color: #ffffff !important; 
+  } 
+  .btn-primary svg, 
+  .rk-landing a.btn-primary svg, 
+  .rk-landing .btn-primary svg,
+  .hero-cta .btn-primary svg {
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+  }
+}
 .btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
 .btn-ghost:hover { border-color: var(--brand); color: var(--brand-strong); }
 @media (prefers-color-scheme: dark) { .btn-ghost:hover { color: var(--brand); } }
@@ -148,9 +189,8 @@ h3 { font-size: 1.28rem; }
 .mobile-nav.open { display: block; }
 .mobile-nav a { display: block; padding: .8em .4em; text-decoration: none; color: var(--body); font-weight: 600; font-size: 1.05rem; border-bottom: 1px solid var(--line-soft); }
 .mobile-nav a:last-of-type { border-bottom: 0; }
-.mobile-nav .btn { width: 100%; margin-top: .8rem; }
-.mobile-nav .btn-primary { color: #fff; }
-@media (prefers-color-scheme: dark) { .mobile-nav .btn-primary { color: #06271c; } }
+.mobile-nav .btn-primary { color: #ffffff !important; }
+@media (prefers-color-scheme: dark) { .mobile-nav .btn-primary { color: #ffffff !important; } }
 
 /* ============ HERO ============ */
 .hero {
@@ -225,7 +265,7 @@ h3 { font-size: 1.28rem; }
 .m-head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .9rem; }
 .m-who { display: inline-flex; align-items: center; gap: .55em; font-size: .85rem; font-weight: 800; color: var(--ink); }
 .m-who .dot { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: inline-grid; place-items: center; font-size: .68rem; flex: none; }
-@media (prefers-color-scheme: dark) { .m-who .dot { color: #06271c; } }
+@media (prefers-color-scheme: dark) { .m-who .dot { color: #ffffff; } }
 .m-who.ai .dot { background: var(--accent); color: #2a2006; font-size: .8rem; }
 .m-tag { font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--brand-strong); background: var(--brand-tint); padding: .35em .9em; border-radius: 999px; white-space: nowrap; }
 @media (prefers-color-scheme: dark) { .m-tag { color: var(--brand); } }
@@ -239,7 +279,7 @@ h3 { font-size: 1.28rem; }
   font-size: .82rem; font-weight: 800; color: #fff; background: var(--brand);
   border-radius: 10px; padding: .55em 1.2em; display: inline-flex; align-items: center; gap: .45em; white-space: nowrap;
 }
-@media (prefers-color-scheme: dark) { .m-send { color: #06271c; } }
+@media (prefers-color-scheme: dark) { .m-send { color: #ffffff; } }
 .m-send svg { width: 14px; height: 14px; }
 .m-send.ghost { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
 
@@ -510,7 +550,7 @@ h3 { font-size: 1.28rem; }
 .rd-act { display: flex; gap: .6rem; margin-top: .9rem; }
 .rd-btn { font-size: .8rem; font-weight: 700; color: #fff; background: var(--brand); border-radius: 10px; padding: .6em 1.2em; }
 .rd-btn.ghost { color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); }
-@media (prefers-color-scheme: dark) { .rd-btn { color: #06271c; } }
+@media (prefers-color-scheme: dark) { .rd-btn { color: #ffffff; } }
 
 /* quiz mock */
 .qz { padding: 1.1rem 1.2rem 1.2rem; }

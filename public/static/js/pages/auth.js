@@ -5,6 +5,93 @@ import { showToast, escapeHtml } from '../utils.js';
 import { navigate } from '../router.js';
 import { fetchUnreadCount } from '../notifications.js';
 
+// Base 9 Schools of KKG Gugus 3 Wanayasa (Always guaranteed in dropdown)
+const BASE_KKG_SCHOOLS = [
+  { id: 1, nama: 'SDN 2 Nangerang' },
+  { id: 2, nama: 'SDN 1 Nangerang' },
+  { id: 3, nama: 'SDN Nagrog' },
+  { id: 4, nama: 'SDN Raharja' },
+  { id: 5, nama: 'SDN 1 Cibuntu' },
+  { id: 6, nama: 'SDN 2 Cibuntu' },
+  { id: 7, nama: 'SDN Sumurugul' },
+  { id: 8, nama: 'SDN Sakambang' },
+  { id: 9, nama: 'SDIT Al-Qalam' }
+];
+
+let allKnownSchools = [...BASE_KKG_SCHOOLS];
+
+function canonicalSchoolKey(name) {
+  if (!name) return '';
+  let s = name.toLowerCase().trim();
+  s = s.replace(/[\.\,\-\_\/\\]/g, ' ').replace(/\s+/g, ' ');
+  s = s.replace(/\bsd\s+negeri\b/g, 'sdn');
+  s = s.replace(/\bsd\s+negri\b/g, 'sdn');
+  s = s.replace(/\bsd\s+n\b/g, 'sdn');
+  s = s.replace(/\bsdn\b/g, 'sdn');
+  s = s.replace(/\bsmp\s+negeri\b/g, 'smpn');
+  s = s.replace(/\bsmp\s+negri\b/g, 'smpn');
+  s = s.replace(/\bsmp\s+n\b/g, 'smpn');
+  s = s.replace(/\bsmpn\b/g, 'smpn');
+  s = s.replace(/\bsma\s+negeri\b/g, 'sman');
+  s = s.replace(/\bsma\s+negri\b/g, 'sman');
+  s = s.replace(/\bsma\s+n\b/g, 'sman');
+  s = s.replace(/\bsman\b/g, 'sman');
+  s = s.replace(/\bsmk\s+negeri\b/g, 'smkn');
+  s = s.replace(/\bsmk\s+negri\b/g, 'smkn');
+  s = s.replace(/\bsmk\s+n\b/g, 'smkn');
+  s = s.replace(/\bsmkn\b/g, 'smkn');
+  s = s.replace(/\bsd\s+it\b/g, 'sdit');
+  s = s.replace(/\bsmp\s+it\b/g, 'smpit');
+  s = s.replace(/\bsma\s+it\b/g, 'smait');
+  s = s.replace(/\b0+(\d+)\b/g, '$1');
+  return s.trim();
+}
+
+function formatStandardSchoolName(name) {
+  if (!name) return '';
+  let s = name.trim();
+  s = s.replace(/^sd\s+negeri\s+/i, 'SDN ');
+  s = s.replace(/^sd\s+negri\s+/i, 'SDN ');
+  s = s.replace(/^sd\s+n\s+/i, 'SDN ');
+  s = s.replace(/^sdn\s+/i, 'SDN ');
+  s = s.replace(/^smp\s+negeri\s+/i, 'SMPN ');
+  s = s.replace(/^smp\s+negri\s+/i, 'SMPN ');
+  s = s.replace(/^smp\s+n\s+/i, 'SMPN ');
+  s = s.replace(/^smpn\s+/i, 'SMPN ');
+  s = s.replace(/^sma\s+negeri\s+/i, 'SMAN ');
+  s = s.replace(/^sma\s+negri\s+/i, 'SMAN ');
+  s = s.replace(/^sma\s+n\s+/i, 'SMAN ');
+  s = s.replace(/^sman\s+/i, 'SMAN ');
+  s = s.replace(/^smk\s+negeri\s+/i, 'SMKN ');
+  s = s.replace(/^smk\s+negri\s+/i, 'SMKN ');
+  s = s.replace(/^smk\s+n\s+/i, 'SMKN ');
+  s = s.replace(/^smkn\s+/i, 'SMKN ');
+  s = s.replace(/^sdit\s+/i, 'SDIT ');
+  s = s.replace(/^sd\s+it\s+/i, 'SDIT ');
+  s = s.replace(/^smpit\s+/i, 'SMPIT ');
+  s = s.replace(/^smp\s+it\s+/i, 'SMPIT ');
+  s = s.replace(/^smait\s+/i, 'SMAIT ');
+  s = s.replace(/^sma\s+it\s+/i, 'SMAIT ');
+  s = s.replace(/^([a-zA-Z]+)\s+0+(\d+)\b/i, '$1 $2');
+  const parts = s.split(/\s+/);
+  if (parts.length > 1) {
+    const prefix = parts[0].toUpperCase();
+    const rest = parts.slice(1).map(w => /^\d+$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return `${prefix} ${rest}`;
+  }
+  return s;
+}
+
+function findMatchingClientSchool(inputName) {
+  if (!inputName) return null;
+  const trimmed = inputName.trim();
+  const exact = allKnownSchools.find(s => s.nama.toLowerCase() === trimmed.toLowerCase());
+  if (exact) return exact;
+  const inputKey = canonicalSchoolKey(trimmed);
+  if (!inputKey) return null;
+  return allKnownSchools.find(s => canonicalSchoolKey(s.nama) === inputKey) || null;
+}
+
 /**
  * Render Login/Register page
  */
@@ -320,92 +407,12 @@ window.switchAuthTab = function (tab) {
     tabRegister.classList.remove('text-cream-400', 'hover:text-cream-200', 'hover:bg-coffee-700/50');
     tabRegister.classList.add('text-cream-100', 'bg-gradient-to-r', 'from-terracotta-500', 'to-sunset-500', 'shadow-lg', 'shadow-terracotta-500/20');
 
-// Base 9 Schools of KKG Gugus 3 Wanayasa (Always guaranteed in dropdown)
-const BASE_KKG_SCHOOLS = [
-  { id: 1, nama: 'SDN 2 Nangerang' },
-  { id: 2, nama: 'SDN 1 Nangerang' },
-  { id: 3, nama: 'SDN Nagrog' },
-  { id: 4, nama: 'SDN Raharja' },
-  { id: 5, nama: 'SDN 1 Cibuntu' },
-  { id: 6, nama: 'SDN 2 Cibuntu' },
-  { id: 7, nama: 'SDN Sumurugul' },
-  { id: 8, nama: 'SDN Sakambang' },
-  { id: 9, nama: 'SDIT Al-Qalam' }
-];
-
-let allKnownSchools = [...BASE_KKG_SCHOOLS];
-
-export function canonicalSchoolKey(name) {
-  if (!name) return '';
-  let s = name.toLowerCase().trim();
-  s = s.replace(/[\.\,\-\_\/\\]/g, ' ').replace(/\s+/g, ' ');
-  s = s.replace(/\bsd\s+negeri\b/g, 'sdn');
-  s = s.replace(/\bsd\s+negri\b/g, 'sdn');
-  s = s.replace(/\bsd\s+n\b/g, 'sdn');
-  s = s.replace(/\bsdn\b/g, 'sdn');
-  s = s.replace(/\bsmp\s+negeri\b/g, 'smpn');
-  s = s.replace(/\bsmp\s+negri\b/g, 'smpn');
-  s = s.replace(/\bsmp\s+n\b/g, 'smpn');
-  s = s.replace(/\bsmpn\b/g, 'smpn');
-  s = s.replace(/\bsma\s+negeri\b/g, 'sman');
-  s = s.replace(/\bsma\s+negri\b/g, 'sman');
-  s = s.replace(/\bsma\s+n\b/g, 'sman');
-  s = s.replace(/\bsman\b/g, 'sman');
-  s = s.replace(/\bsmk\s+negeri\b/g, 'smkn');
-  s = s.replace(/\bsmk\s+negri\b/g, 'smkn');
-  s = s.replace(/\bsmk\s+n\b/g, 'smkn');
-  s = s.replace(/\bsmkn\b/g, 'smkn');
-  s = s.replace(/\bsd\s+it\b/g, 'sdit');
-  s = s.replace(/\bsmp\s+it\b/g, 'smpit');
-  s = s.replace(/\bsma\s+it\b/g, 'smait');
-  s = s.replace(/\b0+(\d+)\b/g, '$1');
-  return s.trim();
-}
-
-export function formatStandardSchoolName(name) {
-  if (!name) return '';
-  let s = name.trim();
-  s = s.replace(/^sd\s+negeri\s+/i, 'SDN ');
-  s = s.replace(/^sd\s+negri\s+/i, 'SDN ');
-  s = s.replace(/^sd\s+n\s+/i, 'SDN ');
-  s = s.replace(/^sdn\s+/i, 'SDN ');
-  s = s.replace(/^smp\s+negeri\s+/i, 'SMPN ');
-  s = s.replace(/^smp\s+negri\s+/i, 'SMPN ');
-  s = s.replace(/^smp\s+n\s+/i, 'SMPN ');
-  s = s.replace(/^smpn\s+/i, 'SMPN ');
-  s = s.replace(/^sma\s+negeri\s+/i, 'SMAN ');
-  s = s.replace(/^sma\s+negri\s+/i, 'SMAN ');
-  s = s.replace(/^sma\s+n\s+/i, 'SMAN ');
-  s = s.replace(/^sman\s+/i, 'SMAN ');
-  s = s.replace(/^smk\s+negeri\s+/i, 'SMKN ');
-  s = s.replace(/^smk\s+negri\s+/i, 'SMKN ');
-  s = s.replace(/^smk\s+n\s+/i, 'SMKN ');
-  s = s.replace(/^smkn\s+/i, 'SMKN ');
-  s = s.replace(/^sdit\s+/i, 'SDIT ');
-  s = s.replace(/^sd\s+it\s+/i, 'SDIT ');
-  s = s.replace(/^smpit\s+/i, 'SMPIT ');
-  s = s.replace(/^smp\s+it\s+/i, 'SMPIT ');
-  s = s.replace(/^smait\s+/i, 'SMAIT ');
-  s = s.replace(/^sma\s+it\s+/i, 'SMAIT ');
-  s = s.replace(/^([a-zA-Z]+)\s+0+(\d+)\b/i, '$1 $2');
-  const parts = s.split(/\s+/);
-  if (parts.length > 1) {
-    const prefix = parts[0].toUpperCase();
-    const rest = parts.slice(1).map(w => /^\d+$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-    return `${prefix} ${rest}`;
+    const sekolahSelect = document.getElementById('register-sekolah-select');
+    if (sekolahSelect) {
+      loadSekolahForRegister(sekolahSelect);
+    }
   }
-  return s;
-}
-
-export function findMatchingClientSchool(inputName) {
-  if (!inputName) return null;
-  const trimmed = inputName.trim();
-  const exact = allKnownSchools.find(s => s.nama.toLowerCase() === trimmed.toLowerCase());
-  if (exact) return exact;
-  const inputKey = canonicalSchoolKey(trimmed);
-  if (!inputKey) return null;
-  return allKnownSchools.find(s => canonicalSchoolKey(s.nama) === inputKey) || null;
-}
+};
 
 window.handleSekolahSelectChange = function (select) {
   const manualWrapper = document.getElementById('register-sekolah-manual-wrapper');

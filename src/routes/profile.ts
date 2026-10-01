@@ -3,6 +3,7 @@ import { getCurrentUser, getCookie, hashPassword, verifyPassword, validatePasswo
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import { logger } from '../lib/logger';
 import { createAuditLog } from '../lib/audit';
+import { findMatchingSchool, formatStandardSchoolName } from '../lib/school-normalizer';
 
 type Bindings = { DB: D1Database };
 
@@ -48,16 +49,35 @@ profile.put('/', async (c) => {
             return Errors.validation(c, 'Nama tidak boleh kosong');
         }
 
+        let sekolahId: number | null = null;
+        let resolvedSekolahName: string | null = sekolah?.trim() || null;
+        if (resolvedSekolahName) {
+            try {
+                const schoolsResult = await c.env.DB.prepare('SELECT id, nama FROM sekolah').all();
+                const existingSchools = (schoolsResult?.results || []) as { id: number; nama: string }[];
+                const matched = findMatchingSchool(resolvedSekolahName, existingSchools);
+                if (matched) {
+                    sekolahId = matched.id;
+                    resolvedSekolahName = matched.nama;
+                } else {
+                    resolvedSekolahName = formatStandardSchoolName(resolvedSekolahName);
+                }
+            } catch (err) {
+                console.error('Profile sekolah resolve err:', err);
+            }
+        }
+
         await c.env.DB.prepare(`
       UPDATE users 
-      SET nama = ?, nip = ?, nik = ?, mata_pelajaran = ?, sekolah = ?, no_hp = ?, alamat = ?, updated_at = datetime('now')
+      SET nama = ?, nip = ?, nik = ?, mata_pelajaran = ?, sekolah = ?, sekolah_id = COALESCE(?, sekolah_id), no_hp = ?, alamat = ?, updated_at = datetime('now')
       WHERE id = ?
     `).bind(
             nama.trim(),
             nip?.trim() || null,
             nik?.trim() || null,
             mata_pelajaran?.trim() || null,
-            sekolah?.trim() || null,
+            resolvedSekolahName,
+            sekolahId,
             no_hp?.trim() || null,
             alamat?.trim() || null,
             user.id

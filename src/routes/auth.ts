@@ -20,6 +20,7 @@ import {
 } from '../lib/validation';
 import { logger } from '../lib/logger';
 import { createAuditLog } from '../lib/audit';
+import { findMatchingSchool, formatStandardSchoolName } from '../lib/school-normalizer';
 import type { User, LoginRequest, RegisterRequest } from '../types';
 
 type Bindings = { DB: D1Database };
@@ -242,13 +243,39 @@ auth.post('/register', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     // Hash password with PBKDF2
     const passwordHash = await hashPassword(password);
 
-    // Resolve sekolah_id from name
+    // Resolve sekolah_id and canonical name to prevent duplicates (e.g. "SD Negeri 2 Nangerang" vs "SDN 2 Nangerang")
     let sekolahId: number | null = null;
-    if (sekolah) {
-      const matchedSchool: any = await c.env.DB.prepare(
-        'SELECT id FROM sekolah WHERE nama = ? LIMIT 1'
-      ).bind(sekolah.trim()).first();
-      if (matchedSchool) sekolahId = matchedSchool.id;
+    let resolvedSekolahName: string | null = sekolah?.trim() || null;
+
+    if (resolvedSekolahName) {
+      try {
+        const schoolsResult = await c.env.DB.prepare('SELECT id, nama FROM sekolah').all();
+        const existingSchools = (schoolsResult?.results || []) as { id: number; nama: string }[];
+        const matched = findMatchingSchool(resolvedSekolahName, existingSchools);
+
+        if (matched) {
+          sekolahId = matched.id;
+          resolvedSekolahName = matched.nama; // Use canonical registered name
+        } else {
+          // Standardize school format: e.g. "sd negeri 5 wanayasa" -> "SDN 5 Wanayasa"
+          resolvedSekolahName = formatStandardSchoolName(resolvedSekolahName);
+          // Register new school into sekolah table to prevent future duplicate fragmentation
+          try {
+            const isSwasta = /^(sdit|smpit|smait|smk\s+swasta|swasta)/i.test(resolvedSekolahName);
+            const insResult = await c.env.DB.prepare(`
+              INSERT INTO sekolah (nama, tipe, is_sekretariat, is_sekolah_penggerak)
+              VALUES (?, ?, 0, 0)
+            `).bind(resolvedSekolahName, isSwasta ? 'swasta' : 'negeri').run();
+            if (insResult?.meta?.last_row_id) {
+              sekolahId = insResult.meta.last_row_id as number;
+            }
+          } catch (insertErr) {
+            console.warn('Auto-create sekolah note:', insertErr);
+          }
+        }
+      } catch (err) {
+        console.error('Error resolving canonical sekolah:', err);
+      }
     }
 
     // Insert user
@@ -261,7 +288,7 @@ auth.post('/register', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
       passwordHash,
       nip?.trim() || null,
       no_hp?.trim() || null,
-      sekolah?.trim() || null,
+      resolvedSekolahName,
       sekolahId
     ).run();
 

@@ -174,7 +174,7 @@ export function renderLogin() {
             </div>
 
             <div>
-              <label class="block text-[var(--color-text-secondary)] text-sm font-medium mb-1.5 ml-1">Asal Sekolah</label>
+              <label class="block text-[var(--color-text-secondary)] text-sm font-medium mb-1.5 ml-1">Asal Sekolah / Satuan Pendidikan</label>
               <div class="relative group/input">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-[var(--color-text-tertiary)] group-focus-within/input:text-[#111111] transition-colors pointer-events-none">
                   <i class="fas fa-school"></i>
@@ -182,13 +182,24 @@ export function renderLogin() {
                 <select 
                   name="sekolah" 
                   id="register-sekolah-select"
+                  onchange="window.handleSekolahSelectChange && window.handleSekolahSelectChange(this)"
                   class="input-field pl-11 bg-[#f8f9fa] border-[var(--color-border-subtle)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[#111111] focus:ring-1 focus:ring-[#111111] appearance-none"
                 >
-                  <option value="" class="text-[var(--color-text-secondary)] bg-white">-- Pilih Sekolah --</option>
+                  <option value="" class="text-[var(--color-text-secondary)] bg-white">-- Pilih Asal Sekolah / Instansi --</option>
+                  <option value="__other__" class="text-teal-700 font-bold bg-teal-50">✍️ Sekolah Lainnya (Ketik Manual)...</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-text-tertiary)]">
                   <i class="fas fa-chevron-down text-xs"></i>
                 </div>
+              </div>
+              <div id="register-sekolah-manual-wrapper" class="mt-2.5 hidden">
+                <input 
+                  type="text" 
+                  id="register-sekolah-manual"
+                  name="sekolah_custom"
+                  placeholder="Ketik nama sekolah Anda (contoh: SDN 1 Menteng / SMPN 2 Bandung)"
+                  class="input-field bg-[#f8f9fa] border-[var(--color-border-subtle)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:border-[#111111] focus:ring-1 focus:ring-[#111111]"
+                />
               </div>
             </div>
 
@@ -290,18 +301,37 @@ window.switchAuthTab = function (tab) {
   }
 };
 
+window.handleSekolahSelectChange = function (select) {
+  const manualWrapper = document.getElementById('register-sekolah-manual-wrapper');
+  const manualInput = document.getElementById('register-sekolah-manual');
+  if (manualWrapper) {
+    if (select.value === '__other__') {
+      manualWrapper.classList.remove('hidden');
+      if (manualInput) manualInput.focus();
+    } else {
+      manualWrapper.classList.add('hidden');
+    }
+  }
+};
+
 async function loadSekolahForRegister(select) {
   try {
     const res = await api('/sekolah');
     const sekolahList = res.data || [];
 
-    // Add options
+    // Reset options: default + manual option
+    select.innerHTML = `
+      <option value="" class="text-[var(--color-text-secondary)] bg-white">-- Pilih Asal Sekolah / Instansi --</option>
+      <option value="__other__" class="text-teal-700 font-bold bg-teal-50">✍️ Sekolah Lainnya (Ketik Manual)...</option>
+    `;
+
+    // Add schools before the manual option
     sekolahList.forEach(s => {
       const option = document.createElement('option');
       option.value = s.nama;
       option.textContent = s.nama;
-      option.className = "text-slate-900 bg-white"; // Ensure text is visible on white background options
-      select.appendChild(option);
+      option.className = "text-slate-900 bg-white";
+      select.insertBefore(option, select.lastElementChild);
     });
   } catch (e) {
     console.error('Failed to load sekolah:', e);
@@ -395,8 +425,15 @@ window.handleRegister = async function (e) {
   setButtonLoading(btn, true);
 
   try {
-    // Remove confirm_password before sending
-    const { confirm_password, ...registerData } = data;
+    // Resolve custom sekolah if selected
+    let finalSekolah = (data.sekolah || '').trim();
+    if (finalSekolah === '__other__' || !finalSekolah) {
+      finalSekolah = (data.sekolah_custom || '').trim();
+    }
+
+    // Remove confirm_password and sekolah_custom before sending
+    const { confirm_password, sekolah_custom, ...registerData } = data;
+    registerData.sekolah = finalSekolah;
 
     const response = await api('/auth/register', {
       method: 'POST',

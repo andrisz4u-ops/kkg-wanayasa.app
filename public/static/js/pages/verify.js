@@ -323,21 +323,29 @@ function renderSertifikatVerification(data) {
   const instansi = data.instansi || 'Pemerintah Kabupaten Purwakarta - Dinas Pendidikan';
   const org = data.organisasi || 'Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa';
   const tt = cert.tanda_tangan || {};
+  const currentUuid = cert.uuid || (window.location.pathname.split('/').pop() || '');
+  window.__currentVerifyCert = { ...cert, uuid: currentUuid, tanda_tangan: tt };
 
   return `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
       <div class="max-w-3xl mx-auto">
 
         <!-- HEADER NAVIGATION -->
-        <div class="mb-4 flex items-center justify-between no-print">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
           <a href="/" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-emerald-700 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
             <i class="fas fa-arrow-left"></i>
             <span>Kembali ke Portal KKG</span>
           </a>
-          <button onclick="window.print()" class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer">
-            <i class="fas fa-print"></i>
-            <span>Cetak Bukti Verifikasi PMM</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="window.printOfficialCertificate(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer">
+              <i class="fas fa-certificate"></i>
+              <span>Cetak / Simpan E-Sertifikat (PDF)</span>
+            </button>
+            <button onclick="window.print()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
+              <i class="fas fa-print"></i>
+              <span>Cetak Lembar Audit</span>
+            </button>
+          </div>
         </div>
 
         <!-- MAIN CERTIFICATE VERIFICATION CARD -->
@@ -512,5 +520,426 @@ function renderSertifikatVerification(data) {
       </div>
     </div>
   `;
+}
+
+if (typeof window.printOfficialCertificate !== 'function') {
+  window.printOfficialCertificate = function (cert) {
+    if (!cert) return;
+
+    const tt = cert.tanda_tangan || {
+      ketua_kkg: 'MAMAN RUKMAN, S.Pd',
+      nip_ketua: '197009212005011007',
+      jabatan_ketua: 'Ketua KKG Gugus 3',
+      pengawas_pembina: 'DIDIN SAMSUDIN, S.Pd.,M.Pd',
+      nip_pengawas: '198208182009021004',
+      jabatan_pengawas: 'Pengawas Pembina Korwil V'
+    };
+
+    const origin = window.location.origin;
+    const verifyFullUrl = `${origin}/verify/sertifikat/${cert.uuid}`;
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(verifyFullUrl)}`;
+
+    const formatDateId = (dateStr) => {
+      if (!dateStr) return '-';
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      } catch (_) {
+        return dateStr;
+      }
+    };
+
+    const formattedDate = formatDateId(cert.tanggal_kegiatan);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak sertifikat.');
+      return;
+    }
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Sertifikat_${(cert.nama_peserta || 'Peserta').replace(/[^a-zA-Z0-9]/g, '_')}</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #1e293b;
+      -webkit-font-smoothing: antialiased;
+    }
+    .cert-container {
+      width: 100%;
+      height: 100%;
+      min-height: 185mm;
+      padding: 22px 34px;
+      border: 5px double #b45309;
+      border-radius: 14px;
+      background: radial-gradient(circle at center, #ffffff 0%, #fffdf8 65%, #fef3c7 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .cert-corner-tl, .cert-corner-tr, .cert-corner-bl, .cert-corner-br {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: #d97706;
+      border-style: solid;
+      pointer-events: none;
+    }
+    .cert-corner-tl { top: 6px; left: 6px; border-width: 3px 0 0 3px; }
+    .cert-corner-tr { top: 6px; right: 6px; border-width: 3px 3px 0 0; }
+    .cert-corner-bl { bottom: 6px; left: 6px; border-width: 0 0 3px 3px; }
+    .cert-corner-br { bottom: 6px; right: 6px; border-width: 0 3px 3px 0; }
+
+    .kop-header {
+      text-align: center;
+      border-bottom: 2px solid #b45309;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .kop-gov {
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    .kop-org {
+      font-size: 15pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+      margin: 2px 0 0 0;
+    }
+    .kop-sub {
+      font-size: 8.5pt;
+      color: #64748b;
+      margin: 2px 0 0 0;
+    }
+
+    .cert-title-section {
+      text-align: center;
+      margin: 4px 0;
+    }
+    .cert-main-title {
+      font-size: 26pt;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: #92400e;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .cert-no {
+      font-family: monospace;
+      font-size: 10pt;
+      font-weight: bold;
+      color: #78350f;
+      margin: 2px 0 0 0;
+    }
+
+    .recipient-section {
+      text-align: center;
+      margin: 6px 0;
+    }
+    .recipient-label {
+      font-size: 10pt;
+      color: #64748b;
+      margin: 0;
+    }
+    .recipient-name {
+      font-size: 20pt;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-block;
+      border-bottom: 2px solid #d97706;
+      padding: 0 16px 2px 16px;
+      margin: 3px 0 0 0;
+    }
+    .recipient-nip {
+      font-family: monospace;
+      font-size: 9.5pt;
+      color: #475569;
+      margin: 3px 0 0 0;
+    }
+    .recipient-unit {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #065f46;
+      margin: 2px 0 0 0;
+    }
+
+    .narrative-section {
+      text-align: center;
+      max-width: 86%;
+      margin: 6px auto;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #334155;
+    }
+    .narrative-activity {
+      font-size: 12pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 3px 0;
+    }
+
+    .signatures-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-top: 8px;
+      border-top: 1px solid #cbd5e1;
+      margin-top: 8px;
+    }
+    .sig-col {
+      width: 32%;
+      font-size: 9pt;
+    }
+    .sig-left { text-align: left; }
+    .sig-center {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sig-right { text-align: right; }
+    .sig-role {
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+    .digital-seal {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-style: italic;
+      color: #047857;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin: 5px 0;
+    }
+    .sig-person {
+      font-weight: bold;
+      text-decoration: underline;
+      color: #0f172a;
+      font-size: 9.5pt;
+    }
+    .sig-nip-num {
+      font-family: monospace;
+      font-size: 8.5pt;
+      color: #475569;
+    }
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .qr-image {
+      width: 60px;
+      height: 60px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 2px;
+      background: #fff;
+    }
+    .qr-label {
+      font-size: 7pt;
+      font-weight: bold;
+      color: #64748b;
+      margin-top: 2px;
+      text-transform: uppercase;
+    }
+    .qr-uuid {
+      font-family: monospace;
+      font-size: 7.5pt;
+      color: #334155;
+      font-weight: bold;
+    }
+    .qr-valid {
+      font-size: 7pt;
+      color: #059669;
+      font-weight: bold;
+    }
+
+    /* Page 2: Struktur Materi */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+    .table-curriculum {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9.5pt;
+    }
+    .table-curriculum th, .table-curriculum td {
+      border: 1px solid #94a3b8;
+      padding: 7px 10px;
+    }
+    .table-curriculum th {
+      background: #f1f5f9;
+      font-weight: bold;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <!-- LEMBAR 1: SERTIFIKAT UTAMA -->
+  <div class="cert-container">
+    <div class="cert-corner-tl"></div>
+    <div class="cert-corner-tr"></div>
+    <div class="cert-corner-bl"></div>
+    <div class="cert-corner-br"></div>
+
+    <div class="kop-header">
+      <p class="kop-gov">Pemerintah Kabupaten Purwakarta • Dinas Pendidikan</p>
+      <h2 class="kop-org">KELOMPOK KERJA GURU (KKG) GUGUS 3 WANAYASA</h2>
+      <p class="kop-sub">Sekretariat: SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta</p>
+    </div>
+
+    <div class="cert-title-section">
+      <h1 class="cert-main-title">SERTIFIKAT</h1>
+      <p class="cert-no">Nomor: ${escapeHtml(cert.nomor_sertifikat)}</p>
+    </div>
+
+    <div class="recipient-section">
+      <p class="recipient-label">Diberikan kepada:</p>
+      <h2 class="recipient-name">${escapeHtml(cert.nama_peserta)}</h2>
+      <p class="recipient-nip">NIP. ${escapeHtml(cert.nip_peserta || '-')}</p>
+      <p class="recipient-unit">${escapeHtml(cert.unit_kerja || 'SDN Gugus 3 Wanayasa')}</p>
+    </div>
+
+    <div class="narrative-section">
+      <p style="margin:0;">Atas partisipasi aktifnya sebagai <strong>${escapeHtml(cert.peran || 'Peserta Aktif')}</strong> dalam Kegiatan Pengembangan Keprofesian Berkelanjutan:</p>
+      <p class="narrative-activity">"${escapeHtml(cert.nama_kegiatan)}"</p>
+      <p style="margin:0;">Yang diselenggarakan oleh KKG Gugus 3 Wanayasa pada tanggal <strong>${formattedDate}</strong>, dengan alokasi waktu setara <strong>${cert.alokasi_jp || 4} Jam Pelajaran (JP)</strong>.</p>
+    </div>
+
+    <div class="signatures-section">
+      <!-- Pengawas Pembina Korwil V -->
+      <div class="sig-col sig-left">
+        <div>Mengetahui,</div>
+        <div class="sig-role">${escapeHtml(tt.jabatan_pengawas || 'Pengawas Pembina Korwil V')}</div>
+        <div class="digital-seal">✓ Ditandatangani Secara Digital</div>
+        <div class="sig-person">${escapeHtml(tt.pengawas_pembina || 'DIDIN SAMSUDIN, S.Pd.,M.Pd')}</div>
+        <div class="sig-nip-num">NIP. ${escapeHtml(tt.nip_pengawas || '198208182009021004')}</div>
+      </div>
+
+      <!-- QR PMM Verification Center -->
+      <div class="sig-col sig-center">
+        <div class="qr-container">
+          <img src="${qrImgUrl}" class="qr-image" alt="QR Code PMM" onerror="this.style.display='none'" />
+          <div class="qr-label">Kode Verifikasi PMM:</div>
+          <div class="qr-uuid">${cert.uuid.substring(0, 13)}...</div>
+          <div class="qr-valid">✓ Dokumen Terdaftar & Sah</div>
+        </div>
+      </div>
+
+      <!-- Ketua KKG Gugus 3 -->
+      <div class="sig-col sig-right">
+        <div>Wanayasa, ${formattedDate}</div>
+        <div class="sig-role">${escapeHtml(tt.jabatan_ketua || 'Ketua KKG Gugus 3')}</div>
+        <div class="digital-seal">✓ Ditandatangani Secara Digital</div>
+        <div class="sig-person">${escapeHtml(tt.ketua_kkg || 'MAMAN RUKMAN, S.Pd')}</div>
+        <div class="sig-nip-num">NIP. ${escapeHtml(tt.nip_ketua || '197009212005011007')}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEMBAR 2: STRUKTUR PROGRAM & ALOKASI WAKTU (STANDAR PMM) -->
+  <div class="page-break"></div>
+  <div class="cert-container" style="min-height: 185mm;">
+    <div class="kop-header">
+      <p class="kop-gov">Lampiran E-Sertifikat Pelatihan KKG</p>
+      <h2 class="kop-org">STRUKTUR PROGRAM & MATERI KEGIATAN (4 JP)</h2>
+      <p class="kop-sub">Nomor Sertifikat: ${escapeHtml(cert.nomor_sertifikat)}</p>
+    </div>
+
+    <div style="margin: 8px 0;">
+      <table style="width: 100%; font-size: 9.5pt; line-height: 1.5; margin-bottom: 10px;">
+        <tr><td style="width: 25%; font-weight: bold;">Nama Peserta</td><td style="width: 2%;">:</td><td>${escapeHtml(cert.nama_peserta)}</td></tr>
+        <tr><td style="font-weight: bold;">NIP</td><td>:</td><td>${escapeHtml(cert.nip_peserta || '-')}</td></tr>
+        <tr><td style="font-weight: bold;">Unit Kerja</td><td>:</td><td>${escapeHtml(cert.unit_kerja || 'SDN Gugus 3 Wanayasa')}</td></tr>
+        <tr><td style="font-weight: bold;">Tema Pelatihan</td><td>:</td><td>${escapeHtml(cert.nama_kegiatan)}</td></tr>
+      </table>
+
+      <table class="table-curriculum">
+        <thead>
+          <tr>
+            <th style="width: 8%; text-align: center;">No</th>
+            <th style="width: 72%;">Materi / Pokok Bahasan</th>
+            <th style="width: 20%; text-align: center;">Alokasi Waktu</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align: center;">1.</td>
+            <td><strong>Penguatan Regulasi & Kebijakan Pendidikan Dasar:</strong><br><span style="font-size: 8.5pt; color: #475569;">Penyelarasan Standar Kurikulum Nasional & Karakter Budaya Purwakarta</span></td>
+            <td style="text-align: center; font-weight: bold;">1 JP</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">2.</td>
+            <td><strong>Materi Inti & Pendalaman Praktis:</strong><br><span style="font-size: 8.5pt; color: #475569;">${escapeHtml(cert.materi_pokok || cert.nama_kegiatan)}</span></td>
+            <td style="text-align: center; font-weight: bold;">2 JP</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">3.</td>
+            <td><strong>Refleksi Kolaboratif & Rencana Tindak Lanjut (RTL):</strong><br><span style="font-size: 8.5pt; color: #475569;">Implementasi di Kelas/Sekolah & Berbagi Praktik Baik di Komunitas Belajar</span></td>
+            <td style="text-align: center; font-weight: bold;">1 JP</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background: #f8fafc; font-weight: bold;">
+            <td colspan="2" style="text-align: right; padding-right: 14px;">TOTAL ALOKASI WAKTU</td>
+            <td style="text-align: center; color: #065f46;">4 JP</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="signatures-section" style="border: none;">
+      <div class="sig-col sig-left"></div>
+      <div class="sig-col sig-center"></div>
+      <div class="sig-col sig-right">
+        <div>Wanayasa, ${formattedDate}</div>
+        <div class="sig-role">${escapeHtml(tt.jabatan_ketua || 'Ketua KKG Gugus 3')}</div>
+        <div class="digital-seal">✓ Disahkan Secara Digital</div>
+        <div class="sig-person">${escapeHtml(tt.ketua_kkg || 'MAMAN RUKMAN, S.Pd')}</div>
+        <div class="sig-nip-num">NIP. ${escapeHtml(tt.nip_ketua || '197009212005011007')}</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    setTimeout(function() {
+      window.focus();
+      window.print();
+    }, 450);
+  </script>
+</body>
+</html>
+    `);
+    printWindow.document.close();
+  };
 }
 

@@ -556,6 +556,35 @@
         visibility: hidden !important;
     }
 
+    /* Exception: Certificate Preview Modal Print Override */
+    #certificate-preview-modal,
+    #certificate-preview-modal * {
+        visibility: visible !important;
+    }
+    #certificate-preview-modal {
+        display: block !important;
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+    #certificate-preview-modal > div {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+    #print-certificate-area {
+        display: block !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     /* 3. Paper Configuration */
     @page {
         margin: 1cm 1.25cm 1cm 1.25cm;

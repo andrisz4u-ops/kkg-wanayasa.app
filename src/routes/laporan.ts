@@ -85,50 +85,75 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
         const aiResponse = await ai.generateText(prompt, preferredSlug);
         const generatedText = aiResponse.content;
 
-        // Robust parsing logic
-        const extractRegex = (startPattern: RegExp, endPattern: RegExp | null = null): string => {
-            try {
-                const matchStart = generatedText.match(startPattern);
-                if (!matchStart) return '';
+        // Dual-Engine Parsing: JSON Structured first, with Regex Heuristic Fallback
+        let parsed: any = null;
 
-                const startIndex = matchStart.index! + matchStart[0].length;
-                let endIndex = generatedText.length;
-
-                if (endPattern) {
-                    const restOfText = generatedText.slice(startIndex);
-                    const matchEnd = restOfText.match(endPattern);
-                    if (matchEnd) {
-                        endIndex = startIndex + matchEnd.index!;
-                    } else {
-                        const nextChapter = restOfText.match(/\nBAB\s+[IVX]+/i);
-                        if (nextChapter) endIndex = startIndex + nextChapter.index!;
-                    }
-                }
-
-                let content = generatedText.substring(startIndex, endIndex).trim();
-                content = content.replace(/^[:\-\s]+/, '').trim();
-                return content;
-            } catch (e) {
-                return '';
+        // 1. Try JSON extraction
+        try {
+            const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsed = JSON.parse(jsonMatch[0]);
             }
-        };
+        } catch (_) {
+            // Attempt JSON repair if truncated
+            try {
+                const { repairTruncatedJSON } = await import('../services/ai');
+                const jsonMatch = generatedText.match(/\{[\s\S]*/);
+                if (jsonMatch) {
+                    parsed = JSON.parse(repairTruncatedJSON(jsonMatch[0]));
+                }
+            } catch (_) {}
+        }
 
-        const p = (str: string) => new RegExp(`(?:^|\\n)\\s*(?:\\*\\*)?\\s*${str}\\s*(?:\\*\\*)?\\s*(?:$|\\n|:)`, 'i');
-        const bab = (num: string, title: string) => new RegExp(`(?:^|\\n)\\s*(?:\\*\\*)?\\s*BAB\\s+${num}[:\\s]+${title}\\s*(?:\\*\\*)?\\s*(?:$|\\n)`, 'i');
+        // 2. Validate JSON has meaningful content, otherwise use regex fallback
+        const hasValidFields = parsed && typeof parsed === 'object' &&
+            (parsed.pendahuluan_latar_belakang || parsed.hasil_uraian || parsed.pelaksanaan_materi);
 
-        const parsed = {
-            pendahuluan_latar_belakang: extractRegex(p('A\\.\\s*Latar\\s*Belakang'), p('B\\.\\s*Tujuan')),
-            pendahuluan_tujuan: extractRegex(p('B\\.\\s*Tujuan'), p('C\\.\\s*Manfaat')),
-            pendahuluan_manfaat: extractRegex(p('C\\.\\s*Manfaat'), bab('II', 'PELAKSANAAN')),
-            pelaksanaan_waktu_tempat: extractRegex(p('A\\.\\s*Waktu\\s*dan\\s*Tempat'), p('B\\.\\s*Materi')),
-            pelaksanaan_materi: extractRegex(p('B\\.\\s*Materi\\s*Kegiatan'), p('C\\.\\s*Narasumber')),
-            pelaksanaan_peserta: extractRegex(p('C\\.\\s*Narasumber\\s*dan\\s*Peserta'), bab('III', 'HASIL')),
-            hasil_uraian: extractRegex(p('A\\.\\s*Uraian\\s*Jalannya\\s*Kegiatan'), p('B\\.\\s*Tindak\\s*Lanjut')),
-            hasil_tindak_lanjut: extractRegex(p('B\\.\\s*Tindak\\s*Lanjut'), p('C\\.\\s*Dampak')),
-            hasil_dampak: extractRegex(p('C\\.\\s*Dampak'), bab('IV', 'PENUTUP')),
-            penutup_simpulan: extractRegex(p('A\\.\\s*Simpulan'), p('B\\.\\s*Saran')),
-            penutup_saran: extractRegex(p('B\\.\\s*Saran'), null)
-        };
+        if (!hasValidFields) {
+            const extractRegex = (startPattern: RegExp, endPattern: RegExp | null = null): string => {
+                try {
+                    const matchStart = generatedText.match(startPattern);
+                    if (!matchStart) return '';
+
+                    const startIndex = matchStart.index! + matchStart[0].length;
+                    let endIndex = generatedText.length;
+
+                    if (endPattern) {
+                        const restOfText = generatedText.slice(startIndex);
+                        const matchEnd = restOfText.match(endPattern);
+                        if (matchEnd) {
+                            endIndex = startIndex + matchEnd.index!;
+                        } else {
+                            const nextChapter = restOfText.match(/\nBAB\s+[IVX]+/i);
+                            if (nextChapter) endIndex = startIndex + nextChapter.index!;
+                        }
+                    }
+
+                    let content = generatedText.substring(startIndex, endIndex).trim();
+                    content = content.replace(/^[:\-\s]+/, '').trim();
+                    return content;
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            const p = (str: string) => new RegExp(`(?:^|\\n)\\s*(?:\\*\\*)?\\s*${str}\\s*(?:\\*\\*)?\\s*(?:$|\\n|:)`, 'i');
+            const bab = (num: string, title: string) => new RegExp(`(?:^|\\n)\\s*(?:\\*\\*)?\\s*BAB\\s+${num}[:\\s]+${title}\\s*(?:\\*\\*)?\\s*(?:$|\\n)`, 'i');
+
+            parsed = {
+                pendahuluan_latar_belakang: extractRegex(p('A\\.\\s*Latar\\s*Belakang'), p('B\\.\\s*Tujuan')),
+                pendahuluan_tujuan: extractRegex(p('B\\.\\s*Tujuan'), p('C\\.\\s*Manfaat')),
+                pendahuluan_manfaat: extractRegex(p('C\\.\\s*Manfaat'), bab('II', 'PELAKSANAAN')),
+                pelaksanaan_waktu_tempat: extractRegex(p('A\\.\\s*Waktu\\s*dan\\s*Tempat'), p('B\\.\\s*Materi')),
+                pelaksanaan_materi: extractRegex(p('B\\.\\s*Materi\\s*Kegiatan'), p('C\\.\\s*Narasumber')),
+                pelaksanaan_peserta: extractRegex(p('C\\.\\s*Narasumber\\s*dan\\s*Peserta'), bab('III', 'HASIL')),
+                hasil_uraian: extractRegex(p('A\\.\\s*Uraian\\s*Jalannya\\s*Kegiatan'), p('B\\.\\s*Tindak\\s*Lanjut')),
+                hasil_tindak_lanjut: extractRegex(p('B\\.\\s*Tindak\\s*Lanjut'), p('C\\.\\s*Dampak')),
+                hasil_dampak: extractRegex(p('C\\.\\s*Dampak'), bab('IV', 'PENUTUP')),
+                penutup_simpulan: extractRegex(p('A\\.\\s*Simpulan'), p('B\\.\\s*Saran')),
+                penutup_saran: extractRegex(p('B\\.\\s*Saran'), null)
+            };
+        }
 
         return successResponse(c, parsed);
 

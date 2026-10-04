@@ -80,6 +80,109 @@ surat.get('/settings', async (c) => {
 });
 
 // ============================================
+// Public Verification Endpoint (No Auth Required)
+// ============================================
+surat.get('/verify/:id', async (c) => {
+  try {
+    const rawId = c.req.param('id');
+    if (!rawId) {
+      return Errors.badRequest(c, 'Parameter ID surat wajib disertakan');
+    }
+
+    let result: any;
+    if (/^\d+$/.test(rawId)) {
+      result = await c.env.DB.prepare(`
+        SELECT id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+               tempat_kegiatan, agenda, peserta, penanggung_jawab, status, tipe_surat, metadata, created_at
+        FROM surat_undangan 
+        WHERE id = ?
+      `).bind(Number(rawId)).first();
+    } else {
+      result = await c.env.DB.prepare(`
+        SELECT id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
+               tempat_kegiatan, agenda, peserta, penanggung_jawab, status, tipe_surat, metadata, created_at
+        FROM surat_undangan 
+        WHERE nomor_surat = ?
+      `).bind(rawId).first();
+    }
+
+    if (!result) {
+      return Errors.notFound(c, 'Dokumen surat tidak ditemukan dalam pangkalan data resmi');
+    }
+
+    // Get KKG settings for official verification header
+    const settingsRows = await c.env.DB.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten', 'nama_ketua', 'nip_ketua', 'logo_url')"
+    ).all();
+    const settingsMap: Record<string, string> = {};
+    settingsRows.results?.forEach((r: any) => { settingsMap[r.key] = r.value; });
+
+    // Parse metadata & peserta safely
+    let meta: any = {};
+    if (result.metadata) {
+      try { meta = JSON.parse(result.metadata); } catch (_) {}
+    } else if (result.isi_surat && typeof result.isi_surat === 'string' && result.isi_surat.includes('<!--SPPD_METADATA_JSON:')) {
+      const match = result.isi_surat.match(/<!--SPPD_METADATA_JSON:([\s\S]*?)-->/);
+      if (match) {
+        try { meta = JSON.parse(match[1]); } catch (_) {}
+      }
+    }
+
+    let pesertaList: any[] = [];
+    if (result.peserta) {
+      try {
+        pesertaList = typeof result.peserta === 'string' ? JSON.parse(result.peserta) : result.peserta;
+      } catch (_) {
+        pesertaList = [result.peserta];
+      }
+    }
+
+    const host = c.req.header('host') || 'kkg-wanayasa.app';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const verifyUrl = `${protocol}://${host}/verify/surat/${result.id}`;
+
+    // Generate QR Code data URL for instant verification display
+    let qrDataUrl = '';
+    try {
+      const { generateQRCodePNG } = await import('../lib/qrcode');
+      qrDataUrl = await generateQRCodePNG(verifyUrl, 256);
+    } catch (_) {}
+
+    return successResponse(c, {
+      id: result.id,
+      nomor_surat: result.nomor_surat,
+      jenis_kegiatan: result.jenis_kegiatan,
+      tipe_surat: result.tipe_surat || (result.jenis_kegiatan?.includes('SPPD') ? 'sppd' : 'undangan'),
+      tanggal_kegiatan: result.tanggal_kegiatan,
+      waktu_kegiatan: result.waktu_kegiatan,
+      tempat_kegiatan: result.tempat_kegiatan,
+      agenda: result.agenda,
+      penanggung_jawab: result.penanggung_jawab || settingsMap.nama_ketua || 'Ketua KKG',
+      status_dokumen: 'TERVERIFIKASI_RESMI',
+      is_valid: true,
+      peserta: pesertaList,
+      metadata: meta,
+      created_at: result.created_at,
+      lembaga_penerbit: {
+        nama_kkg: settingsMap.nama_kkg || 'Kelompok Kerja Guru (KKG) Gugus 3',
+        kecamatan: settingsMap.kecamatan || 'Wanayasa',
+        kabupaten: settingsMap.kabupaten || 'Purwakarta',
+        ketua: settingsMap.nama_ketua || 'Ketua KKG',
+        nip_ketua: settingsMap.nip_ketua || '-'
+      },
+      verifikasi: {
+        url: verifyUrl,
+        qrcode: qrDataUrl,
+        verified_at: new Date().toISOString()
+      }
+    }, 'Dokumen resmi terverifikasi');
+  } catch (e: any) {
+    logger.error('Verify surat error', e);
+    return Errors.internal(c, 'Gagal memverifikasi dokumen');
+  }
+});
+
+// ============================================
 // Generate Surat Undangan (AI)
 // ============================================
 surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
@@ -374,56 +477,8 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       ).run();
       suratId = result.meta.last_row_id;
     } catch (insertErr: any) {
-      logger.warn('Primary SPPD insert failed, trying force alter and retry', { error: insertErr.message });
-      try {
-        await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN tipe_surat TEXT DEFAULT 'undangan'").run();
-      } catch (_) {}
-      try {
-        await c.env.DB.prepare("ALTER TABLE surat_undangan ADD COLUMN metadata TEXT").run();
-      } catch (_) {}
-
-      try {
-        const retryResult = await c.env.DB.prepare(`
-          INSERT INTO surat_undangan 
-          (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
-           tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final', 'sppd', ?)
-        `).bind(
-          user.id,
-          nomorSPT,
-          `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
-          data.tanggal_kegiatan,
-          data.waktu_kegiatan || '08.00 s.d Selesai',
-          data.tempat_kegiatan,
-          data.agenda,
-          JSON.stringify(data.daftar_guru),
-          data.kepala_sekolah_asal,
-          isiLhp,
-          JSON.stringify(metadataPayload)
-        ).run();
-        suratId = retryResult.meta.last_row_id;
-      } catch (retryErr: any) {
-        logger.error('Retry SPPD insert failed, falling back to legacy schema', retryErr);
-        const legacyPayload = `<!--SPPD_METADATA_JSON:${JSON.stringify(metadataPayload)}-->\n${isiLhp}`;
-        const fallbackResult = await c.env.DB.prepare(`
-          INSERT INTO surat_undangan 
-          (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
-           tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'final')
-        `).bind(
-          user.id,
-          nomorSPT,
-          `Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
-          data.tanggal_kegiatan,
-          data.waktu_kegiatan || '08.00 s.d Selesai',
-          data.tempat_kegiatan,
-          data.agenda,
-          JSON.stringify(data.daftar_guru),
-          data.kepala_sekolah_asal,
-          legacyPayload
-        ).run();
-        suratId = fallbackResult.meta.last_row_id;
-      }
+      logger.error('SPPD insert failed', insertErr, { userId: user.id });
+      return Errors.internal(c, 'Gagal menyimpan dokumen SPPD ke pangkalan data');
     }
 
     logger.info('Surat Tugas & SPPD created', {

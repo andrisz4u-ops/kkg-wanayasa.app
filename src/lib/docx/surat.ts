@@ -37,6 +37,16 @@ export async function generateSuratDocx(data: SuratData, settings: KKGSettings):
     // Content parsing moved inside sections to handle Lampiran splitting
     const header = await getHeaderWithLogo(settings);
 
+    let qrBuffer: Uint8Array | null = null;
+    try {
+        const { generateQRCodePNG } = await import('../qrcode');
+        const verifyTarget = `https://kkg-wanayasa.app/verify/surat/${encodeURIComponent(data.nomor_surat || '')}`;
+        const qrDataUri = await generateQRCodePNG(verifyTarget, 200);
+        if (qrDataUri) {
+            qrBuffer = base64toBuffer(qrDataUri.replace(/^data:image\/png;base64,/, ''));
+        }
+    } catch (_) {}
+
     const doc = new Document({
         creator: `Portal Digital ${settings.nama_kkg || 'KKG'}`,
         title: `Surat Undangan - ${data.jenis_kegiatan}`,
@@ -76,8 +86,8 @@ export async function generateSuratDocx(data: SuratData, settings: KKGSettings):
                     // Body Content (Part 1)
                     ...parseContentToParagraphs(data.isi_surat.split('[LAMPIRAN_STRUKTUR]')[0], [], settings),
 
-                    // Signature Block (Immediately after body)
-                    ...createSignatureBlock(data, settings),
+                    // Signature Block with Digital Verification QR
+                    ...createSignatureBlock(data, settings, qrBuffer),
 
                     // Lampiran (if marker exists)
                     ...(data.isi_surat.includes('[LAMPIRAN_STRUKTUR]') ? createLampiranStruktur(settings) : []),

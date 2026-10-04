@@ -374,10 +374,11 @@ const pages = {
   privacy: async () => (await loadPageModule('legal')).renderPrivacyPolicy(),
   terms: async () => (await loadPageModule('legal')).renderTermsOfService(),
   'terms-of-service': async () => (await loadPageModule('legal')).renderTermsOfService(),
+  verify: async () => (await loadPageModule('verify')).renderVerify(state.pageParams),
 };
 
 // Pages that have their own full layout (no main wrapper)
-const customLayoutPages = ['admin', 'surat', 'proker', 'laporan', 'privacy-policy', 'privacy', 'terms', 'terms-of-service'];
+const customLayoutPages = ['admin', 'surat', 'proker', 'laporan', 'privacy-policy', 'privacy', 'terms', 'terms-of-service', 'verify'];
 
 // Protected pages (require authentication)
 const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications'];
@@ -1701,11 +1702,16 @@ async function init() {
   });
 
   // Parse initial URL
-  const path = window.location.pathname.slice(1);
+  const rawPath = window.location.pathname.slice(1);
   const validPages = Object.keys(pages);
 
-  if (path && validPages.includes(path)) {
-    state.currentPage = path;
+  if (rawPath.startsWith('verify')) {
+    state.currentPage = 'verify';
+    const parts = rawPath.split('/').filter(Boolean);
+    const id = parts[parts.length - 1] !== 'verify' && parts[parts.length - 1] !== 'surat' ? parts[parts.length - 1] : null;
+    state.pageParams = { id };
+  } else if (rawPath && validPages.includes(rawPath)) {
+    state.currentPage = rawPath;
   } else {
     state.currentPage = 'home';
   }

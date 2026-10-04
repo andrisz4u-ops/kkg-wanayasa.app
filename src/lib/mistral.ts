@@ -764,8 +764,19 @@ B. Saran
    Rekomendasi konstruktif untuk panitia atau kegiatan berikutnya (misal: manajemen waktu, sarana prasarana, atau topik materi lanjutan).
 
 *** ATURAN FORMAT TEKNIS (PENTING) ***
-1. JANGAN gunakan format Markdown (**bold**, *italic*, # heading) sama sekali. Gunakan TEKS BIASA.
-2. Gunakan JUDUL BAB dan JUDUL SUB-BAB PERSIS seperti contoh di atas (Huruf Kapital pada awal kata untuk Sub-bab).
-3. Langsung mulai dari "BAB I: PENDAHULUAN". Tidak perlu ada kata pengantar dari AI.
-4. Pastikan setiap poin pembahasan terisi dengan paragraf yang utuh dan bermakna.`;
+WAJIB memberikan respon HANYA dalam format JSON murni (valid JSON) tanpa teks pembuka/penutup, dengan struktur key sebagai berikut:
+{
+  "pendahuluan_latar_belakang": "Uraian latar belakang mendalam dan relevan...",
+  "pendahuluan_tujuan": "1. ...\\n2. ...\\n3. ...",
+  "pendahuluan_manfaat": "Manfaat bagi Guru, Sekolah, dan Murid...",
+  "pelaksanaan_waktu_tempat": "Kegiatan dilaksanakan pada ${input.periode}, bertempat di ${input.tempat || '[Lokasi standar/Sekretariat KKG]'} dimulai pukul 08.00 WIB s.d. selesai.",
+  "pelaksanaan_materi": "Uraian materi kegiatan yang dibahas...",
+  "pelaksanaan_peserta": "Narasumber: ${input.narasumber || 'Fasilitator/Pengawas Pembina'}. Peserta: Seluruh guru anggota ${namaOrg}.",
+  "hasil_uraian": "Deskripsi alur jalannya kegiatan dari pembukaan hingga penutupan...",
+  "hasil_tindak_lanjut": "Rencana tindak lanjut nyata pasca-kegiatan...",
+  "hasil_dampak": "Analisis dampak positif terhadap kualitas pembelajaran...",
+  "penutup_simpulan": "Ringkasan padat ketercapaian tujuan kegiatan...",
+  "penutup_saran": "Rekomendasi konstruktif untuk kegiatan selanjutnya..."
+}
+Pastikan setiap nilai berupa string paragraf yang padat, bermakna, dan profesional (EYD V).`;
 }

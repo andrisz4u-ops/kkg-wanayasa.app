@@ -264,6 +264,46 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
         ? kopSuratNodes
         : [createKopSekolahTable(data.sekolah_asal_nama, data.alamat_sekolah_asal, settings)];
 
+    // Prepare QR Code Verifikasi Dokumen Resmi
+    let qrBuffer: Uint8Array | null = null;
+    try {
+        const { generateQRCodePNG } = await import('../qrcode');
+        const verifyTarget = `https://kkg-wanayasa.app/verify/surat/${encodeURIComponent(nomorSPT)}`;
+        const qrDataUri = await generateQRCodePNG(verifyTarget, 200);
+        if (qrDataUri) {
+            qrBuffer = base64toBuffer(qrDataUri.replace(/^data:image\/png;base64,/, ''));
+        }
+    } catch (e) {
+        console.warn('[SPPD DOCX] QR generation skipped:', e);
+    }
+
+    const createQrVerificationBlock = () => {
+        if (!qrBuffer) return [new Paragraph({})];
+        return [
+            new Paragraph({
+                spacing: { after: 30 },
+                children: [
+                    new ImageRun({
+                        data: qrBuffer,
+                        transformation: { width: 64, height: 64 },
+                        type: 'png'
+                    })
+                ]
+            }),
+            new Paragraph({
+                spacing: { after: 20 },
+                children: [
+                    new TextRun({ text: 'Dokumen Digital Sah Terdaftar', bold: true, size: 16, font: FONT_FAMILY })
+                ]
+            }),
+            new Paragraph({
+                children: [
+                    new TextRun({ text: 'Pindai barcode untuk memeriksa keabsahan surat tugas', italics: true, size: 14, font: FONT_FAMILY })
+                ]
+            })
+        ];
+    };
+
     // ==========================================
     // SECTION 1: SURAT PERINTAH TUGAS (SPT)
     // ==========================================
@@ -386,7 +426,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                     new TableRow({
                         cantSplit: true,
                         children: [
-                            new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
+                            new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: createQrVerificationBlock() }),
                             new TableCell({
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
@@ -551,7 +591,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                     new TableRow({
                         cantSplit: true,
                         children: [
-                            new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: [new Paragraph({})] }),
+                            new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: tableBorderNone, children: createQrVerificationBlock() }),
                             new TableCell({
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,

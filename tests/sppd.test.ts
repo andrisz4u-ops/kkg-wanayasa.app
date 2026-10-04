@@ -271,5 +271,62 @@ describe('Paket Surat Tugas & SPPD Unit Tests', () => {
                 expect(cleanedIsi).toBe(isiLhp);
             }
         });
+
+        it('should correctly respond to public verification requests without auth', async () => {
+            const mockDb: any = {
+                prepare: (sql: string) => {
+                    const executor = {
+                        first: async () => {
+                            if (sql.includes('WHERE id = ?') || sql.includes('WHERE nomor_surat = ?')) {
+                                return {
+                                    id: 1,
+                                    nomor_surat: '001/KKG-G3/ST/10/2026',
+                                    jenis_kegiatan: 'Surat Tugas & SPPD - SDN 1 Wanayasa',
+                                    tanggal_kegiatan: '2026-10-15',
+                                    waktu_kegiatan: '08.00 s.d Selesai',
+                                    tempat_kegiatan: 'SDN 1 Wanayasa',
+                                    agenda: 'Workshop Deep Learning',
+                                    peserta: JSON.stringify([{ nama: 'Budi Santoso', nip: '198703032012011003' }]),
+                                    penanggung_jawab: 'Kepala Sekolah',
+                                    status: 'final',
+                                    tipe_surat: 'sppd',
+                                    metadata: JSON.stringify({ nomor_sppd: '090/001/SPPD/2026' }),
+                                    created_at: '2026-10-04T10:00:00Z'
+                                };
+                            }
+                            return null;
+                        },
+                        all: async () => {
+                            if (sql.includes('FROM settings')) {
+                                return {
+                                    results: [
+                                        { key: 'nama_kkg', value: 'KKG Gugus 3 Wanayasa' },
+                                        { key: 'nama_ketua', value: 'Ketua KKG' }
+                                    ]
+                                };
+                            }
+                            return { results: [] };
+                        },
+                        run: async () => ({ success: true })
+                    };
+
+                    return {
+                        ...executor,
+                        bind: (...args: any[]) => executor
+                    };
+                }
+            };
+
+            const suratApp = (await import('../src/routes/surat')).default;
+            const res = await suratApp.request('/verify/1', { method: 'GET' }, { DB: mockDb });
+            expect(res.status).toBe(200);
+            const data: any = await res.json();
+            expect(data.success).toBe(true);
+            expect(data.data.nomor_surat).toBe('001/KKG-G3/ST/10/2026');
+            expect(data.data.status_dokumen).toBe('TERVERIFIKASI_RESMI');
+            expect(data.data.is_valid).toBe(true);
+            expect(data.data.verifikasi.url).toContain('/verify/surat/1');
+        });
     });
 });
+

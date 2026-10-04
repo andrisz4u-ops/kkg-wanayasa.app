@@ -1060,8 +1060,32 @@ export function createMetadataTable(data: SuratData): Table {
 }
 
 // Helper function to create the signature block
-export function createSignatureBlock(data: SuratData, settings: KKGSettings): (Paragraph | Table)[] {
+export function createSignatureBlock(data: SuratData, settings: KKGSettings, qrBuffer?: Uint8Array | null): (Paragraph | Table)[] {
     const dateStr = `Wanayasa, ${new Date(data.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+
+    const leftChildren = qrBuffer ? [
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [
+                new ImageRun({
+                    data: qrBuffer,
+                    transformation: { width: 64, height: 64 },
+                    type: 'png'
+                })
+            ]
+        }),
+        new Paragraph({
+            spacing: { after: 20 },
+            children: [
+                new TextRun({ text: 'Dokumen Digital Sah Terdaftar', bold: true, size: 16, font: FONT_FAMILY })
+            ]
+        }),
+        new Paragraph({
+            children: [
+                new TextRun({ text: 'Pindai barcode untuk memeriksa keabsahan surat', italics: true, size: 14, font: FONT_FAMILY })
+            ]
+        })
+    ] : [];
 
     return [
         new Table({
@@ -1079,7 +1103,7 @@ export function createSignatureBlock(data: SuratData, settings: KKGSettings): (P
                     children: [
                         new TableCell({
                             width: { size: 60, type: WidthType.PERCENTAGE },
-                            children: []
+                            children: leftChildren
                         }),
                         new TableCell({
                             width: { size: 40, type: WidthType.PERCENTAGE },

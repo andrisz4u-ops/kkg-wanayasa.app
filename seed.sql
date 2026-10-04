@@ -32,8 +32,11 @@ VALUES
 INSERT OR IGNORE INTO settings (key, value)
 VALUES
   ('mistral_api_key', ''),
-  ('nama_ketua', 'Admin KKG Gugus 3'),
-  ('nip_ketua', '198501012010011001'),
+  ('nama_ketua', 'MAMAN RUKMAN, S.Pd'),
+  ('nip_ketua', '197009212005011007'),
+  ('pengawas_nama', 'DIDIN SAMSUDIN, S.Pd.,M.Pd'),
+  ('pengawas_nip', '198208182009021004'),
+  ('pengawas_instansi', 'Pengawas Pembina Korwil V'),
   ('alamat_sekretariat', 'SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta'),
   ('tahun_ajaran', '2026/2027');
 

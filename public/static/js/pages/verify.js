@@ -463,14 +463,14 @@ function renderSertifikatVerification(data) {
                 </span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div class="p-3 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
-                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Ketua KKG Gugus 3 Wanayasa</span>
-                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-0.5">${escapeHtml(tt.ketua_kkg || 'Andris, S.Pd.')}</span>
-                    <span class="text-[11px] font-mono text-slate-500 block">NIP. ${escapeHtml(tt.nip_ketua || '-')}</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">${escapeHtml(tt.jabatan_ketua || 'Ketua KKG Gugus 3')}</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-0.5">${escapeHtml(tt.ketua_kkg || 'MAMAN RUKMAN, S.Pd')}</span>
+                    <span class="text-[11px] font-mono text-slate-500 block">NIP. ${escapeHtml(tt.nip_ketua || '197009212005011007')}</span>
                   </div>
                   <div class="p-3 bg-white/70 dark:bg-slate-800/70 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
-                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Pengawas Pembina SD Wanayasa</span>
-                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-0.5">${escapeHtml(tt.pengawas_pembina || 'Hj. Nenden Laila, M.Pd.')}</span>
-                    <span class="text-[11px] font-mono text-slate-500 block">NIP. ${escapeHtml(tt.nip_pengawas || '-')}</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">${escapeHtml(tt.jabatan_pengawas || 'Pengawas Pembina Korwil V')}</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 block mt-0.5">${escapeHtml(tt.pengawas_pembina || 'DIDIN SAMSUDIN, S.Pd.,M.Pd')}</span>
+                    <span class="text-[11px] font-mono text-slate-500 block">NIP. ${escapeHtml(tt.nip_pengawas || '198208182009021004')}</span>
                   </div>
                 </div>
               </div>

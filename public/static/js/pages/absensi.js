@@ -462,10 +462,18 @@ window.showCertificateModal = function (cert) {
   }
 
   const verifyFullUrl = `${window.location.origin}/verify/sertifikat/${cert.uuid}`;
+  const tt = cert.tanda_tangan || {
+    ketua_kkg: 'MAMAN RUKMAN, S.Pd',
+    nip_ketua: '197009212005011007',
+    jabatan_ketua: 'Ketua KKG Gugus 3',
+    pengawas_pembina: 'DIDIN SAMSUDIN, S.Pd.,M.Pd',
+    nip_pengawas: '198208182009021004',
+    jabatan_pengawas: 'Pengawas Pembina Korwil V'
+  };
 
   modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto';
   modal.innerHTML = `
-    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 my-8 border border-amber-200 dark:border-gray-700 relative">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-8 my-8 border border-amber-200 dark:border-gray-700 relative">
       <button onclick="document.getElementById('certificate-preview-modal').remove()" class="absolute top-5 right-5 text-gray-400 hover:text-gray-600 no-print">
         <i class="fas fa-times text-xl"></i>
       </button>
@@ -493,24 +501,41 @@ window.showCertificateModal = function (cert) {
         <p class="text-xs text-slate-500">Dengan alokasi waktu setara <strong>${cert.alokasi_jp || 4} Jam Pelajaran (JP)</strong> pada tanggal ${formatDate(cert.tanggal_kegiatan)}.</p>
 
         <!-- SIGNATURE & QR -->
-        <div class="mt-6 pt-4 border-t border-amber-200 flex justify-between items-center text-left text-xs">
-          <div class="flex items-center gap-3">
-            <div id="cert-qr-box" class="w-16 h-16 bg-white p-1 rounded-xl border border-amber-300 shadow-2xs flex items-center justify-center">
-              <i class="fas fa-qrcode text-3xl text-emerald-700"></i>
+        <div class="mt-8 pt-4 border-t border-amber-200/80">
+          <div class="grid grid-cols-1 sm:grid-cols-3 items-end gap-4 text-xs">
+            
+            <!-- Pengawas Pembina Korwil V -->
+            <div class="text-center sm:text-left order-2 sm:order-1">
+              <span class="text-[11px] text-slate-500 block">Mengetahui,</span>
+              <span class="text-xs font-bold text-slate-800 block mt-0.5">${escapeHtml(tt.jabatan_pengawas || 'Pengawas Pembina Korwil V')}</span>
+              <div class="h-10 flex items-center justify-center sm:justify-start">
+                <span class="text-[10px] italic text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">[Ditandatangani Digital]</span>
+              </div>
+              <span class="text-xs font-bold text-slate-900 block underline">${escapeHtml(tt.pengawas_pembina || 'DIDIN SAMSUDIN, S.Pd.,M.Pd')}</span>
+              <span class="text-[10px] font-mono text-slate-600 block">NIP. ${escapeHtml(tt.nip_pengawas || '198208182009021004')}</span>
             </div>
-            <div>
-              <span class="text-[10px] uppercase font-bold text-slate-400 block">Kode Verifikasi PMM:</span>
-              <span class="text-[11px] font-mono font-bold text-slate-700 block">${cert.uuid.substring(0, 13)}...</span>
-              <span class="text-[10px] text-emerald-600 font-semibold block"><i class="fas fa-check-circle mr-1"></i>Dokumen Terverifikasi Sah</span>
-            </div>
-          </div>
 
-          <div class="text-right">
-            <span class="text-[11px] text-slate-500 block">Wanayasa, ${formatDate(cert.tanggal_kegiatan)}</span>
-            <span class="text-xs font-bold text-slate-800 block mt-1">Ketua KKG Gugus 3</span>
-            <div class="h-8"></div>
-            <span class="text-xs font-bold text-slate-900 block underline">Andris, S.Pd.</span>
-            <span class="text-[10px] font-mono text-slate-500 block">NIP. 19870512 201101 1 002</span>
+            <!-- QR Verification Center -->
+            <div class="flex flex-col items-center justify-center text-center order-1 sm:order-2 my-2 sm:my-0">
+              <div id="cert-qr-box" class="w-16 h-16 bg-white p-1 rounded-xl border border-amber-300 shadow-2xs flex items-center justify-center">
+                <i class="fas fa-qrcode text-3xl text-emerald-700"></i>
+              </div>
+              <span class="text-[9px] uppercase font-bold text-slate-400 mt-1 block">Kode Verifikasi PMM:</span>
+              <span class="text-[10px] font-mono font-bold text-slate-700 block">${cert.uuid.substring(0, 13)}...</span>
+              <span class="text-[9px] text-emerald-600 font-semibold block"><i class="fas fa-check-circle mr-0.5"></i>Dokumen Terverifikasi Sah</span>
+            </div>
+
+            <!-- Ketua KKG Gugus 3 -->
+            <div class="text-center sm:text-right order-3">
+              <span class="text-[11px] text-slate-500 block">Wanayasa, ${formatDate(cert.tanggal_kegiatan)}</span>
+              <span class="text-xs font-bold text-slate-800 block mt-0.5">${escapeHtml(tt.jabatan_ketua || 'Ketua KKG Gugus 3')}</span>
+              <div class="h-10 flex items-center justify-center sm:justify-end">
+                <span class="text-[10px] italic text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">[Ditandatangani Digital]</span>
+              </div>
+              <span class="text-xs font-bold text-slate-900 block underline">${escapeHtml(tt.ketua_kkg || 'MAMAN RUKMAN, S.Pd')}</span>
+              <span class="text-[10px] font-mono text-slate-600 block">NIP. ${escapeHtml(tt.nip_ketua || '197009212005011007')}</span>
+            </div>
+
           </div>
         </div>
       </div>

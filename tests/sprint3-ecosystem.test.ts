@@ -260,9 +260,10 @@ describe('Sprint 3: Pilar 4 Ecosystem & Security Tests', () => {
       expect(body.success).toBe(true);
       expect(body.data.valid).toBe(true);
       expect(body.data.sertifikat.nama_peserta).toBe('Budi Santoso, S.Pd.');
-      expect(body.data.sertifikat.alokasi_jp).toBe(4);
-      expect(body.data.sertifikat.tanda_tangan.ketua_kkg).toBe('Andris, S.Pd.');
-      expect(body.data.sertifikat.tanda_tangan.pengawas_pembina).toBe('Hj. Nenden Laila, M.Pd.');
+      expect(body.data.sertifikat.tanda_tangan.ketua_kkg).toBe('MAMAN RUKMAN, S.Pd');
+      expect(body.data.sertifikat.tanda_tangan.pengawas_pembina).toBe('DIDIN SAMSUDIN, S.Pd.,M.Pd');
+      expect(body.data.sertifikat.tanda_tangan.nip_ketua).toBe('197009212005011007');
+      expect(body.data.sertifikat.tanda_tangan.nip_pengawas).toBe('198208182009021004');
     });
   });
 

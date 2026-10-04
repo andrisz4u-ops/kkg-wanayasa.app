@@ -743,12 +743,51 @@ absensi.get('/kegiatan/:id/my-certificate', async (c) => {
       return Errors.notFound(c, 'E-Sertifikat belum diterbitkan atau Anda belum tercatat hadir dalam kegiatan ini.');
     }
 
-    return successResponse(c, cert);
+    const signers = await getCertificateSigners(c.env.DB);
+    return successResponse(c, {
+      ...cert,
+      tanda_tangan: signers
+    });
   } catch (e: any) {
     console.error('Get my-certificate error:', e);
     return Errors.internal(c);
   }
 });
+
+// Helper untuk mengambil identitas resmi penandatangan E-Sertifikat
+async function getCertificateSigners(db: D1Database) {
+  let settingsMap: Record<string, string> = {};
+  try {
+    const sRows = await db.prepare(
+      "SELECT key, value FROM settings WHERE key IN ('nama_ketua', 'nip_ketua', 'pengawas_nama', 'pengawas_nip', 'pengawas_instansi')"
+    ).all();
+    if (sRows?.results) {
+      for (const row of sRows.results as any[]) {
+        settingsMap[row.key] = row.value;
+      }
+    }
+  } catch (_) {}
+
+  const ketuaNama = settingsMap.nama_ketua && settingsMap.nama_ketua !== 'Admin KKG Gugus 3' && settingsMap.nama_ketua !== 'Ketua KKG'
+    ? settingsMap.nama_ketua
+    : 'MAMAN RUKMAN, S.Pd';
+  const ketuaNip = settingsMap.nip_ketua && settingsMap.nip_ketua !== '198501012010011001'
+    ? settingsMap.nip_ketua
+    : '197009212005011007';
+
+  const pengawasNama = settingsMap.pengawas_nama || 'DIDIN SAMSUDIN, S.Pd.,M.Pd';
+  const pengawasNip = settingsMap.pengawas_nip || '198208182009021004';
+  const pengawasInstansi = settingsMap.pengawas_instansi || 'Pengawas Pembina Korwil V';
+
+  return {
+    ketua_kkg: ketuaNama,
+    nip_ketua: ketuaNip,
+    jabatan_ketua: 'Ketua KKG Gugus 3',
+    pengawas_pembina: pengawasNama,
+    nip_pengawas: pengawasNip,
+    jabatan_pengawas: pengawasInstansi
+  };
+}
 
 // Public Verification Endpoint untuk E-Sertifikat KKG
 absensi.get('/sertifikat/verify/:uuid', async (c) => {
@@ -774,6 +813,8 @@ absensi.get('/sertifikat/verify/:uuid', async (c) => {
       });
     }
 
+    const signers = await getCertificateSigners(c.env.DB);
+
     return successResponse(c, {
       valid: true,
       instansi: 'Pemerintah Kabupaten Purwakarta - Dinas Pendidikan',
@@ -789,12 +830,7 @@ absensi.get('/sertifikat/verify/:uuid', async (c) => {
         alokasi_jp: cert.alokasi_jp,
         peran: cert.peran,
         issued_at: cert.issued_at,
-        tanda_tangan: {
-          ketua_kkg: 'Andris, S.Pd.',
-          nip_ketua: '19870512 201101 1 002',
-          pengawas_pembina: 'Hj. Nenden Laila, M.Pd.',
-          nip_pengawas: '19760314 200501 2 006'
-        }
+        tanda_tangan: signers
       }
     });
   } catch (e: any) {
@@ -820,7 +856,12 @@ absensi.get('/sertifikat/:uuid', async (c) => {
       return Errors.notFound(c, 'E-Sertifikat tidak ditemukan');
     }
 
-    return successResponse(c, cert);
+    const signers = await getCertificateSigners(c.env.DB);
+
+    return successResponse(c, {
+      ...cert,
+      tanda_tangan: signers
+    });
   } catch (e: any) {
     console.error('Get sertifikat by uuid error:', e);
     return Errors.internal(c);

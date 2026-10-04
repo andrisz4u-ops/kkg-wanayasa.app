@@ -624,7 +624,11 @@ CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
       .bind(adminPasswordHash).run();
 
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('mistral_api_key', '')`).run();
-    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('nama_ketua', 'Admin KKG Gugus 3')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('nama_ketua', 'MAMAN RUKMAN, S.Pd')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('nip_ketua', '197009212005011007')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('pengawas_nama', 'DIDIN SAMSUDIN, S.Pd.,M.Pd')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('pengawas_nip', '198208182009021004')`).run();
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('pengawas_instansi', 'Pengawas Pembina Korwil V')`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('logo_url', '/static/img/logo-kkg.png')`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('alamat_sekretariat', 'SDN 1 Wanayasa, Jl. Raya Wanayasa No. 1, Kec. Wanayasa, Kab. Purwakarta')`).run();
     await c.env.DB.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('tahun_ajaran', '2026/2027')`).run();

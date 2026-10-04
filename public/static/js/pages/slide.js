@@ -79,6 +79,63 @@ export const slideLayouts = [
   { id: 'thankyou', name: 'Slide Penutup', icon: 'fa-award', description: 'Apresiasi dan salam penutup' }
 ];
 
+// Auto-Save Debounce & LocalStorage Draft Management
+const STORAGE_KEY_SLIDE_DRAFT = 'kkg_slide_draft';
+let _slideAutoSaveTimer = null;
+
+function getSavedSlideDraft() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SLIDE_DRAFT);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.slides) && parsed.slides.length > 0) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed to parse saved slide draft:', err);
+  }
+  return null;
+}
+
+function triggerSlideAutoSave() {
+  const indicator = document.getElementById('sg-autosave-indicator');
+  if (indicator) {
+    indicator.innerHTML = '<i class="fas fa-circle-notch fa-spin text-amber-500 mr-1"></i>Menyimpan...';
+    indicator.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 inline-block transition-all';
+  }
+
+  clearTimeout(_slideAutoSaveTimer);
+  _slideAutoSaveTimer = setTimeout(() => {
+    const s = window.slideGenState;
+    if (!s || !Array.isArray(s.slides) || s.slides.length === 0) return;
+
+    try {
+      const draft = {
+        slides: s.slides,
+        outline: s.outline || [],
+        template: s.template || 'minimalist-dark',
+        prompt: s.prompt || '',
+        config: s.config || {},
+        currentIndex: s.currentIndex || 0,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEY_SLIDE_DRAFT, JSON.stringify(draft));
+
+      if (indicator) {
+        const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        indicator.innerHTML = `<i class="fas fa-check-circle text-green-500 mr-1"></i>Tersimpan ${timeStr}`;
+        indicator.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 inline-block transition-all';
+      }
+    } catch (e) {
+      console.warn('Gagal menyimpan draf slide ke localStorage:', e);
+      if (indicator) {
+        indicator.innerHTML = '<i class="fas fa-exclamation-circle text-rose-500 mr-1"></i>Gagal Simpan';
+        indicator.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 inline-block transition-all';
+      }
+    }
+  }, 500);
+}
+
 export async function renderSlide() {
   if (!state.user) {
     return renderLockedFeature(
@@ -131,6 +188,38 @@ export async function renderSlide() {
 // ==========================================
 function renderLandingView() {
   const s = window.slideGenState;
+  const draft = getSavedSlideDraft();
+  let draftBanner = '';
+  if (draft) {
+    const draftCount = draft.slides.length;
+    const draftTopic = draft.config?.topik || draft.prompt || draft.slides[0]?.title || 'Presentasi Pembelajaran';
+    const draftDate = draft.savedAt ? new Date(draft.savedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Baru saja';
+    draftBanner = `
+      <div id="sg-draft-banner" class="w-full max-w-3xl mb-6 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i class="fas fa-file-signature text-lg"></i>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+              <span>Draf Slide Tersimpan Otomatis</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 font-extrabold uppercase">Lokal</span>
+            </div>
+            <div class="text-[11px] text-amber-700 dark:text-amber-400 font-medium">${escapeHtml(draftTopic)} • <span class="font-bold">${draftCount} Slide</span> • ${draftDate}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button id="sg-btn-dismiss-draft" class="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+            Abaikan
+          </button>
+          <button id="sg-btn-restore-draft" class="px-3.5 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="fas fa-undo"></i> Pulihkan Draf
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <main class="flex-grow flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden h-full">
       <!-- Background Graphic -->
@@ -152,6 +241,8 @@ function renderLandingView() {
           Ketik topik materi secara bebas di bawah ini. AI otomatis merancang slide kelas yang memukau, visual, dan mudah dipahami murid.
         </p>
       </div>
+
+      ${draftBanner}
 
       <!-- Main Input Bar -->
       <div class="w-full max-w-3xl mb-8 animate-slide-up" style="animation-delay: 100ms;">
@@ -433,7 +524,7 @@ function renderEditorView() {
             <button id="sg-btn-editor-archive" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 transition-colors flex items-center gap-1 cursor-pointer" title="Buka Riwayat Slide">
               <i class="fas fa-folder-open text-amber-500"></i> Riwayat
             </button>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hidden sm:inline-block">
+            <span id="sg-autosave-indicator" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hidden sm:inline-block transition-all">
               <i class="fas fa-check-circle mr-1"></i>Tersimpan Otomatis
             </span>
           </div>
@@ -698,13 +789,22 @@ function generateSlideHTML(slide, index, colorScheme) {
       const quizOptions = slide.quizOptions && Array.isArray(slide.quizOptions)
         ? slide.quizOptions
         : ['A. Opsi Pilihan Pertama', 'B. Opsi Pilihan Kedua', 'C. Opsi Pilihan Ketiga', 'D. Opsi Pilihan Keempat'];
+      const quizVisual = slide.visualDataUri || slide.visualSvg;
       return `
-        <div class="w-full h-full p-8 md:p-10 flex flex-col justify-between" style="background: ${colorScheme.background}; color: ${colorScheme.text};">
-          <div>
-            <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest mb-1">
-              <i class="fas fa-question-circle"></i> Kuis Pemantik Pembelajaran
+        <div class="w-full h-full p-6 md:p-8 flex flex-col justify-between" style="background: ${colorScheme.background}; color: ${colorScheme.text};">
+          <div class="${quizVisual ? 'flex items-center gap-6 mb-2' : ''}">
+            <div class="${quizVisual ? 'flex-1' : ''}">
+              <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-widest mb-1">
+                <i class="fas fa-question-circle"></i> Kuis Pemantik Pembelajaran
+              </div>
+              <h2 contenteditable="true" data-field="question" class="sg-editable text-xl md:text-2xl font-bold mb-2 focus:outline-none rounded px-1" style="color: ${colorScheme.primary};">${escapeHtml(slide.question || title)}</h2>
             </div>
-            <h2 contenteditable="true" data-field="question" class="sg-editable text-2xl font-bold mb-4 focus:outline-none rounded px-1" style="color: ${colorScheme.primary};">${escapeHtml(slide.question || title)}</h2>
+            ${quizVisual ? `
+              <div class="w-44 h-32 rounded-xl border border-black/10 dark:border-white/10 p-1.5 flex flex-col items-center justify-center shrink-0 shadow-sm" style="background: ${colorScheme.cardBg};">
+                <img src="${escapeHtml(quizVisual)}" alt="${escapeHtml(slide.visualCaption || 'Stimulus Soal')}" class="max-h-24 w-auto object-contain select-none" />
+                <span class="text-[9px] font-bold opacity-70 mt-1 uppercase truncate max-w-full">${escapeHtml(slide.visualCaption || 'Diagram')}</span>
+              </div>
+            ` : ''}
           </div>
           <div class="grid grid-cols-2 gap-3 my-2">
             ${quizOptions.map((opt, i) => `
@@ -771,12 +871,19 @@ function generateSlideHTML(slide, index, colorScheme) {
               `).join('')}
             </div>
             <div class="col-span-2 h-full flex items-center justify-center">
-              ${imageHtml || `
+              ${slide.visualDataUri || slide.visualSvg ? `
+                <div class="w-full h-full max-h-64 rounded-2xl border border-black/10 dark:border-white/10 shadow-lg p-3 flex flex-col items-center justify-center" style="background: ${colorScheme.cardBg};">
+                  <img src="${escapeHtml(slide.visualDataUri || slide.visualSvg)}" alt="${escapeHtml(slide.visualCaption || title)}" class="max-h-48 w-auto max-w-full object-contain filter drop-shadow-sm select-none" />
+                  <span class="text-[10px] mt-2 font-bold tracking-wide uppercase opacity-75 truncate max-w-full flex items-center gap-1" style="color: ${colorScheme.primary};">
+                    <i class="fas fa-shapes text-teal-500"></i> ${escapeHtml(slide.visualCaption || 'Stimulus Visual')}
+                  </span>
+                </div>
+              ` : (imageHtml || `
                 <div class="w-full h-56 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 text-center" style="border-color: ${colorScheme.accent};">
                   <i class="fas fa-image text-3xl mb-2 opacity-50"></i>
                   <span class="text-xs opacity-70">Ilustrasi Grafis Edukasi</span>
                 </div>
-              `}
+              `)}
             </div>
           </div>
         </div>
@@ -959,6 +1066,33 @@ function attachCurrentViewEvents() {
       promptInput.addEventListener('input', (e) => {
         s.prompt = e.target.value;
         s.config.topik = e.target.value;
+      });
+    }
+
+    // Draft Restore & Dismiss
+    const restoreBtn = document.getElementById('sg-btn-restore-draft');
+    if (restoreBtn) {
+      restoreBtn.addEventListener('click', () => {
+        const draft = getSavedSlideDraft();
+        if (draft && draft.slides && draft.slides.length > 0) {
+          s.slides = draft.slides;
+          s.outline = draft.outline || [];
+          s.template = draft.template || 'minimalist-dark';
+          s.prompt = draft.prompt || '';
+          s.config = draft.config || s.config;
+          s.currentIndex = draft.currentIndex || 0;
+          showToast(`Draf slide berhasil dipulihkan (${draft.slides.length} slide)!`, 'success');
+          window.slidgenGoTo('editor');
+        }
+      });
+    }
+
+    const dismissBtn = document.getElementById('sg-btn-dismiss-draft');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        localStorage.removeItem(STORAGE_KEY_SLIDE_DRAFT);
+        document.getElementById('sg-draft-banner')?.remove();
+        showToast('Draf slide diabaikan', 'info');
       });
     }
 
@@ -1231,6 +1365,7 @@ function attachCurrentViewEvents() {
     if (titleInput) {
       titleInput.addEventListener('input', (e) => {
         s.config.topik = e.target.value;
+        triggerSlideAutoSave();
       });
     }
 
@@ -1238,6 +1373,7 @@ function attachCurrentViewEvents() {
       notesInput.addEventListener('input', (e) => {
         if (s.slides[s.currentIndex]) {
           s.slides[s.currentIndex].speakerNotes = e.target.value;
+          triggerSlideAutoSave();
         }
       });
     }
@@ -1247,6 +1383,7 @@ function attachCurrentViewEvents() {
         if (s.slides[s.currentIndex]) {
           s.slides[s.currentIndex].layout = e.target.value;
           updateEditorContent();
+          triggerSlideAutoSave();
         }
       });
     }
@@ -1513,6 +1650,13 @@ function attachInlineEditListeners(container, slide) {
         if (!slide.flipcards[fIdx]) slide.flipcards[fIdx] = {};
         slide.flipcards[fIdx][fField] = e.target.innerText;
       }
+
+      if (field === 'title') {
+        const thumbTitle = document.querySelector(`.sg-thumbnail-item[data-index="${window.slideGenState?.currentIndex}"] .font-bold span`);
+        if (thumbTitle) thumbTitle.textContent = `${(window.slideGenState?.currentIndex || 0) + 1}. ${slide.title || 'Slide'}`;
+      }
+
+      triggerSlideAutoSave();
     });
   });
 }
@@ -1594,6 +1738,7 @@ function showPatchSlideModal() {
       if (res.data) {
         s.slides[s.currentIndex] = res.data;
         updateEditorContent();
+        triggerSlideAutoSave();
         showToast(`Slide ${s.currentIndex + 1} berhasil diperbarui!`, 'success');
       }
     } catch (e) {
@@ -1686,7 +1831,12 @@ async function exportToPPTX() {
 
   try {
     if (!window.PptxGenJS) {
-      await loadScript('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js');
+      try {
+        await loadScript('/static/vendor/pptxgen.bundle.js');
+      } catch (localBundleErr) {
+        console.warn('Local PPTX bundle load failed, falling back to CDN...', localBundleErr);
+        await loadScript('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js');
+      }
     }
 
     const pptx = new window.PptxGenJS();
@@ -2322,9 +2472,39 @@ async function exportToPPTX() {
             });
           });
 
-          // Right Image Container
+          // Right Image / Visual Stimulus Container
           const imgH = 4.5;
-          if (slide.image?.url) {
+          const visualUri = slide.visualDataUri || (slide.visualSvg ? `data:image/svg+xml;utf8,${encodeURIComponent(slide.visualSvg)}` : null);
+
+          if (visualUri) {
+            let visualSuccess = false;
+            try {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: imgX, y: 1.8, w: imgW, h: imgH,
+                fill: { color: softCardFill },
+                rectRadius: 0.12
+              });
+              pptSlide.addImage({
+                data: visualUri,
+                x: imgX + 0.2, y: 2.0, w: imgW - 0.4, h: imgH - 0.8,
+                sizing: { type: 'contain', w: imgW - 0.4, h: imgH - 0.8 }
+              });
+              pptSlide.addText(`📐 Stimulus Visual: ${cleanTextStr(slide.visualCaption || 'Diagram Materi')}`, {
+                x: imgX, y: 6.4, w: imgW, h: 0.3,
+                fontFace: FONT_BODY, fontSize: 9, color: subtext, align: 'center'
+              });
+              visualSuccess = true;
+            } catch (vErr) {
+              console.warn('Failed to embed visual stimulus in PPTX:', vErr);
+            }
+            if (!visualSuccess) {
+              pptSlide.addShape(pptx.ShapeType.roundRect, {
+                x: imgX, y: 1.8, w: imgW, h: imgH,
+                fill: { color: softCardFill },
+                rectRadius: 0.12
+              });
+            }
+          } else if (slide.image?.url) {
             let imgSuccess = false;
             try {
               const imgData = await imageUrlToDataUri(slide.image.url);
@@ -2707,6 +2887,22 @@ ${cards.map((c,i) => `<div class="flip-card" onclick="this.classList.toggle('fli
         inner = `<div class="ty-wrap"><div class="ty-icon"><i class="fas fa-heart"></i></div>
 <h1 class="ty-h1">Terima Kasih!</h1>
 <p class="ty-msg">${escapeHtml(cleanSlideText(slide.message||'Semoga pembelajaran hari ini membawa manfaat.'))}</p></div>`;
+      } else if (layout === 'imageText' || slide.visualDataUri || slide.visualSvg || slide.image?.url) {
+        if (content.length === 0) {
+          content = ['Memahami materi utama secara mendalam dan terstruktur.'];
+        }
+        const visualSrc = slide.visualDataUri || (slide.visualSvg ? `data:image/svg+xml;utf8,${encodeURIComponent(slide.visualSvg)}` : slide.image?.url);
+        const visualCaption = escapeHtml(cleanSlideText(slide.visualCaption || slide.image?.alt || t));
+        inner = `<div class="slide-header"><div class="slide-tag">Media &amp; Visual Ajar</div><h2 class="slide-h2">${t}</h2></div>
+<div class="content-list" style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:center;">
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    ${content.map((item,i) => `<div class="content-card"><span class="content-num">${i+1}</span><span class="content-body">${escapeHtml(item)}</span></div>`).join('')}
+  </div>
+  <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+    <img src="${visualSrc}" alt="${visualCaption}" style="max-height:260px;max-width:100%;object-fit:contain;border-radius:12px;" />
+    <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-top:10px;opacity:0.8;">📐 ${visualCaption}</span>
+  </div>
+</div>`;
       } else {
         // content / summary / activity / imageText / default
         if (content.length === 0) {

@@ -80,4 +80,30 @@ describe('Presentation Schemas & Normalization Tests', () => {
             expect(result.data.slides[1].quizAnswer).toBe('A. Jupiter');
         }
     });
+
+    it('should validate and pass through visual stimulus properties on slide objects', () => {
+        const slideWithVisual = {
+            title: 'Materi Geometri Bangun Ruang',
+            slides: [
+                {
+                    layout: 'imageText',
+                    title: 'Jaring-jaring Balok',
+                    content: ['Balok memiliki 6 sisi berbentuk persegi panjang.'],
+                    visualStimulus: { type: 'jaring_balok', params: { p: 10, l: 6, t: 4 } },
+                    visualDataUri: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=',
+                    visualCaption: 'Jaring-jaring Balok',
+                    visualSvg: '<svg></svg>',
+                }
+            ]
+        };
+
+        const result = validate(presentationResponseSchema, slideWithVisual);
+        expect(result.success).toBe(true);
+        if (result.success) {
+            const s0: any = result.data.slides[0];
+            expect(s0.visualDataUri).toBe('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=');
+            expect(s0.visualCaption).toBe('Jaring-jaring Balok');
+            expect(s0.visualStimulus.type).toBe('jaring_balok');
+        }
+    });
 });

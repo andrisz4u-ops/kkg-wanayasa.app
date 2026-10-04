@@ -15,6 +15,7 @@ import { UnsplashService } from '../services/unsplash';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { type AppBindings } from '../types/env';
+import { generateVisualStimulus, detectStimulusFromSoalText } from '../lib/visual-engine';
 
 const presentation = new Hono<{ Bindings: AppBindings }>();
 
@@ -371,6 +372,11 @@ function normalizeRawSlides(raw: any, topik: string, mataPelajaran: string): { t
             flipcards,
             imageQuery,
             imageAlt,
+            image: item.image,
+            visualStimulus: item.visualStimulus,
+            visualDataUri: item.visualDataUri,
+            visualCaption: item.visualCaption,
+            visualSvg: item.visualSvg,
             speakerNotes
         };
     });
@@ -581,6 +587,31 @@ KEMBALIKAN HANYA DALAM FORMAT JSON VALID:
             console.info('Unsplash is not configured. Proceeding with vector and theme layouts.');
         }
 
+        // Attach pedagogical vector stimulus from 200 SVG Engine (IPAS, Matematika, Geometri, Pecahan, Sains)
+        let attachedVisuals = 0;
+        for (const slide of slides) {
+            if (slide.layout === 'title' || slide.layout === 'thankyou' || slide.layout === 'quote') {
+                continue;
+            }
+            if (!slide.visualDataUri && (!slide.image || !slide.image.url)) {
+                const fullContext = `${slide.title} ${slide.subtitle || ''} ${(slide.content || []).join(' ')} ${slide.leftTitle || ''} ${(slide.leftContent || []).join(' ')} ${slide.rightTitle || ''} ${(slide.rightContent || []).join(' ')} ${topik} ${mataPelajaran}`;
+                const detected = detectStimulusFromSoalText(fullContext, mataPelajaran || '');
+                if (detected) {
+                    const visual = generateVisualStimulus(detected);
+                    if (visual) {
+                        slide.visualStimulus = detected;
+                        slide.visualDataUri = visual.dataUri;
+                        slide.visualCaption = visual.title;
+                        slide.visualSvg = visual.svg;
+                        attachedVisuals++;
+                        if (slide.layout === 'content') {
+                            slide.layout = 'imageText';
+                        }
+                    }
+                }
+            }
+        }
+
         const finalResult = {
             title: presentationData.title,
             subtitle: presentationData.subtitle,
@@ -589,6 +620,7 @@ KEMBALIKAN HANYA DALAM FORMAT JSON VALID:
                 slideCount: slides.length,
                 minImageCount,
                 attachedImages,
+                attachedVisuals,
                 imagePolicy: hasUnsplash ? 'minimum_30_percent' : 'vector_fallback',
             },
         };
@@ -692,11 +724,28 @@ OUTPUT HANYA BERUPA JSON VALID UNTUK SATU SLIDE TERSEBUT:
             return Errors.validation(c, 'Output revisi slide AI tidak sesuai schema', validatedResult.errors);
         }
 
-        const patchedSlide = {
+        const patchedSlide: any = {
             ...currentSlide,
             ...validatedResult.data,
             speakerNotes: sanitizeSpeakerNotes(validatedResult.data.speakerNotes || currentSlide.speakerNotes),
         };
+
+        if (!patchedSlide.visualDataUri && (!patchedSlide.image || !patchedSlide.image.url)) {
+            const fullContext = `${patchedSlide.title} ${patchedSlide.subtitle || ''} ${(patchedSlide.content || []).join(' ')} ${instruction} ${topik} ${mataPelajaran}`;
+            const detected = detectStimulusFromSoalText(fullContext, mataPelajaran || '');
+            if (detected) {
+                const visual = generateVisualStimulus(detected);
+                if (visual) {
+                    patchedSlide.visualStimulus = detected;
+                    patchedSlide.visualDataUri = visual.dataUri;
+                    patchedSlide.visualCaption = visual.title;
+                    patchedSlide.visualSvg = visual.svg;
+                    if (patchedSlide.layout === 'content') {
+                        patchedSlide.layout = 'imageText';
+                    }
+                }
+            }
+        }
 
         return successResponse(c, patchedSlide);
     } catch (e: unknown) {

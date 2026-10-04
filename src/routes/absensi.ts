@@ -409,7 +409,52 @@ absensi.get('/kegiatan/:id/qr', async (c) => {
   }
 });
 
-// Check-in via QR code scan
+// Generate Rolling Dynamic QR code (changes every 30 seconds for anti-titip presensi)
+absensi.get('/kegiatan/:id/rolling-qr', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user || user.role !== 'admin') {
+    return Errors.forbidden(c, 'Hanya admin yang dapat mengaktifkan Rolling Dynamic QR');
+  }
+
+  try {
+    const id = c.req.param('id');
+    if (!id || isNaN(Number(id))) {
+      return Errors.validation(c, 'ID kegiatan tidak valid');
+    }
+
+    const kegiatan: any = await c.env.DB.prepare(
+      'SELECT id, nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat FROM kegiatan WHERE id = ?'
+    ).bind(id).first();
+
+    if (!kegiatan) {
+      return Errors.notFound(c, 'Kegiatan');
+    }
+
+    const { generateRollingQRData, generateQRCodePNG } = await import('../lib/qrcode');
+    const rolling = await generateRollingQRData(Number(id), 30);
+    const qrImage = await generateQRCodePNG(rolling.qr_data, 320);
+
+    return successResponse(c, {
+      kegiatan_id: kegiatan.id,
+      nama_kegiatan: kegiatan.nama_kegiatan,
+      tanggal: kegiatan.tanggal,
+      tempat: kegiatan.tempat,
+      qr_data: rolling.qr_data,
+      qr_image: qrImage,
+      window_index: rolling.window_index,
+      seconds_remaining: rolling.seconds_remaining,
+      window_seconds: rolling.window_seconds,
+      mode: 'rolling_dynamic'
+    });
+  } catch (e: any) {
+    console.error('Generate Rolling QR error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Check-in via QR code scan (supports rolling dynamic QR and legacy format)
 absensi.post('/checkin/qr', async (c) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
@@ -419,18 +464,18 @@ absensi.post('/checkin/qr', async (c) => {
   }
 
   try {
-    const { qr_data, keterangan } = await c.req.json();
+    const { qr_data, keterangan, latitude, longitude } = await c.req.json();
 
     if (!qr_data) {
       return Errors.validation(c, 'QR data tidak boleh kosong');
     }
 
-    // Verify QR code
-    const { verifySecureToken } = await import('../lib/qrcode');
-    const verification = await verifySecureToken(qr_data);
+    // Verify QR code with rolling dynamic verifier
+    const { verifyRollingQRData } = await import('../lib/qrcode');
+    const verification = await verifyRollingQRData(qr_data);
 
     if (!verification.valid) {
-      return Errors.validation(c, verification.error || 'QR code tidak valid');
+      return Errors.validation(c, verification.error || 'QR code tidak valid atau telah kadaluarsa');
     }
 
     const kegiatanId = verification.kegiatanId!;
@@ -453,18 +498,25 @@ absensi.post('/checkin/qr', async (c) => {
       return Errors.validation(c, 'Anda sudah check-in untuk kegiatan ini');
     }
 
-    // Perform check-in
+    // Perform check-in with optional GPS coordinates
     const result = await c.env.DB.prepare(`
-      INSERT INTO absensi (kegiatan_id, user_id, keterangan)
-      VALUES (?, ?, ?)
-    `).bind(kegiatanId, user.id, keterangan?.trim() || 'Check-in via QR').run();
+      INSERT INTO absensi (kegiatan_id, user_id, keterangan, latitude, longitude)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      kegiatanId,
+      user.id,
+      keterangan?.trim() || (verification.isRolling ? 'Check-in via Dynamic Rolling QR' : 'Check-in via QR'),
+      latitude || null,
+      longitude || null
+    ).run();
 
     return successResponse(c, {
       id: result.meta.last_row_id,
       kegiatan_id: kegiatanId,
       nama_kegiatan: kegiatan.nama_kegiatan,
       waktu_checkin: new Date().toISOString(),
-      method: 'qr'
+      method: verification.isRolling ? 'rolling_qr' : 'qr',
+      is_rolling: verification.isRolling
     }, 'Check-in berhasil');
   } catch (e: any) {
     console.error('QR Checkin error:', e);
@@ -482,8 +534,8 @@ absensi.post('/verify-qr', async (c) => {
     }
 
     // Verify QR code
-    const { verifySecureToken } = await import('../lib/qrcode');
-    const verification = await verifySecureToken(qr_data);
+    const { verifyRollingQRData } = await import('../lib/qrcode');
+    const verification = await verifyRollingQRData(qr_data);
 
     if (!verification.valid) {
       return successResponse(c, {
@@ -507,6 +559,7 @@ absensi.post('/verify-qr', async (c) => {
 
     return successResponse(c, {
       valid: true,
+      is_rolling: verification.isRolling,
       kegiatan: {
         id: kegiatan.id,
         nama_kegiatan: kegiatan.nama_kegiatan,
@@ -521,4 +574,258 @@ absensi.post('/verify-qr', async (c) => {
   }
 });
 
+// ============================================
+// E-Sertifikat KKG Endpoints (PMM Bukti Dukung)
+// ============================================
+
+async function ensureSertifikatTable(db: D1Database): Promise<void> {
+  try {
+    await db.prepare('SELECT 1 FROM e_sertifikat LIMIT 1').first();
+  } catch {
+    await db.batch([
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS e_sertifikat (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nomor_sertifikat TEXT UNIQUE NOT NULL,
+          kegiatan_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          nama_peserta TEXT NOT NULL,
+          nip_peserta TEXT,
+          unit_kerja TEXT,
+          nama_kegiatan TEXT NOT NULL,
+          tanggal_kegiatan TEXT NOT NULL,
+          materi_pokok TEXT,
+          alokasi_jp INTEGER DEFAULT 4,
+          peran TEXT DEFAULT 'Peserta Aktif',
+          status_kehadiran TEXT DEFAULT 'hadir',
+          uuid TEXT UNIQUE NOT NULL,
+          qr_verify_url TEXT,
+          issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (kegiatan_id) REFERENCES kegiatan(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(kegiatan_id, user_id)
+        )
+      `),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_sertifikat_uuid ON e_sertifikat(uuid)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_sertifikat_user ON e_sertifikat(user_id)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_sertifikat_kegiatan ON e_sertifikat(kegiatan_id)')
+    ]);
+  }
+}
+
+// Terbitkan E-Sertifikat untuk seluruh peserta hadir pada suatu kegiatan (Admin only)
+absensi.post('/kegiatan/:id/issue-certificates', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user || user.role !== 'admin') {
+    return Errors.forbidden(c, 'Hanya admin yang dapat menerbitkan E-Sertifikat');
+  }
+
+  try {
+    const id = c.req.param('id');
+    if (!id || isNaN(Number(id))) {
+      return Errors.validation(c, 'ID kegiatan tidak valid');
+    }
+
+    await ensureSertifikatTable(c.env.DB);
+
+    const kegiatan: any = await c.env.DB.prepare(
+      'SELECT id, nama_kegiatan, tanggal, deskripsi, tempat FROM kegiatan WHERE id = ?'
+    ).bind(id).first();
+
+    if (!kegiatan) {
+      return Errors.notFound(c, 'Kegiatan');
+    }
+
+    // Ambil peserta yang hadir
+    const hadirList: any = await c.env.DB.prepare(`
+      SELECT a.user_id, u.nama, u.nip, u.sekolah
+      FROM absensi a
+      JOIN users u ON a.user_id = u.id
+      WHERE a.kegiatan_id = ? AND a.status = 'hadir'
+    `).bind(id).all();
+
+    const attendees = hadirList.results || [];
+    if (attendees.length === 0) {
+      return Errors.validation(c, 'Belum ada peserta yang berstatus hadir untuk diterbitkan sertifikat.');
+    }
+
+    const year = kegiatan.tanggal ? kegiatan.tanggal.substring(0, 4) : new Date().getFullYear().toString();
+    const issued: any[] = [];
+
+    for (let i = 0; i < attendees.length; i++) {
+      const att = attendees[i];
+
+      const existing: any = await c.env.DB.prepare(
+        'SELECT id, nomor_sertifikat, uuid FROM e_sertifikat WHERE kegiatan_id = ? AND user_id = ?'
+      ).bind(id, att.user_id).first();
+
+      if (existing) {
+        issued.push({
+          user_id: att.user_id,
+          nama: att.nama,
+          nomor_sertifikat: existing.nomor_sertifikat,
+          uuid: existing.uuid,
+          is_new: false
+        });
+        continue;
+      }
+
+      const uuid = crypto.randomUUID();
+      const nomorPadded = String(i + 1).padStart(3, '0');
+      const kegPadded = String(id).padStart(3, '0');
+      const nomorSertifikat = `421.2/KKG-03-WNY/SERT/${year}/${kegPadded}-${nomorPadded}`;
+      const verifyUrl = `/verify/sertifikat/${uuid}`;
+
+      await c.env.DB.prepare(`
+        INSERT INTO e_sertifikat (
+          nomor_sertifikat, kegiatan_id, user_id, nama_peserta, nip_peserta, unit_kerja,
+          nama_kegiatan, tanggal_kegiatan, materi_pokok, alokasi_jp, peran, uuid, qr_verify_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        nomorSertifikat,
+        id,
+        att.user_id,
+        att.nama,
+        att.nip || '-',
+        att.sekolah || 'SDN Gugus 3 Wanayasa',
+        kegiatan.nama_kegiatan,
+        kegiatan.tanggal,
+        kegiatan.deskripsi || kegiatan.nama_kegiatan,
+        4,
+        'Peserta Aktif',
+        uuid,
+        verifyUrl
+      ).run();
+
+      issued.push({
+        user_id: att.user_id,
+        nama: att.nama,
+        nomor_sertifikat: nomorSertifikat,
+        uuid,
+        is_new: true
+      });
+    }
+
+    return successResponse(c, {
+      kegiatan_id: id,
+      total_issued: issued.length,
+      certificates: issued
+    }, `Berhasil menerbitkan ${issued.length} E-Sertifikat resmi KKG Gugus 3 Wanayasa`);
+  } catch (e: any) {
+    console.error('Issue certificates error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Ambil E-Sertifikat milik user yang sedang login untuk kegiatan tertentu
+absensi.get('/kegiatan/:id/my-certificate', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+
+  if (!user) {
+    return Errors.unauthorized(c);
+  }
+
+  try {
+    const id = c.req.param('id');
+    await ensureSertifikatTable(c.env.DB);
+
+    const cert: any = await c.env.DB.prepare(`
+      SELECT s.*, k.tempat, k.waktu_mulai, k.waktu_selesai
+      FROM e_sertifikat s
+      JOIN kegiatan k ON s.kegiatan_id = k.id
+      WHERE s.kegiatan_id = ? AND s.user_id = ?
+    `).bind(id, user.id).first();
+
+    if (!cert) {
+      return Errors.notFound(c, 'E-Sertifikat belum diterbitkan atau Anda belum tercatat hadir dalam kegiatan ini.');
+    }
+
+    return successResponse(c, cert);
+  } catch (e: any) {
+    console.error('Get my-certificate error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Public Verification Endpoint untuk E-Sertifikat KKG
+absensi.get('/sertifikat/verify/:uuid', async (c) => {
+  try {
+    const uuid = c.req.param('uuid');
+    if (!uuid) {
+      return Errors.validation(c, 'UUID sertifikat diperlukan');
+    }
+
+    await ensureSertifikatTable(c.env.DB);
+
+    const cert: any = await c.env.DB.prepare(`
+      SELECT s.*, k.tempat
+      FROM e_sertifikat s
+      JOIN kegiatan k ON s.kegiatan_id = k.id
+      WHERE s.uuid = ?
+    `).bind(uuid).first();
+
+    if (!cert) {
+      return successResponse(c, {
+        valid: false,
+        error: 'Sertifikat tidak ditemukan atau kode verifikasi tidak terdaftar di pangkalan data KKG Gugus 3 Wanayasa.'
+      });
+    }
+
+    return successResponse(c, {
+      valid: true,
+      instansi: 'Pemerintah Kabupaten Purwakarta - Dinas Pendidikan',
+      organisasi: 'Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa',
+      sertifikat: {
+        nomor_sertifikat: cert.nomor_sertifikat,
+        nama_peserta: cert.nama_peserta,
+        nip_peserta: cert.nip_peserta,
+        unit_kerja: cert.unit_kerja,
+        nama_kegiatan: cert.nama_kegiatan,
+        tanggal_kegiatan: cert.tanggal_kegiatan,
+        materi_pokok: cert.materi_pokok,
+        alokasi_jp: cert.alokasi_jp,
+        peran: cert.peran,
+        issued_at: cert.issued_at,
+        tanda_tangan: {
+          ketua_kkg: 'Andris, S.Pd.',
+          nip_ketua: '19870512 201101 1 002',
+          pengawas_pembina: 'Hj. Nenden Laila, M.Pd.',
+          nip_pengawas: '19760314 200501 2 006'
+        }
+      }
+    });
+  } catch (e: any) {
+    console.error('Verify sertifikat error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Detail sertifikat lengkap untuk render UI / Print
+absensi.get('/sertifikat/:uuid', async (c) => {
+  try {
+    const uuid = c.req.param('uuid');
+    await ensureSertifikatTable(c.env.DB);
+
+    const cert: any = await c.env.DB.prepare(`
+      SELECT s.*, k.tempat, k.waktu_mulai, k.waktu_selesai
+      FROM e_sertifikat s
+      JOIN kegiatan k ON s.kegiatan_id = k.id
+      WHERE s.uuid = ?
+    `).bind(uuid).first();
+
+    if (!cert) {
+      return Errors.notFound(c, 'E-Sertifikat tidak ditemukan');
+    }
+
+    return successResponse(c, cert);
+  } catch (e: any) {
+    console.error('Get sertifikat by uuid error:', e);
+    return Errors.internal(c);
+  }
+});
+
 export default absensi;
+

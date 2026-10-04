@@ -62,9 +62,15 @@ export async function renderAbsensi() {
               ${k.deskripsi ? `<p class="text-sm text-gray-500 dark:text-gray-400 mt-2">${escapeHtml(k.deskripsi)}</p>` : ''}
             </div>
             <div class="flex flex-wrap gap-2">
-              ${state.user?.role === 'admin' ? `<button onclick="showQRCode(${k.id})" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition"><i class="fas fa-qrcode mr-1"></i>QR</button>` : ''}
-              ${state.user ? `<button onclick="checkinAbsensi(${k.id})" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"><i class="fas fa-check mr-1"></i>Check-in</button>` : ''}
-              <button onclick="viewAbsensi(${k.id}, '${escapeHtml(k.nama_kegiatan)}')" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium dark:text-gray-200"><i class="fas fa-list mr-1"></i>Daftar Hadir</button>
+              ${state.user?.role === 'admin' ? `
+                <button onclick="showRollingQRCode(${k.id})" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow-2xs" title="Rolling Dynamic QR Anti-Titip Presensi"><i class="fas fa-satellite-dish mr-1"></i>Rolling QR</button>
+                <button onclick="issueCertificates(${k.id})" class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition shadow-2xs" title="Terbitkan E-Sertifikat PMM"><i class="fas fa-stamp mr-1"></i>Terbitkan Sertifikat</button>
+              ` : ''}
+              ${state.user ? `
+                <button onclick="checkinAbsensi(${k.id})" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition shadow-2xs"><i class="fas fa-check mr-1"></i>Check-in</button>
+                <button onclick="viewMyCertificate(${k.id})" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition shadow-2xs" title="Lihat & Cetak E-Sertifikat PMM"><i class="fas fa-award mr-1"></i>E-Sertifikat</button>
+              ` : ''}
+              <button onclick="viewAbsensi(${k.id}, '${escapeHtml(k.nama_kegiatan)}')" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium dark:text-gray-200 transition"><i class="fas fa-list mr-1"></i>Daftar Hadir</button>
             </div>
           </div>
         </div>
@@ -312,7 +318,217 @@ window.copyQRData = function (qrData) {
 }
 
 window.closeQRDisplay = function () {
+  if (window._rollingQRInterval) {
+    clearInterval(window._rollingQRInterval);
+    window._rollingQRInterval = null;
+  }
   document.getElementById('qr-display-modal').classList.add('hidden');
+}
+
+// ============================================
+// Rolling Dynamic QR Code (Anti-Titip Presensi)
+// ============================================
+
+window.showRollingQRCode = async function (kegiatanId) {
+  const modal = document.getElementById('qr-display-modal');
+  const content = document.getElementById('qr-display-content');
+
+  modal.classList.remove('hidden');
+
+  if (window._rollingQRInterval) {
+    clearInterval(window._rollingQRInterval);
+    window._rollingQRInterval = null;
+  }
+
+  content.innerHTML = `
+    <div class="flex flex-col items-center justify-center py-8">
+      <div class="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mb-3"></div>
+      <p class="text-sm font-semibold text-slate-500">Menghasilkan Rolling Dynamic QR Code...</p>
+    </div>
+  `;
+
+  let remaining = 30;
+
+  async function fetchRollingToken() {
+    try {
+      const res = await api(`/absensi/kegiatan/${kegiatanId}/rolling-qr`);
+      const data = res.data;
+      remaining = data.seconds_remaining || 30;
+
+      content.innerHTML = `
+        <div class="mb-3 text-center">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-black uppercase tracking-wider mb-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            Rolling Dynamic QR (Anti-Titip Presensi)
+          </div>
+          <h4 class="font-black text-xl text-gray-900 dark:text-gray-100">${escapeHtml(data.nama_kegiatan)}</h4>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${formatDate(data.tanggal)} • ${escapeHtml(data.tempat || 'Ruang KKG')}</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-md border border-indigo-100 inline-block mb-3 relative">
+          <img src="${data.qr_image}" alt="Rolling QR Code" class="w-72 h-72 mx-auto">
+        </div>
+
+        <!-- PROGRESS BAR & COUNTDOWN -->
+        <div class="max-w-xs mx-auto mb-4 text-center">
+          <div class="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
+            <span>Berganti otomatis:</span>
+            <span id="rolling-countdown-text" class="text-indigo-600 dark:text-indigo-400 font-mono font-black">${remaining} detik</span>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+            <div id="rolling-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-full transition-all duration-1000" style="width: ${(remaining / 30) * 100}%"></div>
+          </div>
+          <p class="text-[11px] text-gray-400 mt-2 leading-tight">
+            <i class="fas fa-shield-alt text-indigo-500 mr-1"></i>QR Code ini memiliki masa berlaku 30 detik. Foto dari luar ruangan tidak akan dapat dipakai check-in.
+          </p>
+        </div>
+
+        <div class="flex gap-2 justify-center">
+          <button onclick="fetchRollingToken()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs">
+            <i class="fas fa-sync-alt mr-1"></i>Refresh Sekarang
+          </button>
+          <button onclick="copyQRData('${data.qr_data}')" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition">
+            <i class="fas fa-copy mr-1"></i>Copy Token
+          </button>
+          <button onclick="closeQRDisplay()" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold">
+            Tutup
+          </button>
+        </div>
+      `;
+    } catch (e) {
+      content.innerHTML = `
+        <div class="text-center py-6">
+          <i class="fas fa-exclamation-triangle text-3xl text-red-500 mb-2"></i>
+          <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">${escapeHtml(e.message || 'Gagal memuat Rolling QR')}</p>
+        </div>
+      `;
+    }
+  }
+
+  window.fetchRollingToken = fetchRollingToken;
+  await fetchRollingToken();
+
+  window._rollingQRInterval = setInterval(() => {
+    remaining--;
+    const txt = document.getElementById('rolling-countdown-text');
+    const bar = document.getElementById('rolling-progress-bar');
+    if (txt) txt.textContent = `${Math.max(0, remaining)} detik`;
+    if (bar) bar.style.width = `${Math.max(0, (remaining / 30) * 100)}%`;
+
+    if (remaining <= 0) {
+      fetchRollingToken();
+    }
+  }, 1000);
+}
+
+// ============================================
+// E-Sertifikat PMM Generator & Viewer
+// ============================================
+
+window.issueCertificates = async function (kegiatanId) {
+  if (!confirm('Terbitkan E-Sertifikat resmi KKG (4 JP) ber-QR Code untuk seluruh peserta yang berstatus HADIR?')) {
+    return;
+  }
+
+  try {
+    const res = await api(`/absensi/kegiatan/${kegiatanId}/issue-certificates`, { method: 'POST' });
+    showToast(res.message || `Berhasil menerbitkan ${res.data?.total_issued || 0} E-Sertifikat!`, 'success');
+  } catch (e) {
+    showToast(e.message || 'Gagal menerbitkan E-Sertifikat', 'error');
+  }
+}
+
+window.viewMyCertificate = async function (kegiatanId) {
+  try {
+    const res = await api(`/absensi/kegiatan/${kegiatanId}/my-certificate`);
+    if (!res.data) {
+      showToast('E-Sertifikat belum diterbitkan atau Anda belum tercatat hadir.', 'warning');
+      return;
+    }
+
+    const cert = res.data;
+    showCertificateModal(cert);
+  } catch (e) {
+    showToast(e.message || 'E-Sertifikat belum tersedia. Pastikan Anda sudah check-in dan admin telah menerbitkan sertifikat.', 'warning');
+  }
+}
+
+window.showCertificateModal = function (cert) {
+  let modal = document.getElementById('certificate-preview-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'certificate-preview-modal';
+    document.body.appendChild(modal);
+  }
+
+  const verifyFullUrl = `${window.location.origin}/verify/sertifikat/${cert.uuid}`;
+
+  modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 my-8 border border-amber-200 dark:border-gray-700 relative">
+      <button onclick="document.getElementById('certificate-preview-modal').remove()" class="absolute top-5 right-5 text-gray-400 hover:text-gray-600 no-print">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+
+      <!-- CERTIFICATE INNER (A4 PROPORTION) -->
+      <div id="print-certificate-area" class="border-4 border-double border-amber-600/70 p-6 sm:p-8 rounded-2xl bg-radial from-amber-50/40 via-white to-amber-50/20 text-center relative">
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <i class="fas fa-award text-amber-500 text-3xl"></i>
+        </div>
+        <h4 class="text-xs uppercase font-extrabold tracking-widest text-slate-500">Pemerintah Kabupaten Purwakarta • Dinas Pendidikan</h4>
+        <h3 class="text-lg font-black tracking-tight text-slate-900 mt-0.5">KELOMPOK KERJA GURU (KKG) GUGUS 3 WANAYASA</h3>
+        <p class="text-[11px] font-mono font-bold text-amber-800 mt-2">Nomor: ${escapeHtml(cert.nomor_sertifikat)}</p>
+
+        <div class="my-4">
+          <p class="text-xs text-slate-500">Diberikan kepada:</p>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1 uppercase tracking-wide border-b-2 border-amber-500/40 pb-1 inline-block">${escapeHtml(cert.nama_peserta)}</h2>
+          <p class="text-xs font-mono text-slate-600 mt-1">NIP. ${escapeHtml(cert.nip_peserta || '-')}</p>
+          <p class="text-xs font-semibold text-emerald-800 mt-0.5">${escapeHtml(cert.unit_kerja || 'SDN Gugus 3 Wanayasa')}</p>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed max-w-lg mx-auto">
+          Atas partisipasi aktifnya sebagai <strong>${escapeHtml(cert.peran || 'Peserta Aktif')}</strong> dalam Kegiatan Pelatihan Guru Berkelanjutan:
+        </p>
+        <p class="text-sm font-bold text-slate-800 my-1">"${escapeHtml(cert.nama_kegiatan)}"</p>
+        <p class="text-xs text-slate-500">Dengan alokasi waktu setara <strong>${cert.alokasi_jp || 4} Jam Pelajaran (JP)</strong> pada tanggal ${formatDate(cert.tanggal_kegiatan)}.</p>
+
+        <!-- SIGNATURE & QR -->
+        <div class="mt-6 pt-4 border-t border-amber-200 flex justify-between items-center text-left text-xs">
+          <div class="flex items-center gap-3">
+            <div id="cert-qr-box" class="w-16 h-16 bg-white p-1 rounded-xl border border-amber-300 shadow-2xs flex items-center justify-center">
+              <i class="fas fa-qrcode text-3xl text-emerald-700"></i>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400 block">Kode Verifikasi PMM:</span>
+              <span class="text-[11px] font-mono font-bold text-slate-700 block">${cert.uuid.substring(0, 13)}...</span>
+              <span class="text-[10px] text-emerald-600 font-semibold block"><i class="fas fa-check-circle mr-1"></i>Dokumen Terverifikasi Sah</span>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <span class="text-[11px] text-slate-500 block">Wanayasa, ${formatDate(cert.tanggal_kegiatan)}</span>
+            <span class="text-xs font-bold text-slate-800 block mt-1">Ketua KKG Gugus 3</span>
+            <div class="h-8"></div>
+            <span class="text-xs font-bold text-slate-900 block underline">Andris, S.Pd.</span>
+            <span class="text-[10px] font-mono text-slate-500 block">NIP. 19870512 201101 1 002</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="flex flex-wrap gap-3 justify-end mt-6 no-print">
+        <button onclick="navigator.clipboard.writeText('${verifyFullUrl}'); showToast('Tautan verifikasi PMM disalin ke clipboard!', 'success');" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+          <i class="fas fa-link mr-1.5"></i>Salin Tautan PMM
+        </button>
+        <button onclick="window.open('/verify/sertifikat/${cert.uuid}', '_blank')" class="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition">
+          <i class="fas fa-external-link-alt mr-1.5"></i>Buka Halaman Verifikasi
+        </button>
+        <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20">
+          <i class="fas fa-print mr-1.5"></i>Cetak / Simpan PDF
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 // QR Scanner 
@@ -331,7 +547,7 @@ window.showQRScanner = async function () {
         <div class="p-6 text-center">
             <i class="fas fa-qrcode text-4xl text-gray-400 mb-4"></i>
             <p class="text-gray-600 dark:text-gray-300 mb-4">Masukkan kode QR dari admin:</p>
-            <input type="text" id="manual-qr-input" placeholder="kkg-absensi:..." class="w-full px-4 py-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <input type="text" id="manual-qr-input" placeholder="kkg-dyn:... atau kkg-absensi:..." class="w-full px-4 py-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-sm">
             <button onclick="submitManualQR()" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium">
                 <i class="fas fa-check mr-2"></i>Submit
             </button>
@@ -371,17 +587,23 @@ async function onQRScanSuccess(qrData) {
       result.innerHTML = `
                 <div class="text-center text-red-600 dark:text-red-400">
                     <i class="fas fa-times-circle text-3xl mb-2"></i>
-                    <p>${escapeHtml(verifyRes.data?.error || 'QR code tidak valid')}</p>
+                    <p>${escapeHtml(verifyRes.data?.error || 'QR code tidak valid atau telah kadaluarsa')}</p>
                 </div>
             `;
       return;
     }
 
     const kegiatan = verifyRes.data.kegiatan;
+    const isRolling = verifyRes.data.is_rolling;
 
     result.innerHTML = `
             <div class="text-center">
                 <i class="fas fa-check-circle text-4xl text-green-500 mb-3"></i>
+                ${isRolling ? `
+                  <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 uppercase mb-2">
+                    <i class="fas fa-satellite-dish mr-1"></i>Verified Rolling Dynamic QR
+                  </span>
+                ` : ''}
                 <h4 class="font-bold text-gray-800 dark:text-gray-100">${escapeHtml(kegiatan.nama_kegiatan)}</h4>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
                     ${formatDate(kegiatan.tanggal)} | ${escapeHtml(kegiatan.waktu_mulai || '')}
@@ -414,10 +636,27 @@ window.confirmQRCheckin = async function (qrData) {
         </div>
     `;
 
+  let coords = null;
+  try {
+    if (navigator.geolocation) {
+      coords = await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+          () => resolve(null),
+          { timeout: 3000 }
+        );
+      });
+    }
+  } catch (_) {}
+
   try {
     const res = await api('/absensi/checkin/qr', {
       method: 'POST',
-      body: { qr_data: qrData }
+      body: {
+        qr_data: qrData,
+        latitude: coords?.latitude,
+        longitude: coords?.longitude
+      }
     });
 
     result.innerHTML = `
@@ -452,4 +691,5 @@ window.closeQRScanner = function () {
   document.getElementById('qr-reader').innerHTML = '';
   document.getElementById('qr-result').classList.add('hidden');
 }
+
 

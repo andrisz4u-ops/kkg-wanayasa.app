@@ -219,3 +219,137 @@ export async function verifySecureToken(qrData: string): Promise<{
         return { valid: false, error: 'Gagal memproses QR code' };
     }
 }
+
+/**
+ * Generate rolling dynamic QR data that changes every `windowSeconds` (default 30 seconds)
+ * Anti-titip presensi: screenshot will expire in 30-60 seconds!
+ */
+export async function generateRollingQRData(
+    kegiatanId: number,
+    windowSeconds: number = 30
+): Promise<{
+    qr_data: string;
+    window_index: number;
+    seconds_remaining: number;
+    window_seconds: number;
+}> {
+    const now = Date.now();
+    const windowIndex = Math.floor(now / (windowSeconds * 1000));
+    const secondsRemaining = windowSeconds - (Math.floor(now / 1000) % windowSeconds);
+
+    const data = `kkg-dyn:${kegiatanId}:${windowIndex}`;
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(TOKEN_SECRET);
+    const messageData = encoder.encode(data);
+
+    const key = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+
+    const signatureBuffer = await crypto.subtle.sign('HMAC', key, messageData);
+    const signatureArray = new Uint8Array(signatureBuffer);
+    const signature = Array.from(signatureArray)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+        .substring(0, 16);
+
+    const qr_data = `kkg-dyn:${kegiatanId}:${windowIndex}:${signature}`;
+    return {
+        qr_data,
+        window_index: windowIndex,
+        seconds_remaining: secondsRemaining,
+        window_seconds: windowSeconds
+    };
+}
+
+/**
+ * Verify rolling dynamic QR data or legacy QR data
+ * Allows +- tolerance window (e.g. 1 window = +-30s grace period)
+ */
+export async function verifyRollingQRData(
+    qrData: string,
+    windowSeconds: number = 30,
+    tolerance: number = 1
+): Promise<{
+    valid: boolean;
+    kegiatanId?: number;
+    expired?: boolean;
+    error?: string;
+    isRolling?: boolean;
+}> {
+    try {
+        if (typeof qrData !== 'string') {
+            return { valid: false, error: 'QR data harus berupa teks string' };
+        }
+
+        // Support dynamic rolling format: kkg-dyn:kegiatanId:windowIndex:signature
+        if (qrData.startsWith('kkg-dyn:')) {
+            const parts = qrData.split(':');
+            if (parts.length !== 4) {
+                return { valid: false, error: 'Format Dynamic QR Code tidak valid' };
+            }
+
+            const [, kegiatanIdStr, windowIndexStr, signature] = parts;
+            const kegiatanId = parseInt(kegiatanIdStr, 10);
+            const tokenWindow = parseInt(windowIndexStr, 10);
+
+            if (isNaN(kegiatanId) || isNaN(tokenWindow)) {
+                return { valid: false, error: 'Data Dynamic QR Code tidak valid' };
+            }
+
+            const currentWindow = Math.floor(Date.now() / (windowSeconds * 1000));
+            const diff = Math.abs(currentWindow - tokenWindow);
+
+            if (diff > tolerance) {
+                return {
+                    valid: false,
+                    kegiatanId,
+                    expired: true,
+                    error: 'Kode QR dinamis telah kadaluarsa. Silakan scan kode terbaru yang tampil di layar proyektor.'
+                };
+            }
+
+            // Verify signature for the token's window
+            const data = `kkg-dyn:${kegiatanId}:${tokenWindow}`;
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(TOKEN_SECRET);
+            const messageData = encoder.encode(data);
+
+            const key = await crypto.subtle.importKey(
+                'raw',
+                keyData,
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign']
+            );
+
+            const signatureBuffer = await crypto.subtle.sign('HMAC', key, messageData);
+            const signatureArray = new Uint8Array(signatureBuffer);
+            const expectedSignature = Array.from(signatureArray)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('')
+                .substring(0, 16);
+
+            if (signature !== expectedSignature) {
+                return { valid: false, error: 'QR Code dinamis tidak valid (tanda tangan digital tidak sesuai)' };
+            }
+
+            return { valid: true, kegiatanId, isRolling: true };
+        }
+
+        // Fallback to legacy format: kkg-absensi:kegiatanId:expiry:signature
+        if (qrData.startsWith('kkg-absensi:')) {
+            const legacyRes = await verifySecureToken(qrData);
+            return { ...legacyRes, isRolling: false };
+        }
+
+        return { valid: false, error: 'Format kode QR presensi tidak dikenali' };
+    } catch (e: any) {
+        return { valid: false, error: 'Gagal memproses QR code: ' + (e?.message || 'Unknown error') };
+    }
+}
+

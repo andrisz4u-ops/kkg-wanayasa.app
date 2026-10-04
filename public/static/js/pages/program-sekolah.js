@@ -36,7 +36,12 @@ export function renderProgramSekolah() {
             </p>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <button type="button" id="btn-toggle-monitoring"
+                    class="inline-flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 active:scale-95 text-emerald-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-emerald-400/30 backdrop-blur-xs transition-all shadow-xs cursor-pointer">
+              <i class="fa-solid fa-clipboard-check text-emerald-300"></i>
+              <span id="btn-toggle-monitoring-text">Monitoring 7 KAIH & 7 Poé</span>
+            </button>
             <button type="button" id="btn-open-archive"
                     class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-white/20 backdrop-blur-xs transition-all shadow-xs cursor-pointer">
               <i class="fa-solid fa-folder-open text-indigo-300"></i>
@@ -289,6 +294,11 @@ export function renderProgramSekolah() {
         </div>
 
       </div>
+      
+      <!-- SECTION MONITORING & CHECKLIST 7 KAIH & 7 POE ATIKAN PURWAKARTA -->
+      <div id="program-monitoring-section" class="hidden space-y-6">
+        <!-- Rendered dynamically by renderMonitoringView() -->
+      </div>
 
     </div>
   `;
@@ -422,6 +432,33 @@ export function initProgramSekolah() {
         currentProgramData = loadedData;
         showCanvasResult(currentProgramData);
       });
+    });
+  }
+
+  // Bind Monitoring Toggle Button (7 KAIH & 7 Poe Atikan Purwakarta)
+  const btnToggleMon = document.getElementById('btn-toggle-monitoring');
+  const monSection = document.getElementById('program-monitoring-section');
+  const wizSection = document.getElementById('program-wizard-section');
+  const resSection = document.getElementById('program-result-section');
+  const btnToggleMonText = document.getElementById('btn-toggle-monitoring-text');
+
+  if (btnToggleMon) {
+    btnToggleMon.addEventListener('click', async () => {
+      const isShowingMon = !monSection?.classList.contains('hidden');
+      if (isShowingMon) {
+        monSection?.classList.add('hidden');
+        wizSection?.classList.remove('hidden');
+        if (btnToggleMonText) btnToggleMonText.textContent = 'Monitoring 7 KAIH & 7 Poé';
+        btnToggleMon.className = 'inline-flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 active:scale-95 text-emerald-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-emerald-400/30 backdrop-blur-xs transition-all shadow-xs cursor-pointer';
+      } else {
+        wizSection?.classList.add('hidden');
+        resSection?.classList.add('hidden');
+        monSection?.classList.remove('hidden');
+        if (btnToggleMonText) btnToggleMonText.textContent = 'Kembali ke Dokumen';
+        btnToggleMon.className = 'inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl border border-indigo-400 backdrop-blur-xs transition-all shadow-xs cursor-pointer';
+        await loadAndRenderMonitoring();
+        monSection?.scrollIntoView({ behavior: 'smooth' });
+      }
     });
   }
 
@@ -1074,3 +1111,344 @@ function bindCanvasLiveSync() {
     });
   });
 }
+
+// ============================================
+// SISTEM MONITORING & CHECKLIST 7 KAIH & 7 POÉ ATIKAN PURWAKARTA
+// ============================================
+
+let currentMonitoringData = null;
+let currentMonitoringFilter = 'all';
+
+async function loadAndRenderMonitoring(filterCategory = 'all') {
+  currentMonitoringFilter = filterCategory;
+  const container = document.getElementById('program-monitoring-section');
+  if (!container) return;
+
+  const targetSekolah = document.getElementById('inp-nama-sekolah')?.value?.trim() || window.state?.user?.sekolah || 'SD NEGERI 1 WANAYASA';
+
+  container.innerHTML = `
+    <div class="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-slate-200/80 shadow-xs">
+      <div class="animate-spin w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full mb-3"></div>
+      <p class="text-sm font-bold text-slate-700">Memuat Sistem Monitoring Keterlaksanaan Program...</p>
+      <p class="text-xs text-slate-400 mt-1">${targetSekolah}</p>
+    </div>
+  `;
+
+  try {
+    const res = await api(`/program-sekolah/monitoring/checklist?sekolah=${encodeURIComponent(targetSekolah)}`);
+    if (!res || !res.success || !res.data) {
+      throw new Error(res?.message || 'Gagal memuat data monitoring');
+    }
+
+    currentMonitoringData = res.data;
+    renderMonitoringView(currentMonitoringData, currentMonitoringFilter);
+  } catch (err) {
+    container.innerHTML = `
+      <div class="p-8 text-center bg-white rounded-3xl border border-rose-200 shadow-xs">
+        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-500 mb-2"></i>
+        <h4 class="font-bold text-slate-800">Gagal Memuat Monitoring Program</h4>
+        <p class="text-xs text-slate-500 mt-1">${err.message || 'Terjadi kesalahan jaringan'}</p>
+        <button onclick="window.retryLoadMonitoring()" class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition">Coba Lagi</button>
+      </div>
+    `;
+  }
+}
+
+window.retryLoadMonitoring = () => loadAndRenderMonitoring(currentMonitoringFilter);
+
+function renderMonitoringView(data, activeFilter = 'all') {
+  const container = document.getElementById('program-monitoring-section');
+  if (!container) return;
+
+  const summary = data.summary || { total: 14, tercapai: 0, berjalan: 0, belum: 14, persentase: 0 };
+  const allItems = data.items || [];
+  const filteredItems = activeFilter === 'all' 
+    ? allItems 
+    : allItems.filter(it => it.kategori === activeFilter);
+
+  const targetSekolah = data.sekolah || 'SD NEGERI 1 WANAYASA';
+
+  container.innerHTML = `
+    <!-- MONITORING TOP HEADER & PROGRESS CARD -->
+    <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-500/20">
+      <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-full text-xs font-semibold text-emerald-300 mb-2.5 backdrop-blur-xs">
+            <i class="fa-solid fa-clipboard-check text-emerald-400"></i>
+            <span>Monitoring & Evaluasi Keterlaksanaan Program Satuan Pendidikan</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            ${targetSekolah}
+          </h2>
+          <p class="text-xs sm:text-sm text-emerald-100/80 mt-1 max-w-2xl leading-relaxed">
+            Pantau dan catat realisasi mingguan pembiasaan karakter <strong>7 Poé Atikan Purwakarta Istimewa</strong> (Perbup No. 69/2015) serta <strong>7 Kebiasaan Anak Indonesia Hebat (7 KAIH)</strong> Kemendikdasmen RI.
+          </p>
+        </div>
+
+        <!-- PROGRESS CIRCLE / STAT CARD -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/15 min-w-[280px] shrink-0 text-center lg:text-right">
+          <div class="text-[11px] uppercase tracking-wider text-emerald-200 font-bold mb-1">Indeks Keterlaksanaan</div>
+          <div class="text-3xl sm:text-4xl font-black text-white font-mono flex items-center justify-center lg:justify-end gap-2">
+            <span>${summary.persentase}%</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${summary.persentase >= 75 ? 'bg-emerald-500/40 text-emerald-200' : summary.persentase >= 40 ? 'bg-amber-500/40 text-amber-200' : 'bg-rose-500/40 text-rose-200'}">
+              ${summary.persentase >= 75 ? 'Optimal' : summary.persentase >= 40 ? 'Berkembang' : 'Awal Mulai'}
+            </span>
+          </div>
+
+          <div class="w-full bg-white/20 h-2.5 rounded-full overflow-hidden mt-3">
+            <div class="bg-gradient-to-r from-emerald-400 to-teal-300 h-full transition-all duration-700" style="width: ${summary.persentase}%"></div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10 text-center">
+            <div>
+              <span class="text-xs font-extrabold text-emerald-300 block">${summary.tercapai}</span>
+              <span class="text-[10px] text-slate-300 block">Tercapai</span>
+            </div>
+            <div>
+              <span class="text-xs font-extrabold text-amber-300 block">${summary.berjalan}</span>
+              <span class="text-[10px] text-slate-300 block">Berjalan</span>
+            </div>
+            <div>
+              <span class="text-xs font-extrabold text-slate-300 block">${summary.belum}</span>
+              <span class="text-[10px] text-slate-300 block">Belum</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER & ACTION BAR -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+      <!-- Tabs Filter -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="window.filterMonitoringTab('all')" 
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${activeFilter === 'all' ? 'bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+          Semua Agenda (${allItems.length})
+        </button>
+        <button onclick="window.filterMonitoringTab('7poe_atikan')" 
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${activeFilter === '7poe_atikan' ? 'bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+          <i class="fa-solid fa-landmark mr-1 text-amber-500"></i>7 Poé Atikan Purwakarta (7)
+        </button>
+        <button onclick="window.filterMonitoringTab('7kaih')" 
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${activeFilter === '7kaih' ? 'bg-emerald-700 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+          <i class="fa-solid fa-child-reaching mr-1 text-indigo-500"></i>7 KAIH Nasional (7)
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button onclick="window.printMonitoringReport()" 
+                class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-print"></i>
+          <span>Cetak Laporan Pengawas</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CARDS GRID -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      ${filteredItems.map(it => {
+        const isTercapai = it.status === 'tercapai';
+        const isBerjalan = it.status === 'berjalan';
+        const isBelum = it.status === 'belum' || !it.status;
+
+        const borderClass = isTercapai 
+          ? 'border-emerald-300 bg-emerald-50/20' 
+          : isBerjalan 
+            ? 'border-amber-300 bg-amber-50/20' 
+            : 'border-slate-200 bg-white';
+
+        return `
+          <div class="rounded-2xl p-5 border-2 ${borderClass} shadow-2xs flex flex-col justify-between transition-all hover:shadow-sm">
+            <div>
+              <!-- CARD TOP BADGES -->
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${it.kategori === '7poe_atikan' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-indigo-100 text-indigo-800 border border-indigo-200'}">
+                  <i class="fa-solid ${it.kategori === '7poe_atikan' ? 'fa-landmark' : 'fa-child-reaching'}"></i>
+                  <span>${it.kategori === '7poe_atikan' ? '7 Poé Atikan' : '7 KAIH'}</span>
+                </span>
+
+                <span class="text-[11px] font-semibold text-slate-500">
+                  <i class="fa-regular fa-calendar-check mr-1 text-slate-400"></i>${it.hari_pelaksanaan || '-'}
+                </span>
+              </div>
+
+              <!-- TITLE & DESCRIPTION -->
+              <h4 class="text-base font-extrabold text-slate-900 leading-snug mb-1">
+                ${it.item_nama}
+              </h4>
+              <p class="text-xs text-slate-600 leading-relaxed mb-4">
+                ${it.deskripsi || '-'}
+              </p>
+
+              <!-- FIELD EVALUATION NOTE (IF EXISTS) -->
+              ${it.catatan ? `
+                <div class="p-3 bg-white rounded-xl border border-slate-200/90 mb-4 text-xs">
+                  <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase mb-1">
+                    <span>Catatan Evaluasi / Bukti Pelaksanaan:</span>
+                    <span>${it.tanggal_evaluasi || ''}</span>
+                  </div>
+                  <p class="text-slate-700 italic">"${it.catatan}"</p>
+                  ${it.penilai ? `<span class="text-[10px] text-slate-400 block mt-1">Penilai: ${it.penilai}</span>` : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- CARD BOTTOM: STATUS TOGGLE & NOTE BUTTON -->
+            <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <!-- Quick Status Buttons -->
+              <div class="inline-flex p-1 bg-slate-100 rounded-xl gap-1 text-[11px] font-bold">
+                <button onclick="window.updateMonitoringStatus('${it.item_kode}', 'belum')" 
+                        class="px-2.5 py-1 rounded-lg transition-all ${isBelum ? 'bg-white text-slate-700 shadow-2xs font-extrabold' : 'text-slate-400 hover:text-slate-600'}">
+                  Belum
+                </button>
+                <button onclick="window.updateMonitoringStatus('${it.item_kode}', 'berjalan')" 
+                        class="px-2.5 py-1 rounded-lg transition-all ${isBerjalan ? 'bg-amber-500 text-white shadow-2xs font-extrabold' : 'text-slate-400 hover:text-slate-600'}">
+                  Berjalan
+                </button>
+                <button onclick="window.updateMonitoringStatus('${it.item_kode}', 'tercapai')" 
+                        class="px-2.5 py-1 rounded-lg transition-all ${isTercapai ? 'bg-emerald-600 text-white shadow-2xs font-extrabold' : 'text-slate-400 hover:text-slate-600'}">
+                  Tercapai
+                </button>
+              </div>
+
+              <!-- Button Open Note Modal -->
+              <button onclick="window.openMonitoringNoteModal('${it.item_kode}')" 
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition cursor-pointer">
+                <i class="fa-regular fa-comment-dots text-emerald-600"></i>
+                <span>${it.catatan ? 'Ubah Catatan' : '+ Catatan Bukti'}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <!-- EVALUATION NOTE MODAL CONTAINER -->
+    <div id="monitoring-note-modal" class="hidden"></div>
+  `;
+}
+
+window.filterMonitoringTab = function (category) {
+  currentMonitoringFilter = category;
+  if (currentMonitoringData) {
+    renderMonitoringView(currentMonitoringData, currentMonitoringFilter);
+  }
+};
+
+window.updateMonitoringStatus = async function (itemKode, newStatus) {
+  const targetSekolah = currentMonitoringData?.sekolah || document.getElementById('inp-nama-sekolah')?.value?.trim() || 'SD NEGERI 1 WANAYASA';
+
+  try {
+    const res = await api('/program-sekolah/monitoring/checklist/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        item_kode: itemKode,
+        status: newStatus,
+        sekolah: targetSekolah
+      })
+    });
+
+    if (res && res.success) {
+      // Update local item
+      const item = currentMonitoringData?.items?.find(it => it.item_kode === itemKode);
+      if (item) {
+        item.status = newStatus;
+      }
+      // Re-fetch to recalculate fresh summary
+      await loadAndRenderMonitoring(currentMonitoringFilter);
+      showToast(`Status berhasil diubah menjadi: ${newStatus.toUpperCase()}`, 'success');
+    }
+  } catch (err) {
+    showToast(err.message || 'Gagal memperbarui status', 'error');
+  }
+};
+
+window.openMonitoringNoteModal = function (itemKode) {
+  const item = currentMonitoringData?.items?.find(it => it.item_kode === itemKode);
+  if (!item) return;
+
+  const modalContainer = document.getElementById('monitoring-note-modal');
+  if (!modalContainer) return;
+
+  modalContainer.classList.remove('hidden');
+  modalContainer.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+
+  const today = new Date().toISOString().split('T')[0];
+
+  modalContainer.innerHTML = `
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 animate-slide-up relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </span>
+          <h3 class="text-sm font-black text-slate-900">Catatan Pelaksanaan & Bukti Lapangan</h3>
+        </div>
+        <button onclick="document.getElementById('monitoring-note-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+          <i class="fa-solid fa-times text-lg"></i>
+        </button>
+      </div>
+
+      <div class="mb-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70">
+        <h4 class="text-xs font-black text-slate-900">${item.item_nama}</h4>
+        <p class="text-[11px] text-slate-500 mt-0.5">${item.deskripsi || ''}</p>
+      </div>
+
+      <form onsubmit="window.saveMonitoringNote(event, '${itemKode}')" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Evaluasi / Pelaksanaan</label>
+          <input type="date" id="inp-modal-tgl" value="${item.tanggal_evaluasi || today}" required class="w-full text-xs rounded-xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Bukti / Realisasi Lapangan</label>
+          <textarea id="inp-modal-catatan" rows="3" class="w-full text-xs rounded-xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed" placeholder="Contoh: Dilaksanakan rutin setiap Senin pagi, seluruh siswa menyanyikan lagu kebangsaan dan membaca ikrar karakter...">${item.catatan || ''}</textarea>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" onclick="document.getElementById('monitoring-note-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+            Batal
+          </button>
+          <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20">
+            Simpan Catatan
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+};
+
+window.saveMonitoringNote = async function (e, itemKode) {
+  e.preventDefault();
+  const tgl = document.getElementById('inp-modal-tgl')?.value;
+  const catatan = document.getElementById('inp-modal-catatan')?.value;
+  const targetSekolah = currentMonitoringData?.sekolah || 'SD NEGERI 1 WANAYASA';
+
+  try {
+    const res = await api('/program-sekolah/monitoring/checklist/update', {
+      method: 'POST',
+      body: JSON.stringify({
+        item_kode: itemKode,
+        catatan: catatan,
+        tanggal_evaluasi: tgl,
+        sekolah: targetSekolah
+      })
+    });
+
+    if (res && res.success) {
+      document.getElementById('monitoring-note-modal')?.classList.add('hidden');
+      await loadAndRenderMonitoring(currentMonitoringFilter);
+      showToast('Catatan pelaksanaan berhasil disimpan!', 'success');
+    }
+  } catch (err) {
+    showToast(err.message || 'Gagal menyimpan catatan', 'error');
+  }
+};
+
+window.printMonitoringReport = function () {
+  window.print();
+};
+

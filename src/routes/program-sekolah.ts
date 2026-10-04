@@ -2011,6 +2011,287 @@ programSekolah.get('/history', async (c) => {
 });
 
 // ============================================
+// Monitoring & Checklist Keterlaksanaan Program Sekolah (7 KAIH & 7 Poe Atikan)
+// ============================================
+
+export const DEFAULT_MONITORING_STANDARDS = [
+  // 7 Poe Atikan Purwakarta Istimewa (Perbup No. 69/2015)
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_SENEN',
+    item_nama: 'Senén Ajeg Nusantara',
+    hari_pelaksanaan: 'Senin',
+    deskripsi: 'Upacara bendera, penumbuhan jiwa nasionalisme, wawasan kebangsaan, dan kepemimpinan murid.'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_SALASA',
+    item_nama: 'Salasa Mimitran',
+    hari_pelaksanaan: 'Selasa',
+    deskripsi: 'Penguatan jalinan persahabatan, empati sosial, gotong royong, dan aksi anti-perundungan (zero bullying).'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_REBO',
+    item_nama: 'Rebo Maneuh di Rawayan',
+    hari_pelaksanaan: 'Rabu',
+    deskripsi: 'Penguatan kearifan lokal Sunda, pembiasaan basa Sunda, kaulinan barudak, dan pelestarian seni budaya.'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_KEMIS',
+    item_nama: 'Kemis Nyanding Guru Minda',
+    hari_pelaksanaan: 'Kamis',
+    deskripsi: 'Mendalami ilmu pengetahuan, refleksi literasi kritis, adab memuliakan guru, dan keteladanan budi pekerti.'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_JUMAAH',
+    item_nama: 'Juma\'ah Nyucikeun Diri',
+    hari_pelaksanaan: 'Jumat',
+    deskripsi: 'Ibadah bersama/shalat dhuha, tadarus/kebaktian, pembersihan raga dan rohani, infak peduli sesama.'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_SABTU_MINGGU',
+    item_nama: 'Saptu - Minggu Betah di Imah',
+    hari_pelaksanaan: 'Sabtu - Minggu',
+    deskripsi: 'Penguatan ketahanan keluarga, bakti pada orang tua, membantu pekerjaan rumah, dan rekreasi mandiri.'
+  },
+  {
+    kategori: '7poe_atikan',
+    item_kode: 'POE_TDBA',
+    item_nama: 'Tatanen di Bale Atikan (TdBA)',
+    hari_pelaksanaan: 'Berkala',
+    deskripsi: 'Pengembangan karakter peduli lingkungan hidup, budidaya tanaman pangan organik, toga, dan komposting sekolah.'
+  },
+
+  // 7 Kebiasaan Anak Indonesia Hebat (7 KAIH - Kemendikdasmen RI 2025)
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_BANGUN_PAGI',
+    item_nama: '1. Bangun Pagi Tepat Waktu',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Kedisiplinan ritme harian anak menyambut fajar dengan segar, tertib, dan mandiri merapikan tempat tidur.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_BERIBADAH',
+    item_nama: '2. Beribadah Sesuai Agama & Keyakinan',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Pelaksanaan ibadah wajib dan doa harian dengan penuh kesadaran dan keikhlasan spiritual.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_OLAHRAGA',
+    item_nama: '3. Berolahraga dan Bergerak Aktif',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Aktivitas fisik, senam kesegaran jasmani, jalan sehat, atau permainan motorik minimal 30 menit sehari.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_LITERASI',
+    item_nama: '4. Gemar Membaca & Melakukan Literasi',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Membaca buku pengayaan/cerita 15 menit sebelum pelajaran dimulai dan menulis jurnal refleksi bacaan.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_MAKAN_SEHAT',
+    item_nama: '5. Makan Sehat Bergizi Seimbang',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Membawa bekal sehat bergizi seimbang, kurangi jajanan tinggi gula/garam, dan minum air putih cukup.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_BERGAUL_POSITIF',
+    item_nama: '6. Bergaul Positif & Ramah Sosial',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Berinteraksi santun, saling menghargai keragaman, menjauhi kata-kata kasar/ujaran kebencian, dan tolong-menolong.'
+  },
+  {
+    kategori: '7kaih',
+    item_kode: 'KAIH_TIDUR_CUKUP',
+    item_nama: '7. Istirahat dan Tidur Cukup Teratur',
+    hari_pelaksanaan: 'Setiap Hari',
+    deskripsi: 'Membatasi screen time gadget di malam hari dan tidur tepat waktu (8-9 jam bagi siswa SD) agar tumbuh kembang optimal.'
+  }
+];
+
+export async function ensureMonitoringTable(db: D1Database): Promise<void> {
+  try {
+    await db.prepare('SELECT 1 FROM program_monitoring_checklist LIMIT 1').first();
+  } catch {
+    await db.batch([
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS program_monitoring_checklist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sekolah TEXT NOT NULL,
+          kategori TEXT NOT NULL,
+          item_kode TEXT NOT NULL,
+          item_nama TEXT NOT NULL,
+          deskripsi TEXT,
+          hari_pelaksanaan TEXT,
+          status TEXT DEFAULT 'belum' CHECK(status IN ('belum', 'berjalan', 'tercapai')),
+          catatan TEXT,
+          tanggal_evaluasi TEXT,
+          penilai TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(sekolah, item_kode)
+        )
+      `),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_monitoring_sekolah ON program_monitoring_checklist(sekolah)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_monitoring_kategori ON program_monitoring_checklist(kategori)')
+    ]);
+  }
+}
+
+// Endpoint 5b: Ambil Data Checklist & Rekap Progress Monitoring Sekolah
+programSekolah.get('/monitoring/checklist', async (c) => {
+  try {
+    const user: any = c.get('user');
+    await ensureMonitoringTable(c.env.DB);
+
+    const sekolahQuery = c.req.query('sekolah');
+    const targetSekolah = (sekolahQuery || user?.sekolah || 'SD NEGERI 1 WANAYASA').trim();
+
+    // 1. Ambil item yang sudah tersimpan
+    let rows: any = await c.env.DB.prepare(`
+      SELECT * FROM program_monitoring_checklist
+      WHERE sekolah = ?
+      ORDER BY kategori ASC, id ASC
+    `).bind(targetSekolah).all();
+
+    let items = rows.results || [];
+
+    // 2. Jika belum ada untuk sekolah ini, inisialisasi dari DEFAULT_MONITORING_STANDARDS
+    if (items.length === 0) {
+      for (const std of DEFAULT_MONITORING_STANDARDS) {
+        await c.env.DB.prepare(`
+          INSERT OR IGNORE INTO program_monitoring_checklist (
+            sekolah, kategori, item_kode, item_nama, deskripsi, hari_pelaksanaan, status
+          ) VALUES (?, ?, ?, ?, ?, ?, 'belum')
+        `).bind(
+          targetSekolah,
+          std.kategori,
+          std.item_kode,
+          std.item_nama,
+          std.deskripsi,
+          std.hari_pelaksanaan
+        ).run();
+      }
+
+      const refreshed: any = await c.env.DB.prepare(`
+        SELECT * FROM program_monitoring_checklist
+        WHERE sekolah = ?
+        ORDER BY kategori ASC, id ASC
+      `).bind(targetSekolah).all();
+      items = refreshed.results || [];
+    }
+
+    // 3. Hitung ringkasan progress
+    const total = items.length;
+    const tercapai = items.filter((it: any) => it.status === 'tercapai').length;
+    const berjalan = items.filter((it: any) => it.status === 'berjalan').length;
+    const belum = items.filter((it: any) => it.status === 'belum').length;
+    const persentase = total > 0 ? Math.round(((tercapai + (berjalan * 0.5)) / total) * 100) : 0;
+
+    return successResponse(c, {
+      sekolah: targetSekolah,
+      items,
+      summary: {
+        total,
+        tercapai,
+        berjalan,
+        belum,
+        persentase
+      }
+    });
+  } catch (e: any) {
+    console.error('Get Monitoring Checklist Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// Endpoint 5c: Update Status & Evaluasi Checklist Item
+programSekolah.post('/monitoring/checklist/update', async (c) => {
+  try {
+    const user: any = c.get('user');
+    await ensureMonitoringTable(c.env.DB);
+
+    const body = await c.req.json();
+    const { item_kode, status, catatan, tanggal_evaluasi, sekolah } = body;
+
+    if (!item_kode) {
+      return Errors.badRequest(c, 'item_kode wajib diisi');
+    }
+
+    const validStatuses = ['belum', 'berjalan', 'tercapai'];
+    if (status && !validStatuses.includes(status)) {
+      return Errors.badRequest(c, 'Status tidak valid (belum, berjalan, tercapai)');
+    }
+
+    const targetSekolah = (sekolah || user?.sekolah || 'SD NEGERI 1 WANAYASA').trim();
+    const tgl = tanggal_evaluasi || new Date().toISOString().split('T')[0];
+    const penilai = user?.nama || 'Kepala Sekolah / Pengawas';
+
+    // Cek apakah item sudah ada di DB
+    const existing: any = await c.env.DB.prepare(
+      'SELECT id FROM program_monitoring_checklist WHERE sekolah = ? AND item_kode = ?'
+    ).bind(targetSekolah, item_kode).first();
+
+    if (existing) {
+      await c.env.DB.prepare(`
+        UPDATE program_monitoring_checklist
+        SET status = COALESCE(?, status),
+            catatan = ?,
+            tanggal_evaluasi = ?,
+            penilai = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(status || null, catatan || null, tgl, penilai, existing.id).run();
+    } else {
+      const std = DEFAULT_MONITORING_STANDARDS.find(s => s.item_kode === item_kode) || {
+        kategori: '7poe_atikan',
+        item_nama: item_kode,
+        deskripsi: '',
+        hari_pelaksanaan: ''
+      };
+
+      await c.env.DB.prepare(`
+        INSERT INTO program_monitoring_checklist (
+          sekolah, kategori, item_kode, item_nama, deskripsi, hari_pelaksanaan, status, catatan, tanggal_evaluasi, penilai
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        targetSekolah,
+        std.kategori,
+        item_kode,
+        std.item_nama,
+        std.deskripsi,
+        std.hari_pelaksanaan,
+        status || 'belum',
+        catatan || null,
+        tgl,
+        penilai
+      ).run();
+    }
+
+    return successResponse(c, {
+      sekolah: targetSekolah,
+      item_kode,
+      status,
+      catatan,
+      tanggal_evaluasi: tgl,
+      penilai
+    }, 'Status keterlaksanaan program berhasil diperbarui');
+  } catch (e: any) {
+    console.error('Update Monitoring Checklist Error:', e);
+    return Errors.internal(c, e.message);
+  }
+});
+
+// ============================================
 // Endpoint 6: Ambil Detail Dokumen Tersimpan
 // ============================================
 programSekolah.get('/:id', async (c) => {

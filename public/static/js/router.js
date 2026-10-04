@@ -9,8 +9,9 @@ export function parseRoute(pathname) {
     }
     if (raw.startsWith('verify')) {
         const parts = raw.split('/').filter(Boolean);
-        const id = parts[parts.length - 1] !== 'verify' && parts[parts.length - 1] !== 'surat' ? parts[parts.length - 1] : null;
-        return { page: 'verify', params: { id } };
+        const type = parts.includes('sertifikat') ? 'sertifikat' : 'surat';
+        const id = parts[parts.length - 1] !== 'verify' && parts[parts.length - 1] !== 'surat' && parts[parts.length - 1] !== 'sertifikat' ? parts[parts.length - 1] : null;
+        return { page: 'verify', params: { id, type } };
     }
     return { page: raw, params: {} };
 }
@@ -36,7 +37,7 @@ export function navigate(page, params = {}) {
     state.pageParams = params;
     let url = `/${page === 'home' ? '' : page}`;
     if (page === 'verify' && params.id) {
-        url = `/verify/surat/${params.id}`;
+        url = params.type === 'sertifikat' ? `/verify/sertifikat/${params.id}` : `/verify/surat/${params.id}`;
     }
     window.history.pushState({ page, params }, '', url);
     if (_render) _render();

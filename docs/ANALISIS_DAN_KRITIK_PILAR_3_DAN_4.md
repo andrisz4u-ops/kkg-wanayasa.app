@@ -237,22 +237,22 @@ graph TD
 <a id="roadmap-eksekusi-bertahap"></a>
 ## 5. 🛠️ ROADMAP EKSEKUSI BERTAHAP (SPRINT 1 - 3)
 
-### 🚀 SPRINT 1: PERBAIKAN STABILITAS, KEAMANAN & DATABASE (HARI 1 - 3)
-* [ ] **Tugas 1.1:** Buat file migrasi SQL `migrations/0028_fix_surat_undangan_complete.sql` untuk memastikan kolom `tipe_surat`, `metadata`, dan indeks pendukung telah permanen di D1.
-* [ ] **Tugas 1.2:** Bersihkan blok runtime `ALTER TABLE` dan fallback HTML comment di [`src/routes/surat.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/surat.ts).
-* [ ] **Tugas 1.3:** Bangun endpoint publik verifikasi dokumen dinas: `GET /api/surat/verify/:id` dan halaman frontend publik `/verify/surat/:id`.
-* [ ] **Tugas 1.4:** Perbaiki generator AI LPJ di [`src/routes/laporan.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/laporan.ts) agar menggunakan structured JSON response format.
+### 🚀 SPRINT 1: PERBAIKAN STABILITAS, KEAMANAN & DATABASE (HARI 1 - 3) — ✅ SELESAI
+* [x] **Tugas 1.1:** Buat file migrasi SQL `migrations/0028_fix_surat_undangan_complete.sql` untuk memastikan kolom `tipe_surat`, `metadata`, dan indeks pendukung telah permanen di D1.
+* [x] **Tugas 1.2:** Bersihkan blok runtime `ALTER TABLE` dan fallback HTML comment di [`src/routes/surat.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/surat.ts).
+* [x] **Tugas 1.3:** Bangun endpoint publik verifikasi dokumen dinas: `GET /api/surat/verify/:id` dan halaman frontend publik `/verify/surat/:id`.
+* [x] **Tugas 1.4:** Perbaiki generator AI LPJ di [`src/routes/laporan.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/laporan.ts) agar menggunakan structured JSON response format.
 
-### 🚀 SPRINT 2: PENINGKATAN PRESENTASI & VISUAL (HARI 4 - 7)
-* [ ] **Tugas 2.1:** Sambungkan [`src/routes/presentation.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/presentation.ts) ke mesin visual [`src/lib/visual-engine.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/lib/visual-engine.ts) untuk menginjeksi 200 SVG edukasi pada materi matematika dan sains.
-* [ ] **Tugas 2.2:** Simpan pustaka `pptxgen.bundle.js` secara lokal di folder `public/static/vendor/` untuk menjamin ekspor PPTX offline 100%.
-* [ ] **Tugas 2.3:** Tambahkan fungsi auto-save (debounce 500ms) ke `localStorage` pada [`public/static/js/pages/slide.js`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/public/static/js/pages/slide.js).
-* [ ] **Tugas 2.4:** Bangun Mode Konsol Presenter Dual-Screen (Layar Guru vs Layar Proyektor) menggunakan `BroadcastChannel`.
+### 🚀 SPRINT 2: PENINGKATAN PRESENTASI & VISUAL (HARI 4 - 7) — ✅ SELESAI
+* [x] **Tugas 2.1:** Sambungkan [`src/routes/presentation.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/presentation.ts) ke mesin visual [`src/lib/visual-engine.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/lib/visual-engine.ts) untuk menginjeksi 200 SVG edukasi pada materi matematika dan sains.
+* [x] **Tugas 2.2:** Simpan pustaka `pptxgen.bundle.js` secara lokal di folder `public/static/vendor/` untuk menjamin ekspor PPTX offline 100%.
+* [x] **Tugas 2.3:** Tambahkan fungsi auto-save (debounce 500ms) ke `localStorage` pada [`public/static/js/pages/slide.js`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/public/static/js/pages/slide.js).
+* [x] **Tugas 2.4:** Bangun Mode Konsol Presenter Dual-Screen (Layar Guru vs Layar Proyektor) menggunakan `BroadcastChannel`.
 
-### 🚀 SPRINT 3: GAMIFIKASI KELAS & FITUR EKOSISTEM PMM (HARI 8 - 10)
-* [ ] **Tugas 3.1:** Terapkan pengaman absensi rolling QR token di [`src/routes/absensi.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/absensi.ts) dan [`public/static/js/pages/absensi.js`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/public/static/js/pages/absensi.js).
-* [ ] **Tugas 3.2:** Bangun fitur generator otomatis E-Sertifikat Kegiatan KKG ber-QR code untuk bukti dukung kinerja guru di PMM.
-* [ ] **Tugas 3.3:** Tambahkan tab *"Monitoring & Checklist Keterlaksanaan"* pada halaman Program Sekolah (khusus 7 KAIH dan 7 Poé Atikan Purwakarta).
+### 🚀 SPRINT 3: GAMIFIKASI KELAS & FITUR EKOSISTEM PMM (HARI 8 - 10) — ✅ SELESAI
+* [x] **Tugas 3.1:** Terapkan pengaman absensi rolling QR token di [`src/routes/absensi.ts`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/src/routes/absensi.ts) dan [`public/static/js/pages/absensi.js`](file:///c:/Users/Andris%20PC/Pictures/genspark/webapp/public/static/js/pages/absensi.js).
+* [x] **Tugas 3.2:** Bangun fitur generator otomatis E-Sertifikat Kegiatan KKG ber-QR code untuk bukti dukung kinerja guru di PMM.
+* [x] **Tugas 3.3:** Tambahkan tab *"Monitoring & Checklist Keterlaksanaan"* pada halaman Program Sekolah (khusus 7 KAIH dan 7 Poé Atikan Purwakarta).
 
 ---
 *Dokumen ini disusun sebagai blueprint resmi pengembangan berkelanjutan aplikasi RuangKKG Gugus 3 Wanayasa.*

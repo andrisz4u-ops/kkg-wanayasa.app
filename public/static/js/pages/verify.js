@@ -337,16 +337,45 @@ function renderSertifikatVerification(data) {
             <span>Kembali ke Portal KKG</span>
           </a>
           <div class="flex flex-wrap items-center gap-2">
-            <!-- 1. UNDUH PDF RESMI -->
-            <button id="btn-download-cert-pdf" onclick="window.downloadCertificatePDF(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Unduh berkas PDF resmi (A4 Landscape) langsung ke HP/Komputer">
+            <!-- 1. UNDUH PDF RESMI (2 HALAMAN LENGKAP) -->
+            <button id="btn-download-cert-pdf" onclick="window.downloadCertificatePDF(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Unduh berkas PDF resmi (2 Halaman A4 Landscape) langsung ke HP/Komputer">
               <i class="fas fa-file-pdf text-red-200"></i>
-              <span>Unduh PDF Resmi</span>
+              <span>Unduh PDF Resmi (2 Hal)</span>
             </button>
-            <!-- 2. UNDUH GAMBAR PNG -->
-            <button id="btn-download-cert-png" onclick="window.downloadCertificatePNG(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Simpan sebagai gambar PNG HD">
-              <i class="fas fa-image"></i>
-              <span>Unduh PNG</span>
-            </button>
+
+            <!-- 2. DROPDOWN PILIHAN UNDUH PNG -->
+            <div class="relative inline-block text-left" id="verify-png-dropdown-wrapper">
+              <button type="button" onclick="const m=document.getElementById('verify-png-menu-items'); m.classList.toggle('hidden');" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Pilihan unduh format gambar PNG HD">
+                <i class="fas fa-image"></i>
+                <span>Unduh PNG</span>
+                <i class="fas fa-chevron-down text-[10px] ml-0.5"></i>
+              </button>
+              <div id="verify-png-menu-items" class="hidden absolute right-0 mt-2 w-64 rounded-2xl shadow-xl bg-white dark:bg-slate-800 ring-1 ring-black/10 dark:ring-white/10 z-50 py-1.5 focus:outline-none">
+                <button onclick="document.getElementById('verify-png-menu-items').classList.add('hidden'); window.downloadBothCertificatePNG(window.__currentVerifyCert);" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-700/60 font-bold flex items-center gap-2.5 cursor-pointer">
+                  <i class="fas fa-images text-amber-500 text-sm"></i>
+                  <div>
+                    <span class="block text-slate-900 dark:text-white font-extrabold">Unduh Keduanya (Depan & Belakang)</span>
+                    <span class="text-[10px] font-normal text-slate-500 dark:text-slate-400">2 File PNG HD sekaligus</span>
+                  </div>
+                </button>
+                <div class="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+                <button onclick="document.getElementById('verify-png-menu-items').classList.add('hidden'); window.downloadCertificatePNG(window.__currentVerifyCert, 'depan');" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 font-medium flex items-center gap-2.5 cursor-pointer">
+                  <i class="fas fa-id-card text-emerald-600 text-sm"></i>
+                  <div>
+                    <span class="block text-slate-900 dark:text-white font-bold">Lembar Depan Saja</span>
+                    <span class="text-[10px] font-normal text-slate-500 dark:text-slate-400">Piagam Penghargaan Utama</span>
+                  </div>
+                </button>
+                <button onclick="document.getElementById('verify-png-menu-items').classList.add('hidden'); window.downloadCertificatePNG(window.__currentVerifyCert, 'belakang');" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 font-medium flex items-center gap-2.5 cursor-pointer">
+                  <i class="fas fa-list-alt text-indigo-600 text-sm"></i>
+                  <div>
+                    <span class="block text-slate-900 dark:text-white font-bold">Lembar Belakang Saja</span>
+                    <span class="text-[10px] font-normal text-slate-500 dark:text-slate-400">Struktur Materi & Alokasi 4 JP</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <!-- 3. CETAK PRINTER -->
             <button onclick="window.printOfficialCertificate(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors cursor-pointer" title="Cetak langsung ke kertas fisik">
               <i class="fas fa-print"></i>

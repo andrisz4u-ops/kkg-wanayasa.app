@@ -676,6 +676,35 @@
     border-radius: 1rem;
 }
 
+/* Smart Sidebar Mini Tooltip */
+.smart-sidebar-mini-item {
+    position: relative;
+}
+.smart-sidebar-mini-tooltip {
+    position: fixed;
+    left: 80px;
+    transform: translateY(-50%) translateX(6px);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+    z-index: 99999;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.smart-sidebar-mini-item:hover .smart-sidebar-mini-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
 /* ═════════════════════════════════════════════════════════════════════════
    IFP True Fullscreen Kiosk Mode (Edge-to-Edge with Instant Exit)
    ═════════════════════════════════════════════════════════════════════════ */

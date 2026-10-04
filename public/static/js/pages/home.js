@@ -740,10 +740,8 @@ async function renderPublicHome() {
     </a>
     <nav class="nav" aria-label="Navigasi utama">
       <a href="#fitur">Modul AI</a>
-      <a href="#dokumentasi">Dokumentasi</a>
+      <a href="#komunitas">Komunitas</a>
       <a href="#tentang">Tentang</a>
-      <a href="#harga">Harga</a>
-      <a href="#testimoni">Testimoni</a>
       <a href="#faq">FAQ</a>
     </nav>
     <div class="head-cta">
@@ -753,7 +751,7 @@ async function renderPublicHome() {
         </button>
       ` : `
         <button onclick="navigate('login')" class="btn btn-ghost btn-sm" style="cursor:pointer;">Masuk</button>
-        <button onclick="navigate('login')" class="btn btn-primary btn-sm" style="cursor:pointer; color:#ffffff !important;">Coba Gratis</button>
+        <button onclick="navigate('login')" class="btn btn-primary btn-sm" style="cursor:pointer; color:#ffffff !important;">Gabung Gratis</button>
       `}
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="mobileNav" aria-label="Buka menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
@@ -763,16 +761,14 @@ async function renderPublicHome() {
 </header>
 <nav class="mobile-nav" id="mobileNav" aria-label="Navigasi seluler">
   <a href="#fitur">Modul AI</a>
-  <a href="#dokumentasi">Dokumentasi</a>
+  <a href="#komunitas">Komunitas</a>
   <a href="#tentang">Tentang</a>
-  <a href="#harga">Harga</a>
-  <a href="#testimoni">Testimoni</a>
   <a href="#faq">FAQ</a>
   ${state.user ? `
     <button onclick="window.togglePublicLanding()" class="btn btn-primary" style="width:100%; margin-top:0.8rem; color:#ffffff !important;">Ke Workspace Saya</button>
   ` : `
     <button onclick="navigate('login')" class="btn btn-ghost" style="width:100%; margin-top:0.8rem;">Masuk</button>
-    <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; margin-top:0.5rem; color:#ffffff !important;">Coba Gratis 30 Hari</button>
+    <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; margin-top:0.5rem; color:#ffffff !important;">Gabung Gratis</button>
   `}
 </nav>
 
@@ -782,11 +778,11 @@ async function renderPublicHome() {
   <div class="wrap">
     <div class="hero-grid">
       <div class="hero-copy">
-        <span class="pill rv">✶ Baru: 5 modul AI untuk perangkat pembelajaran</span>
-        <h1 class="rv rv-d1">Satu perintah guru,<br />jadi <span class="hl">RPP lengkap<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9c40-5 90-6.5 194-4" stroke="#e9a51b" stroke-width="5" stroke-linecap="round"/></svg></span> dalam hitungan menit.</h1>
-        <p class="lede rv rv-d2">RuangKKG adalah Asisten AI untuk guru Indonesia — Analisis CP, Buat RPP, Buat Asesmen, Slide Presentasi, sampai Game Edukasi. Satu alur kerja, dari dokumen kurikulum sampai kelas yang hidup.</p>
+        <span class="pill rv">✶ Rumah digital komunitas guru Wanayasa</span>
+        <h1 class="rv rv-d1">Berkumpul, berbagi,<br />dan <span class="hl">tumbuh bersama<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9c40-5 90-6.5 194-4" stroke="#e9a51b" stroke-width="5" stroke-linecap="round"/></svg></span> sebagai pendidik.</h1>
+        <p class="lede rv rv-d2">RuangKKG adalah rumah digital untuk guru-guru Kelompok Kerja Guru — 5 modul AI gratis untuk perangkat pembelajaran (Analisis CP, RPP, Asesmen, Slide, Game Edukasi), forum diskusi, dan berbagi praktik baik. Dari guru, oleh guru, untuk guru.</p>
         <div class="hero-cta rv rv-d3">
-          <a class="btn btn-primary" href="#harga" style="color:#ffffff !important;">Coba Gratis
+          <a class="btn btn-primary" href="/login" onclick="navigate('login'); return false;" style="color:#ffffff !important;">Gabung Komunitas
             <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ffffff !important;"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
           <a class="btn btn-ghost" href="#fitur">
@@ -794,10 +790,9 @@ async function renderPublicHome() {
             Jelajahi 5 Modul</a>
         </div>
         <div class="hero-trust rv rv-d3">
-          <div class="avatars" aria-hidden="true"><span>BR</span><span>SA</span><span>DP</span><span class="more">50+</span></div>
           <div>
-            <span class="tt"><span class="stars" aria-hidden="true">★★★★★</span>Dipercaya <b>500+ pendidik &amp; anggota KKG</b></span>
-            <span class="ts">Tanpa kartu kredit · Bayar via QRIS · CS bahasa Indonesia</span>
+            <span class="tt">Dibangun untuk <b>komunitas KKG Wanayasa</b> dan guru Indonesia</span>
+            <span class="ts">100% gratis · Tanpa kartu kredit · Untuk komunitas</span>
           </div>
         </div>
       </div>
@@ -829,7 +824,7 @@ async function renderPublicHome() {
       <div class="stat-item rv"><div class="n"><span class="count" data-to="5">0</span><em> Modul</em></div><div class="l">perangkat ajar terintegrasi</div></div>
       <div class="stat-item rv rv-d1"><div class="n">&lt; 2<em> mnt</em></div><div class="l">susun modul &amp; RPP lengkap</div></div>
       <div class="stat-item rv rv-d2"><div class="n"><span class="count" data-to="100">0</span><em>%</em></div><div class="l">standar Kurikulum Merdeka</div></div>
-      <div class="stat-item rv rv-d3"><div class="n">4,9<em>/5</em></div><div class="l">skor kepuasan pendidik</div></div>
+      <div class="stat-item rv rv-d3"><div class="n">Gratis<em> selamanya</em></div><div class="l">tanpa paket, tanpa langganan</div></div>
     </div>
   </div>
 </section>
@@ -1077,8 +1072,8 @@ async function renderPublicHome() {
             <span class="mod-wf-step">Langkah 5 dari 5 · Kelas Hidup &amp; Interaktif</span>
             <span class="mod-wf-title">Alur Lengkap Selesai: Semua Modul Siap Digunakan</span>
           </div>
-          <a href="#harga" class="btn btn-sm btn-accent mod-next-btn">
-            Mulai Gunakan Semua Modul (Coba Gratis)
+          <a href="/login" onclick="navigate('login'); return false;" class="btn btn-sm btn-accent mod-next-btn">
+            Mulai Gunakan Semua Modul (Gratis)
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
         </div>
@@ -1087,27 +1082,30 @@ async function renderPublicHome() {
   </div>
 </section>
 
-<!-- ================= GALERI ================= -->
-<section class="band section" id="dokumentasi">
+<!-- ================= KOMUNITAS ================= -->
+<section class="band section" id="komunitas">
   <div class="wrap">
-    <div class="section-head center rv" style="max-width:640px">
-      <span class="f-tag" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3 17l5-4 4 3 4-4 5 5"/></svg> Galeri</span>
-      <h2>Dokumentasi kegiatan komunitas</h2>
-      <p class="lede" style="margin-bottom:0">Digunakan bersama dalam workshop KKG Gugus, maupun secara mandiri oleh pendidik untuk persiapan mengajar: bimtek, workshop perangkat ajar, dan rapat pengurus.</p>
+    <div class="section-head center rv" style="max-width:680px">
+      <span class="pill"><span class="dot"></span> Komunitas</span>
+      <h2>Belajar bareng, tumbuh bareng — khas guru KKG.</h2>
+      <p class="lede" style="margin-bottom:0">RuangKKG lahir dari ruang-ruang diskusi KKG Wanayasa: guru saling berbagi perangkat ajar, saling mengoreksi, saling menguatkan. Platform ini rumah digitalnya — gratis, terbuka, dan milik bersama.</p>
     </div>
-    <div class="gallery rv rv-d1" role="group" aria-label="Galeri dokumentasi kegiatan komunitas guru">
-      <button class="g-item" data-cap="Bimtek Deep Learning &amp; Media Interaktif|KKG Gugus 3 · 28 Juni 2026 · 42 foto" aria-label="Perbesar foto: Bimtek Deep Learning dan Media Interaktif">
-        <img src="/static/img/gallery-1.jpg" alt="Sekelompok guru berfoto bersama dengan laptop di meja saat pelatihan" loading="lazy" />
-        <div class="g-cap"><b>Bimtek Deep Learning &amp; Media Interaktif</b><span>KKG Gugus 3 · 28 Juni 2026 · 42 foto</span></div>
-      </button>
-      <button class="g-item" data-cap="Workshop Penyusunan Perangkat KBM 2025/2026|KKG Gugus Cempaka · 23 Juli 2025 · 36 foto" aria-label="Perbesar foto: Workshop Penyusunan Perangkat KBM">
-        <img src="/static/img/gallery-2.jpg" alt="Ruangan seminar sekolah dengan penceramah dan peserta guru yang menyimak presentasi" loading="lazy" />
-        <div class="g-cap"><b>Workshop Perangkat KBM</b><span>KKG Gugus Cempaka · 23 Jul 2025</span></div>
-      </button>
-      <button class="g-item" data-cap="Rapat Pengurus — Program Semester Genap|KKG PAI Gugus Flamboyan · 21 Agu 2026 · 18 foto" aria-label="Perbesar foto: Rapat Pengurus Program Semester Genap">
-        <img src="/static/img/gallery-3.jpg" alt="Diskusi para guru berpakaian batik di ruang kelas" loading="lazy" />
-        <div class="g-cap"><b>Rapat Pengurus Semester Genap</b><span>KKG Flamboyan · 21 Agu 2026</span></div>
-      </button>
+    <div class="rv rv-d1" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-top:2rem;">
+      <div style="background:rgba(255,255,255,0.75); border:1px solid rgba(0,0,0,0.07); border-radius:1.25rem; padding:1.75rem;">
+        <div style="font-size:1.75rem; margin-bottom:0.75rem;" aria-hidden="true">🤝</div>
+        <h3 style="margin:0 0 0.5rem; font-size:1.05rem; font-weight:800;">Gotong Royong Perangkat Ajar</h3>
+        <p style="margin:0; font-size:0.9rem; line-height:1.65; color:#4b5563;">RPP, modul ajar, dan asesmen yang dibuat anggota bisa dibagikan ke sesama guru satu gugus. Yang satu menyusun, yang lain tinggal menyesuaikan.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.75); border:1px solid rgba(0,0,0,0.07); border-radius:1.25rem; padding:1.75rem;">
+        <div style="font-size:1.75rem; margin-bottom:0.75rem;" aria-hidden="true">💬</div>
+        <h3 style="margin:0 0 0.5rem; font-size:1.05rem; font-weight:800;">Ruang Diskusi Guru</h3>
+        <p style="margin:0; font-size:0.9rem; line-height:1.65; color:#4b5563;">Forum tanya-jawab seputar Kurikulum Merdeka, asesmen, dan praktik kelas. Pengalaman senior menjadi pelajaran bagi yang junior.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.75); border:1px solid rgba(0,0,0,0.07); border-radius:1.25rem; padding:1.75rem;">
+        <div style="font-size:1.75rem; margin-bottom:0.75rem;" aria-hidden="true">🌱</div>
+        <h3 style="margin:0 0 0.5rem; font-size:1.05rem; font-weight:800;">Tumbuh Tanpa Biaya</h3>
+        <p style="margin:0; font-size:0.9rem; line-height:1.65; color:#4b5563;">Tidak ada paket, tidak ada langganan. Semua modul AI dan fitur komunitas gratis untuk anggota — karena ilmu yang dibagikan tidak pernah berkurang.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1117,8 +1115,8 @@ async function renderPublicHome() {
   <div class="wrap">
     <div class="section-head rv">
       <span class="pill"><span class="dot"></span> Tentang RuangKKG</span>
-      <h2>Platform SaaS Pedagogis Independen untuk Pendidik Indonesia.</h2>
-      <p class="lede">RuangKKG adalah platform SaaS (Software as a Service) teknologi pendidikan (EdTech) yang didirikan untuk memangkas beban administrasi dan memberdayakan guru Indonesia melalui kecerdasan artifisial yang terstruktur dan terstandarisasi.</p>
+      <h2>Rumah digital yang dibangun guru, untuk guru.</h2>
+      <p class="lede">RuangKKG adalah inisiatif komunitas untuk memangkas beban administrasi guru Indonesia — 5 modul AI gratis, forum diskusi, dan ruang berbagi praktik baik. Tanpa paket, tanpa langganan, tanpa embel-embel komersial.</p>
     </div>
 
     <div class="rv rv-d1" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
@@ -1145,12 +1143,12 @@ async function renderPublicHome() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:1.25rem; height:1.25rem;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div>
-            <h3 style="margin:0; font-size:1rem; font-weight:800; color:#111827;">SaaS Komersial Independen</h3>
-            <span style="font-size:0.8rem; color:#2563eb; font-weight:600;">Mitra Teknologi Komunitas</span>
+            <h3 style="margin:0; font-size:1rem; font-weight:800; color:#111827;">Komunitas Nirlaba</h3>
+            <span style="font-size:0.8rem; color:#2563eb; font-weight:600;">Milik Bersama Guru</span>
           </div>
         </div>
         <p style="font-size:0.875rem; line-height:1.6; color:#4b5563; margin:0;">
-          RuangKKG beroperasi sebagai entitas pengembang SaaS independen (bootstrapped). Komunitas KKG, MGMP, dan sekolah bertindak sebagai pengguna, mitra perintis, dan pelanggan layanan langganan.
+          RuangKKG dikelola sebagai ruang komunitas nirlaba. KKG, MGMP, dan sekolah adalah pemilik sekaligus penggeraknya — bukan pelanggan. Semua fitur gratis, selamanya.
         </p>
       </div>
 
@@ -1173,107 +1171,8 @@ async function renderPublicHome() {
   </div>
 </section>
 
-<!-- ================= HARGA ================= -->
-<section class="section" id="harga">
-  <div class="wrap">
-    <div class="section-head center rv">
-      <span class="pill"><span class="dot"></span> Harga</span>
-      <h2>Harga yang masuk akal untuk urusan guru.</h2>
-      <p class="lede">Mulai gratis selamanya untuk KKG kecil. Naik kelas saat butuh automasi penuh — bayar per KKG, bukan per anggota.</p>
-      <div style="margin-top:1.4rem">
-        <div class="toggle" role="group" aria-label="Pilih periode pembayaran">
-          <button type="button" id="btnMonthly" aria-pressed="true">Bulanan</button>
-          <button type="button" id="btnYearly" aria-pressed="false">Tahunan <span class="save">Hemat 18%</span></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="price-grid">
-      <div class="price rv">
-        <div class="pn">Rintisan</div>
-        <div class="pd">Untuk guru &amp; KKG yang baru mulai digital.</div>
-        <div class="pr">
-          <div class="amt">Rp 0<small>/selamanya</small></div>
-          <div class="per">tanpa batas waktu</div>
-        </div>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Akses gratis 5 Modul AI (CP, RPP, Soal, Slide, Game)</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>1 kegiatan aktif, 50 anggota KKG</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Kalender &amp; undangan kegiatan</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Absensi manual &amp; arsip 2 GB</li>
-          <li class="dim"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Absensi QR &amp; sertifikat otomatis</li>
-        </ul>
-        <button onclick="navigate('login')" class="btn btn-ghost" style="width:100%; cursor:pointer;">Mulai Gratis</button>
-      </div>
-
-      <div class="price feat rv rv-d1">
-        <div class="ribbon">Paling populer</div>
-        <div class="pn">KKG Pro</div>
-        <div class="pd">Untuk KKG yang berkegiatan rutin.</div>
-        <div class="pr">
-          <div class="old" data-old> </div>
-          <div class="amt"><span data-price data-m="Rp 49rb" data-y="Rp 39rb">Rp 49rb</span><small data-suffix>/KKG/bln</small></div>
-          <div class="per" data-note>tagihan per bulan</div>
-        </div>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>Akses Penuh 5 Modul AI</b> seluruh guru anggota</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Buat RPP, Asesmen &amp; Soal tanpa batas</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Kegiatan tanpa batas, 500 anggota</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Absensi QR &amp; sertifikat bernomor verifikasi</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Buku kas, SPJ siap cetak, arsip 100 GB</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Prioritas CS &amp; pendampingan pengurus</li>
-        </ul>
-        <button onclick="navigate('login')" class="btn btn-primary" style="width:100%; cursor:pointer; color:#ffffff !important;">Coba Gratis 30 Hari</button>
-      </div>
-
-      <div class="price rv rv-d2">
-        <div class="pn">Kabupaten</div>
-        <div class="pd">Untuk dinas, korcam &amp; MKKS.</div>
-        <div class="pr">
-          <div class="amt">Custom</div>
-          <div class="per">penawaran per kebutuhan</div>
-        </div>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>Lisensi AI Terintegrasi</b> se-Kecamatan / Kabupaten</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Custom format RPP &amp; KOP dinas daerah</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Semua fitur KKG Pro</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Dashboard rekap pengawas &amp; multi-gugus</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Pelatihan pengurus &amp; SLA dukungan khusus</li>
-        </ul>
-        <a class="btn btn-ghost" href="mailto:support@ruangkkg.my.id?subject=Penawaran%20Paket%20Kabupaten%20RuangKKG">Hubungi Kami</a>
-      </div>
-    </div>
-    <p class="price-foot rv">Pembayaran via transfer bank, virtual account, atau QRIS — atas nama KKG, bukan perorangan. Berhenti kapan saja, data tetap bisa diekspor.</p>
-  </div>
-</section>
-
-
-<!-- ================= TESTIMONI ================= -->
-<section class="section" id="testimoni" style="padding-top:0">
-  <div class="wrap">
-    <div class="section-head center rv">
-      <span class="pill"><span class="dot"></span> Kata mereka</span>
-      <h2>Guru &amp; pengurus yang sudah merasakan bedanya.</h2>
-    </div>
-    <div class="testi-grid">
-      <article class="testi rv">
-        <p class="q">Biasanya menyusun RPP dan kisi-kisi asesmen butuh 3 malam suntuk. Lewat modul AI RuangKKG, draf perangkat siap ajar selesai sebelum jam pulang sekolah. Murid-murid pun antusias waktu kuis interaktifnya dicoba di kelas.</p>
-        <div class="who"><span class="avatar" style="background:#16a34a">SR</span><div><b>Siti Rahmawati, S.Pd.</b><span>Guru Kelas 5 SD, Kab. Purwakarta</span></div></div>
-      </article>
-      <article class="testi rv rv-d1">
-        <p class="q">Dulu SPJ nginep seminggu di meja saya. Sekarang sore setelah kegiatan selesai, laporannya sudah jadi dan siap tanda tangan.</p>
-        <div class="who"><span class="avatar">RD</span><div><b>Hj. Ratna Dewi, S.Pd.</b><span>Ketua KKG Gugus 3, Bandung</span></div></div>
-      </article>
-      <article class="testi rv rv-d2">
-        <p class="q">Absensi QR itu paling kerasa. Delapan puluh peserta, lima menit selesai, sertifikat otomatis terbit dan datanya langsung masuk tanpa rekap manual.</p>
-        <div class="who"><span class="avatar a2">BS</span><div><b>Budi Santoso, S.Pd.</b><span>Sekretaris KKG, Surabaya</span></div></div>
-      </article>
-    </div>
-  </div>
-</section>
-
 <!-- ================= FAQ ================= -->
-<section class="section" id="faq" style="padding-top:0">
+<section class="section" id="faq">
   <div class="wrap">
     <div class="section-head center rv">
       <span class="pill"><span class="dot"></span> FAQ</span>
@@ -1328,7 +1227,7 @@ async function renderPublicHome() {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-            <p><b>Daftar langsung dan coba gratis seketika.</b> Pendidik dapat langsung menekan tombol &ldquo;Coba Gratis&rdquo; atau &ldquo;Masuk&rdquo; untuk mendaftar mandiri. Anda langsung mendapatkan akses gratis untuk menguji 5 modul AI (Analisis CP, RPP, Kisi-Kisi, Slide, Game) tanpa perlu memasukkan kartu kredit.</p>
+            <p><b>Daftar langsung dan gratis seketika.</b> Pendidik dapat langsung menekan tombol &ldquo;Gabung Gratis&rdquo; atau &ldquo;Masuk&rdquo; untuk mendaftar mandiri. Anda langsung mendapatkan akses gratis untuk memakai 5 modul AI (Analisis CP, RPP, Kisi-Kisi, Slide, Game) tanpa perlu memasukkan kartu kredit.</p>
           </div>
         </div>
 
@@ -1339,16 +1238,6 @@ async function renderPublicHome() {
           </button>
           <div class="faq-a">
             <p><b>Bisa dan fleksibel untuk semua jenjang pendidikan.</b> Alur kerja pedagogik RuangKKG dirancang fleksibel untuk semua jenjang pendidikan: SD, SMP, SMA, SMK, maupun madrasah (MI, MTs, MA). Pilihan fase (Fase A hingga F), tingkat kelas, dan mata pelajaran dapat disesuaikan seketika di Asisten AI.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-q" aria-expanded="false">
-            <span>Bagaimana sistem pembayarannya jika ingin upgrade ke Paket Pro?</span>
-            <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-          </button>
-          <div class="faq-a">
-            <p><b>Tersedia pembayaran instan dan resmi atas nama KKG/sekolah.</b> Pembayaran dapat dilakukan melalui transfer bank, virtual account, atau QRIS instan atas nama KKG/sekolah. Paket tahunan memberikan potongan hemat hingga 18%. Anda dapat membatalkan atau mengubah paket kapan saja tanpa penalti tersembunyi.</p>
           </div>
         </div>
 
@@ -1370,15 +1259,15 @@ async function renderPublicHome() {
 <section class="section" style="padding-top:0">
   <div class="wrap">
     <div class="cta-panel rv">
-      <h2>Siap memangkas waktu menyusun perangkat ajar — minggu ini juga?</h2>
-      <p>Ratusan pendidik dan perintis komunitas belajar telah merasakan kemudahan 5 modul AI RuangKKG, dari Analisis CP sampai Game Edukasi — kembali punya waktu luang untuk hal terpenting: mengajar di depan kelas.</p>
+      <h2>Siap bergabung dengan komunitas guru yang saling menguatkan?</h2>
+      <p>Ratusan pendidik telah merasakan kemudahan 5 modul AI RuangKKG, dari Analisis CP sampai Game Edukasi — gratis, tanpa syarat. Kembali punya waktu luang untuk hal terpenting: mengajar di depan kelas.</p>
       <div class="row">
-        <button onclick="navigate('login')" class="btn btn-accent" style="cursor:pointer;">Mulai Gratis 30 Hari
+        <button onclick="navigate('login')" class="btn btn-accent" style="cursor:pointer;">Gabung Komunitas — Gratis
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
         <a class="btn btn-ghost" href="#fitur">Lihat 5 Modul AI</a>
       </div>
-      <p class="cta-note">Tanpa kartu kredit · Batalkan kapan saja · Data tetap milik Anda</p>
+      <p class="cta-note">Tanpa kartu kredit · Tanpa paket · Data tetap milik Anda</p>
     </div>
   </div>
 </section>
@@ -1393,11 +1282,11 @@ async function renderPublicHome() {
           <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H9.6L4 20.5Z"/><path d="M9.5 9.5l2 2 3.8-3.8"/></svg></span>
           <span class="word">RuangKKG</span>
         </a>
-        <p>Platform SaaS EdTech independen untuk Kelompok Kerja Guru Indonesia — didirikan oleh Andris Hadiansyah (2025) guna merapikan administrasi agar guru fokus mengajar.</p>
+        <p>Rumah digital komunitas Kelompok Kerja Guru Indonesia — didirikan oleh Andris Hadiansyah (2025) agar guru punya ruang berbagi, berdiskusi, dan merapikan administrasi bersama.</p>
       </div>
       <div class="foot-col">
-        <h4>Produk</h4>
-        <ul><li><a href="#fitur">Fitur AI</a></li><li><a href="#dokumentasi">Dokumentasi</a></li><li><a href="#tentang">Tentang Kami</a></li><li><a href="#harga">Harga</a></li><li><a href="#faq">FAQ</a></li></ul>
+        <h4>Jelajah</h4>
+        <ul><li><a href="#fitur">Modul AI</a></li><li><a href="#komunitas">Komunitas</a></li><li><a href="#tentang">Tentang Kami</a></li><li><a href="#faq">FAQ</a></li></ul>
       </div>
       <div class="foot-col">
         <h4>Modul AI</h4>
@@ -1405,7 +1294,7 @@ async function renderPublicHome() {
       </div>
       <div class="foot-col">
         <h4>Bantuan</h4>
-        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:admin@ruangkkg.my.id?subject=Bantuan%20RuangKKG">Hubungi CS</a></li><li><a href="#testimoni">Testimoni</a></li><li><a href="#faq"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:6px;"></span>Sistem Aktif (99.9%)</a></li></ul>
+        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:admin@ruangkkg.my.id?subject=Bantuan%20RuangKKG">Hubungi Kami</a></li><li><a href="#faq"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:6px;"></span>Sistem Aktif (99.9%)</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
@@ -1414,12 +1303,6 @@ async function renderPublicHome() {
     </div>
   </div>
 </footer>
-
-<!-- ================= LIGHTBOX ================= -->
-<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Pratinjau foto dokumentasi">
-  <button class="lb-close" id="lbClose" aria-label="Tutup pratinjau"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <figure><img id="lbImg" alt="" /><figcaption><b id="lbTitle"></b><span id="lbMeta"></span></figcaption></figure>
-</div>
     </div>
   `;
 }
@@ -1475,7 +1358,7 @@ function initPublicLandingRedesign() {
 
   // 3.1. Scrollspy
   const navLinks = Array.from(document.querySelectorAll('.site-head .nav a'));
-  const spySections = ['fitur', 'dokumentasi', 'harga', 'testimoni', 'faq']
+  const spySections = ['fitur', 'komunitas', 'tentang', 'faq']
     .map(id => document.getElementById(id))
     .filter(Boolean);
   if ('IntersectionObserver' in window && navLinks.length && spySections.length) {

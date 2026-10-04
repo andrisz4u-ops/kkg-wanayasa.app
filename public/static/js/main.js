@@ -348,6 +348,16 @@ const adminPages = ['admin', 'program-sekolah'];
   }
 })();
 
+// Smart Sidebar state tracking — persisted to localStorage
+(function() {
+  try {
+    window.__isSidebarCollapsed = localStorage.getItem('kkg_sidebar_collapsed') === 'true';
+  } catch(_) {
+    window.__isSidebarCollapsed = false;
+  }
+  window.__sidebarSearchQuery = '';
+})();
+
 window.toggleNavSection = function(sectionId) {
   if (!window.__navSectionState || typeof window.__navSectionState !== 'object') {
     window.__navSectionState = {};
@@ -384,6 +394,55 @@ window.toggleNavSection = function(sectionId) {
   });
 };
 
+window.toggleSidebarCollapse = function() {
+  window.__isSidebarCollapsed = !window.__isSidebarCollapsed;
+  try {
+    localStorage.setItem('kkg_sidebar_collapsed', String(window.__isSidebarCollapsed));
+  } catch (_) {}
+
+  const sidebarEl = document.getElementById('app-sidebar');
+  if (sidebarEl && typeof renderDesktopSidebar === 'function') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = renderDesktopSidebar(state.currentPage);
+    const newSidebar = tempDiv.firstElementChild;
+    if (newSidebar) {
+      sidebarEl.replaceWith(newSidebar);
+      if (!window.__isSidebarCollapsed && window.__sidebarSearchQuery) {
+        document.getElementById('sidebar-search-input')?.focus();
+      }
+    }
+  }
+};
+
+window.handleSidebarSearch = function(query) {
+  window.__sidebarSearchQuery = query || '';
+  const sidebarNav = document.getElementById('sidebar-nav-links');
+  if (sidebarNav) {
+    sidebarNav.innerHTML = renderNavLinks(state.currentPage, false);
+  }
+  const clearBtn = document.getElementById('sidebar-search-clear');
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', !window.__sidebarSearchQuery);
+  }
+};
+
+window.clearSidebarSearch = function() {
+  window.__sidebarSearchQuery = '';
+  const searchInput = document.getElementById('sidebar-search-input');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  const sidebarNav = document.getElementById('sidebar-nav-links');
+  if (sidebarNav) {
+    sidebarNav.innerHTML = renderNavLinks(state.currentPage, false);
+  }
+  const clearBtn = document.getElementById('sidebar-search-clear');
+  if (clearBtn) {
+    clearBtn.classList.add('hidden');
+  }
+};
+
 // Navigation Structure - Collapsible Accordion Architecture
 const navSections = [
   {
@@ -392,25 +451,23 @@ const navSections = [
     icon: 'fa-briefcase',
     defaultOpen: true,
     items: [
-      { page: 'home', label: 'Beranda', icon: 'fa-home', public: true },
-      { page: 'pengumuman', label: 'Pengumuman', icon: 'fa-bullhorn', public: true },
-      { page: 'kalender', label: 'Kalender & Agenda', icon: 'fa-calendar-alt', public: true },
+      { page: 'home', label: 'Beranda', icon: 'fa-home', public: true, keywords: 'beranda home awal dashboard' },
+      { page: 'pengumuman', label: 'Pengumuman', icon: 'fa-bullhorn', public: true, keywords: 'pengumuman info berita kkg' },
+      { page: 'kalender', label: 'Kalender & Agenda', icon: 'fa-calendar-alt', public: true, keywords: 'kalender agenda jadwal kaldik pendidikan' },
     ]
   },
   {
-    id: 'asisten-ai',
-    title: 'Asisten AI',
-    icon: 'fa-wand-magic-sparkles',
-    isAI: true,
-    badgeText: null,
+    id: 'perangkat',
+    title: 'Perangkat Pembelajaran',
+    icon: 'fa-layer-group',
     defaultOpen: true,
     items: [
-      { page: 'analisis-cp', label: 'Analisis CP (AI)', icon: 'fa-book-bookmark', public: true, ai: true },
-      { page: 'program-sekolah', label: 'Program Sekolah (Beta)', icon: 'fa-file-lines', admin: true, ai: true, beta: true },
-      { page: 'rpp', label: 'Buat RPP (AI)', icon: 'fa-magic', public: true, ai: true },
-      { page: 'kisi', label: 'Buat Asesmen', icon: 'fa-list-check', public: true, ai: true },
-      { page: 'slide', label: 'Slide Presentasi', icon: 'fa-file-powerpoint', public: true, ai: true },
-      { page: 'games', label: 'Game Edukasi', icon: 'fa-gamepad', public: true, ai: true },
+      { page: 'analisis-cp', label: 'Analisis CP & ATP', icon: 'fa-book-bookmark', public: true, keywords: 'analisis cp atp capaian tujuan pembelajaran bskap fase elemen' },
+      { page: 'program-sekolah', label: 'Program Sekolah', icon: 'fa-file-lines', admin: true, beta: true, keywords: 'program sekolah kurikulum kerja rkas bosp pbd rapor pendidikan' },
+      { page: 'rpp', label: 'Modul Ajar (RPP)', icon: 'fa-file-pen', public: true, keywords: 'rpp modul ajar rencana pelaksanaan pembelajaran diferensiasi alur' },
+      { page: 'kisi', label: 'Asesmen & Kisi-Kisi', icon: 'fa-list-check', public: true, keywords: 'asesmen kisi-kisi soal ujian ulangan formatif sumatif rubrik kktp hots' },
+      { page: 'slide', label: 'Media Presentasi', icon: 'fa-file-powerpoint', public: true, keywords: 'slide presentasi media tayang ppt powerpoint materi proyektor' },
+      { page: 'games', label: 'Game Edukasi', icon: 'fa-gamepad', public: true, keywords: 'game kuis teka teki silang tts interaktif ifp papan skor' },
     ]
   },
   {
@@ -419,10 +476,10 @@ const navSections = [
     icon: 'fa-users',
     defaultOpen: true,
     items: [
-      { page: 'materi', label: 'Bank Materi Ajar', icon: 'fa-book-open', public: true },
-      { page: 'absensi', label: 'Presensi Kegiatan', icon: 'fa-clipboard-check', auth: true },
-      { page: 'forum', label: 'Forum Diskusi', icon: 'fa-comments', public: true },
-      { page: 'guru', label: 'Direktori Guru', icon: 'fa-users', public: true },
+      { page: 'materi', label: 'Bank Materi Ajar', icon: 'fa-book-open', public: true, keywords: 'materi ajar modul bahan bacaan sumber belajar' },
+      { page: 'absensi', label: 'Presensi Kegiatan', icon: 'fa-clipboard-check', auth: true, keywords: 'presensi absen daftar hadir kkg barcode qr kehadiran' },
+      { page: 'forum', label: 'Forum Diskusi', icon: 'fa-comments', public: true, keywords: 'forum diskusi tanya jawab rekan sejawat guru' },
+      { page: 'guru', label: 'Direktori Guru', icon: 'fa-users', public: true, keywords: 'direktori guru profil kontak anggota pendidik sekolah' },
     ]
   },
   {
@@ -432,10 +489,10 @@ const navSections = [
     admin: true,
     defaultOpen: true,
     items: [
-      { page: 'surat', label: 'Generator Surat', icon: 'fa-envelope-open-text', admin: true },
-      { page: 'proker', label: 'Program Kerja', icon: 'fa-tasks', admin: true },
-      { page: 'laporan', label: 'Laporan KKG', icon: 'fa-file-contract', admin: true },
-      { page: 'admin', label: 'Panel Kontrol', icon: 'fa-cog', admin: true },
+      { page: 'surat', label: 'Generator Surat', icon: 'fa-envelope-open-text', admin: true, keywords: 'surat undangan tugas sppd dinas nomor format' },
+      { page: 'proker', label: 'Program Kerja', icon: 'fa-tasks', admin: true, keywords: 'program kerja proker rencana agenda tahunan kkg' },
+      { page: 'laporan', label: 'Laporan KKG', icon: 'fa-file-contract', admin: true, keywords: 'laporan pertanggungjawaban spj lpj kegiatan' },
+      { page: 'admin', label: 'Panel Kontrol', icon: 'fa-cog', admin: true, keywords: 'panel kontrol setting admin kelola konfigurasi sistem' },
     ]
   }
 ];
@@ -443,88 +500,142 @@ const navSections = [
 // Flat navLinks export for legacy compatibility if referenced
 const navLinks = navSections.flatMap(s => s.items.map(it => ({ ...it, section: s.title })));
 
-function renderNavLinks(activePage) {
+function renderNavLinks(activePage, isMobileDrawer = false) {
   const isLoggedIn = !!state.user;
   const isAdminPanelUser = ['super_admin', 'admin', 'operator'].includes(state.user?.role || '');
+  const isCollapsed = !isMobileDrawer && !!window.__isSidebarCollapsed;
+  const searchQuery = (window.__sidebarSearchQuery || '').trim().toLowerCase();
 
-  return navSections.filter(section => {
+  // If in collapsed mode (desktop mini sidebar)
+  if (isCollapsed) {
+    return navSections.filter(section => {
+      if (section.admin && !isAdminPanelUser) return false;
+      return true;
+    }).map((section, sIdx) => {
+      const visibleItems = section.items.filter(item => {
+        if (item.public) return true;
+        if (item.auth && isLoggedIn) return true;
+        if (item.admin && isAdminPanelUser) return true;
+        return false;
+      });
+      if (visibleItems.length === 0) return '';
+
+      return `
+        <div class="mb-2">
+          ${sIdx > 0 ? '<div class="w-7 h-[1px] bg-slate-200/70 mx-auto my-2"></div>' : ''}
+          <div class="space-y-1.5 flex flex-col items-center">
+            ${visibleItems.map(item => {
+              const isActive = activePage === item.page;
+              return `
+                <div class="smart-sidebar-mini-item">
+                  <button 
+                    onclick="navigate('${item.page}'); if(window.innerWidth < 768) document.getElementById('mobile-menu')?.classList.add('hidden');"
+                    ${isActive ? 'aria-current="page"' : ''}
+                    class="w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isActive 
+                      ? 'bg-teal-600 text-white shadow-sm ring-2 ring-teal-500/30' 
+                      : 'text-slate-500 hover:bg-teal-50 hover:text-teal-700'
+                    }"
+                    aria-label="${escapeHtml(item.label)}"
+                  >
+                    <i class="fas ${item.icon} text-sm"></i>
+                    ${item.page === 'pengumuman' ? '<span class="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>' : ''}
+                  </button>
+
+                  <!-- Floating Smart Tooltip on Hover -->
+                  <div class="smart-sidebar-mini-tooltip">
+                    <div class="text-[12px] font-bold text-white leading-tight">${item.label}</div>
+                    <div class="text-[10px] text-teal-300 font-medium leading-tight">${section.title}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Expanded Mode (Normal Sidebar & Mobile Drawer)
+  let totalMatches = 0;
+  const renderedSections = navSections.filter(section => {
     if (section.admin && !isAdminPanelUser) return false;
     return true;
   }).map((section) => {
-    // Initialize section state if not yet set by user or storage
-    if (window.__navSectionState[section.id] === undefined) {
-      const hasActiveChild = section.items.some(it => it.page === activePage);
-      window.__navSectionState[section.id] = hasActiveChild || section.defaultOpen;
-    }
-
-    const isExpanded = !!window.__navSectionState[section.id];
-
-    const visibleItems = section.items.filter(item => {
+    // Filter visible items by role
+    let visibleItems = section.items.filter(item => {
       if (item.public) return true;
       if (item.auth && isLoggedIn) return true;
       if (item.admin && isAdminPanelUser) return true;
       return false;
     });
 
-    if (visibleItems.length === 0) return '';
+    // If searching, apply keyword filter
+    if (searchQuery) {
+      visibleItems = visibleItems.filter(item => {
+        const matchLabel = item.label.toLowerCase().includes(searchQuery);
+        const matchKeywords = item.keywords && item.keywords.toLowerCase().includes(searchQuery);
+        const matchSection = section.title.toLowerCase().includes(searchQuery);
+        return matchLabel || matchKeywords || matchSection;
+      });
+    }
 
-    // Hitung badge count dinamis berdasarkan item yang terlihat
-    const dynamicBadgeText = section.isAI ? `${visibleItems.length} Modul` : section.badgeText;
+    if (visibleItems.length === 0) return '';
+    totalMatches += visibleItems.length;
+
+    // In search mode, auto-expand matching sections
+    const isExpanded = searchQuery ? true : (
+      window.__navSectionState[section.id] !== undefined
+        ? !!window.__navSectionState[section.id]
+        : (section.items.some(it => it.page === activePage) || section.defaultOpen)
+    );
+
+    const dynamicBadgeText = section.id === 'perangkat' ? `${visibleItems.length} Modul` : section.badgeText;
 
     return `
-      <div class="mb-3.5">
+      <div class="mb-3">
         <!-- Section Header Toggle Button -->
         <button 
           type="button"
           onclick="window.toggleNavSection('${section.id}')"
-          class="nav-section-toggle-${section.id} w-full flex items-center justify-between px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors group cursor-pointer select-none rounded-xl hover:bg-slate-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 focus-visible:ring-offset-1"
+          class="nav-section-toggle-${section.id} w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors group cursor-pointer select-none rounded-xl hover:bg-slate-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
           title="Klik untuk buka/tutup kategori ${section.title}"
           aria-expanded="${isExpanded}"
           aria-controls="nav-section-${section.id}"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <i class="fas ${section.icon} text-xs ${section.isAI ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}"></i>
-            <span class="${section.isAI ? 'text-teal-700 font-black' : 'text-slate-500 font-bold'} truncate">${section.title}</span>
-            ${section.badgeText || dynamicBadgeText ? `
-              <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 border border-teal-500/20">${dynamicBadgeText || section.badgeText}</span>
+            <i class="fas ${section.icon} text-xs ${section.id === 'perangkat' ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}"></i>
+            <span class="${section.id === 'perangkat' ? 'text-teal-700 font-black' : 'text-slate-500 font-bold'} truncate">${section.title}</span>
+            ${dynamicBadgeText ? `
+              <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 border border-teal-500/20">${dynamicBadgeText}</span>
             ` : ''}
           </div>
           <i class="nav-section-chevron-${section.id} fas fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
         </button>
 
-        <!-- Section Items (Proportional, comfortable sizing) -->
-        <div id="nav-section-${section.id}" class="nav-section-content-${section.id} space-y-1.5 pt-1.5 ${isExpanded ? '' : 'hidden'}" role="group" aria-label="${section.title}">
+        <!-- Section Items -->
+        <div id="nav-section-${section.id}" class="nav-section-content-${section.id} space-y-1 pt-1 ${isExpanded ? '' : 'hidden'}" role="group" aria-label="${section.title}">
           ${visibleItems.map(item => {
             const isActive = activePage === item.page;
-            const isAI = item.ai;
             return `
               <button 
                 onclick="navigate('${item.page}'); if(window.innerWidth < 768) document.getElementById('mobile-menu')?.classList.add('hidden');"
                 ${isActive ? 'aria-current="page"' : ''}
-                class="nav-item-btn w-full text-left px-3.5 py-2.5 sm:py-3 rounded-2xl flex items-center transition-all duration-200 group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 focus-visible:ring-offset-1 ${isActive
-                  ? (isAI
-                      ? 'nav-item-active bg-teal-500/15 text-teal-900 font-bold border border-teal-500/30 shadow-xs'
-                      : 'nav-item-active bg-teal-500/10 text-teal-900 font-bold border border-teal-500/25 shadow-xs')
-                  : (isAI
-                      ? 'text-slate-700 hover:text-teal-700 hover:bg-teal-50/80 font-semibold'
-                      : 'text-slate-600 hover:text-teal-700 hover:bg-slate-100/80 font-medium')
+                class="nav-item-btn w-full text-left px-3 py-2 sm:py-2.5 rounded-xl flex items-center transition-all duration-200 group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40 ${isActive
+                  ? 'nav-item-active bg-teal-500/15 text-teal-900 font-bold border border-teal-500/30 shadow-2xs'
+                  : 'text-slate-600 hover:text-teal-700 hover:bg-slate-100/80 font-medium'
                 }"
               >
-                <span class="w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mr-3 shrink-0 transition-all ${isActive
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : (isAI 
-                      ? 'bg-teal-500/10 text-teal-600 group-hover:bg-teal-500/20 group-hover:scale-105' 
-                      : 'bg-slate-100 text-slate-500 group-hover:bg-teal-50 group-hover:text-teal-600 group-hover:scale-105')
+                <span class="w-8.5 h-8.5 rounded-lg flex items-center justify-center mr-2.5 shrink-0 transition-all ${isActive
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-500 group-hover:bg-teal-50 group-hover:text-teal-600 group-hover:scale-105'
                 }">
-                  <i class="fas ${item.icon} text-base"></i>
+                  <i class="fas ${item.icon} text-sm"></i>
                 </span>
-                <span class="text-[13.5px] sm:text-[14px] tracking-tight truncate flex-1 leading-snug">${item.label}</span>
+                <span class="text-[13px] tracking-tight truncate flex-1 leading-snug">${item.label}</span>
                 ${item.beta && item.admin ? (
                   '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 border border-amber-500/25 ml-auto shrink-0 flex items-center gap-1" title="Fitur beta — hanya admin & operator"><i class="fas fa-flask text-[8px]"></i> Beta</span>'
-                ) : (isAI ? (
-                  !isLoggedIn
-                    ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 ml-auto shrink-0 flex items-center gap-1" title="Perlu Login Akun Pendidik"><i class="fas fa-lock text-[8px]"></i> AI</span>'
-                    : '<span class="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-700 border border-teal-500/20 ml-auto shrink-0">AI</span>'
+                ) : (item.auth && !isLoggedIn ? (
+                  '<span class="text-slate-300 ml-auto shrink-0 text-xs" title="Perlu login akun pendidik"><i class="fas fa-lock text-[9px]"></i></span>'
                 ) : '')}
                 ${item.page === 'pengumuman' ? '<span class="w-2 h-2 bg-amber-500 rounded-full ml-auto shrink-0 animate-pulse"></span>' : ''}
               </button>
@@ -533,8 +644,30 @@ function renderNavLinks(activePage) {
         </div>
       </div>
     `;
-  }).join('');
+  }).filter(Boolean).join('');
+
+  if (searchQuery && totalMatches === 0) {
+    return `
+      <div class="px-3 py-8 text-center text-slate-400">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+          <i class="fas fa-search text-xs"></i>
+        </div>
+        <p class="text-xs font-bold text-slate-600">Menu tidak ditemukan</p>
+        <p class="text-[10.5px] text-slate-400 mt-0.5">Tidak ada menu untuk &ldquo;${escapeHtml(searchQuery)}&rdquo;</p>
+        <button 
+          type="button"
+          onclick="window.clearSidebarSearch()" 
+          class="mt-2.5 px-3 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 text-xs font-bold transition-colors cursor-pointer"
+        >
+          Reset Pencarian
+        </button>
+      </div>
+    `;
+  }
+
+  return renderedSections;
 }
+
 
 // Mobile Bottom Navigation Bar (App Bar Bawah untuk HP)
 function renderMobileBottomNav(activePage) {
@@ -571,19 +704,19 @@ function renderMobileBottomNav(activePage) {
         <span class="text-[10px] mt-1 tracking-tight leading-none">Presensi</span>
       </button>
 
-      <!-- 3. Elevated Floating Action: Asisten AI Hub -->
+      <!-- 3. Elevated Floating Action: Perangkat Pembelajaran Hub -->
       <div class="flex-1 flex flex-col items-center justify-center relative -top-3.5">
         <button 
           id="btn-mobile-ai-sheet"
           onclick="window.toggleMobileAiSheet()" 
           class="w-13 h-13 rounded-2xl bg-gradient-to-tr from-teal-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-teal-500/35 border-4 border-[#f8fdfd] active:scale-90 transition-transform duration-200 cursor-pointer group relative ${isAIActive ? 'ring-2 ring-teal-500 ring-offset-2' : ''}"
-          title="Buka Asisten AI Pendidik"
-          aria-label="Asisten AI Pendidik"
+          title="Buka Perangkat Pembelajaran"
+          aria-label="Perangkat Pembelajaran"
         >
-          <i class="fas fa-wand-magic-sparkles text-lg group-hover:rotate-12 transition-transform duration-300"></i>
+          <i class="fas fa-layer-group text-lg group-hover:scale-110 transition-transform duration-300"></i>
           <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full"></span>
         </button>
-        <span class="text-[9.5px] font-extrabold text-teal-700 tracking-tight leading-none mt-0.5">Asisten AI</span>
+        <span class="text-[9.5px] font-extrabold text-teal-700 tracking-tight leading-none mt-0.5">Perangkat</span>
       </div>
 
       <!-- 4. Bank Materi -->
@@ -617,11 +750,11 @@ function renderMobileBottomNav(activePage) {
   `;
 }
 
-// Mobile AI Bottom Sheet (Lembar Aksi Cepat 4 Modul AI di HP)
+// Mobile Bottom Sheet (Lembar Aksi Cepat Modul Perangkat Pembelajaran di HP)
 function renderMobileAiSheet(activePage) {
   const isAdminPanelUser = ['super_admin', 'admin', 'operator'].includes(state.user?.role || '');
   return `
-    <!-- Mobile AI Action Sheet Modal Overlay -->
+    <!-- Mobile Action Sheet Modal Overlay -->
     <div 
       id="mobile-ai-action-sheet" 
       class="hidden md:hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
@@ -638,11 +771,11 @@ function renderMobileAiSheet(activePage) {
         <div class="flex items-center justify-between mb-4 px-1">
           <div class="flex items-center gap-2.5">
             <span class="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-700 flex items-center justify-center text-sm">
-              <i class="fas fa-wand-magic-sparkles"></i>
+              <i class="fas fa-layer-group"></i>
             </span>
             <div>
-              <h3 class="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">Asisten AI Pendidik</h3>
-              <p class="text-[10.5px] text-slate-400 font-medium leading-tight">Pilih modul otomatisasi Kurikulum Merdeka</p>
+              <h3 class="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">Perangkat Pembelajaran</h3>
+              <p class="text-[10.5px] text-slate-400 font-medium leading-tight">Pilih modul Kurikulum Merdeka resmi BSKAP</p>
             </div>
           </div>
           <button 
@@ -653,7 +786,7 @@ function renderMobileAiSheet(activePage) {
           </button>
         </div>
 
-        <!-- AI Generator Cards Grid -->
+        <!-- Generator Cards Grid -->
         <div class="grid grid-cols-2 gap-2.5 mb-4">
           <!-- 0. Analisis CP, TP, ATP -->
           <button 
@@ -665,13 +798,13 @@ function renderMobileAiSheet(activePage) {
                 <i class="fas fa-book-bookmark"></i>
               </div>
               <div>
-                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Analisis CP, TP & ATP</span>
-                <span class="block text-[10px] text-slate-500 font-normal leading-snug">Ekstrak Buku PDF ke CP/TP/ATP Resmi BSKAP</span>
+                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Analisis CP & ATP</span>
+                <span class="block text-[10px] text-slate-500 font-normal leading-snug">Ekstrak Dokumen Capaian ke TP/ATP Resmi BSKAP</span>
               </div>
             </div>
           </button>
 
-          <!-- 0b. Program Sekolah Universal (AI) (Khusus Admin/Operator) -->
+          <!-- 0b. Program Sekolah (Khusus Admin/Operator) -->
           ${isAdminPanelUser ? `
           <button 
             onclick="window.closeMobileAiSheet(); navigate('program-sekolah');" 
@@ -682,7 +815,7 @@ function renderMobileAiSheet(activePage) {
                 <i class="fas fa-file-lines"></i>
               </div>
               <div>
-                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Program Sekolah (AI)</span>
+                <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Program Sekolah</span>
                 <span class="block text-[10px] text-slate-500 font-normal leading-snug">Kokurikuler Profil Lulusan, 7 KAIH, HBG, dll.</span>
               </div>
             </div>
@@ -695,10 +828,10 @@ function renderMobileAiSheet(activePage) {
             class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'rpp' ? 'bg-teal-50/90 border-teal-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-teal-50/40 hover:border-teal-300'}"
           >
             <div class="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
-              <i class="fas fa-magic"></i>
+              <i class="fas fa-file-pen"></i>
             </div>
-            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Buat RPP</span>
-            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Modul Ajar Berdiferensiasi</span>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Modul Ajar (RPP)</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Pembelajaran Berdiferensiasi</span>
           </button>
 
           <!-- 2. Asesmen & Kisi-Kisi -->
@@ -709,11 +842,11 @@ function renderMobileAiSheet(activePage) {
             <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
               <i class="fas fa-list-check"></i>
             </div>
-            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Buat Asesmen</span>
-            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Soal HOTS & Kisi-Kisi</span>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Asesmen & Kisi-Kisi</span>
+            <span class="block text-[10px] text-slate-500 font-normal leading-snug">Soal HOTS & Rubrik KKTP</span>
           </button>
 
-          <!-- 3. Slide Studio -->
+          <!-- 3. Media Presentasi -->
           <button 
             onclick="window.closeMobileAiSheet(); navigate('slide');" 
             class="text-left p-3.5 rounded-2xl border transition-all active:scale-95 cursor-pointer ${activePage === 'slide' ? 'bg-sky-50/90 border-sky-400 shadow-2xs' : 'bg-slate-50/70 border-slate-200/70 hover:bg-sky-50/40 hover:border-sky-300'}"
@@ -721,7 +854,7 @@ function renderMobileAiSheet(activePage) {
             <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-700 flex items-center justify-center text-sm mb-2.5 shadow-2xs">
               <i class="fas fa-file-powerpoint"></i>
             </div>
-            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Slide Presentasi</span>
+            <span class="block text-xs font-bold text-slate-900 leading-tight mb-0.5">Media Presentasi</span>
             <span class="block text-[10px] text-slate-500 font-normal leading-snug">Slide Mengajar Interaktif</span>
           </button>
 
@@ -747,6 +880,172 @@ function renderMobileAiSheet(activePage) {
         </button>
       </div>
     </div>
+  `;
+}
+
+// Desktop Smart Sidebar Generator (Expanded 280px vs Collapsed 72px)
+function renderDesktopSidebar(page) {
+  const isCollapsed = !!window.__isSidebarCollapsed;
+  const namaKkg = state.settings?.nama_kkg || state.tenant?.nama || 'Portal Digital KKG';
+  const kecamatan = state.settings?.kecamatan || '';
+
+  return `
+    <aside 
+      id="app-sidebar" 
+      class="hidden md:flex flex-col ${isCollapsed ? 'w-[72px]' : 'w-[275px] lg:w-[285px]'} bg-white border-r border-slate-200/80 z-[100] shadow-sm shrink-0 h-screen transition-all duration-200 ease-in-out select-none"
+    >
+      <!-- Sidebar Header -->
+      <div class="flex items-center ${isCollapsed ? 'justify-center px-2 py-4' : 'justify-between px-4 py-3.5'} border-b border-slate-100 shrink-0">
+         <div class="flex items-center gap-3 min-w-0 ${isCollapsed ? 'hidden' : ''}">
+            <div class="w-9 h-9 flex items-center justify-center transition-transform duration-300 hover:scale-105 shrink-0">
+               <img 
+                 src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" 
+                 alt="Logo KKG" 
+                 class="w-full h-full object-contain drop-shadow-xs"
+                 onerror="this.src='/static/img/logo-kkg.png'"
+               >
+            </div>
+            <div class="min-w-0">
+               <h1 class="text-[13px] font-black text-teal-600 uppercase tracking-tight leading-tight truncate max-w-[145px]">${escapeHtml(namaKkg)}</h1>
+               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block leading-tight truncate max-w-[145px]">${escapeHtml(kecamatan)}</span>
+            </div>
+         </div>
+         ${isCollapsed ? `
+            <div class="w-9 h-9 flex items-center justify-center hover:scale-105 transition-transform shrink-0" title="${escapeHtml(namaKkg)}">
+               <img 
+                 src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" 
+                 alt="Logo KKG" 
+                 class="w-7 h-7 object-contain drop-shadow-xs"
+                 onerror="this.src='/static/img/logo-kkg.png'"
+               >
+            </div>
+         ` : ''}
+         <button 
+           type="button"
+           onclick="window.toggleSidebarCollapse()" 
+           class="p-2 rounded-xl text-slate-400 hover:text-teal-700 hover:bg-teal-50/80 transition-colors cursor-pointer shrink-0"
+           title="${isCollapsed ? 'Lebarkan Sidebar (Ctrl+[)' : 'Ciutkan Sidebar (Ctrl+[)'}"
+           aria-label="Toggle Sidebar"
+         >
+           <i class="fas ${isCollapsed ? 'fa-angles-right' : 'fa-angles-left'} text-xs"></i>
+         </button>
+      </div>
+
+      <!-- Smart Search Input (Only when expanded) -->
+      ${!isCollapsed ? `
+        <div class="px-3 pt-2.5 pb-1">
+          <div class="relative flex items-center">
+            <i class="fas fa-search absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+            <input 
+              type="text" 
+              id="sidebar-search-input"
+              oninput="window.handleSidebarSearch(this.value)"
+              placeholder="Cari menu... (Ctrl+K)" 
+              value="${escapeHtml(window.__sidebarSearchQuery || '')}"
+              class="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-slate-700 placeholder-slate-400 rounded-xl border border-slate-200/80 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
+              aria-label="Cari menu sidebar"
+            />
+            <button 
+              id="sidebar-search-clear"
+              onclick="window.clearSidebarSearch()" 
+              class="absolute right-2 text-slate-400 hover:text-slate-600 p-1 text-[11px] cursor-pointer ${window.__sidebarSearchQuery ? '' : 'hidden'}"
+              title="Hapus pencarian"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+            ${!window.__sidebarSearchQuery ? `
+              <kbd class="absolute right-2 px-1 py-0.5 text-[9px] font-mono text-slate-400 bg-white border border-slate-200 rounded pointer-events-none hidden sm:inline-block">⌘K</kbd>
+            ` : ''}
+          </div>
+        </div>
+      ` : `
+        <div class="px-2 pt-2 pb-1 text-center">
+          <button 
+            type="button"
+            onclick="window.toggleSidebarCollapse(); setTimeout(() => document.getElementById('sidebar-search-input')?.focus(), 150);" 
+            class="w-10 h-10 mx-auto rounded-xl flex items-center justify-center text-slate-400 hover:text-teal-600 hover:bg-teal-50/80 transition-colors cursor-pointer"
+            title="Cari Menu (Ctrl+K)"
+          >
+            <i class="fas fa-search text-xs"></i>
+          </button>
+        </div>
+      `}
+
+      <!-- Navigation Links Container -->
+      <nav class="flex-1 overflow-y-auto custom-scrollbar ${isCollapsed ? 'px-1.5' : 'px-3'} py-2 space-y-1 flex flex-col justify-between">
+        <div id="sidebar-nav-links" class="space-y-1">
+          ${renderNavLinks(page, false)}
+        </div>
+
+        <!-- Smart Bottom Quality Card -->
+        <div class="mt-3 px-0.5 pb-1 ${isCollapsed ? 'hidden' : ''}">
+          ${state.user ? `
+            <div class="p-3 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/20 border border-slate-200/80 shadow-2xs">
+              <div class="flex items-center gap-2.5 mb-2">
+                <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shadow-2xs shrink-0">
+                  <i class="fas fa-school"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight truncate">${escapeHtml(state.user?.sekolah || namaKkg)}</p>
+                  <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Pendidik Terdaftar</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-[10.5px] text-slate-500 pt-1.5 border-t border-slate-200/60">
+                <span class="font-medium current-tahun-ajaran-display">T.A ${escapeHtml(state.settings?.tahun_ajaran || '2026/2027')}</span>
+                <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Aktif
+                </span>
+              </div>
+            </div>
+          ` : `
+            <div class="p-3 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/20 border border-slate-200/80 shadow-2xs">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shadow-2xs shrink-0">
+                  <i class="fas fa-award"></i>
+                </span>
+                <div>
+                  <p class="text-[11px] font-extrabold text-slate-800 leading-tight">Kurikulum Merdeka</p>
+                  <p class="text-[9px] text-teal-600 font-bold leading-tight">Standar BSKAP 2025</p>
+                </div>
+              </div>
+              <p class="text-[10.5px] text-slate-500 leading-relaxed font-normal mb-2">Platform resmi komunitas ${escapeHtml(namaKkg)}.</p>
+              <button 
+                onclick="window.openShowcaseModal ? window.openShowcaseModal('rpp') : navigate('home')" 
+                class="w-full py-1.5 px-2.5 rounded-xl bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200/80 hover:border-teal-200 text-[10.5px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <i class="fas fa-book-open text-teal-600 text-xs"></i>
+                <span>Panduan Perangkat Ajar</span>
+              </button>
+            </div>
+          `}
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="p-3 border-t border-slate-100/80 shrink-0 bg-slate-50/50">
+        ${state.user ? `
+          <div class="flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-1'} text-slate-400">
+            <div class="flex items-center gap-2 ${isCollapsed ? 'hidden' : ''}">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs"></span>
+              <span class="text-xs font-bold text-slate-600 tracking-tight truncate max-w-[130px]">${escapeHtml(namaKkg)}</span>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded" title="Versi Aplikasi">v2.6</span>
+          </div>
+        ` : `
+          ${isCollapsed ? `
+            <button onclick="navigate('login')" class="w-10 h-10 mx-auto bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-teal-600 transition-colors shadow-sm cursor-pointer" title="Masuk Akun">
+              <i class="fas fa-sign-in-alt text-xs"></i>
+            </button>
+          ` : `
+            <button onclick="navigate('login')" class="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-teal-600 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+              <i class="fas fa-sign-in-alt text-xs"></i>
+              <span>Masuk Akun</span>
+            </button>
+          `}
+        `}
+      </div>
+    </aside>
   `;
 }
 
@@ -897,20 +1196,20 @@ async function render() {
 
   const pageMetadata = {
     home: { title: state.user && !state.showPublicLanding ? 'Ruang Kerja Pendidik' : `Beranda ${namaKkg}`, icon: 'fa-home', category: 'Utama' },
-    'analisis-cp': { title: 'Analisis CP, TP & ATP (BSKAP 046/2025)', icon: 'fa-book-bookmark', category: 'Asisten AI' },
-    'program-sekolah': { title: 'Program Kerja & Pembiasaan Sekolah (AI)', icon: 'fa-file-lines', category: 'Asisten AI' },
-    rpp: { title: 'Generator Modul Ajar AI', icon: 'fa-wand-magic-sparkles', category: 'Asisten AI' },
-    analisis: { title: 'Analisis CP & Capaian', icon: 'fa-chart-pie', category: 'Asisten AI' },
-    kktp: { title: 'Kriteria Ketuntasan (KKTP)', icon: 'fa-bullseye', category: 'Asisten AI' },
-    prota: { title: 'Program Tahunan (Prota)', icon: 'fa-calendar-alt', category: 'Asisten AI' },
-    promes: { title: 'Program Semester (Promes)', icon: 'fa-calendar-check', category: 'Asisten AI' },
-    atp: { title: 'Alur Tujuan Pembelajaran', icon: 'fa-project-diagram', category: 'Asisten AI' },
-    kisi: { title: 'Kisi-Kisi & Asesmen Pintar', icon: 'fa-list-check', category: 'Asisten AI' },
-    lkpd: { title: 'Lembar Kerja Peserta Didik', icon: 'fa-file-signature', category: 'Asisten AI' },
-    rubrik: { title: 'Rubrik Penilaian Berjenjang', icon: 'fa-tasks', category: 'Asisten AI' },
-    slide: { title: 'Slide Studio AI Presentasi', icon: 'fa-file-powerpoint', category: 'Asisten AI' },
-    games: { title: 'Pusat Game Edukasi Interaktif IFP', icon: 'fa-gamepad', category: 'Asisten AI' },
-    tts: { title: 'Teka-Teki Silang Edukatif', icon: 'fa-puzzle-piece', category: 'Asisten AI' },
+    'analisis-cp': { title: 'Analisis CP, TP & ATP (BSKAP 046/2025)', icon: 'fa-book-bookmark', category: 'Perangkat Pembelajaran' },
+    'program-sekolah': { title: 'Program Kerja & Pembiasaan Sekolah', icon: 'fa-file-lines', category: 'Perangkat Pembelajaran' },
+    rpp: { title: 'Generator Modul Ajar (RPP)', icon: 'fa-file-pen', category: 'Perangkat Pembelajaran' },
+    analisis: { title: 'Analisis CP & Capaian', icon: 'fa-chart-pie', category: 'Perangkat Pembelajaran' },
+    kktp: { title: 'Kriteria Ketuntasan (KKTP)', icon: 'fa-bullseye', category: 'Perangkat Pembelajaran' },
+    prota: { title: 'Program Tahunan (Prota)', icon: 'fa-calendar-alt', category: 'Perangkat Pembelajaran' },
+    promes: { title: 'Program Semester (Promes)', icon: 'fa-calendar-check', category: 'Perangkat Pembelajaran' },
+    atp: { title: 'Alur Tujuan Pembelajaran', icon: 'fa-project-diagram', category: 'Perangkat Pembelajaran' },
+    kisi: { title: 'Asesmen & Kisi-Kisi Pintar', icon: 'fa-list-check', category: 'Perangkat Pembelajaran' },
+    lkpd: { title: 'Lembar Kerja Peserta Didik', icon: 'fa-file-signature', category: 'Perangkat Pembelajaran' },
+    rubrik: { title: 'Rubrik Penilaian Berjenjang', icon: 'fa-tasks', category: 'Perangkat Pembelajaran' },
+    slide: { title: 'Media Presentasi Pembelajaran', icon: 'fa-file-powerpoint', category: 'Perangkat Pembelajaran' },
+    games: { title: 'Game Edukasi Interaktif IFP', icon: 'fa-gamepad', category: 'Perangkat Pembelajaran' },
+    tts: { title: 'Teka-Teki Silang Edukatif', icon: 'fa-puzzle-piece', category: 'Perangkat Pembelajaran' },
     absensi: { title: 'Presensi & Absensi Kegiatan', icon: 'fa-clipboard-check', category: 'Kegiatan' },
     materi: { title: 'Bank Materi & Modul Ajar', icon: 'fa-book-open', category: 'Akademik' },
     guru: { title: 'Direktori Pendidik', icon: 'fa-users', category: 'Komunitas' },
@@ -932,7 +1231,7 @@ async function render() {
 
   if (isPublicHome) {
     document.body.classList.add('rk-landing');
-    document.title = 'RuangKKG — Platform SaaS Administrasi & Modul Ajar AI untuk Guru Indonesia';
+    document.title = 'RuangKKG — Rumah Digital Komunitas Guru KKG Indonesia';
   } else {
     document.body.classList.remove('rk-landing');
     if (isCustomLayout) {
@@ -956,89 +1255,7 @@ async function render() {
         <div class="fixed -bottom-20 -left-20 w-[40%] h-[60%] bg-teal-500/5 -z-10 rounded-tr-[100px] blur-3xl pointer-events-none"></div>
 
         <!-- Sidebar (Desktop) -->
-        <aside class="hidden md:flex flex-col w-[275px] lg:w-[285px] bg-white border-r border-slate-200/80 z-[100] shadow-sm shrink-0 h-screen">
-          <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
-             <div class="w-10 h-10 flex items-center justify-center transition-transform duration-300 hover:scale-105 shrink-0">
-                <img 
-                  src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}?v=${window.__APP_VERSION__}" 
-                  alt="Logo KKG" 
-                  class="w-full h-full object-contain drop-shadow-xs"
-                  onerror="this.src='/static/img/logo-kkg.png'"
-                >
-             </div>
-             <div class="min-w-0">
-                <h1 class="text-[13px] font-black text-teal-600 uppercase tracking-tight leading-tight truncate max-w-[150px]">${escapeHtml(namaKkg)}</h1>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block leading-tight truncate max-w-[150px]">${escapeHtml(kecamatan)}</span>
-             </div>
-          </div>
-
-          <nav class="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-1 flex flex-col justify-between">
-            <div id="sidebar-nav-links" class="space-y-1">
-              ${renderNavLinks(page)}
-            </div>
-
-            <!-- Proportional Bottom Quality Card (Fills empty space harmoniously) -->
-            <div class="mt-4 px-0.5 pb-1">
-              ${state.user ? `
-                <div class="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/20 border border-slate-200/80 shadow-2xs">
-                  <div class="flex items-center gap-2.5 mb-2">
-                    <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shadow-2xs shrink-0">
-                      <i class="fas fa-school"></i>
-                    </span>
-                    <div class="min-w-0 flex-1">
-                      <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight truncate">${escapeHtml(state.user?.sekolah || namaKkg)}</p>
-                      <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Pendidik Terdaftar</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between text-[10.5px] text-slate-500 pt-1.5 border-t border-slate-200/60">
-                    <span class="font-medium current-tahun-ajaran-display">T.A ${escapeHtml(state.settings?.tahun_ajaran || '2026/2027')}</span>
-                    <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Aktif
-                    </span>
-                  </div>
-                </div>
-              ` : `
-                <div class="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/20 border border-slate-200/80 shadow-2xs">
-                  <div class="flex items-center gap-2.5 mb-1.5">
-                    <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shadow-2xs shrink-0">
-                      <i class="fas fa-award"></i>
-                    </span>
-                    <div>
-                      <p class="text-[11.5px] font-extrabold text-slate-800 leading-tight">Kurikulum Merdeka</p>
-                      <p class="text-[9.5px] text-teal-600 font-bold leading-tight">Standar BSKAP 2025</p>
-                    </div>
-                  </div>
-                  <p class="text-[11px] text-slate-500 leading-relaxed font-normal mb-2.5">Platform resmi ${escapeHtml(namaKkg)}.</p>
-                  <button 
-                    onclick="window.openShowcaseModal ? window.openShowcaseModal('rpp') : navigate('home')" 
-                    class="w-full py-2 px-3 rounded-xl bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200/80 hover:border-teal-200 text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <i class="fas fa-sparkles text-teal-600 text-xs"></i>
-                    <span>Lihat Simulasi AI</span>
-                  </button>
-                </div>
-              `}
-            </div>
-          </nav>
-
-          <div class="p-3.5 px-4 border-t border-slate-100/80 shrink-0 bg-slate-50/50">
-            ${state.user ? `
-              <div class="flex items-center justify-between px-1 text-slate-400">
-                <div class="flex items-center gap-2">
-                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs"></span>
-                  <span class="text-xs font-bold text-slate-600 tracking-tight truncate max-w-[140px]">${escapeHtml(namaKkg)}</span>
-                </div>
-                <span class="text-[10px] font-mono text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded">v2.6</span>
-              </div>
-            ` : `
-              <button onclick="navigate('login')" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-teal-600 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
-                <i class="fas fa-sign-in-alt text-xs"></i>
-                <span>Masuk Akun</span>
-              </button>
-            `}
-          </div>
-        </aside>
+        ${renderDesktopSidebar(page)}
 
         <!-- Mobile Header & Main Content -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -1073,7 +1290,7 @@ async function render() {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span>AI Perangkat Ajar</span>
+                <span>Perangkat Ajar Aktif</span>
               </div>
 
               <!-- Notifications Bell -->
@@ -1477,7 +1694,7 @@ async function init() {
 
   // Set dynamic browser page title
   if (!state.user || state.currentPage === 'home') {
-    document.title = 'RuangKKG — Platform SaaS Administrasi & Modul Ajar AI untuk Guru Indonesia';
+    document.title = 'RuangKKG — Rumah Digital Komunitas Guru KKG Indonesia';
   } else {
     const activeOrgName = state.settings?.nama_kkg || state.tenant?.nama || 'Portal KKG';
     document.title = `Portal ${activeOrgName} | RuangKKG`;
@@ -1485,6 +1702,38 @@ async function init() {
 
   // Bind router handler
   initRouter(render);
+
+  // Global Smart Sidebar Keyboard Shortcuts: Ctrl+K / Cmd+K (Search), Ctrl+[ / Cmd+[ (Toggle collapse)
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+K or Cmd+K: Focus search
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (window.__isSidebarCollapsed) {
+        window.toggleSidebarCollapse();
+      }
+      setTimeout(() => {
+        const input = document.getElementById('sidebar-search-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+      return;
+    }
+
+    // Ctrl+[ or Cmd+[: Toggle collapse
+    if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+      e.preventDefault();
+      window.toggleSidebarCollapse();
+      return;
+    }
+
+    // Escape inside sidebar search: clear & blur
+    if (e.key === 'Escape' && document.activeElement?.id === 'sidebar-search-input') {
+      window.clearSidebarSearch();
+      document.activeElement.blur();
+    }
+  });
 
   // Finally, render once with all data ready
   await render();
@@ -1496,10 +1745,10 @@ async function init() {
 
   document.addEventListener('notifications-updated', () => {
     const sidebarNav = document.getElementById('sidebar-nav-links') || document.querySelector('aside nav .space-y-1');
-    if (sidebarNav) sidebarNav.innerHTML = renderNavLinks(state.currentPage);
+    if (sidebarNav) sidebarNav.innerHTML = renderNavLinks(state.currentPage, false);
 
     const mobileNav = document.getElementById('mobile-nav-links') || document.querySelector('#mobile-menu nav');
-    if (mobileNav) mobileNav.innerHTML = renderNavLinks(state.currentPage);
+    if (mobileNav) mobileNav.innerHTML = renderNavLinks(state.currentPage, true);
   });
 
   document.addEventListener('settings-updated', (e) => {

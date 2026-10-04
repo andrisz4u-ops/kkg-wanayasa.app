@@ -471,6 +471,7 @@ window.showCertificateModal = function (cert) {
     jabatan_pengawas: 'Pengawas Pembina Korwil V'
   };
 
+  window.__currentCert = cert;
   modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto';
   modal.innerHTML = `
     <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-8 my-8 border border-amber-200 dark:border-gray-700 relative">
@@ -541,16 +542,35 @@ window.showCertificateModal = function (cert) {
       </div>
 
       <!-- ACTION BUTTONS -->
-      <div class="flex flex-wrap gap-3 justify-end mt-6 no-print">
-        <button onclick="navigator.clipboard.writeText('${verifyFullUrl}'); showToast('Tautan verifikasi PMM disalin ke clipboard!', 'success');" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
-          <i class="fas fa-link mr-1.5"></i>Salin Tautan PMM
-        </button>
-        <button onclick="window.open('/verify/sertifikat/${cert.uuid}', '_blank')" class="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition">
-          <i class="fas fa-external-link-alt mr-1.5"></i>Buka Halaman Verifikasi
-        </button>
-        <button onclick="window.printOfficialCertificate(window.__currentCert)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20">
-          <i class="fas fa-print mr-1.5"></i>Cetak / Simpan PDF
-        </button>
+      <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 no-print">
+        <div class="flex items-center gap-2">
+          <button onclick="navigator.clipboard.writeText('${verifyFullUrl}'); showToast('Tautan verifikasi PMM disalin ke clipboard!', 'success');" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Salin tautan untuk diunggah ke PMM">
+            <i class="fas fa-link text-emerald-600"></i>Salin Tautan PMM
+          </button>
+          <button onclick="window.open('/verify/sertifikat/${cert.uuid}', '_blank')" class="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Buka halaman verifikasi publik">
+            <i class="fas fa-external-link-alt"></i>Halaman Verifikasi
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- 1. UNDUH PDF LANGSUNG (1-CLICK DOWNLOAD) -->
+          <button id="btn-download-cert-pdf" onclick="window.downloadCertificatePDF(window.__currentCert)" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition shadow-lg shadow-emerald-600/30 flex items-center gap-2 cursor-pointer" title="Unduh berkas PDF resmi (2 Halaman A4 Landscape) langsung ke HP/Komputer">
+            <i class="fas fa-file-pdf text-sm text-red-200"></i>
+            <span>Unduh PDF Resmi</span>
+          </button>
+
+          <!-- 2. UNDUH GAMBAR PNG HD -->
+          <button id="btn-download-cert-png" onclick="window.downloadCertificatePNG(window.__currentCert)" class="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer" title="Simpan sebagai gambar PNG HD untuk WA / Berkas">
+            <i class="fas fa-image"></i>
+            <span>Unduh Gambar (PNG)</span>
+          </button>
+
+          <!-- 3. CETAK PRINTER -->
+          <button onclick="window.printOfficialCertificate(window.__currentCert)" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer" title="Cetak langsung ke mesin printer fisik">
+            <i class="fas fa-print"></i>
+            <span>Cetak Kertas</span>
+          </button>
+        </div>
       </div>
     </div>
   `;

@@ -336,14 +336,21 @@ function renderSertifikatVerification(data) {
             <i class="fas fa-arrow-left"></i>
             <span>Kembali ke Portal KKG</span>
           </a>
-          <div class="flex items-center gap-2">
-            <button onclick="window.printOfficialCertificate(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer">
-              <i class="fas fa-certificate"></i>
-              <span>Cetak / Simpan E-Sertifikat (PDF)</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- 1. UNDUH PDF RESMI -->
+            <button id="btn-download-cert-pdf" onclick="window.downloadCertificatePDF(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Unduh berkas PDF resmi (A4 Landscape) langsung ke HP/Komputer">
+              <i class="fas fa-file-pdf text-red-200"></i>
+              <span>Unduh PDF Resmi</span>
             </button>
-            <button onclick="window.print()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
+            <!-- 2. UNDUH GAMBAR PNG -->
+            <button id="btn-download-cert-png" onclick="window.downloadCertificatePNG(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer" title="Simpan sebagai gambar PNG HD">
+              <i class="fas fa-image"></i>
+              <span>Unduh PNG</span>
+            </button>
+            <!-- 3. CETAK PRINTER -->
+            <button onclick="window.printOfficialCertificate(window.__currentVerifyCert)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-colors cursor-pointer" title="Cetak langsung ke kertas fisik">
               <i class="fas fa-print"></i>
-              <span>Cetak Lembar Audit</span>
+              <span>Cetak Kertas</span>
             </button>
           </div>
         </div>

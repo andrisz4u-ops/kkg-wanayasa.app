@@ -789,6 +789,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
 
   <script>window.__APP_VERSION__ = '${APP_VERSION}';</script>
   <script src="/static/js/profil-lulusan-data.js?v=${APP_VERSION}"></script>
+  <script src="/static/js/certificate-engine.js?v=${APP_VERSION}"></script>
   <script type="module" src="/static/js/main.js?v=${APP_VERSION}"></script>
 
   <!-- SVG Clip Path for Organic Shapes -->

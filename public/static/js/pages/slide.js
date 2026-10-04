@@ -545,8 +545,13 @@ function renderEditorView() {
           </button>
 
           <!-- Present Fullscreen Mode -->
-          <button id="sg-btn-fullscreen" class="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all flex items-center gap-1.5" title="Mulai Presentasi Layar Penuh">
+          <button id="sg-btn-fullscreen" class="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all flex items-center gap-1.5" title="Mulai Presentasi Layar Penuh (F5)">
             <i class="fas fa-play"></i> <span class="hidden sm:inline">Mulai Tayang</span>
+          </button>
+
+          <!-- Dual-Screen Presenter Console -->
+          <button id="sg-btn-presenter-console" class="px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer" title="Buka Konsol Guru di Jendela Terpisah (Dual-Screen)">
+            <i class="fas fa-desktop"></i> <span class="hidden md:inline">Konsol Guru</span>
           </button>
 
           <!-- Export Dropdown -->
@@ -1338,6 +1343,7 @@ function attachCurrentViewEvents() {
     const exportToggleBtn = document.getElementById('sg-btn-export-toggle');
     const exportMenu = document.getElementById('sg-export-menu');
     const fullscreenBtn = document.getElementById('sg-btn-fullscreen');
+    const presenterConsoleBtn = document.getElementById('sg-btn-presenter-console');
     const patchBtn = document.getElementById('sg-btn-patch-slide');
     const layoutSelect = document.getElementById('sg-change-layout-select');
     const notesInput = document.getElementById('sg-speaker-notes-input');
@@ -1355,6 +1361,7 @@ function attachCurrentViewEvents() {
       document.addEventListener('click', () => exportMenu.classList.add('hidden'));
     }
     if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreenPresentation);
+    if (presenterConsoleBtn) presenterConsoleBtn.addEventListener('click', openPresenterConsole);
     if (patchBtn) patchBtn.addEventListener('click', showPatchSlideModal);
 
     const editorArchiveBtn = document.getElementById('sg-btn-editor-archive');
@@ -1773,9 +1780,13 @@ function toggleFullscreenPresentation() {
         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-gray-900/80 backdrop-blur-md px-5 py-2 rounded-full text-white text-xs flex items-center gap-4 border border-white/10 z-50">
           <span class="font-bold text-primary">${s.currentIndex + 1} / ${s.slides.length}</span>
           <div class="w-px h-3 bg-white/20"></div>
-          <span class="text-gray-300">${escapeHtml(s.config.topik || 'Presentasi')}</span>
+          <span class="text-gray-300 truncate max-w-[200px]">${escapeHtml(s.config.topik || 'Presentasi')}</span>
           <div class="w-px h-3 bg-white/20"></div>
-          <button id="sg-fs-close" class="text-gray-400 hover:text-white transition-colors" title="Keluar (Esc)"><i class="fas fa-times"></i></button>
+          <button id="sg-fs-console" class="text-teal-400 hover:text-teal-300 transition-colors flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer" title="Buka Konsol Pengajar di Jendela Terpisah (Dual-Screen)">
+            <i class="fas fa-desktop"></i> Konsol Guru
+          </button>
+          <div class="w-px h-3 bg-white/20"></div>
+          <button id="sg-fs-close" class="text-gray-400 hover:text-white transition-colors cursor-pointer" title="Keluar (Esc)"><i class="fas fa-times"></i></button>
         </div>
 
         <!-- 16:9 Stage Screen -->
@@ -1796,8 +1807,10 @@ function toggleFullscreenPresentation() {
     `;
 
     document.getElementById('sg-fs-close').onclick = closeFullscreen;
-    document.getElementById('sg-fs-prev').onclick = () => { if (s.currentIndex > 0) { s.currentIndex--; renderFsSlide(); } };
-    document.getElementById('sg-fs-next').onclick = () => { if (s.currentIndex < s.slides.length - 1) { s.currentIndex++; renderFsSlide(); } };
+    const fsConsoleBtn = document.getElementById('sg-fs-console');
+    if (fsConsoleBtn) fsConsoleBtn.onclick = openPresenterConsole;
+    document.getElementById('sg-fs-prev').onclick = () => { if (s.currentIndex > 0) { s.currentIndex--; renderFsSlide(); getPresenterSyncChannel()?.postMessage({ type: 'SYNC_SLIDE', index: s.currentIndex }); } };
+    document.getElementById('sg-fs-next').onclick = () => { if (s.currentIndex < s.slides.length - 1) { s.currentIndex++; renderFsSlide(); getPresenterSyncChannel()?.postMessage({ type: 'SYNC_SLIDE', index: s.currentIndex }); } };
   }
 
   function closeFullscreen() {
@@ -1809,12 +1822,319 @@ function toggleFullscreenPresentation() {
 
   const fsKeyHandler = (e) => {
     if (e.key === 'Escape') closeFullscreen();
-    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { if (s.currentIndex > 0) { s.currentIndex--; renderFsSlide(); } }
-    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { if (s.currentIndex < s.slides.length - 1) { s.currentIndex++; renderFsSlide(); } }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      if (s.currentIndex > 0) {
+        s.currentIndex--;
+        renderFsSlide();
+        getPresenterSyncChannel()?.postMessage({ type: 'SYNC_SLIDE', index: s.currentIndex });
+      }
+    }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      if (s.currentIndex < s.slides.length - 1) {
+        s.currentIndex++;
+        renderFsSlide();
+        getPresenterSyncChannel()?.postMessage({ type: 'SYNC_SLIDE', index: s.currentIndex });
+      }
+    }
   };
 
   document.addEventListener('keydown', fsKeyHandler);
   renderFsSlide();
+}
+
+// ==========================================
+// 10B. DUAL-SCREEN PRESENTER CONSOLE (TEACHER COCKPIT)
+// ==========================================
+let _presenterBroadcastChannel = null;
+
+function getPresenterSyncChannel() {
+  if (!_presenterBroadcastChannel && typeof BroadcastChannel !== 'undefined') {
+    _presenterBroadcastChannel = new BroadcastChannel('kkg_presenter_sync');
+    _presenterBroadcastChannel.onmessage = (e) => {
+      const { type, index } = e.data || {};
+      const s = window.slideGenState;
+      if (!s || !s.slides || !s.slides.length) return;
+
+      if (type === 'SYNC_SLIDE' && typeof index === 'number' && index >= 0 && index < s.slides.length) {
+        s.currentIndex = index;
+        updateEditorContent();
+        const fsContainer = document.getElementById('sg-fullscreen-container');
+        if (fsContainer && !fsContainer.classList.contains('hidden')) {
+          const tpl = slideTemplates[s.template] || slideTemplates['minimalist-dark'];
+          const stageArea = fsContainer.querySelector('.w-full.max-w-6xl');
+          if (stageArea) {
+            stageArea.innerHTML = generateSlideHTML(s.slides[index], index, tpl.colorScheme);
+          }
+          const counter = fsContainer.querySelector('.font-bold.text-primary');
+          if (counter) counter.textContent = `${index + 1} / ${s.slides.length}`;
+        }
+      } else if (type === 'BLACKOUT_TOGGLE') {
+        const fsContainer = document.getElementById('sg-fullscreen-container');
+        if (fsContainer) {
+          fsContainer.classList.toggle('brightness-0');
+        }
+      }
+    };
+  }
+  return _presenterBroadcastChannel;
+}
+
+function openPresenterConsole() {
+  const s = window.slideGenState;
+  if (!s || !s.slides || !s.slides.length) {
+    showToast('Tidak ada slide untuk ditampilkan di Konsol Guru', 'error');
+    return;
+  }
+
+  getPresenterSyncChannel();
+  const consoleWin = window.open('', 'KKG_PRESENTER_CONSOLE', 'width=1120,height=740,menubar=no,toolbar=no,location=no,status=no');
+
+  if (!consoleWin) {
+    showToast('Pop-up diblokir browser. Harap izinkan pop-up untuk Konsol Guru.', 'warning');
+    return;
+  }
+
+  const currentIdx = s.currentIndex;
+  const currentSlide = s.slides[currentIdx];
+  const nextSlide = s.slides[currentIdx + 1];
+  const tpl = slideTemplates[s.template] || slideTemplates['minimalist-dark'];
+  const cs = tpl.colorScheme;
+  const title = s.config.topik || s.prompt || 'Presentasi Pembelajaran';
+
+  const consoleHtml = `<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konsol Pengajar — ${escapeHtml(title)}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; margin: 0; padding: 0; overflow: hidden; height: 100vh; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none">
+  <!-- Top Bar -->
+  <header class="h-14 border-b border-gray-800 bg-[#0e1424] px-5 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-sm">
+        <i class="fas fa-chalkboard-user"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white truncate max-w-md">${escapeHtml(title)}</h1>
+        <div class="text-[11px] text-gray-400">Konsol Pengajar Dual-Screen • RuangKKG Wanayasa</div>
+      </div>
+    </div>
+    
+    <!-- Timer & Controls -->
+    <div class="flex items-center gap-5">
+      <div class="flex items-center gap-2 bg-gray-900/90 border border-gray-800 px-3.5 py-1.5 rounded-xl">
+        <i class="fas fa-stopwatch text-teal-400 text-xs"></i>
+        <span id="timer-display" class="mono text-sm font-bold text-white tracking-wider">00:00:00</span>
+        <button id="btn-timer-toggle" class="text-gray-400 hover:text-white ml-2 text-xs" title="Mulai / Jeda"><i class="fas fa-play"></i></button>
+        <button id="btn-timer-reset" class="text-gray-400 hover:text-white text-xs" title="Reset Waktu"><i class="fas fa-redo-alt"></i></button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-blackout" class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold flex items-center gap-1.5 transition-all">
+          <i class="fas fa-moon"></i> Layar Gelap (B)
+        </button>
+        <span class="mono text-xs font-bold text-teal-400 bg-teal-950/60 border border-teal-800/80 px-3 py-1.5 rounded-xl" id="slide-num">
+          Slide ${currentIdx + 1} / ${s.slides.length}
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dual Area -->
+  <main class="flex-1 flex overflow-hidden p-4 gap-4">
+    <!-- Left Stage: Current & Next Slide Previews -->
+    <div class="flex-1 flex flex-col gap-3 min-w-0">
+      <!-- Current Slide Box -->
+      <div class="flex-1 bg-[#12192c] border border-gray-800 rounded-2xl p-4 flex flex-col min-h-0 relative shadow-xl overflow-hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800/80 mb-2 shrink-0">
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+            <i class="fas fa-tv"></i> Sedang Ditampilkan ke Murid (Live)
+          </span>
+          <span id="current-layout-tag" class="text-[10px] uppercase font-bold text-gray-400 bg-gray-800 px-2 py-0.5 rounded">${currentSlide.layout || 'Content'}</span>
+        </div>
+        <div class="flex-1 flex items-center justify-center p-2 overflow-auto bg-black/30 rounded-xl" id="current-slide-preview">
+        </div>
+      </div>
+
+      <!-- Next Slide Box -->
+      <div class="h-44 bg-[#12192c] border border-gray-800 rounded-2xl p-3 flex flex-col shrink-0">
+        <div class="flex items-center justify-between pb-1.5 border-b border-gray-800/60 mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+            <i class="fas fa-forward text-amber-400"></i> Slide Berikutnya
+          </span>
+          <span id="next-title-preview" class="text-xs text-gray-300 font-semibold truncate max-w-sm">
+            ${nextSlide ? (nextSlide.title || 'Slide Selanjutnya') : 'Akhir Presentasi'}
+          </span>
+        </div>
+        <div class="flex-1 flex items-center p-3 bg-black/20 rounded-xl overflow-hidden text-xs text-gray-400">
+          <p id="next-content-preview" class="line-clamp-3">
+            ${nextSlide ? (nextSlide.content?.[0] || nextSlide.subtitle || nextSlide.instruction || 'Klik selanjutnya untuk menampilkan.') : 'Tidak ada slide lagi. Bersiap untuk penutupan.'}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Stage: Speaker Notes & Facilitator Tools -->
+    <div class="w-96 flex flex-col gap-3 shrink-0">
+      <div class="flex-1 bg-[#12192c] border border-gray-800 rounded-2xl p-4 flex flex-col shadow-xl">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-800/80 mb-3 shrink-0">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i class="fas fa-lightbulb"></i> Panduan Guru & Pertanyaan Pemantik
+          </span>
+          <div class="flex items-center gap-1 text-xs">
+            <button id="btn-font-dec" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 font-bold">A-</button>
+            <button id="btn-font-inc" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 font-bold">A+</button>
+          </div>
+        </div>
+        <div id="notes-content" class="flex-1 overflow-y-auto pr-1 text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+          ${escapeHtml(currentSlide.speakerNotes || 'Tidak ada catatan pembicara untuk slide ini. Ajak siswa berdiskusi aktif mengenai topik.')}
+        </div>
+      </div>
+
+      <!-- Quick Nav Buttons -->
+      <div class="h-20 bg-[#0e1424] border border-gray-800 rounded-2xl p-3 flex items-center justify-between gap-3 shrink-0">
+        <button id="btn-prev" class="flex-1 h-full rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+          <i class="fas fa-arrow-left"></i> Sebelumnya
+        </button>
+        <button id="btn-next" class="flex-1 h-full rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer">
+          Selanjutnya <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const slidesData = ${JSON.stringify(s.slides)};
+    let currentIndex = ${currentIdx};
+    const colorScheme = ${JSON.stringify(cs)};
+    let isBlackout = false;
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let fontSize = 14;
+
+    const channel = new BroadcastChannel('kkg_presenter_sync');
+
+    function updateView() {
+      const cur = slidesData[currentIndex] || {};
+      const nxt = slidesData[currentIndex + 1];
+
+      document.getElementById('slide-num').textContent = 'Slide ' + (currentIndex + 1) + ' / ' + slidesData.length;
+      document.getElementById('current-layout-tag').textContent = cur.layout || 'Content';
+      document.getElementById('notes-content').innerHTML = cur.speakerNotes || 'Tidak ada catatan pembicara untuk slide ini.';
+
+      document.getElementById('next-title-preview').textContent = nxt ? (nxt.title || 'Slide ' + (currentIndex + 2)) : 'Akhir Presentasi';
+      document.getElementById('next-content-preview').textContent = nxt ? (Array.isArray(nxt.content) ? nxt.content[0] : (nxt.subtitle || 'Siap ditampilkan')) : 'Tidak ada slide lagi.';
+
+      // Preview content
+      const previewArea = document.getElementById('current-slide-preview');
+      previewArea.innerHTML = '<div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;border-radius:12px;background:' + colorScheme.background + ';color:' + colorScheme.text + ';"><h2 style="font-size:22px;font-weight:bold;margin-bottom:12px;color:' + colorScheme.primary + '">' + (cur.title || 'Slide ' + (currentIndex+1)) + '</h2><p style="font-size:13px;max-width:80%;opacity:0.8;">' + (Array.isArray(cur.content) ? cur.content.join(' • ') : (cur.subtitle || '')) + '</p></div>';
+
+      document.getElementById('btn-prev').disabled = currentIndex === 0;
+      document.getElementById('btn-prev').className = currentIndex === 0 ? 'flex-1 h-full rounded-xl bg-gray-900 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed' : 'flex-1 h-full rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm flex items-center justify-center gap-2 cursor-pointer';
+
+      document.getElementById('btn-next').disabled = currentIndex === slidesData.length - 1;
+      document.getElementById('btn-next').className = currentIndex === slidesData.length - 1 ? 'flex-1 h-full rounded-xl bg-gray-900 text-gray-600 font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed' : 'flex-1 h-full rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg';
+
+      channel.postMessage({ type: 'SYNC_SLIDE', index: currentIndex });
+    }
+
+    function goTo(idx) {
+      if (idx >= 0 && idx < slidesData.length) {
+        currentIndex = idx;
+        updateView();
+      }
+    }
+
+    document.getElementById('btn-prev').onclick = () => goTo(currentIndex - 1);
+    document.getElementById('btn-next').onclick = () => goTo(currentIndex + 1);
+
+    document.getElementById('btn-blackout').onclick = () => {
+      isBlackout = !isBlackout;
+      channel.postMessage({ type: 'BLACKOUT_TOGGLE' });
+      document.getElementById('btn-blackout').className = isBlackout ? 'px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-semibold flex items-center gap-1.5' : 'px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold flex items-center gap-1.5';
+    };
+
+    // Notes Font Resizer
+    document.getElementById('btn-font-inc').onclick = () => {
+      fontSize = Math.min(24, fontSize + 2);
+      document.getElementById('notes-content').style.fontSize = fontSize + 'px';
+    };
+    document.getElementById('btn-font-dec').onclick = () => {
+      fontSize = Math.max(11, fontSize - 2);
+      document.getElementById('notes-content').style.fontSize = fontSize + 'px';
+    };
+
+    // Timer
+    const timerDisplay = document.getElementById('timer-display');
+    const timerToggle = document.getElementById('btn-timer-toggle');
+    const timerReset = document.getElementById('btn-timer-reset');
+
+    function formatTimer(sec) {
+      const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+      const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return h + ':' + m + ':' + s;
+    }
+
+    function startTimer() {
+      if (!timerInterval) {
+        timerInterval = setInterval(() => {
+          timerSeconds++;
+          timerDisplay.textContent = formatTimer(timerSeconds);
+        }, 1000);
+        timerToggle.innerHTML = '<i class="fas fa-pause"></i>';
+      } else {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerToggle.innerHTML = '<i class="fas fa-play"></i>';
+      }
+    }
+
+    timerToggle.onclick = startTimer;
+    timerReset.onclick = () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerSeconds = 0;
+      timerDisplay.textContent = '00:00:00';
+      timerToggle.innerHTML = '<i class="fas fa-play"></i>';
+    };
+
+    startTimer();
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        goTo(currentIndex + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        goTo(currentIndex - 1);
+      } else if (e.key.toLowerCase() === 'b') {
+        document.getElementById('btn-blackout').click();
+      }
+    });
+
+    channel.onmessage = (e) => {
+      if (e.data && e.data.type === 'SYNC_SLIDE' && typeof e.data.index === 'number') {
+        currentIndex = e.data.index;
+        updateView();
+      }
+    };
+
+    updateView();
+  </script>
+</body>
+</html>`;
+
+  consoleWin.document.open();
+  consoleWin.document.write(consoleHtml);
+  consoleWin.document.close();
+  showToast('Konsol Guru dual-screen berhasil dibuka di jendela terpisah!', 'success');
 }
 
 // ==========================================

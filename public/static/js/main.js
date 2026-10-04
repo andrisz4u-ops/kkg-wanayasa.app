@@ -102,23 +102,63 @@ window.isPwaStandalone = function() {
          document.referrer.includes('android-app://');
 };
 
+window.updatePwaInstallButtons = function() {
+  const isStandalone = window.isPwaStandalone();
+  const headerBtn = document.getElementById('header-pwa-install-btn');
+  const mobileHeaderBtn = document.getElementById('mobile-header-pwa-install-btn');
+  if (headerBtn) {
+    if (isStandalone) {
+      headerBtn.classList.add('hidden');
+      headerBtn.classList.remove('inline-flex');
+    } else {
+      headerBtn.classList.remove('hidden');
+      headerBtn.classList.add('inline-flex');
+    }
+  }
+  if (mobileHeaderBtn) {
+    if (isStandalone) {
+      mobileHeaderBtn.classList.add('hidden');
+      mobileHeaderBtn.classList.remove('flex');
+    } else {
+      mobileHeaderBtn.classList.remove('hidden');
+      mobileHeaderBtn.classList.add('flex');
+    }
+  }
+};
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // Auto-show banner only if not already in standalone mode
-  if (!window.isPwaStandalone()) {
-    window.showPwaInstallBanner?.();
+  window.updatePwaInstallButtons?.();
+  // Best practice: Do NOT show obstructive floating banner on desktop (window.innerWidth >= 768)
+  // On mobile screens, only show gentle prompt if user hasn't snoozed/dismissed it
+  if (!window.isPwaStandalone() && window.innerWidth < 768) {
+    const dismissedUntil = localStorage.getItem('pwa_banner_dismissed_until');
+    if (!dismissedUntil || Date.now() > Number(dismissedUntil)) {
+      setTimeout(() => {
+        window.showPwaInstallBanner?.();
+      }, 5000);
+    }
   }
 });
 
 window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
   document.getElementById('pwa-install-banner')?.remove();
+  window.updatePwaInstallButtons?.();
   showToast('Terima kasih! Aplikasi KKG Portal berhasil dipasang di layar utama.', 'success');
 });
 
 window.showPwaInstallBanner = function() {
   if (window.isPwaStandalone()) return;
+  // Never show floating banner on desktop to avoid obscuring workspace content
+  if (window.innerWidth >= 768) {
+    document.getElementById('pwa-install-banner')?.remove();
+    return;
+  }
+  const dismissedUntil = localStorage.getItem('pwa_banner_dismissed_until');
+  if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
+
   const existing = document.getElementById('pwa-install-banner');
   if (existing || !deferredPrompt) return;
 
@@ -144,11 +184,24 @@ window.showPwaInstallBanner = function() {
   `;
   document.body.appendChild(banner);
 
+  // Auto-hide after 8 seconds so it doesn't linger forever
+  const autoHideTimer = setTimeout(() => {
+    const b = document.getElementById('pwa-install-banner');
+    if (b) {
+      b.classList.add('transition-opacity', 'duration-500', 'opacity-0');
+      setTimeout(() => b.remove(), 500);
+    }
+  }, 8000);
+
   document.getElementById('btn-pwa-install')?.addEventListener('click', async () => {
+    clearTimeout(autoHideTimer);
     window.promptPwaInstall();
   });
 
   document.getElementById('btn-pwa-dismiss')?.addEventListener('click', () => {
+    clearTimeout(autoHideTimer);
+    // Snooze for 14 days
+    localStorage.setItem('pwa_banner_dismissed_until', String(Date.now() + 14 * 24 * 60 * 60 * 1000));
     banner.remove();
   });
 };
@@ -168,6 +221,7 @@ window.promptPwaInstall = async function() {
       }
       deferredPrompt = null;
       document.getElementById('pwa-install-banner')?.remove();
+      window.updatePwaInstallButtons?.();
       return;
     } catch (err) {
       console.warn('[PWA] Prompt error:', err);
@@ -1293,6 +1347,18 @@ async function render() {
                 <span>Perangkat Ajar Aktif</span>
               </div>
 
+              <!-- Header PWA Install Button (Discreet, 0% content obstruction) -->
+              <button 
+                id="header-pwa-install-btn" 
+                onclick="window.promptPwaInstall()" 
+                class="${window.isPwaStandalone() ? 'hidden' : 'inline-flex'} items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 hover:bg-teal-100 text-teal-700 hover:text-teal-800 text-xs font-bold border border-teal-200/80 transition-all shadow-2xs hover:shadow cursor-pointer group"
+                title="Pasang Aplikasi ke Komputer / Layar Utama"
+                aria-label="Pasang Aplikasi"
+              >
+                <i class="fas fa-arrow-down-to-bracket text-teal-600 group-hover:translate-y-0.5 transition-transform text-xs"></i>
+                <span class="hidden md:inline">Pasang Aplikasi</span>
+              </button>
+
               <!-- Notifications Bell -->
               ${state.user ? `
                 <div class="p-1 rounded-2xl bg-slate-50 border border-slate-200/70 hover:border-teal-400/50 transition-colors">
@@ -1404,7 +1470,17 @@ async function render() {
                    <span class="text-[9px] font-bold text-slate-400 leading-none block truncate max-w-[130px] mt-0.5">${currentMeta.title}</span>
                 </div>
              </div>
-             <div class="flex items-center gap-2">
+             <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- Mobile Header PWA Install Button -->
+                <button 
+                  id="mobile-header-pwa-install-btn"
+                  onclick="window.promptPwaInstall()" 
+                  class="${window.isPwaStandalone() ? 'hidden' : 'flex'} w-9 h-9 text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200/70 rounded-xl active:scale-95 transition-all items-center justify-center cursor-pointer shadow-2xs"
+                  title="Pasang Aplikasi ke Layar HP"
+                  aria-label="Pasang Aplikasi"
+                >
+                  <i class="fas fa-arrow-down-to-bracket text-xs"></i>
+                </button>
                 ${state.user ? `
                   <div class="p-1 rounded-xl bg-slate-50 border border-slate-200/60">
                     ${renderNotificationBell()}
@@ -1500,6 +1576,12 @@ async function render() {
 
   // Scroll to top on page change
   window.scrollTo(0, 0);
+
+  // Sync PWA install action buttons & clean up any desktop floating banner
+  window.updatePwaInstallButtons?.();
+  if (window.innerWidth >= 768) {
+    document.getElementById('pwa-install-banner')?.remove();
+  }
 
   // Initialize Auth page
   if (page === 'login') {

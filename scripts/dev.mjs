@@ -17,8 +17,8 @@ function start(name, scriptPath, args = [], required = true) {
 
   child.on('exit', (code, signal) => {
     if (shuttingDown) return;
-    if (!required && (code === 0 || signal === 'SIGTERM')) {
-      console.warn(`${prefix} stopped (non-blocking)`);
+    if (!required) {
+      console.warn(`${prefix} stopped (non-blocking, code: ${code ?? signal})`);
       return;
     }
     if (signal) {

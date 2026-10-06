@@ -23,6 +23,10 @@ window.loadAdminSettings = async function loadAdminSettings() {
     setVal('profil-telepon_kkg', s.telepon_kkg);
     setVal('profil-website_kkg', s.website_kkg);
     setVal('profil-nama_ketua', s.nama_ketua);
+    setVal('profil-nip_ketua', s.nip_ketua);
+    setVal('profil-pengawas_nama', s.pengawas_nama);
+    setVal('profil-pengawas_nip', s.pengawas_nip);
+    setVal('profil-pengawas_instansi', s.pengawas_instansi);
     setVal('profil-nama_sekretaris', s.nama_sekretaris);
     setVal('profil-nama_bendahara', s.nama_bendahara);
     setVal('profil-struktur_organisasi', s.struktur_organisasi);
@@ -104,9 +108,13 @@ window.saveProfilKKG = async function () {
       kabupaten: document.getElementById('profil-kabupaten').value,
       provinsi: document.getElementById('profil-provinsi').value,
       kode_pos: document.getElementById('profil-kode_pos').value,
-      nama_ketua: document.getElementById('profil-nama_ketua').value,
-      nama_sekretaris: document.getElementById('profil-nama_sekretaris').value,
-      nama_bendahara: document.getElementById('profil-nama_bendahara').value,
+      nama_ketua: document.getElementById('profil-nama_ketua')?.value || '',
+      nip_ketua: document.getElementById('profil-nip_ketua')?.value || '',
+      pengawas_nama: document.getElementById('profil-pengawas_nama')?.value || '',
+      pengawas_nip: document.getElementById('profil-pengawas_nip')?.value || '',
+      pengawas_instansi: document.getElementById('profil-pengawas_instansi')?.value || '',
+      nama_sekretaris: document.getElementById('profil-nama_sekretaris')?.value || '',
+      nama_bendahara: document.getElementById('profil-nama_bendahara')?.value || '',
       email_kkg: document.getElementById('profil-email_kkg').value,
       telepon_kkg: document.getElementById('profil-telepon_kkg').value,
       website_kkg: document.getElementById('profil-website_kkg').value,

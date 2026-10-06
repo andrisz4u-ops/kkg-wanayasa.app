@@ -52,7 +52,7 @@ absensi.post('/kegiatan', async (c) => {
       return Errors.validation(c, `Field berikut harus diisi: ${validation.missing.join(', ')}`);
     }
 
-    const { nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat, deskripsi } = body;
+    const { nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat, deskripsi, alokasi_jp, narasumber } = body as any;
 
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
@@ -60,8 +60,8 @@ absensi.post('/kegiatan', async (c) => {
     }
 
     const result = await c.env.DB.prepare(`
-      INSERT INTO kegiatan (nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat, deskripsi, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO kegiatan (nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat, deskripsi, created_by, alokasi_jp, narasumber)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       nama_kegiatan.trim(),
       tanggal,
@@ -69,7 +69,9 @@ absensi.post('/kegiatan', async (c) => {
       waktu_selesai?.trim() || null,
       tempat?.trim() || null,
       deskripsi?.trim() || null,
-      user.id
+      user.id,
+      alokasi_jp ? parseInt(alokasi_jp, 10) : 4,
+      narasumber?.trim() || null
     ).run();
 
     return successResponse(c, {
@@ -123,7 +125,7 @@ absensi.post('/checkin', async (c) => {
     if (existing) {
       // Update existing record if status changed
       await c.env.DB.prepare(`
-        UPDATE absensi SET status = ?, keterangan = ?, updated_at = datetime('now')
+        UPDATE absensi SET status = ?, keterangan = ?, waktu_checkin = datetime('now')
         WHERE id = ?
       `).bind(status, keterangan?.trim() || null, existing.id).run();
 

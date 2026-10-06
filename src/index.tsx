@@ -28,6 +28,7 @@ import aiJobsRoutes from './routes/ai-jobs';
 import ttsRoutes from './routes/tts';
 import banksoalRoutes from './routes/banksoal';
 import tenantRoutes from './routes/tenants';
+import sertifikatRoutes from './routes/sertifikat';
 import { renderHTML } from './templates/layout';
 import { rateLimitMiddleware, RATE_LIMITS } from './lib/ratelimit';
 import { successResponse, Errors } from './lib/response';
@@ -133,6 +134,7 @@ app.route('/api/ai-jobs', aiJobsRoutes);
 app.route('/api/tts', ttsRoutes);
 app.route('/api/banksoal', banksoalRoutes);
 app.route('/api/tenants', tenantRoutes);
+app.route('/api/sertifikat', sertifikatRoutes);
 
 // Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)
 app.get('/api/ai-providers/active', async (c) => {

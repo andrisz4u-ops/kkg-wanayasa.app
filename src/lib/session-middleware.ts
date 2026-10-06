@@ -6,7 +6,9 @@ export const requireSession: MiddlewareHandler<{
   Bindings: { DB: D1Database };
   Variables: { user: any };
 }> = async (c, next) => {
-  const user = c.get('user') || await getCurrentUser(c.env.DB, getCookie(c.req.header('Cookie'), 'session'));
+  const cookieHeader = c.req.header('Cookie') || c.req.header('cookie');
+  const sessionId = getCookie(cookieHeader, 'session') || c.req.header('x-session-id') || c.req.header('authorization')?.replace('Bearer ', '');
+  const user = c.get('user') || await getCurrentUser(c.env.DB, sessionId);
   if (!user) return Errors.unauthorized(c);
   c.set('user', user);
   await next();

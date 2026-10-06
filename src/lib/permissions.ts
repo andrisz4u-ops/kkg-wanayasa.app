@@ -3,7 +3,7 @@
  * Enterprise Permission Matrix for KKG and School Leaders
  */
 
-export type UserRole = 'super_admin' | 'admin' | 'operator' | 'kepala_sekolah' | 'user';
+export type UserRole = 'super_admin' | 'admin' | 'operator' | 'pengawas' | 'kepala_sekolah' | 'user';
 
 export const PERMISSIONS = {
   // Generator AI (Always preserved and locked)
@@ -21,6 +21,11 @@ export const PERMISSIONS = {
   ABSENSI_CHECKIN: 'absensi:checkin',
   ABSENSI_MANAGE: 'absensi:manage',
   KEGIATAN_MANAGE: 'kegiatan:manage',
+
+  // Sertifikat & Pengesahan Digital (Dual Sign-Off)
+  SERTIFIKAT_SIGN_KETUA: 'sertifikat:sign_ketua',
+  SERTIFIKAT_SIGN_PENGAWAS: 'sertifikat:sign_pengawas',
+  SERTIFIKAT_VIEW_ALL: 'sertifikat:view_all',
 
   // Administrasi Gugus & Sekolah
   SCHOOL_MANAGE: 'school:manage',
@@ -47,9 +52,23 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.ABSENSI_CHECKIN,
     PERMISSIONS.ABSENSI_MANAGE,
     PERMISSIONS.KEGIATAN_MANAGE,
+    PERMISSIONS.SERTIFIKAT_SIGN_KETUA,
+    PERMISSIONS.SERTIFIKAT_VIEW_ALL,
     PERMISSIONS.SCHOOL_MANAGE,
     PERMISSIONS.TEACHER_MANAGE,
     PERMISSIONS.SURAT_MANAGE
+  ],
+  pengawas: [
+    PERMISSIONS.RPP_CREATE,
+    PERMISSIONS.KISI_CREATE,
+    PERMISSIONS.SLIDE_CREATE,
+    PERMISSIONS.TTS_CREATE,
+    PERMISSIONS.MATERI_READ,
+    PERMISSIONS.SOAL_SHARE,
+    PERMISSIONS.ABSENSI_CHECKIN,
+    PERMISSIONS.SERTIFIKAT_SIGN_PENGAWAS,
+    PERMISSIONS.SERTIFIKAT_VIEW_ALL,
+    PERMISSIONS.AUDIT_VIEW
   ],
   kepala_sekolah: [
     PERMISSIONS.RPP_CREATE,

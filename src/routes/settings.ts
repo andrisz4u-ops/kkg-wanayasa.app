@@ -12,9 +12,9 @@ settings.get('/public', async (c) => {
         const keys = [
             'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten', 'provinsi', 'tahun_ajaran', 
             'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk',
-            'nama_ketua', 'nama_sekretaris', 'nama_bendahara', 'email_kkg', 'telepon_kkg', 'website_kkg',
+            'nama_ketua', 'nip_ketua', 'nama_sekretaris', 'nama_bendahara', 'email_kkg', 'telepon_kkg', 'website_kkg',
             'hero_title', 'hero_deskripsi', 'visi', 'misi', 'visi_misi',
-            'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
+            'pengawas_nama', 'pengawas_nip', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
             'theme_color'
         ];
 

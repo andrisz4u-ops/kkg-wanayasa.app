@@ -30,6 +30,14 @@ describe('RBAC & Enterprise Permissions Matrix', () => {
     expect(hasPermission('kepala_sekolah', PERMISSIONS.SETTINGS_MANAGE)).toBe(false);
   });
 
+  it('should grant supervisor permissions to pengawas', () => {
+    expect(hasPermission('pengawas', PERMISSIONS.SERTIFIKAT_SIGN_PENGAWAS)).toBe(true);
+    expect(hasPermission('pengawas', PERMISSIONS.SERTIFIKAT_VIEW_ALL)).toBe(true);
+    expect(hasPermission('pengawas', PERMISSIONS.AUDIT_VIEW)).toBe(true);
+    expect(hasPermission('pengawas', PERMISSIONS.SETTINGS_MANAGE)).toBe(false);
+    expect(hasPermission('pengawas', PERMISSIONS.TENANT_MANAGE)).toBe(false);
+  });
+
   it('should always allow core AI generators for standard users', () => {
     expect(hasPermission('user', PERMISSIONS.RPP_CREATE)).toBe(true);
     expect(hasPermission('user', PERMISSIONS.KISI_CREATE)).toBe(true);

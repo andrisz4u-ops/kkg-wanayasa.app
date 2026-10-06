@@ -445,6 +445,7 @@ export const updateSettingsSchema = z.object({
     visi: z.string().max(2000).optional(),
     misi: z.string().max(5000).optional(),
     pengawas_nama: z.string().max(150).optional(),
+    pengawas_nip: z.string().max(50).optional(),
     pengawas_instansi: z.string().max(150).optional(),
     kutipan_pengawas: z.string().max(2000).optional(),
     kutipan_ketua: z.string().max(2000).optional(),

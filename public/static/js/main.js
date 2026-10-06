@@ -272,6 +272,8 @@ const pages = {
   surat: async () => (await loadPageModule('surat')).renderSurat(),
   proker: async () => (await loadPageModule('proker')).renderProker(),
   absensi: async () => (await loadPageModule('absensi')).renderAbsensi(),
+  sertifikat: async () => (await loadPageModule('sertifikat')).renderSertifikat(),
+  verifikasi: async () => (await loadPageModule('sertifikat')).renderVerifikasi(),
   materi: async () => (await loadPageModule('materi')).renderMateri(),
   guru: async () => (await loadPageModule('guru')).renderGuru(),
   forum: async () => (await loadPageModule('forum')).renderForum(),
@@ -295,10 +297,10 @@ const pages = {
 };
 
 // Pages that have their own full layout (no main wrapper)
-const customLayoutPages = ['privacy-policy', 'privacy', 'terms', 'terms-of-service'];
+const customLayoutPages = ['privacy-policy', 'privacy', 'terms', 'terms-of-service', 'verifikasi'];
 
 // Protected pages (require authentication)
-const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications'];
+const protectedPages = ['surat', 'proker', 'absensi', 'profile', 'notifications', 'sertifikat'];
 const adminPages = ['admin', 'program-sekolah'];
 
 // Accordion state tracking for sidebar categories — persisted to localStorage
@@ -393,6 +395,7 @@ const navSections = [
     items: [
       { page: 'materi', label: 'Bank Materi Ajar', icon: 'fa-book-open', public: true },
       { page: 'absensi', label: 'Presensi Kegiatan', icon: 'fa-clipboard-check', auth: true },
+      { page: 'sertifikat', label: 'Sertifikat KKG', icon: 'fa-certificate', auth: true },
       { page: 'forum', label: 'Forum Diskusi', icon: 'fa-comments', public: true },
       { page: 'guru', label: 'Direktori Guru', icon: 'fa-users', public: true },
     ]

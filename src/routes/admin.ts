@@ -328,7 +328,9 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
       'nama_kkg', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
       'email_kkg', 'telepon_kkg', 'website_kkg',
       'logo_url', 'kop_surat_url',
-      'nama_sekretaris', 'nama_bendahara',
+      'nama_ketua', 'nip_ketua', 'nama_sekretaris', 'nama_bendahara',
+      'pengawas_nama', 'pengawas_nip', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
+      'hero_title', 'hero_deskripsi', 'visi', 'misi',
       'struktur_organisasi', 'visi_misi',
       'npsn_sekolah_induk', 'nama_sekolah_induk',
       'theme_color'
@@ -434,7 +436,7 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       'supabase_url', 'supabase_bucket',
       // Landing page customization
       'hero_title', 'hero_deskripsi', 'visi', 'misi',
-      'pengawas_nama', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
+      'pengawas_nama', 'pengawas_nip', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
       'theme_color'
     ];
 

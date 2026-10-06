@@ -490,21 +490,64 @@ export async function renderAdmin() {
       <!-- Struktur & Kontak -->
       <div class="grid lg:grid-cols-2 gap-8">
           <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 border border-slate-200/70 shadow-sm shadow-slate-200/50 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)]">
-              <h2 class="font-display text-2xl font-semibold text-slate-900 mb-8 flex items-center gap-4 tracking-tighter">
-                <span class="w-10 h-10 rounded-2xl bg-slate-100/50 backdrop-blur-md border border-slate-200/70 text-slate-900 flex items-center justify-center text-sm shadow-sm shadow-slate-200/50"><i class="fas fa-sitemap"></i></span>
-                Struktur Inti
-              </h2>
+              <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h2 class="font-display text-xl font-semibold text-slate-900 flex items-center gap-3 tracking-tighter">
+                  <span class="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center text-sm shadow-sm"><i class="fas fa-stamp"></i></span>
+                  Struktur Organisasi & Otoritas Pengesahan
+                </h2>
+                <span class="px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[10px] font-bold">Design by System</span>
+              </div>
+              
+              <div class="p-3 mb-4 bg-teal-50/70 rounded-2xl border border-teal-100 text-xs text-slate-600 leading-relaxed">
+                <i class="fas fa-magic text-teal-600 mr-1"></i>
+                Data <strong>Pengawas Pembina</strong> dan <strong>Ketua KKG</strong> di bawah otomatis dipakai sistem sebagai tanda tangan resmi pada seluruh sertifikat presensi kegiatan KKG tanpa perlu diketik manual.
+              </div>
+
               <div class="space-y-4">
-                  <div>
-                      <label class="label">Ketua KKG</label>
-                      <input type="text" id="profil-nama_ketua" class="input-field">
+                  <!-- Pengawas SD Pembina -->
+                  <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 space-y-2.5">
+                      <div class="flex items-center gap-2 text-xs font-bold text-teal-800">
+                        <i class="fas fa-user-tie text-teal-600"></i>
+                        <span>Pengawas SD Pembina (Pengesahan Kedinasan)</span>
+                      </div>
+                      <div>
+                          <label class="label text-xs">Nama Lengkap & Gelar Pengawas</label>
+                          <input type="text" id="profil-pengawas_nama" class="input-field" placeholder="Contoh: Dra. Hj. Siti Rohmah, M.Pd.">
+                      </div>
+                      <div class="grid grid-cols-2 gap-2.5">
+                          <div>
+                              <label class="label text-xs">NIP Pengawas</label>
+                              <input type="text" id="profil-pengawas_nip" class="input-field" placeholder="196805141992032004">
+                          </div>
+                          <div>
+                              <label class="label text-xs">Instansi / Jabatan</label>
+                              <input type="text" id="profil-pengawas_instansi" class="input-field" placeholder="Pengawas SD Gugus 3">
+                          </div>
+                      </div>
                   </div>
+
+                  <!-- Ketua KKG -->
+                  <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 space-y-2.5">
+                      <div class="flex items-center gap-2 text-xs font-bold text-blue-800">
+                        <i class="fas fa-user-graduate text-blue-600"></i>
+                        <span>Ketua KKG (Pelaksana Kegiatan)</span>
+                      </div>
+                      <div>
+                          <label class="label text-xs">Nama Lengkap & Gelar Ketua KKG</label>
+                          <input type="text" id="profil-nama_ketua" class="input-field" placeholder="Contoh: Andri, S.Pd., M.Pd.">
+                      </div>
+                      <div>
+                          <label class="label text-xs">NIP Ketua KKG</label>
+                          <input type="text" id="profil-nip_ketua" class="input-field" placeholder="198310122010011001">
+                      </div>
+                  </div>
+
                   <div>
-                      <label class="label">Sekretaris</label>
+                      <label class="label">Sekretaris KKG</label>
                       <input type="text" id="profil-nama_sekretaris" class="input-field">
                   </div>
                   <div>
-                      <label class="label">Bendahara</label>
+                      <label class="label">Bendahara KKG</label>
                       <input type="text" id="profil-nama_bendahara" class="input-field">
                   </div>
               </div>
@@ -573,11 +616,8 @@ export async function renderAdmin() {
             <div class="grid md:grid-cols-2 gap-6">
               <div class="space-y-3">
                 <label class="label font-bold text-slate-800">Kutipan Pengawas Pembina</label>
-                <div class="grid grid-cols-2 gap-3">
-                  <input type="text" id="profil-pengawas_nama" class="input-field" placeholder="Nama / Jabatan Pengawas">
-                  <input type="text" id="profil-pengawas_instansi" class="input-field" placeholder="Instansi (misal: Pengawas Pembina SD)">
-                </div>
-                <textarea id="profil-kutipan_pengawas" rows="3" class="input-field" placeholder="Inisiatif portal digital ini adalah terobosan riil bagi mutu pembelajaran..."></textarea>
+                <p class="text-[11px] text-slate-500">Nama pengawas dan instansi otomatis mengikuti data Otoritas Pengesahan di atas.</p>
+                <textarea id="profil-kutipan_pengawas" rows="4" class="input-field" placeholder="Inisiatif portal digital ini adalah terobosan riil bagi mutu pembelajaran..."></textarea>
               </div>
               <div class="space-y-3">
                 <label class="label font-bold text-slate-800">Pesan / Sambutan Ketua KKG</label>

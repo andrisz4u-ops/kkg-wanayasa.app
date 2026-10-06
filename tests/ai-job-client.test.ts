@@ -140,4 +140,15 @@ describe('Teacher-facing monitor ownership and accessibility', () => {
     await vi.waitFor(() => expect(document.querySelector('#ai-live-monitor-modal')).toBeNull());
     expect(review).toHaveBeenCalledTimes(2);
   });
+  it('automatically proceeds to canvas review on completion without needing manual confirmation button', async () => {
+    const root = document.querySelector<HTMLElement>('#main-content')!;
+    root.dataset.featurePage = 'kisi';
+    monitor = openAiLiveMonitor({ title: 'Menyusun Asesmen' });
+    const review = vi.fn();
+    monitor.complete(review);
+    expect(review).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(review).toHaveBeenCalledOnce());
+    expect(document.querySelector('#ai-live-monitor-modal')).toBeNull();
+    expect(hasActiveAiJob()).toBe(false);
+  });
 });

@@ -1465,12 +1465,12 @@ export function initKisi() {
         subtitle: `Menyusun soal ${data.mataPelajaran || ''} (${data.jenjangKelas || 'SD'}) - "${data.topik}"`,
         modelName: data.aiProvider || 'AI Engine',
         steps: [
-          { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
-          { id: 2, label: 'Naskah PG', icon: 'fa-list-ol' },
-          { id: 3, label: 'Isian & Uraian', icon: 'fa-pen-fancy' },
-          { id: 4, label: 'Memeriksa kelengkapan soal', icon: 'fa-shield-halved' },
-          { id: 5, label: 'Matriks Kisi', icon: 'fa-table-cells' },
-          { id: 6, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
+          { id: 1, label: 'Analisis CP & Materi', icon: 'fa-book-open' },
+          { id: 2, label: 'Kisi-kisi & Butir PG', icon: 'fa-list-ol' },
+          { id: 3, label: 'Kisi-kisi & Uraian', icon: 'fa-pen-fancy' },
+          { id: 4, label: 'Audit Kaidah Puspendik', icon: 'fa-shield-halved' },
+          { id: 5, label: 'Rekap Tabel Matriks', icon: 'fa-table-cells' },
+          { id: 6, label: 'Finalisasi Asesmen', icon: 'fa-wand-magic-sparkles' }
         ]
       });
 
@@ -1514,7 +1514,8 @@ export function initKisi() {
             loadBankSoalCountBadge();
 
             showToast(completion.partial ? 'Sebagian soal tersedia. Tinjau bagian yang belum lengkap.' : archived ? 'Draf Asesmen tersedia dan tersimpan di perangkat ini.' : 'Draf Asesmen tersedia, tetapi arsip perangkat belum tersimpan.', completion.partial || !archived ? 'warning' : 'success');
-          }, { partial: !!completion.partial, warnings: completion.warnings || [] });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, { partial: !!completion.partial, warnings: completion.warnings || [], autoReview: true });
         } else {
           monitor.fail(new Error('Hasil Asesmen belum diterima. Silakan mulai ulang.'));
         }

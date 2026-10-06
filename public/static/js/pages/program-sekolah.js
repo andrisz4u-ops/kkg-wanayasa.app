@@ -898,7 +898,7 @@ async function handleGenerateProgram() {
         currentProgramData = rawGeneratedResult;
         showCanvasResult(currentProgramData);
         showToast('Dokumen Program Kerja berhasil disusun secara lengkap!', 'success');
-      });
+      }, { autoReview: true });
     } else {
       throw new Error('Hasil respon AI kosong');
     }
@@ -995,7 +995,7 @@ async function handleGenerateBySections(monitor, baseInput, tmpl) {
       currentProgramData = accumulated;
       showCanvasResult(currentProgramData);
       showToast('Dokumen Program Kerja (Semua Bab) berhasil disusun secara bertahap dengan narasi komprehensif!', 'success');
-    });
+    }, { autoReview: true });
   } catch (err) {
     if (completedSections.length) {
       const missing = sections.filter(section => !completedSections.includes(section.key)).map(section => section.name);

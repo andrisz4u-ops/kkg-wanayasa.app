@@ -138,7 +138,7 @@ async function generate() {
     const quality = result.meta?.quality || {};
     const warnings = [...(quality.contentIssues || []), quality.countWarning, ...(quality.layoutWarnings || [])].filter(Boolean);
     const message = quality.partial ? 'Sebagian materi sudah tersedia. Lengkapi slide yang ditandai di editor sebelum ekspor.' : quality.layoutWarnings?.length ? 'Draf materi sudah tersedia. Rapikan bidang teks yang ditandai di editor sebelum ekspor.' : 'Draf materi tersedia untuk ditinjau.';
-    monitor.complete(() => { S.deck = normalizeDeck(result, S.config.topik); S.index = 0; S.reveal = false; S.view = 'editor'; save(); render(); }, { partial: !!quality.partial, warnings: warnings.length ? [message, ...warnings.slice(0, 4)] : [] });
+    monitor.complete(() => { S.deck = normalizeDeck(result, S.config.topik); S.index = 0; S.reveal = false; S.view = 'editor'; save(); render(); }, { partial: !!quality.partial, warnings: warnings.length ? [message, ...warnings.slice(0, 4)] : [], autoReview: true });
   });
 }
 async function outline() {
@@ -146,7 +146,7 @@ async function outline() {
   await aiAction('Menyusun kerangka slide', async monitor => {
     monitor.updateStep(2, '', 'Menyusun urutan konsep dan kegiatan.');
     const res = await api('/presentation/outline', { method: 'POST', body: JSON.stringify(S.config), signal: monitor.signal, timeout: 180000 });
-    monitor.complete(() => { S.outline = res.data.outline; S.view = 'outline'; save(); render(); });
+    monitor.complete(() => { S.outline = res.data.outline; S.view = 'outline'; save(); render(); }, { autoReview: true });
   });
 }
 async function revise() {
@@ -154,7 +154,7 @@ async function revise() {
   const index = S.index;
   await aiAction('Merevisi satu slide', async monitor => {
     const res = await api('/presentation/patch-slide', { method: 'POST', body: JSON.stringify({ currentSlide: S.deck.slides[index], instruction, topik: S.config.topik.slice(0, 200), mataPelajaran: S.config.mataPelajaran, jenjangKelas: S.config.jenjangKelas, aiProvider: S.config.aiProvider }), signal: monitor.signal, timeout: 180000 });
-    monitor.complete(() => { S.deck.slides[index] = normalizeSlide(res.data, index); S.reveal = false; save(); render(); });
+    monitor.complete(() => { S.deck.slides[index] = normalizeSlide(res.data, index); S.reveal = false; save(); render(); }, { autoReview: true });
   });
 }
 function updateField(name, value) {

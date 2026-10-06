@@ -690,7 +690,7 @@ export function initRpp() {
             const aiMeta = finalResultData?._ai_meta;
             const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
             showToast(archived ? 'Draf RPP tersedia dan tersimpan di perangkat ini. Tinjau sebelum digunakan.' : 'Draf RPP tersedia, tetapi arsip perangkat belum tersimpan.', archived ? 'success' : 'warning');
-          });
+          }, { autoReview: true });
         } else {
           monitor.fail(new Error('Hasil RPP belum diterima. Silakan mulai ulang.'));
         }

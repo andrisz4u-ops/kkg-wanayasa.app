@@ -9,7 +9,7 @@ export const hasActiveAiJob = () => ['running', 'completed', 'partial'].includes
 export const getActiveAiJobSignal = () => activeMonitor?.signal;
 export function closeAiLiveMonitor() { activeMonitor?.hide(); }
 
-export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle = 'Hasil akan tersedia untuk ditinjau.', modelName = 'Model yang dipilih', steps = [], onCancel } = {}) {
+export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle = 'Hasil akan tersedia untuk ditinjau.', modelName = 'Model yang dipilih', steps = [], autoReview = true, onCancel } = {}) {
   if (hasActiveAiJob()) {
     activeMonitor.show();
     throw new Error('Masih ada proses AI yang berjalan. Tinjau atau batalkan proses tersebut terlebih dahulu.');
@@ -40,13 +40,22 @@ export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle 
   document.body.append(overlay);
   const find = selector => overlay.querySelector(selector);
   const startTime = Date.now();
-  let timer, frame, log = '', characters = 0, review, restore, disposed = false, reviewing = false;
+  let timer, frame, log = '', characters = 0, review, restore, disposed = false, reviewing = false, autoReviewTimer = null;
   const flush = () => {
     frame = null;
     find('#monitor-token-count').textContent = `${characters.toLocaleString('id-ID')} karakter diterima`;
     if (find('details').open) find('#monitor-terminal').textContent = log;
   };
-  const stopTimer = () => { clearInterval(timer); if (frame) cancelAnimationFrame(frame); frame = null; flush(); };
+  const stopTimer = () => {
+    clearInterval(timer);
+    if (frame) cancelAnimationFrame(frame);
+    frame = null;
+    if (autoReviewTimer) {
+      clearTimeout(autoReviewTimer);
+      autoReviewTimer = null;
+    }
+    flush();
+  };
   const finish = (state, message) => {
     monitor.state = state; stopTimer();
     find('#monitor-connection').textContent = state === 'completed' ? 'Selesai' : state === 'partial' ? 'Selesai sebagian' : state === 'cancelled' ? 'Dibatalkan' : 'Terhenti';
@@ -54,6 +63,42 @@ export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle 
     find('#monitor-cancel-btn').hidden = true;
     find('#monitor-dismiss-btn').hidden = false;
     if (restore) restore.textContent = `${title}: ${find('#monitor-connection').textContent}`;
+  };
+  const performReview = async () => {
+    if (autoReviewTimer) {
+      clearTimeout(autoReviewTimer);
+      autoReviewTimer = null;
+    }
+    if (reviewing || disposed) return;
+    reviewing = true;
+    const reviewBtn = find('#monitor-review-btn');
+    if (reviewBtn) reviewBtn.disabled = true;
+    monitor.hide();
+    try {
+      if (originPage && document.querySelector('#main-content')?.dataset.featurePage !== originPage) {
+        if (!window.navigate) throw new Error('Navigasi halaman asal belum tersedia.');
+        await new Promise((resolve, reject) => {
+          let timeout;
+          const observer = new MutationObserver(ready);
+          const cleanup = () => { observer.disconnect(); clearTimeout(timeout); };
+          const fail = error => { cleanup(); reject(error); };
+          function ready() {
+            if (document.querySelector('#main-content')?.dataset.featurePage === originPage) { cleanup(); resolve(); }
+          }
+          observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-feature-page'] });
+          timeout = setTimeout(() => fail(new Error('Halaman asal belum selesai dimuat.')), 5000);
+          try { Promise.resolve(window.navigate(originPage)).then(ready, fail); ready(); } catch (error) { fail(error); }
+        });
+      }
+      if (disposed || state.user?.id !== ownerId) return;
+      await review?.(); monitor.close();
+    } catch (error) {
+      if (disposed || state.user?.id !== ownerId) return;
+      find('#monitor-error').hidden = false;
+      find('#monitor-error').textContent = 'Draf masih tersedia, tetapi belum dapat ditampilkan. Coba tinjau kembali.';
+      log = (log + `\nCatatan peninjauan: ${error.message}`).slice(-65536); flush();
+      monitor.show(); showToast('Draf belum dapat ditampilkan dan masih tersimpan dalam proses ini.', 'error');
+    } finally { reviewing = false; if (!disposed && find('#monitor-review-btn')) find('#monitor-review-btn').disabled = false; }
   };
   const ensureStatus = () => {
     if (disposed || restore) return;
@@ -102,16 +147,27 @@ export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle 
       if (disposed || monitor.state !== 'running') return;
       log = ''; characters = 0; flush(); find('#monitor-message').textContent = message;
     },
-    complete(callback, { partial = false, warnings = [] } = {}) {
+    complete(callback, { partial = false, warnings = [], autoReview: autoReviewOpt } = {}) {
       if (disposed || (!partial && controller.signal.aborted) || (monitor.state !== 'running' && !(partial && monitor.state === 'cancelled'))) return;
       review = callback;
-      finish(partial ? 'partial' : 'completed', partial ? 'Sebagian hasil perlu dilengkapi' : 'Draf siap ditinjau');
+      const shouldAutoReview = autoReviewOpt !== undefined ? Boolean(autoReviewOpt) : (Boolean(autoReview) && !partial);
+      finish(partial ? 'partial' : 'completed', shouldAutoReview ? 'Penyusunan selesai, memuat draf ke canvas...' : (partial ? 'Sebagian hasil perlu dilengkapi' : 'Draf siap ditinjau'));
       if (!partial) find('#monitor-progress-bar').value = stages.length;
       if (!partial) for (const stage of stages) { const node = find(`#step-node-${stage.id}`); node.dataset.state = 'done'; node.removeAttribute('aria-current'); }
       find('#monitor-message').textContent = warnings.length ? warnings.join(' ') : 'Tinjau isi, identitas, dan kesesuaian materi sebelum menggunakan draf.';
       find('#monitor-review-btn').hidden = false;
       find('#monitor-review-btn').textContent = partial ? 'Tinjau draf parsial' : 'Tinjau hasil';
       find('#monitor-dismiss-btn').textContent = 'Buang draf';
+
+      if (shouldAutoReview) {
+        if (autoReviewTimer) clearTimeout(autoReviewTimer);
+        autoReviewTimer = setTimeout(() => {
+          autoReviewTimer = null;
+          if (!disposed && ['completed', 'partial'].includes(monitor.state)) {
+            performReview();
+          }
+        }, 300);
+      }
     },
     fail(error) {
       if (disposed || monitor.state !== 'running') return;
@@ -141,36 +197,7 @@ export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle 
   find('#monitor-close-btn').addEventListener('click', () => monitor.hide());
   find('#monitor-cancel-btn').addEventListener('click', () => monitor.cancel());
   find('#monitor-dismiss-btn').addEventListener('click', () => monitor.close());
-  find('#monitor-review-btn').addEventListener('click', async () => {
-    if (reviewing) return;
-    reviewing = true; find('#monitor-review-btn').disabled = true;
-    monitor.hide();
-    try {
-      if (originPage && document.querySelector('#main-content')?.dataset.featurePage !== originPage) {
-        if (!window.navigate) throw new Error('Navigasi halaman asal belum tersedia.');
-        await new Promise((resolve, reject) => {
-          let timeout;
-          const observer = new MutationObserver(ready);
-          const cleanup = () => { observer.disconnect(); clearTimeout(timeout); };
-          const fail = error => { cleanup(); reject(error); };
-          function ready() {
-            if (document.querySelector('#main-content')?.dataset.featurePage === originPage) { cleanup(); resolve(); }
-          }
-          observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-feature-page'] });
-          timeout = setTimeout(() => fail(new Error('Halaman asal belum selesai dimuat.')), 5000);
-          try { Promise.resolve(window.navigate(originPage)).then(ready, fail); ready(); } catch (error) { fail(error); }
-        });
-      }
-      if (disposed || state.user?.id !== ownerId) return;
-      await review?.(); monitor.close();
-    } catch (error) {
-      if (disposed || state.user?.id !== ownerId) return;
-      find('#monitor-error').hidden = false;
-      find('#monitor-error').textContent = 'Draf masih tersedia, tetapi belum dapat ditampilkan. Coba tinjau kembali.';
-      log = (log + `\nCatatan peninjauan: ${error.message}`).slice(-65536); flush();
-      monitor.show(); showToast('Draf belum dapat ditampilkan dan masih tersimpan dalam proses ini.', 'error');
-    } finally { reviewing = false; if (!disposed) find('#monitor-review-btn').disabled = false; }
-  });
+  find('#monitor-review-btn').addEventListener('click', performReview);
   find('details').addEventListener('toggle', flush);
   timer = setInterval(() => {
     const seconds = Math.floor((Date.now() - startTime) / 1000);

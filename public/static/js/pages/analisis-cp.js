@@ -1879,7 +1879,7 @@ async function generateAnalisisCpFromForm() {
     if (finalResultData) {
       monitor?.complete?.(() => {
         proceedToCanvasResult(finalResultData, payload);
-      });
+      }, { autoReview: true });
     } else {
       throw new Error('Tidak ada data hasil analisis dari server streaming');
     }

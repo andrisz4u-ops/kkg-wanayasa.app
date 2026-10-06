@@ -1870,7 +1870,7 @@ kisi.post('/generate-stream', async (c) => {
                     data: JSON.stringify({
                         step: 1,
                         totalSteps: 6,
-                        title: `Analisis CP ${regTitle}`,
+                        title: 'Analisis CP & Materi',
                         message: `Menelaah materi "${topik}" berdasar rujukan resmi ${regTitle} (${jenjangKelas || 'SD'})...`,
                         percent: 15
                     })
@@ -1893,8 +1893,8 @@ kisi.post('/generate-stream', async (c) => {
                         data: JSON.stringify({
                             step: 2,
                             totalSteps: 6,
-                            title: 'Merancang Kisi-kisi & Naskah PG',
-                            message: `Menghubungkan Engine AI [${preferredSlug}] & menyusun ${totalPG} butir soal pilihan ganda...`,
+                            title: 'Kisi-kisi & Butir PG',
+                            message: `Merumuskan indikator kisi-kisi & menyusun ${totalPG} butir soal pilihan ganda...`,
                             percent: 35
                         })
                     });
@@ -1932,8 +1932,8 @@ kisi.post('/generate-stream', async (c) => {
                         data: JSON.stringify({
                             step: 3,
                             totalSteps: 6,
-                            title: 'Menyusun Soal Isian & Uraian HOTS',
-                            message: `Memformulasikan soal isian (${totalIsian}) dan penalaran uraian L3 (${totalUraian})...`,
+                            title: 'Kisi-kisi & Uraian',
+                            message: `Merumuskan indikator isian (${totalIsian}) dan penalaran uraian L3 (${totalUraian})...`,
                             percent: 55
                         })
                     });
@@ -1973,8 +1973,8 @@ kisi.post('/generate-stream', async (c) => {
                     data: JSON.stringify({
                         step: 4,
                         totalSteps: 6,
-                        title: 'AI Verifikator & Quality Gate',
-                        message: 'Audit forensik mutu: memverifikasi kebenaran kunci, kaidah Puspendik, & auto-healing...',
+                        title: 'Audit Kaidah Puspendik',
+                        message: 'Audit forensik mutu: memverifikasi kebenaran kunci, kaidah Puspendik, & stimulus...',
                         percent: 75
                     })
                 });
@@ -1993,7 +1993,7 @@ kisi.post('/generate-stream', async (c) => {
                                 data: JSON.stringify({
                                     step: 4,
                                     totalSteps: 6,
-                                    title: 'AI Verifikator & Quality Gate',
+                                    title: 'Audit Kaidah Puspendik',
                                     message: msg,
                                     percent: pct
                                 })
@@ -2012,8 +2012,8 @@ kisi.post('/generate-stream', async (c) => {
                     data: JSON.stringify({
                         step: 5,
                         totalSteps: 6,
-                        title: 'Standarisasi Matriks Kisi-kisi',
-                        message: 'Menyelaraskan rumusan indikator, level kognitif L1-L3, dan kunci jawaban...',
+                        title: 'Rekap Tabel Matriks',
+                        message: 'Merekapitulasi rumusan indikator, level kognitif L1-L3, dan format tabel matriks...',
                         percent: 90
                     })
                 });
@@ -2039,8 +2039,8 @@ kisi.post('/generate-stream', async (c) => {
                     data: JSON.stringify({
                         step: 6,
                         totalSteps: 6,
-                        title: 'Finalisasi Selesai',
-                        message: 'Paket Asesmen & Kisi-kisi Matriks terverifikasi siap ditampilkan!',
+                        title: 'Finalisasi Asesmen',
+                        message: 'Paket Asesmen & Matriks Kisi-kisi terverifikasi siap ditampilkan!',
                         percent: 100
                     })
                 });

@@ -1,0 +1,289 @@
+{
+  "date": "2026-10-03",
+  "checks": [
+    {
+      "body": "Buat asesmen\n\nAtur materi, jumlah soal, dan tingkat kognitif.\n\nGaleri Visual (200 SVG)\nRiwayat Lokal\nBank Soal Kolaboratif\nIDENTITAS\nData sekolah dan pengesahan\nKELAS\nKelas 1\nKelas",
+      "fields": 19,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Buat asesmen",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/kisi",
+      "width": 1754
+    },
+    {
+      "body": "Buat slide pembelajaran\n\nMulai dari topik, lalu susun outline atau pilih template presentasi.\n\nAI Studio Presentasi\nModel:\nVertex AI (GCP Proxy) (gemini-2.5-flash)\nGemini 2.0 Flash",
+      "fields": 2,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Buat slide pembelajaran",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/slide",
+      "width": 1754
+    },
+    {
+      "body": "Pusat Game Edukasi Interaktif\nIFP EDITION\n\nKoleksi permainan edukatif kelas untuk Layar Sentuh Besar & Smart Board (Multi-Touch 40pt)\n\nVolume: Tinggi\nLayar Penuh IFP\nPEMBELAJARAN A",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Pusat Game Edukasi Interaktif\n                \n                  IFP Edition",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/games",
+      "width": 1754
+    },
+    {
+      "body": "Repository Materi\n\nPusat sumber belajar, modul ajar, dan referensi pendidikan.\n\nUpload Materi\nJenis materi\nSemua Jenis\nRPP\nModul\nSilabus\nMedia Ajar\nSoal\nLainnya\nKelas\nSemua Kelas\nK",
+      "fields": 3,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Repository Materi",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/materi",
+      "width": 1754
+    },
+    {
+      "body": "Presensi kegiatan\n\nKelola kehadiran kegiatan KKG\n\nScan QR\nRekap\nWorkshop Kurikulum Merdeka\nSabtu, 28 Februari 2026\n08:00 - 16:00\nSDN 1 Wanayasa\n\nWorkshop implementasi Kurikulum Mer",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Presensi kegiatan",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/absensi",
+      "width": 1754
+    },
+    {
+      "body": "Forum Diskusi\n\nRuang diskusi dan sharing antar guru\n\nTopik Baru\nbest-practice\nSharing Best Practice: Pembelajaran Diferensiasi di SD\n\nAssalamualaikum rekan-rekan guru.\\n\\nSaya ingi",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Forum Diskusi",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/forum",
+      "width": 1754
+    },
+    {
+      "body": "Direktori Guru\n\nDaftar lengkap anggota RuangKKG Digital\n\nCari guru\nGuru Kelas 5\n1 Guru\nAK\nAdmin KKG Gugus 3\n\nGURU KELAS 5\n\nSDN 2 Nangerang\n\n198501012010011001\nadmin@kkg-wanayasa.id",
+      "fields": 1,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Direktori Guru",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/guru",
+      "width": 1754
+    },
+    {
+      "body": "Kalender Kegiatan\n\nJadwal kegiatan dan event KKG\n\nTambah Event\nOktober 2026\nHari Ini\nBulan\nMinggu\nDaftar\nMin\nSen\nSel\nRab\nKam\nJum\nSab\n1\nHari Kesaktian Pancasila\n2\n3\n4\n5\n6\n7\n8\n9\n10\n1",
+      "fields": 8,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Kalender Kegiatan",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/kalender",
+      "width": 1754
+    },
+    {
+      "body": "MANAJEMEN AKUN & IDENTITAS\nProfil Pendidik\nAkun Terverifikasi\nSiti Nurhaliza\n\nsiti@kkg-wanayasa.id\n\nPendidik Anggota KKG\nSekolah Induk\nSDN 2 Wanayasa\nJabatan / Mapel\nMatematika\nNIP",
+      "fields": 12,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Profil Pendidik",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/profile",
+      "width": 1754
+    },
+    {
+      "body": "Generator Program Sekolah Universal (AI)\nBSKAP / Merdeka\nProgram Kerja & Pembiasaan Sekolah\n\nSusun dokumen program kerja resmi berstruktur BAB ilmiah lengkap (BAB I–V, Lembar Penge",
+      "fields": 15,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Program Kerja & Pembiasaan Sekolah",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/program-sekolah",
+      "width": 1754
+    },
+    {
+      "body": "Generator Surat\n\nBuat surat undangan KKG secara otomatis dengan AI atau Template.\n\nRiwayat Surat\nSurat Undangan KKG\nPaket Surat Tugas & SPPD (+ LHP)\n4-in-1\nAI Generator\nTemplate\nJe",
+      "fields": 33,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Generator Surat",
+      "unnamedFields": [
+        "surat-edit-textarea"
+      ],
+      "url": "http://127.0.0.1:5173/surat",
+      "width": 1754
+    },
+    {
+      "body": "Generator Program Kerja\n\nSusun program kerja KKG secara otomatis dengan AI\n\nRiwayat\nTahun Ajaran *\n2024/2025\n2025/2026\n2026/2027\n2027/2028\n2028/2029\nAI Model\nVertex AI (GCP Proxy) ",
+      "fields": 12,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Generator Program Kerja",
+      "unnamedFields": [
+        "proker-content"
+      ],
+      "url": "http://127.0.0.1:5173/proker",
+      "width": 1754
+    },
+    {
+      "body": "Laporan Kegiatan (LPJ) KKG\nT.A 2026/2027\n\nPenyusunan Laporan Pertanggungjawaban Kegiatan Resmi Berstandar Dinas dengan Dukungan AI\n\nRiwayat LPJ\n0\nReset Form\nForm & Parameter\nPratin",
+      "fields": 7,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Laporan Kegiatan (LPJ) KKG",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/laporan",
+      "width": 1754
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nDASHBOARD OPERASIONAL\nSelamat datang, Admin\n\nP",
+      "fields": 87,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=dashboard",
+      "width": 1754
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nManajemen Pengguna\n\nKelola akun dan hak akses ",
+      "fields": 92,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=users",
+      "width": 1754
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nManajemen Pengguna\n\nKelola akun dan hak akses ",
+      "fields": 92,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=users",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nData Sekolah\n\nKelola daftar sekolah anggota gu",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=sekolah",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nDATA MASTER KURIKULUM\nBSKAP No. 046 Tahun 2025",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=cp",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nKelola AI Provider\n\nAtur provider custom (Open",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=ai-providers",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nLog Audit Sistem\n\nRiwayat aktivitas pengguna\n\n",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=logs",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nTemplate Surat\n\nKelola format surat resmi KKG\n",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=templates",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\n\nFungsi Data Organisasi\n\nInformasi ini digunak",
+      "fields": 97,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=profil",
+      "width": 390
+    },
+    {
+      "body": "Administrasi KKG\n\nPanel kontrol\nAdmin\nOperator\nRingkasan\nPengguna\nSekolah\nData CP\nProvider AI\nLog aktivitas\nTemplate surat\nOrganisasi\nDASHBOARD OPERASIONAL\nSelamat datang, Admin\n\nP",
+      "fields": 87,
+      "overflow": false,
+      "sidebar": true,
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/admin?panel=dashboard",
+      "width": 820
+    },
+    {
+      "body": "RUANG KERJA PENDIDIK\n\nSelamat datang, Siti\n\nSiapkan pembelajaran hari ini. Semua perangkat ajar Anda ada di sini.\n\nBuat RPP\nAnalisis CP\n\nSDN 2 Wanayasa\nGuru\n\nSabtu, 3 Oktober 2026\n",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Selamat datang, Siti",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/",
+      "width": 1754
+    },
+    {
+      "body": "KURIKULUM MERDEKA • BSKAP NO. 046/2025\nAnalisis CP, TP & ATP\n\nEkstraksi materi buku ajar guru/siswa menjadi pemetaan CP, TP, dan ATP resmi siap cetak\n\nCP Kolaboratif\n1\nIDENTITAS DO",
+      "fields": 30,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Analisis CP, TP & ATP",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/analisis-cp",
+      "width": 390
+    },
+    {
+      "body": "Buat RPP\n\nSusun rencana pembelajaran dan lampiran sesuai kebutuhan kelas.\n\nRiwayat RPP Tersimpan\nIdentitas dokumen · sekolah, guru, dan pengesahan\nKurikulum\nKELAS\nKelas 1\nKelas 2\nK",
+      "fields": 16,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Buat RPP",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/rpp",
+      "width": 390
+    },
+    {
+      "body": "Pengumuman\n\nInformasi terkini, agenda, dan berita seputar RuangKKG Digital.\n\nPENTING\nJADWAL\nJADWAL RAPAT RUTIN KKG BULAN FEBRUARI 2026\nDiberitahukan kepada seluruh anggota KKG Gugu",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Pengumuman",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/pengumuman",
+      "width": 1754
+    },
+    {
+      "body": "Pengumuman\n\nInformasi terkini, agenda, dan berita seputar RuangKKG Digital.\n\nPENTING\nJADWAL\nJADWAL RAPAT RUTIN KKG BULAN FEBRUARI 2026\nDiberitahukan kepada seluruh anggota KKG Gugu",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Pengumuman",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/pengumuman",
+      "width": 1754
+    },
+    {
+      "body": "Notifikasi\nTandai Semua Dibaca\nTidak ada notifikasi\n\nAnda belum memiliki notifikasi apapun saat ini.",
+      "fields": 0,
+      "overflow": false,
+      "sidebar": true,
+      "title": "Notifikasi",
+      "unnamedFields": [],
+      "url": "http://127.0.0.1:5173/notifications",
+      "width": 1754
+    }
+  ]
+}

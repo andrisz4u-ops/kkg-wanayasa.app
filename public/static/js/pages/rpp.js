@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
@@ -41,7 +41,7 @@ export async function renderRpp() {
 
           <!-- Column 1: IDENTITAS -->
           <div class="rpp-card">
-            <h3 class="rpp-card-title"><i class="fas fa-graduation-cap"></i> Identitas</h3>
+            <h2 class="rpp-card-title"><i class="fas fa-graduation-cap"></i> Identitas</h2>
 
             <div class="rpp-row">
               <div class="rpp-col">
@@ -80,7 +80,7 @@ export async function renderRpp() {
 
           <!-- Column 2: KURIKULUM -->
           <div class="rpp-card">
-            <h3 class="rpp-card-title"><i class="fas fa-book-open"></i> Kurikulum</h3>
+            <h2 class="rpp-card-title"><i class="fas fa-book-open"></i> Kurikulum</h2>
 
             <div class="rpp-row">
               <div class="rpp-col">
@@ -139,7 +139,7 @@ export async function renderRpp() {
 
           <!-- Column 3: STRATEGI -->
           <div class="rpp-card">
-            <h3 class="rpp-card-title"><i class="fas fa-crosshairs"></i> Strategi</h3>
+            <h2 class="rpp-card-title"><i class="fas fa-crosshairs"></i> Strategi</h2>
 
             <label class="rpp-label">MODEL PEMBELAJARAN</label>
             <select name="strategi" class="rpp-input">
@@ -165,10 +165,10 @@ export async function renderRpp() {
 
             <label class="rpp-label">AI NEURAL ENGINE</label>
             <select name="aiProvider" class="rpp-input">
-              <option value="bedrock-deepseek" selected>🚀 AWS Bedrock (DeepSeek 3.2)</option>
+              <option value="bedrock-deepseek" selected>AWS Bedrock (DeepSeek 3.2)</option>
               <option value="bedrock">AWS Bedrock (Claude Sonnet 4.6)</option>
-              <option value="vertex">⚡ Vertex AI</option>
-              <option value="gemini">✨ Gemini 2.0 (Gratis)</option>
+              <option value="vertex">Vertex AI</option>
+              <option value="gemini">Gemini 2.0</option>
               <option value="mistral">Mistral Medium</option>
               <option value="z_ai">GLM-4.7</option>
             </select>
@@ -182,16 +182,16 @@ export async function renderRpp() {
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Live</span>
             </div>
           </div>
-        </form>
 
-        <!-- 8 Dimensi Profil Lulusan (SK BSKAP 058/H/KR/2025) -->
-        <div class="rpp-profil-bar">
-          <span class="rpp-profil-label">8 DIMENSI PROFIL LULUSAN:</span>
-          <div class="rpp-profil-tags" id="profil-tags">
-            ${['Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas', 'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi']
-      .map(d => `<button type="button" class="rpp-tag" data-dim="${d}">${d}</button>`).join('')}
+          <!-- 8 Dimensi Profil Lulusan (SK BSKAP 058/H/KR/2025) -->
+          <div class="rpp-profil-bar">
+            <span class="rpp-profil-label">8 DIMENSI PROFIL LULUSAN:</span>
+            <div class="rpp-profil-tags" id="profil-tags">
+              ${['Keimanan & Ketakwaan', 'Kewargaan', 'Penalaran Kritis', 'Kreativitas', 'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi']
+        .map(d => `<button type="button" class="rpp-tag" data-dim="${d}">${d}</button>`).join('')}
+            </div>
           </div>
-        </div>
+        </form>
 
         <!-- Generate Button -->
         <div class="rpp-action-center">
@@ -620,6 +620,7 @@ export function initRpp() {
 
   // Generate button
   document.getElementById('btn-generate-rpp')?.addEventListener('click', async () => {
+    if (hasActiveAiJob() || document.getElementById('btn-generate-rpp').disabled) { showToast('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.', 'info'); return; }
     const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries());
     data.profilLulusan = Array.from(selectedDimensions);
@@ -633,19 +634,20 @@ export function initRpp() {
 
     const isStreaming = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
     const btn = document.getElementById('btn-generate-rpp');
+    const buttonMarkup = btn.innerHTML;
     btn.disabled = true;
 
     if (isStreaming) {
       btn.innerHTML = '<i class="fas fa-satellite-dish animate-pulse"></i> Streaming RPP...';
 
       const monitor = openAiLiveMonitor({
-        title: 'RPP Merdeka Deep Learning',
+        title: 'Menyusun RPP',
         subtitle: `Menyusun modul ajar ${data.mataPelajaran || ''} (${data.jenjangKelas || 'SD'}) - "${data.topik}"`,
         modelName: data.aiProvider || 'AI Engine',
         steps: [
-          { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
-          { id: 2, label: 'Mindful/Joyful', icon: 'fa-lightbulb' },
-          { id: 3, label: 'Asesmen & LKPD', icon: 'fa-clipboard-check' },
+          { id: 1, label: 'Menyiapkan capaian pembelajaran', icon: 'fa-book-open' },
+          { id: 2, label: 'Menyusun kegiatan pembelajaran', icon: 'fa-lightbulb' },
+          { id: 3, label: 'Memeriksa struktur RPP', icon: 'fa-clipboard-check' },
           { id: 4, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
         ]
       });
@@ -658,6 +660,8 @@ export function initRpp() {
             monitor.updateStep(payload.step, payload.title, payload.message, payload.percent);
           } else if (event === 'token') {
             monitor.appendToken(payload.text);
+          } else if (event === 'reset') {
+            monitor.reset(payload.message);
           } else if (event === 'done') {
             finalResultData = payload?.data || payload;
           } else if (event === 'error') {
@@ -666,7 +670,7 @@ export function initRpp() {
               : String(payload);
             throw new Error(msg || 'Gagal generate stream RPP');
           }
-        });
+        }, { signal: monitor.signal, jobId: monitor.id });
 
         if (finalResultData) {
           monitor.complete(() => {
@@ -675,7 +679,7 @@ export function initRpp() {
             currentLampiran = null;
             renderResult(finalResultData, data);
 
-            saveDocArchive({
+            const archived = saveDocArchive({
               module: 'rpp',
               title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
               subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
@@ -685,19 +689,16 @@ export function initRpp() {
 
             const aiMeta = finalResultData?._ai_meta;
             const aiInfo = aiMeta ? ` (${aiMeta.model})` : '';
-            showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
+            showToast(archived ? 'Draf RPP tersedia dan tersimpan di perangkat ini. Tinjau sebelum digunakan.' : 'Draf RPP tersedia, tetapi arsip perangkat belum tersimpan.', archived ? 'success' : 'warning');
           });
         } else {
-          monitor.close();
-          showToast('Gagal memuat hasil dari streaming RPP.', 'error');
+          monitor.fail(new Error('Hasil RPP belum diterima. Silakan mulai ulang.'));
         }
       } catch (err) {
-        console.error('Streaming RPP error:', err);
-        monitor.close();
-        showToast('Error Streaming: ' + err.message, 'error');
+        if (!monitor.signal.aborted) monitor.fail(err);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
+        btn.innerHTML = buttonMarkup;
       }
     } else {
       // Non-streaming fallback with Smart Dynamic Loader
@@ -720,7 +721,7 @@ export function initRpp() {
           renderResult(result.data, data);
 
           // Auto-archive document
-          saveDocArchive({
+          const archived = saveDocArchive({
             module: 'rpp',
             title: `${data.mataPelajaran || 'RPP'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
             subtitle: `${data.jumlahPertemuan || 1} Pertemuan | ${data.semester || 'Smt 1'}`,
@@ -728,7 +729,7 @@ export function initRpp() {
             content: result.data
           });
 
-          showToast(`RPP berhasil digenerate dan otomatis diarsipkan!${aiInfo}`, 'success');
+          showToast(archived ? 'Draf RPP tersedia dan tersimpan di perangkat ini.' : 'Draf RPP tersedia, tetapi arsip lokal penuh atau tidak dapat disimpan. Unduh hasil agar tidak hilang.', archived ? 'success' : 'info');
           if (aiMeta?.failover_from) {
             console.warn('[AI Failover]', aiMeta.failover_from, '→', aiMeta.provider);
             console.warn('[AI Failover Errors]', aiMeta.failover_errors);
@@ -743,7 +744,7 @@ export function initRpp() {
       } finally {
         hideLoading();
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-magic"></i> Generate RPP Sekarang';
+        btn.innerHTML = buttonMarkup;
       }
     }
   });
@@ -801,6 +802,9 @@ export function initRpp() {
 
   document.getElementById('btn-rpp-archive')?.addEventListener('click', handleOpenRppArchive);
   document.getElementById('btn-rpp-history')?.addEventListener('click', handleOpenRppArchive);
+  if (state.pageParams?.archiveId) {
+    handleOpenRppArchive();
+  }
 
   // Initialize Lampiran Button
   initLampiranBtn();

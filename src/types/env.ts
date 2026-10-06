@@ -20,6 +20,7 @@ export type AppBindings = {
     // ─── Monitoring & Environment ────────────────
     SENTRY_DSN?: string;
     ENVIRONMENT?: string;
+    CORS_ORIGINS?: string;
     CF_PAGES_COMMIT_SHA?: string;
 
     // ─── Legacy AI Keys (from env vars, now managed via DB providers) ──

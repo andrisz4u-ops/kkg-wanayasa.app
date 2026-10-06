@@ -3,10 +3,12 @@ import { api } from '../api.js';
 import { state } from '../state.js';
 import { formatDate, formatDateTime, escapeHtml, nl2br, showToast } from '../utils.js';
 import { navigate } from '../router.js';
+import { renderLoadFailure, renderEmptyState } from '../ui-load-state.js';
 
 export async function renderForum() {
     let threads = [];
-    try { const res = await api('/forum/threads'); threads = res.data || []; } catch (e) { }
+    let loadFailed = false;
+    try { const res = await api('/forum/threads'); threads = res.data || []; } catch (e) { loadFailed = true; }
 
     return `
   <div class="fade-in max-w-4xl mx-auto py-8 px-4">
@@ -15,14 +17,14 @@ export async function renderForum() {
         <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-comments text-pink-500 mr-2"></i>Forum Diskusi</h1>
         <p class="text-gray-500 text-sm mt-1">Ruang diskusi dan sharing antar guru</p>
       </div>
-      ${state.user ? `<button onclick="showNewThread()" class="px-4 py-2 bg-pink-500 text-white rounded-lg text-sm font-medium hover:bg-pink-600"><i class="fas fa-plus mr-1"></i>Topik Baru</button>` : ''}
+      ${state.user ? `<button id="new-thread-trigger" onclick="showNewThread()" class="px-4 py-2 bg-pink-500 text-white rounded-lg text-sm font-medium hover:bg-pink-600"><i class="fas fa-plus mr-1"></i>Topik Baru</button>` : ''}
     </div>
 
     <div id="new-thread-modal" class="hidden mb-6"></div>
 
     <div id="thread-list" class="space-y-4">
-      ${threads.length > 0 ? threads.map(t => `
-        <div onclick="viewThread(${t.id})" class="bg-white rounded-xl p-5 border hover:border-pink-200 transition shadow-sm cursor-pointer">
+      ${loadFailed ? renderLoadFailure('Forum belum dapat dimuat', 'forum') : threads.length > 0 ? threads.map(t => `
+        <article class="bg-white rounded-xl p-5 border hover:border-pink-200 transition shadow-sm">
           <div class="flex items-start gap-4">
             <div class="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center flex-shrink-0">
               <i class="fas fa-comment-dots text-pink-500"></i>
@@ -32,7 +34,7 @@ export async function renderForum() {
                 ${t.is_pinned ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full"><i class="fas fa-thumbtack mr-1"></i>Pin</span>' : ''}
                 ${t.kategori ? `<span class="px-2 py-0.5 bg-pink-50 text-pink-600 text-xs rounded-full">${escapeHtml(t.kategori)}</span>` : ''}
               </div>
-              <h3 class="font-bold text-gray-800">${escapeHtml(t.judul)}</h3>
+              <h3 class="font-bold text-gray-800"><button type="button" onclick="viewThread(${t.id})" class="fw-thread-title">${escapeHtml(t.judul)}</button></h3>
               <p class="text-sm text-gray-500 mt-1 line-clamp-2">${escapeHtml((t.isi || '').substring(0, 150))}...</p>
               <div class="flex items-center gap-4 mt-3 text-xs text-gray-400">
                 <span><i class="fas fa-user mr-1"></i>${escapeHtml(t.author_name || '-')}</span>
@@ -41,8 +43,8 @@ export async function renderForum() {
               </div>
             </div>
           </div>
-        </div>
-      `).join('') : '<div class="text-center py-12 text-gray-400"><i class="fas fa-comment-slash text-4xl mb-4 block"></i>Belum ada diskusi.</div>'}
+        </article>
+      `).join('') : renderEmptyState('Mulai percakapan pertama', 'Bagikan pengalaman mengajar atau pertanyaan melalui Topik Baru.')}
     </div>
 
     <div id="thread-detail" class="hidden mt-8"></div>
@@ -57,19 +59,28 @@ window.showNewThread = function () {
     <div class="bg-white rounded-2xl shadow-lg p-6 border border-pink-200">
       <h3 class="font-bold text-gray-800 mb-4"><i class="fas fa-plus-circle text-pink-500 mr-2"></i>Buat Topik Baru</h3>
       <form onsubmit="createThread(event)">
-        <input type="text" name="judul" required placeholder="Judul Topik" class="w-full px-4 py-3 border rounded-xl mb-3">
-        <select name="kategori" class="w-full px-4 py-3 border rounded-xl mb-3">
+        <label for="forum-topic-title" class="block mb-1">Judul topik</label>
+        <input id="forum-topic-title" type="text" name="judul" required placeholder="Judul Topik" class="w-full px-4 py-3 border rounded-xl mb-3">
+        <label for="forum-topic-category" class="block mb-1">Kategori</label>
+        <select id="forum-topic-category" name="kategori" class="w-full px-4 py-3 border rounded-xl mb-3">
           <option value="umum">Umum</option><option value="best-practice">Best Practice</option><option value="kurikulum">Kurikulum</option>
           <option value="teknologi">Teknologi</option><option value="tanya-jawab">Tanya Jawab</option>
         </select>
-        <textarea name="isi" required rows="4" placeholder="Tulis isi diskusi Anda..." class="w-full px-4 py-3 border rounded-xl mb-3"></textarea>
+        <label for="forum-topic-body" class="block mb-1">Isi diskusi</label>
+        <textarea id="forum-topic-body" name="isi" required rows="4" placeholder="Tulis isi diskusi Anda..." class="w-full px-4 py-3 border rounded-xl mb-3"></textarea>
         <div class="flex gap-2">
           <button type="submit" class="px-6 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600">Posting</button>
-          <button type="button" onclick="document.getElementById('new-thread-modal').classList.add('hidden')" class="px-6 py-2 bg-gray-200 rounded-lg font-medium">Batal</button>
+          <button type="button" onclick="closeNewThread()" class="px-6 py-2 bg-gray-200 rounded-lg font-medium">Batal</button>
         </div>
       </form>
     </div>`;
+    document.getElementById('forum-topic-title')?.focus();
 }
+
+window.closeNewThread = function () {
+    document.getElementById('new-thread-modal')?.classList.add('hidden');
+    document.getElementById('new-thread-trigger')?.focus();
+};
 
 window.createThread = async function (e) {
     e.preventDefault();

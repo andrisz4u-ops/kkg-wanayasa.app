@@ -2,10 +2,13 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { escapeHtml, showToast } from '../utils.js';
+import { openUiDialog, closeUiDialog } from '../ui-dialog.js';
+import { renderLoadFailure } from '../ui-load-state.js';
 
 let currentDate = new Date();
 let currentView = 'month';
 let events = [];
+let loadFailed = false;
 
 export async function renderKalender() {
     return `
@@ -33,11 +36,11 @@ export async function renderKalender() {
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 overflow-hidden">
       <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
         <div class="flex items-center gap-2">
-          <button onclick="navigateMonth(-1)" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          <button aria-label="Bulan sebelumnya" onclick="navigateMonth(-1)" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
             <i class="fas fa-chevron-left text-gray-600 dark:text-gray-300"></i>
           </button>
           <h2 id="calendar-title" class="text-xl font-bold text-gray-800 dark:text-gray-100 min-w-[200px] text-center"></h2>
-          <button onclick="navigateMonth(1)" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          <button aria-label="Bulan berikutnya" onclick="navigateMonth(1)" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
             <i class="fas fa-chevron-right text-gray-600 dark:text-gray-300"></i>
           </button>
           <button onclick="goToToday()" class="ml-2 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50">
@@ -62,11 +65,11 @@ export async function renderKalender() {
     </div>
 
     <!-- Add Event Modal -->
-    <div id="event-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-modal-title" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
           <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100" id="event-modal-title"><i class="fas fa-calendar-plus text-blue-500 mr-2"></i>Tambah Event</h3>
-          <button onclick="closeEventModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+          <button aria-label="Tutup dialog kegiatan" onclick="closeEventModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
         </div>
         <form id="event-form" onsubmit="saveEvent(event)">
           <input type="hidden" id="event-id" value="">
@@ -117,7 +120,7 @@ export async function renderKalender() {
               <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Warna</label>
               <div class="flex gap-2" id="color-picker">
                 ${['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'].map((c, i) => `
-                  <button type="button" onclick="selectColor('${c}')" data-color="${c}" class="w-8 h-8 rounded-full border-2 ${i === 0 ? 'border-gray-800 dark:border-white ring-2 ring-offset-2 ring-blue-500' : 'border-transparent'}" style="background: ${c}"></button>
+                  <button type="button" aria-label="Warna kegiatan ${['biru', 'hijau', 'kuning', 'merah', 'ungu', 'merah muda'][i]}" onclick="selectColor('${c}')" data-color="${c}" class="w-8 h-8 rounded-full border-2 ${i === 0 ? 'border-gray-800 dark:border-white ring-2 ring-offset-2 ring-blue-500' : 'border-transparent'}" style="background: ${c}"></button>
                 `).join('')}
               </div>
               <input type="hidden" id="event-color" value="#3B82F6">
@@ -139,24 +142,35 @@ export async function renderKalender() {
 
 // Initialize calendar after render
 export async function initKalender() {
+    currentView = window.matchMedia('(max-width: 767px)').matches ? 'list' : 'month';
+    switchView(currentView);
     await loadEvents();
     renderCalendar();
 }
 
 async function loadEvents() {
+    loadFailed = false;
+    const body = document.getElementById('calendar-body');
+    if (body) body.innerHTML = '<p role="status" class="text-center py-8">Memuat agenda kegiatan…</p>';
     try {
         const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
         const res = await api(`/calendar/events?month=${month}`);
         events = res.data || [];
     } catch (e) {
-        console.error('Load events error:', e);
+        loadFailed = true;
         events = [];
     }
 }
 
 function renderCalendar() {
     const title = currentDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-    document.getElementById('calendar-title').textContent = title;
+    const titleElement = document.getElementById('calendar-title');
+    if (!titleElement) return;
+    titleElement.textContent = title;
+    if (loadFailed) {
+        document.getElementById('calendar-body').innerHTML = renderLoadFailure('Agenda belum dapat dimuat', 'kalender');
+        return;
+    }
 
     if (currentView === 'month') {
         renderMonthView();
@@ -354,6 +368,8 @@ window.showAddEvent = function (date = null) {
         document.getElementById('event-start-date').value = today;
     }
 
+    openUiDialog(document.getElementById('event-modal'), { labelledBy: 'event-modal-title', initialFocus: '#event-title' });
+
     // Reset color picker
     document.querySelectorAll('#color-picker button').forEach((btn, i) => {
         if (i === 0) {
@@ -367,7 +383,7 @@ window.showAddEvent = function (date = null) {
 }
 
 window.closeEventModal = function () {
-    document.getElementById('event-modal').classList.add('hidden');
+    closeUiDialog(document.getElementById('event-modal'));
 }
 
 window.selectColor = function (color) {
@@ -434,6 +450,7 @@ window.viewEvent = async function (id) {
         document.getElementById('event-color').value = e.color || '#3B82F6';
 
         selectColor(e.color || '#3B82F6');
+        openUiDialog(document.getElementById('event-modal'), { labelledBy: 'event-modal-title', initialFocus: '#event-title' });
     } catch (err) {
         showToast(err.message, 'error');
     }

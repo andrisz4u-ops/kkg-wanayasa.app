@@ -50,14 +50,15 @@ export function renderSurat() {
         <!-- Mode Tabs -->
         <div class="flex p-1 mb-8 bg-[var(--color-bg-tertiary)] rounded-xl w-fit">
           <button type="button" onclick="switchSuratMode('ai')" id="mode-ai" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]">
-            <i class="fas fa-magic mr-2 text-blue-500"></i>AI Generator
+            <i class="fas fa-file-lines mr-2 text-blue-500"></i>Susun dengan AI
           </button>
           <button type="button" onclick="switchSuratMode('template')" id="mode-template" class="px-6 py-2.5 rounded-lg text-sm font-medium transition-all text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-            <i class="fas fa-file-alt mr-2"></i>Template
+            <i class="fas fa-file-alt mr-2"></i>Isi Template
           </button>
         </div>
 
         <!-- Template Selector (hidden by default) -->
+        <p class="text-sm text-[var(--color-text-secondary)] mb-6">Gunakan AI untuk menyusun isi kegiatan, atau pilih template untuk mengisi format yang sudah tersedia.</p>
         <div id="template-selector" class="hidden mb-8 animate-fade-in">
           <label class="block text-sm font-bold text-[var(--color-text-secondary)] mb-2">Pilih Template Surat</label>
           <div class="relative">

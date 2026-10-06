@@ -10,6 +10,8 @@ type Bindings = {
 } & StorageBindings;
 
 const guru = new Hono<{ Bindings: Bindings }>();
+const publicColumns = 'id, nama, role, sekolah, mata_pelajaran, foto_url';
+const memberColumns = 'id, nama, email, role, nip, sekolah, mata_pelajaran, no_hp, foto_url';
 
 // Get all guru (public)
 guru.get('/', async (c) => {
@@ -20,9 +22,7 @@ guru.get('/', async (c) => {
     const isLoggedIn = !!user;
 
     // Smart Privacy: Hide sensitive data for public users
-    const columns = isLoggedIn
-      ? "id, nama, email, role, nip, sekolah, mata_pelajaran, no_hp, foto_url"
-      : "id, nama, role, sekolah, mata_pelajaran, foto_url"; // No NIP, Email, Phone for public
+    const columns = isLoggedIn ? memberColumns : publicColumns;
 
     let query = `SELECT ${columns} FROM users WHERE 1=1`;
     const params: any[] = [];
@@ -87,8 +87,11 @@ guru.get('/:id', async (c) => {
       return Errors.validation(c, 'ID guru tidak valid');
     }
 
+    const sessionId = getCookie(c.req.header('Cookie'), 'session');
+    const user = await getCurrentUser(c.env.DB, sessionId);
+    const columns = `id, nama, COALESCE(role_label, role) AS role, sekolah, mata_pelajaran, foto_url${user ? ', email, nip, no_hp' : ''}`;
     const result: any = await c.env.DB.prepare(`
-      SELECT id, nama, email, COALESCE(role_label, role) as role, nip, sekolah, mata_pelajaran, no_hp, foto_url, created_at
+      SELECT ${columns}, created_at
       FROM users WHERE id = ?
     `).bind(id).first();
 

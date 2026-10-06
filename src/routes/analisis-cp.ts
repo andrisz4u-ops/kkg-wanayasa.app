@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { getOfficialCP, getOfficialCPElements, cpElementsData, getDynamicCP, getDynamicCPElements, getFaseFromKelas } from '../lib/cp-data';
@@ -1268,6 +1269,7 @@ analisisCp.post('/generate', async (c) => {
 });
 
 // 3. Generate Analisis CP Stream (SSE Live Monitor)
+analisisCp.use('/generate-stream', requireSession);
 analisisCp.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -1307,8 +1309,11 @@ analisisCp.post('/generate-stream', async (c) => {
     };
     const preferredSlug = slugMap[aiProvider] || aiProvider;
 
+    const job = await createStreamJob(c, 'analisis-cp', body);
+    if ('response' in job) return job.response;
     c.header('X-Accel-Buffering', 'no');
-    return streamSSE(c, async (stream) => {
+    return streamSSE(c, async (rawStream) => {
+      const stream = job.attach(rawStream, ai);
       try {
         const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
           ? 'Kepka BKPDM 020/2026'
@@ -1457,6 +1462,7 @@ analisisCp.post('/generate-stream', async (c) => {
           })
         });
       } catch (err: any) {
+        if (job.signal.aborted) return;
         console.error('Analisis CP Stream Error:', err);
         await stream.writeSSE({
           event: 'error',
@@ -1464,7 +1470,7 @@ analisisCp.post('/generate-stream', async (c) => {
             message: err.message || 'Gagal menghasilkan Analisis CP secara streaming'
           })
         });
-      }
+      } finally { await job.dispose(); }
     });
   } catch (e: any) {
     console.error('Analisis CP Route Stream Error:', e);

@@ -174,6 +174,23 @@ export class AIService {
     private providers: DBProvider[] = [];
     private env: any;
     private db?: D1Database;
+    private abortSignal?: AbortSignal;
+    private streamReset?: () => void | Promise<void>;
+
+    setAbortSignal(signal: AbortSignal, onReset?: () => void | Promise<void>) {
+        this.abortSignal = signal;
+        this.streamReset = onReset;
+        return this;
+    }
+
+    private requestSignal(signal?: AbortSignal) {
+        return this.abortSignal && signal ? AbortSignal.any([this.abortSignal, signal]) : this.abortSignal || signal;
+    }
+
+    private async resetStream() {
+        this.abortSignal?.throwIfAborted();
+        await this.streamReset?.();
+    }
 
     constructor(env?: any) {
         this.env = env || {};
@@ -560,6 +577,7 @@ CRITICAL JSON RULES:
                     return response;
                 } catch (err: any) {
                     const errMsg = err?.message || String(err);
+                    this.abortSignal?.throwIfAborted();
                     console.error(`[AI-LOCKED] Provider "${specificProvider.name}" (${specificProvider.slug}) failed in stream:`, errMsg);
                     throw new Error(`Provider "${specificProvider.name}" tidak dapat merespons: ${errMsg}. Silakan ganti model AI yang lain di menu pilihan AI Engine.`);
                 }
@@ -589,6 +607,8 @@ CRITICAL JSON RULES:
                 return response;
             } catch (e: any) {
                 const errMsg = e?.message || String(e);
+                this.abortSignal?.throwIfAborted();
+                await this.resetStream();
                 console.error(`[AI-FAILOVER] ${provider.slug} FAILED in stream:`, errMsg);
                 failoverLog.push(`${provider.slug}: ${errMsg.substring(0, 200)}`);
                 previousFailedSlug = provider.slug;
@@ -650,6 +670,7 @@ CRITICAL JSON RULES:
     // ─── Provider Dispatcher (with Key Pooling & Round-Robin Rotation) ─
 
     private async callProvider(provider: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
+        this.abortSignal?.throwIfAborted();
         const keys = (provider.api_keys && provider.api_keys.length > 0)
             ? provider.api_keys
             : (provider.api_key ? [provider.api_key] : []);
@@ -717,6 +738,7 @@ CRITICAL JSON RULES:
                 return res;
             } catch (err: any) {
                 const errMsg = err?.message || String(err);
+                this.abortSignal?.throwIfAborted();
                 keyErrors.push(`Key #${currentIndex + 1}: ${errMsg.substring(0, 150)}`);
 
                 // Check for rate limits (429), quota limits (402/529), or invalid key (401)
@@ -740,6 +762,7 @@ CRITICAL JSON RULES:
     // ─── Provider Stream Dispatcher (Key Pooling & Round-Robin) ───
 
     private async callProviderStream(provider: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void, timeoutMs: number = 300000): Promise<AIResponse> {
+        this.abortSignal?.throwIfAborted();
         const keys = (provider.api_keys && provider.api_keys.length > 0)
             ? provider.api_keys
             : (provider.api_key ? [provider.api_key] : []);
@@ -787,6 +810,7 @@ CRITICAL JSON RULES:
                         try {
                             res = await this.callOpenAICompatStream(pWithKey, prompt, jsonMode, onToken);
                         } catch (streamErr: any) {
+                            await this.resetStream();
                             console.warn(`[AI-STREAM] Streaming failed for ${provider.name} (${provider.slug}): "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
                             res = await this.callOpenAICompat(pWithKey, prompt, jsonMode, timeoutMs);
                             if (onToken && res.content) {
@@ -798,6 +822,7 @@ CRITICAL JSON RULES:
                         try {
                             res = await this.callGeminiSDKStream(pWithKey, prompt, jsonMode, onToken);
                         } catch (streamErr: any) {
+                            await this.resetStream();
                             console.warn(`[AI-STREAM] Gemini streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
                             res = await this.callGeminiSDK(pWithKey, prompt, jsonMode, timeoutMs);
                             if (onToken && res.content) {
@@ -809,6 +834,7 @@ CRITICAL JSON RULES:
                         try {
                             res = await this.callAnthropicStream(pWithKey, prompt, jsonMode, onToken);
                         } catch (streamErr: any) {
+                            await this.resetStream();
                             console.warn(`[AI-STREAM] Anthropic streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
                             res = await this.callAnthropic(pWithKey, prompt, jsonMode, timeoutMs);
                             if (onToken && res.content) {
@@ -821,6 +847,7 @@ CRITICAL JSON RULES:
                         try {
                             res = await this.callBedrockStream(pWithKey, prompt, jsonMode, onToken);
                         } catch (streamErr: any) {
+                            await this.resetStream();
                             console.warn(`[AI-STREAM] Bedrock streaming failed: "${streamErr.message}". Otomatis fallback ke non-streaming call...`);
                             res = await this.callBedrock(pWithKey, prompt, jsonMode, timeoutMs);
                             if (onToken && res.content) {
@@ -846,6 +873,7 @@ CRITICAL JSON RULES:
                 return res;
             } catch (err: any) {
                 const errMsg = err?.message || String(err);
+                this.abortSignal?.throwIfAborted();
                 keyErrors.push(`Key #${currentIndex + 1}: ${errMsg.substring(0, 150)}`);
 
                 const isRotatableError = /429|402|529|rate[_\s-]?limit|quota|unauthorized|401|invalid_api_key/i.test(errMsg);
@@ -955,7 +983,7 @@ CRITICAL JSON RULES:
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
-                signal: controller.signal,
+                signal: this.requestSignal(controller.signal),
             });
 
             if (!response.ok) {
@@ -1112,10 +1140,12 @@ CRITICAL JSON RULES:
         let maxTotalTimer: any = null;
         let initialTimer: any = null;
         let timeoutError: Error | null = null;
+        const requestController = new AbortController();
 
         const maxTotalPromise = new Promise<never>((_, reject) => {
             maxTotalTimer = setTimeout(() => {
                 timeoutError = new Error(`Timeout: Batas waktu maksimal generasi (${STREAM_MAX_TOTAL_TIMEOUT_MS / 60000} menit) terlampaui.`);
+                requestController.abort(timeoutError);
                 reject(timeoutError);
             }, STREAM_MAX_TOTAL_TIMEOUT_MS);
         });
@@ -1130,16 +1160,18 @@ CRITICAL JSON RULES:
             }
             idleTimer = setTimeout(() => {
                 timeoutError = new Error(`Timeout: Aliran data dari Gemini (${p.slug}) terhenti lebih dari ${STREAM_IDLE_TIMEOUT_MS / 1000} detik.`);
+                requestController.abort(timeoutError);
             }, STREAM_IDLE_TIMEOUT_MS);
         };
 
         initialTimer = setTimeout(() => {
             timeoutError = new Error(`Timeout: Gemini (${p.slug}) tidak merespons dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`);
+            requestController.abort(timeoutError);
         }, STREAM_INITIAL_TIMEOUT_MS);
 
         try {
             const streamPromise = (async () => {
-                const streamResult = await model.generateContentStream(SYSTEM_PROMPT + '\n\n' + prompt);
+                const streamResult = await model.generateContentStream(SYSTEM_PROMPT + '\n\n' + prompt, { signal: this.requestSignal(requestController.signal) });
                 let content = '';
 
                 for await (const chunk of streamResult.stream) {
@@ -1174,6 +1206,7 @@ CRITICAL JSON RULES:
             if (initialTimer) clearTimeout(initialTimer);
             if (idleTimer) clearTimeout(idleTimer);
             if (maxTotalTimer) clearTimeout(maxTotalTimer);
+            requestController.abort();
         }
     }
 
@@ -1236,7 +1269,7 @@ CRITICAL JSON RULES:
             method: 'POST',
             headers,
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(timeoutMs),
+            signal: this.requestSignal(AbortSignal.timeout(timeoutMs)),
         });
 
         if (!response.ok) {
@@ -1301,7 +1334,7 @@ CRITICAL JSON RULES:
             method: 'POST',
             headers,
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(timeoutMs),
+            signal: this.requestSignal(AbortSignal.timeout(timeoutMs)),
         });
 
         if (!response.ok) {
@@ -1415,7 +1448,7 @@ CRITICAL JSON RULES:
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
-                signal: controller.signal,
+                signal: this.requestSignal(controller.signal),
             });
 
             if (!response.ok) {
@@ -1511,7 +1544,7 @@ CRITICAL JSON RULES:
             }
         });
 
-        const generatePromise = model.generateContent(SYSTEM_PROMPT + '\n\n' + prompt);
+        const generatePromise = model.generateContent(SYSTEM_PROMPT + '\n\n' + prompt, { signal: this.requestSignal(AbortSignal.timeout(timeoutMs)) });
         const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error(`Timeout ${timeoutMs}ms exceeded on ${p.name}`)), timeoutMs)
         );
@@ -1578,7 +1611,7 @@ CRITICAL JSON RULES:
                     ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
                 },
                 body: JSON.stringify(body),
-                signal: AbortSignal.timeout(timeoutMs),
+                signal: this.requestSignal(AbortSignal.timeout(timeoutMs)),
             });
 
             if (response.ok) {
@@ -1702,7 +1735,7 @@ CRITICAL JSON RULES:
                     ...(p.extra_headers && typeof p.extra_headers === 'object' && !Array.isArray(p.extra_headers) ? p.extra_headers : {}),
                 },
                 body: JSON.stringify(body),
-                signal: controller.signal,
+                signal: this.requestSignal(controller.signal),
             });
 
             if (!response.ok) {
@@ -1801,7 +1834,7 @@ CRITICAL JSON RULES:
                 json_mode: jsonMode,
                 ...(p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body) ? p.extra_body : {}),
             }),
-            signal: AbortSignal.timeout(timeoutMs),
+            signal: this.requestSignal(AbortSignal.timeout(timeoutMs)),
         });
 
         if (!response.ok) {

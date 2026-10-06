@@ -1,4 +1,4 @@
-import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect, getActiveAiProviders, renderTahunAjaranOptions, detectUserDefaultKelas, detectUserDefaultMapel, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
+import { showToast, showLoading, hideLoading, escapeHtml, populateAiModelSelect, getActiveAiProviders, renderTahunAjaranOptions, detectUserDefaultKelas, detectUserDefaultMapel, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
@@ -75,10 +75,10 @@ export async function renderAnalisisCp() {
   const aiOptionsHtml = (activeProviders && activeProviders.length > 0)
     ? activeProviders.map((p, idx) => `<option value="${escapeHtml(p.slug)}" ${idx === 0 ? 'selected' : ''}>${escapeHtml(p.name)} (${escapeHtml(p.model)})</option>`).join('')
     : `
-      <option value="awz" selected>awz (deepseek.v3.2)</option>
-      <option value="claude-anthropic">Claude (claude-haiku)</option>
-      <option value="nvi">Nvi (nemotron-3)</option>
-      <option value="mistral-medium">Mistral (mistral-medium-latest)</option>
+      <option value="awz" selected>DeepSeek V3.2</option>
+      <option value="claude-anthropic">Claude Haiku</option>
+      <option value="nvi">Nemotron 3</option>
+      <option value="mistral-medium">Mistral Medium</option>
     `;
 
   return `
@@ -320,12 +320,12 @@ export async function renderAnalisisCp() {
 
               <!-- VIEW TAB 1: UPLOAD PDF DROPZONE -->
               <div id="tab-view-pdf" class="space-y-3">
-                <div id="pdf-dropzone" class="border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-400 dark:hover:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-2xl p-6 text-center cursor-pointer transition-all group">
+                <div id="pdf-dropzone" role="button" tabindex="0" aria-label="Pilih berkas PDF buku ajar" class="border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-400 dark:hover:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-2xl p-6 text-center cursor-pointer transition-all group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-300">
                   <input type="file" id="pdf-file-input" accept="application/pdf" class="hidden">
                   <div class="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 text-rose-500 flex items-center justify-center text-xl mx-auto mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
                     <i class="fas fa-cloud-arrow-up text-indigo-600 dark:text-indigo-400"></i>
                   </div>
-                  <h4 class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 mb-1">Klik / Tarik Buku PDF ke Sini</h4>
+                  <h4 class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 mb-1">Pilih atau tarik buku PDF ke sini</h4>
                   <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5 leading-snug">Mendukung Buku Guru / Buku Siswa PDF hingga 100MB</p>
                   <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold">
                     <i class="fas fa-bolt text-amber-500"></i> Ekstraksi Otomatis Halaman Daftar Isi
@@ -610,7 +610,16 @@ export function initAnalisisCp() {
   const dropzone = document.getElementById('pdf-dropzone');
   const fileInput = document.getElementById('pdf-file-input');
 
-  dropzone?.addEventListener('click', () => fileInput?.click());
+  dropzone?.addEventListener('click', (e) => {
+    if (e.target !== fileInput) fileInput?.click();
+  });
+
+  dropzone?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput?.click();
+    }
+  });
 
   dropzone?.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -1807,6 +1816,7 @@ function renderChaptersList() {
  * Generate Analisis CP Process (Streaming SSE with fallback)
  */
 async function generateAnalisisCpFromForm() {
+  if (hasActiveAiJob()) { showToast('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.', 'info'); return; }
   const form = document.getElementById('analisis-cp-form');
   const formData = new FormData(form);
 
@@ -1837,7 +1847,7 @@ async function generateAnalisisCpFromForm() {
   const modelName = modelSelect?.options[modelSelect.selectedIndex]?.text || 'AI Model';
 
   const monitor = openAiLiveMonitor({
-    title: 'Analisis CP, TP & ATP Deep Learning',
+    title: 'Menyusun Analisis CP, TP & ATP',
     subtitle: `Memetakan ${detectedChapters.length} BAB ${payload.mataPelajaran} (${jenjangKelas}) ke Regulasi BSKAP 046/2025`,
     modelName,
     steps: [
@@ -1857,12 +1867,14 @@ async function generateAnalisisCpFromForm() {
         monitor?.updateStep?.(eventPayload.step, eventPayload.title, eventPayload.message, eventPayload.percent);
       } else if (event === 'token') {
         monitor?.appendToken?.(eventPayload.text);
+      } else if (event === 'reset') {
+        monitor.reset(eventPayload.message);
       } else if (event === 'done') {
         finalResultData = eventPayload?.data || eventPayload?.result || eventPayload;
       } else if (event === 'error') {
         throw new Error(eventPayload?.message || 'Gagal menghasilkan streaming AI');
       }
-    });
+    }, { signal: monitor.signal, jobId: monitor.id });
 
     if (finalResultData) {
       monitor?.complete?.(() => {
@@ -1872,27 +1884,7 @@ async function generateAnalisisCpFromForm() {
       throw new Error('Tidak ada data hasil analisis dari server streaming');
     }
   } catch (err) {
-    console.warn('Stream failed, trying standard fallback...', err);
-    try {
-      showLoading('Merakit Dokumen Analisis...', 'Menggunakan mesin AI cadangan');
-      const fallbackRes = await api('/analisis-cp/generate', {
-        method: 'POST',
-        body: payload
-      });
-      hideLoading();
-      closeAiLiveMonitor();
-
-      if (fallbackRes && fallbackRes.success && fallbackRes.data) {
-        proceedToCanvasResult(fallbackRes.data, payload);
-      } else {
-        throw new Error(fallbackRes?.error || 'Gagal generate Analisis CP');
-      }
-    } catch (fallbackErr) {
-      hideLoading();
-      closeAiLiveMonitor();
-      console.error('All generation failed:', fallbackErr);
-      showToast('Gagal merakit Analisis CP: ' + fallbackErr.message, 'error');
-    }
+    if (!monitor.signal.aborted) monitor.fail(err);
   }
 }
 
@@ -1910,16 +1902,16 @@ function proceedToCanvasResult(rawData, payload) {
   renderAnalysisCanvas(currentAnalysisData, currentInputData, activeAnalysisTab, activePromesSemester, handleSemesterChange);
   saveDraftToStorage();
 
-  const qualityScore = currentAnalysisData._audit?.summary?.overall_quality_score || 95;
-  const gradeLabel = currentAnalysisData._audit?.summary?.grade_label || 'Sangat Baik';
-  showToast(`Analisis CP selesai dirakit & terverifikasi AI (Skor Mutu: ${qualityScore}/100 - ${gradeLabel})!`, 'success');
+  const qualityScore = currentAnalysisData._audit?.summary?.overall_quality_score;
+  showToast(Number.isFinite(qualityScore) ? `Draf Analisis CP tersedia. Skor pemeriksaan struktur: ${qualityScore}/100. Tinjau isi sebelum digunakan.` : 'Draf Analisis CP tersedia untuk ditinjau.', 'success');
 
   const jenjangKelas = currentInputData?.jenjangKelas || 'Kelas 5';
-  saveDocArchive({
+  const archived = saveDocArchive({
     module: 'analisis-cp',
     title: `Analisis CP ${currentInputData?.mataPelajaran || ''} ${jenjangKelas}`,
-    subtitle: `${currentInputData?.namaSekolah || ''} • ${detectedChapters.length} BAB (Terverifikasi AI)`,
+    subtitle: `${currentInputData?.namaSekolah || ''} • ${detectedChapters.length} BAB, draf untuk ditinjau`,
     inputData: currentInputData,
     content: currentAnalysisData
   });
+  if (!archived) showToast('Draf tersedia, tetapi arsip lokal tidak dapat disimpan. Unduh hasil agar tidak hilang.', 'info');
 }

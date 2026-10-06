@@ -48,6 +48,8 @@ process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
 const cssCli = resolve(root, 'node_modules/tailwindcss/lib/cli.js');
+const slideVendor = spawnSync(process.execPath, [resolve(root, 'scripts/build-slide-vendor.mjs')], { cwd: root, stdio: 'inherit' });
+if (slideVendor.status !== 0) process.exit(slideVendor.status || 1);
 
 const initialCss = spawnSync(process.execPath, [cssCli,
   '-i',

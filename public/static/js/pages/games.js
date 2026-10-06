@@ -41,7 +41,7 @@ const GAME_CATALOG = [
     color: 'rose',
     gradient: 'from-rose-600 to-red-700',
     border: 'border-rose-500/30',
-    badges: ['Split Screen', '+ − × ÷', 'Multi-Touch'],
+    badges: ['Dua Area Tim', '+ − × ÷', 'Sentuhan Bersama'],
     fases: ['fase-a', 'fase-b', 'fase-c'],
     faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
@@ -49,7 +49,7 @@ const GAME_CATALOG = [
   {
     id: 'snake',
     title: 'Ular Tangga Kelas',
-    subtitle: 'Smart Board Edition (Papan Bersama 1-100)',
+    subtitle: 'Papan Bersama 1-100',
     desc: 'Papan ular tangga 100 kotak dengan dadu digital raksasa, visual rel tangga & tubuh ular, serta kartu soal tantangan saat mendarat.',
     icon: 'fa-dice',
     color: 'emerald',
@@ -63,13 +63,13 @@ const GAME_CATALOG = [
   {
     id: 'puzzle',
     title: 'Peta Buta & Puzzle Anatomi',
-    subtitle: 'Split-Screen Balap Susun Bentuk',
+    subtitle: 'Balap Susun Bentuk Dua Tim',
     desc: 'Balapan menyusun potongan pulau Indonesia atau organ vital tubuh manusia ke siluet yang tepat dengan sistem snap-in interaktif.',
     icon: 'fa-shapes',
     color: 'cyan',
     gradient: 'from-cyan-600 to-blue-700',
     border: 'border-cyan-500/30',
-    badges: ['Split Screen', 'Geografi & IPAS', 'Multi-Touch'],
+    badges: ['Dua Area Tim', 'Geografi & IPAS', 'Sentuhan Bersama'],
     fases: ['fase-a', 'fase-b', 'fase-c'],
     faseLabel: 'Fase A, B, C',
     mode: 'Balapan (Kiri vs Kanan)'
@@ -77,13 +77,13 @@ const GAME_CATALOG = [
   {
     id: 'tug',
     title: 'Tarik Tambang Cerdas Cermat',
-    subtitle: 'Split-Screen Duel Tarik Tali',
+    subtitle: 'Duel Tarik Tali Dua Tim',
     desc: 'Kubu Merah dan Kubu Biru bersaing menjawab pertanyaan cerdas cermat. Jawaban benar menarik tali tambang melintasi garis batas lawan.',
     icon: 'fa-people-pulling',
     color: 'amber',
     gradient: 'from-amber-600 to-orange-700',
     border: 'border-amber-500/30',
-    badges: ['Split Screen', 'Animasi Tali Fisik', 'Multi-Mapel'],
+    badges: ['Dua Area Tim', 'Animasi Tali', 'Lintas Pelajaran'],
     fases: ['fase-a', 'fase-b', 'fase-c'],
     faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
@@ -91,13 +91,13 @@ const GAME_CATALOG = [
   {
     id: 'word',
     title: 'Cari Kata Raksasa',
-    subtitle: 'Word Search Duel di Layar Lebar',
+    subtitle: 'Duel Cari Kata di Layar Lebar',
     desc: 'Dua kotak grid huruf besar di kiri dan kanan. Murid balapan menyentuh huruf awal dan akhir untuk menemukan kata sains & kurikulum.',
     icon: 'fa-magnifying-glass',
     color: 'violet',
     gradient: 'from-violet-600 to-fuchsia-700',
     border: 'border-violet-500/30',
-    badges: ['Split Screen', 'Kosakata Tematik', 'Grid 7x7/8x8'],
+    badges: ['Dua Area Tim', 'Kosakata Tematik', 'Grid 7x7/8x8'],
     fases: ['fase-a', 'fase-b', 'fase-c'],
     faseLabel: 'Fase A, B, C',
     mode: 'Balapan (Kiri vs Kanan)'
@@ -106,12 +106,12 @@ const GAME_CATALOG = [
     id: 'pinisi',
     title: 'Duel Pinisi Kata',
     subtitle: 'Balap Literasi Kalimat Rumpang',
-    desc: 'Lomba membaca dan melengkapi kalimat rumpang Bahasa Indonesia di layar sentuh IFP. Balapan kapal pinisi Nusantara dengan 45 paket soal berjenjang.',
+    desc: 'Lomba membaca dan melengkapi kalimat rumpang Bahasa Indonesia di layar sentuh. Balapan kapal pinisi Nusantara dengan 45 paket soal berjenjang.',
     icon: 'fa-ship',
     color: 'sky',
     gradient: 'from-sky-600 to-blue-700',
     border: 'border-sky-500/30',
-    badges: ['Split Screen', 'Literasi Rumpang', '45 Paket Soal'],
+    badges: ['Dua Area Tim', 'Literasi Rumpang', '45 Paket Soal'],
     fases: ['fase-a', 'fase-b', 'fase-c'],
     faseLabel: 'Fase A, B, C',
     mode: 'Duel Tim (Kiri vs Kanan)'
@@ -154,14 +154,14 @@ export function exitIfpFullscreen() {
 
 function updateFsButtons(isFs) {
   document.querySelectorAll('.fs-btn-label').forEach(el => {
-    el.textContent = isFs ? 'Keluar Fullscreen' : 'Layar Penuh IFP';
+    el.textContent = isFs ? 'Keluar layar penuh' : 'Layar penuh';
   });
   document.querySelectorAll('.fs-btn-icon').forEach(el => {
     el.className = `fas ${isFs ? 'fa-compress' : 'fa-expand'} fs-btn-icon`;
   });
   const badge = document.getElementById('ifp-mode-badge');
   if (badge) {
-    badge.textContent = isFs ? 'Mode Layar Penuh IFP' : 'Mode Tersemat';
+    badge.textContent = isFs ? 'Layar penuh' : 'Di halaman';
   }
 }
 
@@ -182,11 +182,11 @@ if (!window.__ifpFsListenerAttached) {
 export function renderGames(opts = {}) {
   if (!state.user) {
     return renderLockedFeature(
-      'Pusat Game Edukasi Interaktif IFP',
+      'Game Edukasi Kelas',
       `Maaf, fitur Game Edukasi khusus untuk anggota guru terdaftar ${state.settings?.nama_kkg || 'KKG'}. Silakan masuk / login akun pendidik Anda terlebih dahulu untuk mengakses katalog dan memainkan seluruh 7 game edukatif kelas.`,
       [
         '7 Permainan Edukasi Kurikulum Merdeka (TTS, Berhitung, Ular Tangga, Pinisi, dll)',
-        'Mode Layar Sentuh Besar IFP & Smart Board Interaktif Kelas',
+        'Permainan untuk layar sentuh kelas',
         'Bank Soal Otomatis Sesuai Fase Belajar (Fase A, Fase B, Fase C)',
         'Pertandingan Duel Tim Seru Lengkap dengan Audio SFX & Animasi'
       ]
@@ -214,11 +214,11 @@ export function renderGames(opts = {}) {
               <h1 class="text-base sm:text-lg font-black font-display tracking-tight text-white flex items-center gap-2">
                 Pusat Game Edukasi Interaktif
                 <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-widest hidden sm:inline-block">
-                  IFP Edition
+                  Layar sentuh
                 </span>
               </h1>
               <p class="text-[11px] text-slate-400">
-                Koleksi permainan edukatif kelas untuk Layar Sentuh Besar & Smart Board (Multi-Touch 40pt)
+                Pilih permainan dan fase belajar untuk kegiatan bersama di kelas.
               </p>
             </div>
           </div>
@@ -238,10 +238,10 @@ export function renderGames(opts = {}) {
             <button 
               id="btn-game-toggle-fullscreen" 
               class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs sm:text-sm font-bold flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-md"
-              title="Aktifkan Layar Penuh untuk IFP / Smart Board"
+              title="Aktifkan layar penuh untuk permainan kelas"
             >
               <i class="fas ${isFs ? 'fa-compress' : 'fa-expand'} fs-btn-icon"></i>
-              <span class="fs-btn-label">${isFs ? 'Keluar Fullscreen' : 'Layar Penuh IFP'}</span>
+              <span class="fs-btn-label">${isFs ? 'Keluar layar penuh' : 'Layar penuh'}</span>
             </button>
           </div>
         </div>
@@ -275,7 +275,7 @@ export function renderGames(opts = {}) {
               ${getActiveGameTitle()}
             </h2>
             <span id="ifp-mode-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-widest hidden md:inline-block">
-              ${isFs ? 'Mode Layar Penuh IFP' : 'Mode Tersemat'}
+              ${isFs ? 'Layar penuh' : 'Di halaman'}
             </span>
           </div>
         </div>
@@ -298,7 +298,7 @@ export function renderGames(opts = {}) {
             title="Mode Kiosk Layar Penuh"
           >
             <i class="fas ${isFs ? 'fa-compress' : 'fa-expand'} fs-btn-icon"></i>
-            <span class="fs-btn-label">${isFs ? 'Keluar Fullscreen' : 'Layar Penuh IFP'}</span>
+            <span class="fs-btn-label">${isFs ? 'Keluar layar penuh' : 'Layar penuh'}</span>
           </button>
         </div>
 
@@ -354,10 +354,10 @@ function renderCatalogHub() {
             <i class="fas fa-chalkboard-user"></i> Pembelajaran Aktif & Interaktif
           </div>
           <h2 class="text-2xl sm:text-4xl font-extrabold text-white font-display tracking-tight leading-tight">
-            Game Edukasi Layar Sentuh IFP / Smart Board
+            Game Edukasi Layar Sentuh
           </h2>
           <p class="text-sm sm:text-base text-teal-100/80 mt-2.5 leading-relaxed">
-            Dirancang khusus untuk multi-touch simultan dan format split-screen duel antar kelompok di kelas. Ciptakan suasana belajar yang aktif, seru, dan kompetitif!
+            Pilih permainan untuk berlatih bersama. Beberapa permainan membagi layar menjadi dua area untuk pertandingan antarkelompok.
           </p>
         </div>
 
@@ -443,7 +443,7 @@ function renderCatalogHub() {
               class="btn-select-game w-full py-3 rounded-2xl bg-gradient-to-r ${g.gradient} hover:opacity-95 text-white font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
             >
               <i class="fas fa-play text-xs"></i>
-              <span>${g.id === 'tts' ? 'Buka Studio TTS' : 'Mulai Game di IFP'}</span>
+              <span>${g.id === 'tts' ? 'Buka Studio TTS' : 'Mulai Permainan'}</span>
             </button>
           </div>
         `).join('')}

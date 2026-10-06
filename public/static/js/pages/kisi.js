@@ -1,5 +1,7 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
+import { openUiDialog, closeUiDialog } from '../ui-dialog.js';
+import { setGenerationNotice } from '../ai-generation-notice.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx, preloadAsesmenImages } from '../asesmen-docx.js';
@@ -27,7 +29,7 @@ export async function renderKisi() {
               <i class="fas fa-brain"></i>
             </div>
             <div>
-              <h1 class="asesmen-title">ASESMEN A4EDU</h1>
+              <h1 class="asesmen-title">Buat Asesmen</h1>
               <p class="asesmen-subtitle">NEURAL QUESTION ARCHITECT A4EDU</p>
             </div>
           </div>
@@ -207,13 +209,12 @@ export async function renderKisi() {
               </label>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Otomatis</span>
             </div>
+            <div class="asesmen-action-footer">
+              <button type="submit" class="asesmen-generate-btn">
+                <i class="fas fa-file-pen" aria-hidden="true"></i> Buat Asesmen
+              </button>
+            </div>
           </div>
-          </div>
-
-          <div class="asesmen-action-center">
-            <button type="submit" class="asesmen-generate-btn">
-              <i class="fas fa-magic"></i> GENERATE ASESMEN SEKARANG
-            </button>
           </div>
         </form>
       </div>
@@ -1454,23 +1455,27 @@ export function initKisi() {
     }
 
     const isStreaming = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
-
+    const submitButton = form.querySelector('[type="submit"]');
+    if (submitButton?.disabled || hasActiveAiJob()) { showToast('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.', 'info'); return; }
+    if (submitButton) submitButton.disabled = true;
+    try {
     if (isStreaming) {
       const monitor = openAiLiveMonitor({
-        title: 'Asesmen Neural Architect',
+        title: 'Menyusun Asesmen',
         subtitle: `Menyusun soal ${data.mataPelajaran || ''} (${data.jenjangKelas || 'SD'}) - "${data.topik}"`,
         modelName: data.aiProvider || 'AI Engine',
         steps: [
           { id: 1, label: 'CP 2025', icon: 'fa-book-open' },
           { id: 2, label: 'Naskah PG', icon: 'fa-list-ol' },
           { id: 3, label: 'Isian & Uraian', icon: 'fa-pen-fancy' },
-          { id: 4, label: 'Quality Gate', icon: 'fa-shield-halved' },
+          { id: 4, label: 'Memeriksa kelengkapan soal', icon: 'fa-shield-halved' },
           { id: 5, label: 'Matriks Kisi', icon: 'fa-table-cells' },
           { id: 6, label: 'Finalisasi', icon: 'fa-wand-magic-sparkles' }
         ]
       });
 
       let finalResultData = null;
+      let completion = {};
 
       try {
         await streamPost('/kisi/generate-stream', data, (event, payload) => {
@@ -1478,7 +1483,10 @@ export function initKisi() {
             monitor.updateStep(payload.step, payload.title, payload.message, payload.percent);
           } else if (event === 'token') {
             monitor.appendToken(payload.text);
+          } else if (event === 'reset') {
+            monitor.reset(payload.message);
           } else if (event === 'done') {
+            completion = payload;
             finalResultData = payload?.data || payload;
           } else if (event === 'error') {
             const msg = (typeof payload === 'object' && payload !== null)
@@ -1486,7 +1494,7 @@ export function initKisi() {
               : String(payload);
             throw new Error(msg || 'Gagal generate stream');
           }
-        });
+        }, { signal: monitor.signal, jobId: monitor.id });
 
         if (finalResultData) {
           monitor.complete(() => {
@@ -1494,7 +1502,7 @@ export function initKisi() {
             renderResult(finalResultData, data);
             const modelInfo = finalResultData?._meta?.model ? ` (${finalResultData._meta.model})` : '';
 
-            saveDocArchive({
+            const archived = saveDocArchive({
               module: 'kisi',
               title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
               subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
@@ -1505,16 +1513,13 @@ export function initKisi() {
             // Auto-update badge Bank Soal Kolaboratif seketika
             loadBankSoalCountBadge();
 
-            showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
-          });
+            showToast(completion.partial ? 'Sebagian soal tersedia. Tinjau bagian yang belum lengkap.' : archived ? 'Draf Asesmen tersedia dan tersimpan di perangkat ini.' : 'Draf Asesmen tersedia, tetapi arsip perangkat belum tersimpan.', completion.partial || !archived ? 'warning' : 'success');
+          }, { partial: !!completion.partial, warnings: completion.warnings || [] });
         } else {
-          monitor.close();
-          showToast('Gagal memuat hasil dari streaming AI.', 'error');
+          monitor.fail(new Error('Hasil Asesmen belum diterima. Silakan mulai ulang.'));
         }
       } catch (err) {
-        console.error('Streaming Asesmen error:', err);
-        monitor.close();
-        showToast('Error Streaming: ' + err.message, 'error');
+        if (!monitor.signal.aborted) monitor.fail(err);
       }
     } else {
       // Non-streaming fallback with Smart Dynamic Loader
@@ -1533,7 +1538,7 @@ export function initKisi() {
           const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
 
           // Auto-archive document
-          saveDocArchive({
+          const archived = saveDocArchive({
             module: 'kisi',
             title: `${data.mataPelajaran || 'Asesmen'} - ${data.topik || 'Topik'} (${data.jenjangKelas || 'SD'})`,
             subtitle: `${data.jenisUjian || 'Ulangan'} | ${data.semester || 'Smt 1'}`,
@@ -1544,7 +1549,7 @@ export function initKisi() {
           // Auto-update badge Bank Soal Kolaboratif seketika
           loadBankSoalCountBadge();
 
-          showToast(`Soal berhasil digenerate dan otomatis diarsipkan!${modelInfo}`, 'success');
+          showToast(archived ? 'Draf Asesmen tersedia dan tersimpan di perangkat ini.' : 'Draf Asesmen tersedia, tetapi arsip lokal penuh atau tidak dapat disimpan. Unduh hasil agar tidak hilang.', archived ? 'success' : 'info');
         } else {
           showToast(result.error?.message || 'Gagal generate', 'error');
         }
@@ -1555,6 +1560,7 @@ export function initKisi() {
         hideLoading();
       }
     }
+    } finally { if (submitButton) submitButton.disabled = false; }
   });
 
   // Archive Drawer Handler
@@ -1597,6 +1603,9 @@ export function initKisi() {
 
   document.getElementById('btn-kisi-archive')?.addEventListener('click', handleOpenKisiArchive);
   document.getElementById('btn-kisi-history')?.addEventListener('click', handleOpenKisiArchive);
+  if (state.pageParams?.archiveId) {
+    handleOpenKisiArchive();
+  }
 
   // Bank Soal Kolaboratif Handler
   document.getElementById('btn-bank-soal')?.addEventListener('click', () => {
@@ -1784,6 +1793,7 @@ function renderResult(data, formData) {
   // Show result view, hide form
   document.getElementById('asesmen-form-view').classList.add('hidden');
   document.getElementById('asesmen-result-view').classList.remove('hidden');
+  setGenerationNotice(document.getElementById('asesmen-result-view'), data._generation);
 
   const canvas = document.getElementById('asesmen-canvas');
 
@@ -4684,7 +4694,7 @@ function getVcCategoryBadge(category) {
 export async function openVisualCatalogModal() {
   // Remove stale modal if present
   const existing = document.getElementById('visual-catalog-modal-root');
-  if (existing) existing.remove();
+  if (existing) { closeUiDialog(existing); existing.remove(); }
 
   const root = document.createElement('div');
   root.id = 'visual-catalog-modal-root';
@@ -4701,7 +4711,7 @@ export async function openVisualCatalogModal() {
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="font-bold text-base sm:text-lg text-white font-display">Katalog Stimulus Visual Edukasi</h3>
+              <h2 id="vc-modal-title" class="font-bold text-base sm:text-lg text-white font-display">Katalog Visual Asesmen</h2>
               <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">200 SVG DINAMIS</span>
             </div>
             <p class="text-xs text-emerald-200/80" id="vc-header-subtitle">Pustaka stimulus visual cerdas untuk Matematika, Sains/IPAS, Seni, Bahasa, dan Komputasi</p>
@@ -4778,23 +4788,8 @@ export async function openVisualCatalogModal() {
   let activeCategory = 'all';
   let searchQuery = '';
 
-  const closeModal = () => {
-    window.removeEventListener('keydown', handleKeyEsc);
-    root.remove();
-  };
-
-  const handleKeyEsc = (e) => {
-    if (e.key === 'Escape') {
-      const preview = document.getElementById('vc-preview-modal-root');
-      if (preview) {
-        preview.remove();
-      } else {
-        closeModal();
-      }
-    }
-  };
-
-  window.addEventListener('keydown', handleKeyEsc);
+  const closeModal = () => closeUiDialog(root);
+  openUiDialog(root, { labelledBy: 'vc-modal-title', initialFocus: '#vc-search-input', onClose: () => root.remove() });
   document.getElementById('vc-modal-close')?.addEventListener('click', closeModal);
   document.getElementById('vc-modal-close-bottom')?.addEventListener('click', closeModal);
   document.getElementById('vc-modal-backdrop')?.addEventListener('click', closeModal);
@@ -5028,7 +5023,7 @@ export async function openVisualCatalogModal() {
  */
 export async function openVisualPreviewModal(item) {
   const existing = document.getElementById('vc-preview-modal-root');
-  if (existing) existing.remove();
+  if (existing) { closeUiDialog(existing); existing.remove(); }
 
   const previewRoot = document.createElement('div');
   previewRoot.id = 'vc-preview-modal-root';
@@ -5045,7 +5040,7 @@ export async function openVisualPreviewModal(item) {
           <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">
             ${escBs(item.category)}
           </span>
-          <h3 class="font-bold text-base text-white font-display">${escBs(item.name)}</h3>
+          <h2 id="vc-preview-title" class="font-bold text-base text-white font-display">${escBs(item.name)}</h2>
         </div>
         <button id="vc-preview-close" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Tutup">
           <i class="fas fa-times text-xs"></i>
@@ -5099,7 +5094,8 @@ export async function openVisualPreviewModal(item) {
 
   document.body.appendChild(previewRoot);
 
-  const closePreview = () => previewRoot.remove();
+  const closePreview = () => closeUiDialog(previewRoot);
+  openUiDialog(previewRoot, { labelledBy: 'vc-preview-title', initialFocus: '#vc-preview-close', nested: true, onClose: () => previewRoot.remove() });
   document.getElementById('vc-preview-close')?.addEventListener('click', closePreview);
   document.getElementById('vc-preview-cancel')?.addEventListener('click', closePreview);
   document.getElementById('vc-preview-backdrop')?.addEventListener('click', closePreview);

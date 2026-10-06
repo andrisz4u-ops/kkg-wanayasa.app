@@ -1,5 +1,6 @@
 import { api } from '../api.js';
-import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, openAiLiveMonitor, closeAiLiveMonitor, streamPost } from '../utils.js';
+import { setGenerationNotice } from '../ai-generation-notice.js';
+import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
 import { PROGRAM_TEMPLATES } from './program-sekolah/templates.js';
 import { renderProgramCanvas, syncCanvasToProgramData } from './program-sekolah/renderers.js';
 import { downloadProgramDocx, downloadProgramLampiranOnlyDocx, downloadKaldikExcel, saveProgramToArchive, openProgramArchiveDrawer } from './program-sekolah/downloaders.js';
@@ -25,14 +26,14 @@ export function renderProgramSekolah() {
           <div>
             <div class="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-400/30 px-3 py-1 rounded-full text-xs font-semibold text-indigo-300 mb-3 backdrop-blur-xs">
               <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
-              <span>Generator Program Sekolah Universal (AI)</span>
+              <span>Program Sekolah Dasar</span>
               <span class="bg-indigo-500/40 text-[10px] px-1.5 py-0.5 rounded-full font-mono">BSKAP / Merdeka</span>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
               Program Kerja & Pembiasaan Sekolah
             </h1>
             <p class="text-slate-300 text-sm max-w-2xl leading-relaxed">
-              Susun dokumen program kerja resmi berstruktur BAB ilmiah lengkap (BAB I–V, Lembar Pengesahan, Action Plan 12 Bulan, dan Format Jurnal Siswa dalam 1 file DOCX siap cetak).
+               Pilih program, lengkapi kegiatan dan targetnya, lalu susun draf untuk ditinjau bersama sekolah.
             </p>
           </div>
 
@@ -78,8 +79,6 @@ export function renderProgramSekolah() {
                 <label class="block text-xs font-semibold text-slate-700 mb-1">Jenjang Pendidikan</label>
                 <select id="inp-jenjang" class="w-full text-xs rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
                   <option value="Sekolah Dasar (SD)" selected>Sekolah Dasar (SD)</option>
-                  <option value="Sekolah Menengah Pertama (SMP)">Sekolah Menengah Pertama (SMP)</option>
-                  <option value="Sekolah Menengah Atas/Kejuruan (SMA/SMK)">Sekolah Menengah Atas (SMA)</option>
                 </select>
               </div>
               <div>
@@ -194,8 +193,8 @@ export function renderProgramSekolah() {
                   <i class="fa-solid fa-layer-group mr-1 text-teal-600"></i> Metode:
                 </label>
                 <select id="program-generate-mode-select" class="text-xs rounded-lg border-slate-300 focus:border-teal-500 focus:ring-teal-500 bg-white font-medium text-slate-800">
-                  <option value="section" selected>Bertahap Per-Bab (Rekomendasi - Narasi Kaya & Bebas Potong Token)</option>
-                  <option value="full">Sekaligus 1 Kali (Cepat)</option>
+                  <option value="section" selected>Bertahap per bab</option>
+                  <option value="full">Seluruh dokumen sekaligus</option>
                 </select>
               </div>
             </div>
@@ -234,7 +233,7 @@ export function renderProgramSekolah() {
               <i class="fa-solid fa-circle-check"></i>
             </div>
             <div>
-              <h4 class="font-bold text-slate-900 text-sm">Dokumen Program Siap</h4>
+              <h4 class="font-bold text-slate-900 text-sm" data-generation-complete="Dokumen Program Siap" data-generation-partial="Draf Program Parsial">Dokumen Program Siap</h4>
               <p class="text-[11px] text-slate-500">Format A4 Portrait • Rata Kanan-Kiri • Terintegrasi Lampiran</p>
             </div>
           </div>
@@ -278,7 +277,7 @@ export function renderProgramSekolah() {
             <button type="button" id="btn-download-docx"
                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-200 active:scale-95 transition-all cursor-pointer">
               <i class="fa-solid fa-file-word text-sm"></i>
-              <span>Unduh Program Lengkap (DOCX)</span>
+              <span data-generation-complete="Unduh Program Lengkap (DOCX)" data-generation-partial="Unduh Draf Parsial (DOCX)">Unduh Program Lengkap (DOCX)</span>
             </button>
           </div>
         </div>
@@ -850,15 +849,21 @@ async function handleGenerateProgram() {
   };
 
   // Launch AI Live Monitor
+  if (hasActiveAiJob()) { showToast('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.', 'info'); return; }
   const monitor = openAiLiveMonitor({
     title: 'Menyusun Dokumen Program Sekolah',
-    subtitle: `${tmpl?.title || 'Program Kerja'} • ${generateMode === 'section' ? 'Mode Bertahap Per-Bab (Detail Maksimal)' : 'Mode Penuh'}`,
-    steps: [
+    subtitle: `${tmpl?.title || 'Program Kerja'}. Tinjau draf sebelum digunakan.`,
+    steps: generateMode === 'section' ? [
       { id: 1, label: 'BAB I', icon: 'fa-book-open' },
       { id: 2, label: 'BAB II', icon: 'fa-graduation-cap' },
       { id: 3, label: 'BAB III & RAB', icon: 'fa-calendar-check' },
       { id: 4, label: 'BAB IV & V', icon: 'fa-clipboard-list' },
       { id: 5, label: 'Finalisasi', icon: 'fa-file-circle-check' },
+    ] : [
+      { id: 1, label: 'Menyiapkan acuan program' },
+      { id: 2, label: 'Menyusun kerangka' },
+      { id: 3, label: 'Menyusun isi program' },
+      { id: 4, label: 'Memeriksa draf' },
     ],
     onCancel: () => {
       showToast('Penyusunan program dibatalkan', 'info');
@@ -879,12 +884,14 @@ async function handleGenerateProgram() {
         monitor.updateStep(payload.step, payload.title, payload.message, payload.percent);
       } else if (event === 'token') {
         monitor.appendToken(payload.text || '');
+      } else if (event === 'reset') {
+        monitor.reset(payload.message);
       } else if (event === 'done') {
         rawGeneratedResult = payload;
       } else if (event === 'error') {
         throw new Error(payload.message || 'Gagal menghasilkan dokumen');
       }
-    });
+    }, { signal: monitor.signal, jobId: monitor.id });
 
     if (rawGeneratedResult) {
       monitor.complete(() => {
@@ -896,34 +903,7 @@ async function handleGenerateProgram() {
       throw new Error('Hasil respon AI kosong');
     }
   } catch (streamErr) {
-    console.warn('SSE stream failed or interrupted, falling back to direct JSON:', streamErr);
-    
-    // Direct JSON Fallback
-    try {
-      monitor.updateStep(3, 'Mengalihkan ke Mode Buffer...', 'Menyelesaikan penyusunan program via jalur stabil...', 80);
-      
-      const res = await fetch('/api/program-sekolah/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentProgramInput),
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || 'Gagal menghasilkan dokumen program');
-      }
-
-      const jsonRes = await res.json();
-      currentProgramData = jsonRes.data;
-
-      monitor.complete(() => {
-        showCanvasResult(currentProgramData);
-        showToast('Dokumen Program Kerja berhasil disusun!', 'success');
-      });
-    } catch (fallbackErr) {
-      monitor.close();
-      showToast(fallbackErr.message || 'Gagal menyusun program sekolah', 'error');
-    }
+    if (!monitor.signal.aborted) monitor.fail(streamErr);
   }
 }
 
@@ -979,29 +959,34 @@ async function handleGenerateBySections(monitor, baseInput, tmpl) {
     ]
   };
 
+  const completedSections = [];
   try {
     for (const sec of sections) {
+      monitor.signal.throwIfAborted();
       monitor.updateStep(sec.step, `Menyusun ${sec.name}`, `AI sedang menyusun narasi mendalam untuk ${sec.name}...`, sec.percent);
       monitor.appendToken(`\n=== [Bagian ${sec.step}/4] Menyusun ${sec.name} ===\n`);
 
-      const res = await api('/program-sekolah/generate-section', {
-        method: 'POST',
-        body: JSON.stringify({
+      let res;
+      await streamPost('/program-sekolah/generate-section-stream', {
           template: baseInput.template,
           identitas: baseInput.identitas,
           spesifik: baseInput.spesifik,
           section: sec.key,
           aiProvider: baseInput.aiProvider,
           currentData: accumulated
-        })
-      });
+      }, (event, payload) => {
+        if (event === 'token') monitor.appendToken(payload.text);
+        if (event === 'reset') monitor.reset(payload.message);
+        if (event === 'done') res = payload;
+      }, { signal: monitor.signal, jobId: `${monitor.id}-${sec.step}` });
 
       if (!res || !res.data || !res.data.mergedData) {
         throw new Error(res?.message || `Gagal menyusun ${sec.name}`);
       }
 
       accumulated = { ...accumulated, ...res.data.mergedData };
-      monitor.appendToken(`[SUKSES] ${sec.name} berhasil disusun tanpa terpotong batas token.\n`);
+      completedSections.push(sec.key);
+      monitor.appendToken(`[SUKSES] ${sec.name} tersedia untuk ditinjau.\n`);
     }
 
     monitor.updateStep(5, 'Finalisasi Dokumen Program', 'Mengintegrasikan instrumen asesmen dan lembar refleksi...', 98);
@@ -1012,9 +997,11 @@ async function handleGenerateBySections(monitor, baseInput, tmpl) {
       showToast('Dokumen Program Kerja (Semua Bab) berhasil disusun secara bertahap dengan narasi komprehensif!', 'success');
     });
   } catch (err) {
-    console.error('Generate by Section Error:', err);
-    monitor.close();
-    showToast(err.message || 'Gagal menyusun program secara bertahap', 'error');
+    if (completedSections.length) {
+      const missing = sections.filter(section => !completedSections.includes(section.key)).map(section => section.name);
+      accumulated._generation = { partial: true, missingSections: missing };
+      monitor.complete(() => { currentProgramData = accumulated; showCanvasResult(accumulated); }, { partial: true, warnings: [`Bagian belum tersedia: ${missing.join(', ')}. Tinjau hasil yang sudah selesai sebelum melanjutkan.`] });
+    } else if (!monitor.signal.aborted) monitor.fail(err);
   }
 }
 
@@ -1026,6 +1013,7 @@ function showCanvasResult(data) {
   const resultSec = document.getElementById('program-result-section');
   const canvasEl = document.getElementById('program-canvas');
   if (!resultSec || !canvasEl) return;
+  setGenerationNotice(resultSec, data._generation);
 
   const btnExcel = document.getElementById('btn-download-kaldik-excel');
   const btnDocx = document.getElementById('btn-download-docx');

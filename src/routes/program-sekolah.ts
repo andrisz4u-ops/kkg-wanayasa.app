@@ -1,5 +1,6 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { getCookie, getCurrentUser } from '../lib/auth';
@@ -1427,6 +1428,7 @@ export async function ensureProgramSekolahTables(db: D1Database): Promise<void> 
 // ============================================
 // Endpoint 1: SSE Live Streaming Generation
 // ============================================
+programSekolah.use('/generate-stream', requireSession);
 programSekolah.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -1454,8 +1456,11 @@ programSekolah.post('/generate-stream', async (c) => {
     };
     const preferredSlug = slugMap[aiProvider] || aiProvider;
 
+    const job = await createStreamJob(c, 'program-sekolah', body);
+    if ('response' in job) return job.response;
     c.header('X-Accel-Buffering', 'no');
-    return streamSSE(c, async (stream) => {
+    return streamSSE(c, async (rawStream) => {
+      const stream = job.attach(rawStream, ai);
       try {
         await stream.writeSSE({
           event: 'step',
@@ -1538,12 +1543,13 @@ programSekolah.post('/generate-stream', async (c) => {
           data: JSON.stringify(result),
         });
       } catch (err: any) {
+        if (job.signal.aborted) return;
         console.error('SSE Program Sekolah Stream Error:', err);
         await stream.writeSSE({
           event: 'error',
           data: JSON.stringify({ message: err.message || 'Gagal menghasilkan dokumen program sekolah' }),
         });
-      }
+      } finally { await job.dispose(); }
     });
   } catch (e: any) {
     console.error('Program Sekolah SSE Route Error:', e);
@@ -1614,7 +1620,9 @@ programSekolah.post('/generate', async (c) => {
 // ============================================
 // Endpoint 2b: Generate Khusus Bab / Bagian Tertentu (Hemat Token & Lebih Mendalam)
 // ============================================
-programSekolah.post('/generate-section', async (c) => {
+programSekolah.use('/generate-section', requireSession);
+programSekolah.use('/generate-section-stream', requireSession);
+const generateSection = async (c: Context<any>) => {
   try {
     const body = await c.req.json();
     const { template, identitas, spesifik, section, aiProvider, currentData } = body;
@@ -1645,8 +1653,17 @@ programSekolah.post('/generate-section', async (c) => {
     };
     const preferredSlug = slugMap[aiProvider] || aiProvider;
 
-    const rawResult = await ai.generateJSON(prompt, preferredSlug);
+    const normalizeSection = async (rawResult: any) => {
     const sanitizedResult = replacePesertaDidik(rawResult);
+    const keys: Record<string, string[]> = {
+      bab1: ['bab_1_pendahuluan'], bab2: ['bab_2_kajian_konseptual'],
+      bab3: ['bab_3_rencana_program', 'kegiatan', 'kegiatan_utama'],
+      bab4_5: ['bab_4_monitoring_evaluasi', 'bab_4_monitoring', 'mekanisme', 'evaluasi', 'indikator'],
+    };
+    if (!keys[section].some(key => sanitizedResult[key] && Object.keys(sanitizedResult[key]).length > 0)
+      || (section === 'bab4_5' && !Object.keys(sanitizedResult.bab_5_penutup || {}).length)) {
+      throw new Error('Model belum mengirimkan isi bab yang diminta. Bab sebelumnya tetap dapat ditinjau.');
+    }
 
     // Merge section ke dalam currentData jika ada
     let merged = currentData ? { ...currentData } : {};
@@ -1772,7 +1789,7 @@ programSekolah.post('/generate-section', async (c) => {
     try {
       const user = c.get('user' as any);
       await recordAIGeneration(c.env.DB, {
-        user_id: user?.id || 1,
+        user_id: user.id,
         user_nama: user?.nama || (identitas?.penyusun || 'Guru'),
         sekolah: user?.sekolah || (identitas?.namaSekolah || 'SDN'),
         feature_type: 'PROGRAM_SEKOLAH_SECTION',
@@ -1783,16 +1800,37 @@ programSekolah.post('/generate-section', async (c) => {
       });
     } catch (_) {}
 
-    return successResponse(c, {
+    return {
       section,
       sectionData: sanitizedResult,
       mergedData: merged,
-    });
+    };
+    };
+    if (c.req.path.endsWith('/generate-section-stream')) {
+      const job = await createStreamJob(c, 'program-section', body);
+      if (job.response) return job.response;
+      return streamSSE(c, async rawStream => {
+        const stream = job.attach(rawStream, ai);
+        try {
+          const rawResult = await ai.generateJSONStream(prompt, preferredSlug, token => {
+            void stream.writeSSE({ event: 'token', data: JSON.stringify({ text: token }) }).catch(() => {});
+          });
+          job.signal.throwIfAborted();
+          await stream.writeSSE({ event: 'done', data: JSON.stringify({ success: true, data: await normalizeSection(rawResult) }) });
+        } catch (error: any) {
+          if (!job.signal.aborted) await stream.writeSSE({ event: 'error', data: JSON.stringify({ message: error.message }) });
+        } finally { await job.dispose(); }
+      });
+    }
+    ai.setAbortSignal(c.req.raw.signal);
+    return successResponse(c, await normalizeSection(await ai.generateJSON(prompt, preferredSlug)));
   } catch (e: any) {
     console.error('Program Sekolah Section Gen Error:', e);
     return Errors.internal(c, e.message);
   }
-});
+};
+programSekolah.post('/generate-section', generateSection);
+programSekolah.post('/generate-section-stream', generateSection);
 
 // ============================================
 // Endpoint 3: Download DOCX Lengkap (BAB I-V + Lampiran dlm 1 File)

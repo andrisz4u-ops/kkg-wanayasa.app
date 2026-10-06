@@ -24,6 +24,7 @@ import programSekolahRoutes from './routes/program-sekolah';
 import rppRoutes from './routes/rpp';
 import kisiRoutes from './routes/kisi';
 import presentationRoutes from './routes/presentation';
+import aiJobsRoutes from './routes/ai-jobs';
 import ttsRoutes from './routes/tts';
 import banksoalRoutes from './routes/banksoal';
 import tenantRoutes from './routes/tenants';
@@ -34,6 +35,7 @@ import { hashPassword, getCurrentUser, getCookie } from './lib/auth';
 import { initSentry, captureError } from './lib/sentry';
 import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
+import { allowedCorsOrigin } from './lib/cors-origin';
 import type { AppBindings, AppVariables } from './types/env';
 
 const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
@@ -75,15 +77,9 @@ app.use('*', secureHeaders({
 
 // CORS - with proper configuration
 app.use('/api/*', cors({
-  origin: (origin) => {
-    // Allow same-origin and localhost for development
-    if (!origin) return '*';
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) return origin;
-    if (origin.includes('kkg-wanayasa')) return origin;
-    return null;
-  },
+  origin: (origin, c) => allowedCorsOrigin(origin, c.req.url, c.env.ENVIRONMENT, c.env.CORS_ORIGINS),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-AI-Job-Id'],
   credentials: true,
   maxAge: 86400,
 }));
@@ -133,6 +129,7 @@ app.route('/api/program-sekolah', programSekolahRoutes);
 app.route('/api/rpp', rppRoutes);
 app.route('/api/kisi', kisiRoutes);
 app.route('/api/presentation', presentationRoutes);
+app.route('/api/ai-jobs', aiJobsRoutes);
 app.route('/api/tts', ttsRoutes);
 app.route('/api/banksoal', banksoalRoutes);
 app.route('/api/tenants', tenantRoutes);
@@ -141,7 +138,7 @@ app.route('/api/tenants', tenantRoutes);
 app.get('/api/ai-providers/active', async (c) => {
   try {
     const result = await c.env.DB.prepare(
-      'SELECT id, name, slug, api_type, model, priority FROM ai_providers WHERE is_active = 1 ORDER BY priority ASC'
+      "SELECT id, name, slug, api_type, model, priority, CASE WHEN (api_type = 'custom_proxy' AND TRIM(COALESCE(base_url, '')) <> '') OR (api_key IS NOT NULL AND TRIM(api_key) NOT IN ('', '[]')) THEN 1 ELSE 0 END AS configured FROM ai_providers WHERE is_active = 1 ORDER BY priority ASC"
     ).all();
     return successResponse(c, result.results || []);
   } catch (e: any) {

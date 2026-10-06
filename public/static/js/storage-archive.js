@@ -1,6 +1,7 @@
 // Document Archive & History Helper - KKG Wanayasa Digital
 import { state } from './state.js';
 import { showToast, escapeHtml, formatRelativeTime } from './utils.js';
+import { openUiDialog, closeUiDialog } from './ui-dialog.js';
 
 const MAX_ARCHIVE_ITEMS = 30;
 
@@ -98,6 +99,16 @@ function formatArchiveDate(isoString) {
  * Open Slide-over Drawer for Document History
  */
 export function openArchiveDrawer({ module, moduleName = 'Dokumen', onSelect, onDownloadDocx }) {
+  const requestedId = state.pageParams?.archiveId;
+  if (requestedId) {
+    delete state.pageParams.archiveId;
+    const item = getDocArchiveById(module, requestedId);
+    if (item && onSelect) {
+      onSelect(item);
+      return;
+    }
+    showToast('Dokumen tidak ditemukan pada akun atau perangkat ini.', 'warning');
+  }
   const existing = document.getElementById('kkg-archive-drawer-root');
   if (existing) existing.remove();
 
@@ -198,7 +209,10 @@ export function openArchiveDrawer({ module, moduleName = 'Dokumen', onSelect, on
   document.body.appendChild(root);
 
   // Close handlers
-  const close = () => root.remove();
+  const close = () => closeUiDialog(root);
+  const heading = root.querySelector('h2, h3');
+  if (heading) heading.id = 'kkg-archive-title';
+  openUiDialog(root, { labelledBy: heading?.id, initialFocus: '#kkg-drawer-search', onClose: () => root.remove() });
   document.getElementById('kkg-drawer-close')?.addEventListener('click', close);
   document.getElementById('kkg-drawer-backdrop')?.addEventListener('click', close);
 

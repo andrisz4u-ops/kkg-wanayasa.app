@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import app from '../src/index';
 
+vi.mock('../src/lib/auth', async importOriginal => ({
+    ...await importOriginal<typeof import('../src/lib/auth')>(),
+    getCurrentUser: vi.fn(async () => ({ id: 1, nama: 'Guru Uji', role: 'user', sekolah: 'SD Uji' }))
+}));
+
 const mockEnv = {
     DB: {
         prepare: vi.fn(() => ({

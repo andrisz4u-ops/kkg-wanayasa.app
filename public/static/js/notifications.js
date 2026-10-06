@@ -38,8 +38,8 @@ export function renderNotificationBell() {
 
     return `
     <div class="relative group">
-        <button onclick="toggleNotifications()" class="p-2 rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-primary-600 transition-colors relative">
-            <i class="fas fa-bell text-xl"></i>
+        <button type="button" aria-label="Buka notifikasi" onclick="toggleNotifications()" class="p-2 rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-primary-600 transition-colors relative">
+            <i class="fas fa-bell text-xl" aria-hidden="true"></i>
             <span id="notification-badge" class="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center border-2 border-[var(--color-bg-elevated)] ${state.unreadNotifications > 0 ? '' : 'hidden'}">
                 ${state.unreadNotifications > 99 ? '99+' : state.unreadNotifications}
             </span>

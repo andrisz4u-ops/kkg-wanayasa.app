@@ -33,16 +33,15 @@ export async function renderAdmin() {
   const innerContent = `
     <!--Dashboard Tab -->
       <div id="panel-dashboard" class="animate-fade-in space-y-6">
-        <div class="rounded-3xl border border-slate-200/70 bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 px-6 md:px-8 py-8 shadow-[0_12px_24px_rgba(99,102,241,0.12)] relative overflow-hidden">
+        <div class="ui-admin-actions rounded-3xl border border-slate-200/70 bg-indigo-900/40 backdrop-blur-2xl border-indigo-500/20 text-slate-900 px-6 md:px-8 py-4 shadow-[0_12px_24px_rgba(99,102,241,0.12)] relative overflow-hidden">
           <!-- Subtle subtle geometric accents -->
           <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-bl-full pointer-events-none"></div>
           <div class="absolute bottom-0 left-0 w-32 h-32 bg-indigo-600/10 blur-3xl rounded-tr-full pointer-events-none"></div>
 
           <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 relative z-10">
             <div>
-              <span class="inline-block px-3 py-1 bg-white/10 border border-white/10 rounded-full text-[10px] uppercase font-semibold tracking-widest text-indigo-600 mb-4">Dashboard Operasional</span>
-              <h2 class="text-3xl md:text-4xl font-display font-semibold tracking-tighter mt-2">Selamat datang, ${escapeHtml(state.user?.nama?.split(' ')[0] || 'Admin')}</h2>
-              <p class="text-slate-900/60 mt-3 max-w-2xl font-light leading-relaxed tracking-tight">Pantau kondisi platform, selesaikan tugas prioritas harian, dan lakukan aksi penting tanpa berpindah halaman.</p>
+              <h2 class="text-xl font-display font-semibold tracking-tight">Tindakan cepat</h2>
+              <p class="text-slate-900/60 mt-2 max-w-2xl leading-relaxed">Kelola anggota, sekolah, dan pengaturan KKG.</p>
               <span id="dashboard-mode-label" class="inline-flex mt-4 px-2.5 py-1 rounded border border-white/20 bg-white/5 text-[10px] tracking-wide">Mode Admin Utama</span>
             </div>
             <div class="flex flex-wrap gap-3 text-xs">
@@ -288,7 +287,7 @@ export async function renderAdmin() {
               </div>
             </div>
             <div class="flex items-center gap-2 text-xs self-start sm:self-auto flex-wrap">
-              <label class="text-[10px] uppercase font-semibold text-slate-500 tracking-widest hidden md:inline">Periode</label>
+              <label for="school-analytics-month" class="text-xs font-semibold text-slate-500">Periode</label>
               <select id="school-analytics-month" onchange="window.loadSchoolAiAnalytics(this.value)" class="px-4 py-2 rounded-xl border border-slate-200/80 bg-slate-50 text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
                 <option value="">Memuat bulan...</option>
               </select>

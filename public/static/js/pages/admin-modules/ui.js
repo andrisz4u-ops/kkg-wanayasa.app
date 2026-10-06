@@ -1,4 +1,6 @@
 import { state } from '../../state.js';
+import { syncAdminContext } from '../../layouts/admin.js';
+import { updateAdminPanelLocation } from '../../router.js';
 import { api } from '../../api.js';
 import { debounce, escapeHtml } from '../../utils.js';
 import {
@@ -362,7 +364,7 @@ window.initAdminData = async function () {
 
   // Sync panel visibility with the active tab (don't force-reset if user switched tab)
   const activeTab = state.currentAdminTab || 'dashboard';
-  const allPanels = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers'];
+  const allPanels = ['dashboard', 'profil', 'sekolah', 'templates', 'users', 'logs', 'ai-providers', 'cp'];
   allPanels.forEach(tabName => {
     const panel = document.getElementById(`panel-${tabName}`);
     if (panel) {
@@ -380,6 +382,7 @@ window.initAdminData = async function () {
   window.setAdminDensity(adminTableDensity);
   syncDashboardControlState();
   applyAdminModeUI();
+  syncAdminContext(activeTab);
 
   // Start auto-refresh if on dashboard tab
   if (window.startDashboardAutoRefresh) {
@@ -475,6 +478,8 @@ window.switchAdminTab = function (tab) {
   }
 
   applyAdminModeUI();
+  syncAdminContext(tab);
+  updateAdminPanelLocation(tab);
 }
 
 // Global handler for sidebar tab clicks

@@ -1,0 +1,12 @@
+export const slideTemplates = {
+  'kelas-ceria': { name: 'Kelas Ceria', category: 'cerita', description: 'Judul ramah, bidang warna hangat dan aktivitas yang mengajak anak berbicara.', cover: 'poster', body: 'tiles', font: 'Trebuchet MS', headingFont: 'Trebuchet MS', colors: { background: '#fff9ec', paper: '#ffffff', ink: '#30291c', muted: '#685a40', primary: '#994417', soft: '#ffe3a5', secondary: '#256756' } },
+  'jelajah-ipas': { name: 'Jelajah IPAS', category: 'eksplorasi', description: 'Bidang hijau, diagram besar dan alur pengamatan untuk memahami lingkungan.', cover: 'field', body: 'rail', font: 'Calibri', headingFont: 'Trebuchet MS', colors: { background: '#eff8f3', paper: '#ffffff', ink: '#14392e', muted: '#466658', primary: '#165f46', soft: '#ccebd7', secondary: '#286784' } },
+  'matematika-visual': { name: 'Matematika Visual', category: 'eksplorasi', description: 'Angka terbaca, model pecahan dan perbandingan dengan bidang kerja lapang.', cover: 'split', body: 'rail', font: 'Calibri', headingFont: 'Trebuchet MS', colors: { background: '#f1f6fc', paper: '#ffffff', ink: '#182f50', muted: '#4e617b', primary: '#234fa0', soft: '#d5e4fb', secondary: '#8f4b0f' } },
+  'cerita-budaya': { name: 'Cerita & Budaya', category: 'cerita', description: 'Judul serif dan komposisi seperti buku untuk bahasa, cerita dan budaya lokal.', cover: 'editorial', body: 'editorial', font: 'Calibri', headingFont: 'Georgia', colors: { background: '#faf2e8', paper: '#fffdf8', ink: '#472d29', muted: '#725b54', primary: '#913f32', soft: '#f2d5c5', secondary: '#4b6650' } },
+};
+const aliases = { 'minimalist-dark': 'jelajah-ipas', 'educational-blue': 'matematika-visual', 'minimalist-light': 'matematika-visual', 'colorful-rainbow': 'kelas-ceria', 'aurora-cosmic': 'jelajah-ipas', 'sunset-warm': 'cerita-budaya', 'ocean-deep': 'jelajah-ipas', 'sakura-bloom': 'kelas-ceria', 'golden-luxury': 'cerita-budaya' };
+export const resolveTemplateId = id => slideTemplates[id] ? id : aliases[id] || 'kelas-ceria';
+export const getTemplate = id => slideTemplates[resolveTemplateId(id)];
+export const slideLayouts = [
+  ['title', 'Pembuka'], ['content', 'Konsep inti'], ['imageText', 'Visual & penjelasan'], ['twoColumn', 'Dua gagasan'], ['comparison', 'Perbandingan'], ['timeline', 'Urutan proses'], ['stats', 'Angka bermakna'], ['quiz', 'Cek pemahaman'], ['flipcard', 'Tebak konsep'], ['activity', 'Aktivitas kelas'], ['quote', 'Definisi / kutipan'], ['summary', 'Rangkuman'], ['thankyou', 'Refleksi penutup'],
+].map(([id, name]) => ({ id, name }));

@@ -174,7 +174,7 @@ async function loadMateriList() {
     if (container) {
       container.innerHTML = list.length > 0
         ? list.map(m => renderMateriCard(m)).join('')
-        : emptyState('fa-folder-open', 'Belum ada materi yang diupload');
+        : emptyState('fa-folder-open', 'Belum ada materi bersama', 'Unggah perangkat ajar untuk berbagi dengan anggota KKG.');
     }
   } catch (e) {
     console.error('Load materi error:', e);

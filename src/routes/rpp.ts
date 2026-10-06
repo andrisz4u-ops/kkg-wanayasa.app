@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { generateRppBuffer, type RppInputData, type RppContentData } from '../lib/docx-generator';
@@ -258,6 +259,7 @@ rpp.post('/generate', async (c) => {
 });
 
 // Generate RPP Stream (SSE - Live Monitor)
+rpp.use('/generate-stream', requireSession);
 rpp.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -292,8 +294,11 @@ rpp.post('/generate-stream', async (c) => {
     };
     const preferredSlug = slugMap[aiProvider] || aiProvider;
 
+    const job = await createStreamJob(c, 'rpp', body);
+    if ('response' in job) return job.response;
     c.header('X-Accel-Buffering', 'no');
-    return streamSSE(c, async (stream) => {
+    return streamSSE(c, async (rawStream) => {
+      const stream = job.attach(rawStream, ai);
       try {
         const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp')) ? 'Kepka BKPDM 020/2026' : 'BSKAP 046/2025';
         await stream.writeSSE({
@@ -334,8 +339,8 @@ rpp.post('/generate-stream', async (c) => {
           data: JSON.stringify({
             step: 3,
             totalSteps: 4,
-            title: 'Asesmen & Instrumen LKPD',
-            message: 'Menyusun rubrik asesmen formatif-sumatif dan lembar kerja murid...',
+            title: 'Memeriksa struktur RPP',
+            message: 'Merapikan struktur draf dan pengaturan lampiran...',
             percent: 80
           })
         });
@@ -365,7 +370,7 @@ rpp.post('/generate-stream', async (c) => {
             step: 4,
             totalSteps: 4,
             title: 'Finalisasi Dokumen RPP',
-            message: 'Dokumen RPP Deep Learning siap ajar berhasil dirakit!',
+            message: 'Draf RPP siap ditinjau sesuai kebutuhan kelas.',
             percent: 100
           })
         });
@@ -378,6 +383,7 @@ rpp.post('/generate-stream', async (c) => {
           })
         });
       } catch (err: any) {
+        if (job.signal.aborted) return;
         console.error('RPP Stream Error:', err);
         await stream.writeSSE({
           event: 'error',
@@ -385,7 +391,7 @@ rpp.post('/generate-stream', async (c) => {
             message: err.message || 'Gagal menghasilkan RPP secara streaming'
           })
         });
-      }
+      } finally { await job.dispose(); }
     });
   } catch (e: any) {
     console.error('RPP Route Stream Error:', e);

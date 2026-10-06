@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
-    "build": "npm run build:css && vite build",
+    "build": "npm run build:slides && npm run build:css && vite build",
+    "build:slides": "node ./scripts/build-slide-vendor.mjs",
     "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --minify",
     "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --watch",
     "preview": "wrangler pages dev dist",
@@ -29,10 +30,19 @@
     "cheerio": "^1.2.0",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
-    "hono": "^4.7.5",
+    "hono": "^4.13.13",
     "mammoth": "^1.11.0",
+    "pptxgenjs": "4.0.0",
     "qrcode": "^1.5.4",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "@mistralai/mistralai": {
+      "ws": "^8.22.0"
+    },
+    "pptxgenjs": {
+      "image-size": "^2.0.4"
+    }
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260207.0",

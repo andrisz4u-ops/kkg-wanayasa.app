@@ -2,10 +2,16 @@ import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import type { CreateKegiatanRequest, Kegiatan, AbsensiWithUser } from '../types';
+import { requireSession } from '../lib/session-middleware';
+import { attendanceSummary, csvCell } from '../lib/attendance-summary';
 
 type Bindings = { DB: D1Database };
 
-const absensi = new Hono<{ Bindings: Bindings }>();
+const absensi = new Hono<{ Bindings: Bindings; Variables: { user: any } }>();
+absensi.use('/kegiatan/:id/absensi', requireSession);
+absensi.use('/rekap', requireSession);
+absensi.use('/rekap/*', requireSession);
+absensi.use('/export/*', requireSession);
 
 // Get all kegiatan
 absensi.get('/kegiatan', async (c) => {
@@ -183,35 +189,8 @@ absensi.get('/rekap', async (c) => {
     const startDate = c.req.query('start_date');
     const endDate = c.req.query('end_date');
 
-    let dateFilter = '';
-    const params: any[] = [];
-
-    if (startDate && endDate) {
-      dateFilter = `AND k.tanggal BETWEEN ? AND ?`;
-      params.push(startDate, endDate);
-    } else if (startDate) {
-      dateFilter = `AND k.tanggal >= ?`;
-      params.push(startDate);
-    } else if (endDate) {
-      dateFilter = `AND k.tanggal <= ?`;
-      params.push(endDate);
-    }
-
-    const results = await c.env.DB.prepare(`
-      SELECT 
-        u.id, u.nama, u.nip, u.sekolah,
-        COUNT(CASE WHEN a.status = 'hadir' THEN 1 END) as total_hadir,
-        COUNT(CASE WHEN a.status = 'izin' THEN 1 END) as total_izin,
-        COUNT(CASE WHEN a.status = 'sakit' THEN 1 END) as total_sakit,
-        COUNT(DISTINCT a.kegiatan_id) as total_tercatat,
-        (SELECT COUNT(*) FROM kegiatan k WHERE 1=1 ${dateFilter}) as total_kegiatan
-      FROM users u
-      LEFT JOIN absensi a ON u.id = a.user_id
-      LEFT JOIN kegiatan k ON a.kegiatan_id = k.id
-      WHERE u.role = 'user'
-      GROUP BY u.id
-      ORDER BY total_hadir DESC, u.nama ASC
-    `).bind(...params).all();
+    const query = attendanceSummary(startDate, endDate);
+    const results = await c.env.DB.prepare(query.sql).bind(...query.params).all();
 
     // Calculate alpha (tidak hadir tanpa keterangan)
     const dataWithAlpha = results.results?.map((row: any) => ({
@@ -221,6 +200,7 @@ absensi.get('/rekap', async (c) => {
 
     return successResponse(c, dataWithAlpha);
   } catch (e: any) {
+    if (e instanceof RangeError) return Errors.validation(c, e.message);
     console.error('Get rekap error:', e);
     return Errors.internal(c);
   }
@@ -240,29 +220,8 @@ absensi.get('/rekap/export', async (c) => {
     const startDate = c.req.query('start_date');
     const endDate = c.req.query('end_date');
 
-    let dateFilter = '';
-    const params: any[] = [];
-
-    if (startDate && endDate) {
-      dateFilter = `AND k.tanggal BETWEEN ? AND ?`;
-      params.push(startDate, endDate);
-    }
-
-    const results = await c.env.DB.prepare(`
-      SELECT 
-        u.nama, u.nip, u.sekolah,
-        COUNT(CASE WHEN a.status = 'hadir' THEN 1 END) as hadir,
-        COUNT(CASE WHEN a.status = 'izin' THEN 1 END) as izin,
-        COUNT(CASE WHEN a.status = 'sakit' THEN 1 END) as sakit,
-        COUNT(DISTINCT a.kegiatan_id) as tercatat,
-        (SELECT COUNT(*) FROM kegiatan k WHERE 1=1 ${dateFilter}) as total_kegiatan
-      FROM users u
-      LEFT JOIN absensi a ON u.id = a.user_id
-      LEFT JOIN kegiatan k ON a.kegiatan_id = k.id
-      WHERE u.role = 'user'
-      GROUP BY u.id
-      ORDER BY u.nama ASC
-    `).bind(...params).all();
+    const query = attendanceSummary(startDate, endDate, true);
+    const results = await c.env.DB.prepare(query.sql).bind(...query.params).all();
 
     if (format === 'csv') {
       // Generate CSV
@@ -272,7 +231,7 @@ absensi.get('/rekap/export', async (c) => {
         const percentage = r.total_kegiatan > 0
           ? ((r.hadir / r.total_kegiatan) * 100).toFixed(1) + '%'
           : '0%';
-        return [r.nama, r.nip || '', r.sekolah || '', r.hadir, r.izin, r.sakit, alpha, r.total_kegiatan, percentage].join(',');
+        return [r.nama, r.nip || '', r.sekolah || '', r.hadir, r.izin, r.sakit, alpha, r.total_kegiatan, percentage].map(csvCell).join(',');
       });
 
       const csv = [headers.join(','), ...(rows || [])].join('\n');
@@ -290,6 +249,7 @@ absensi.get('/rekap/export', async (c) => {
     // JSON format (for Excel generation on client)
     return successResponse(c, results.results);
   } catch (e: any) {
+    if (e instanceof RangeError) return Errors.validation(c, e.message);
     console.error('Export rekap error:', e);
     return Errors.internal(c);
   }

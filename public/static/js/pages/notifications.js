@@ -14,12 +14,12 @@ export async function renderNotifications() {
             <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <i class="fas fa-bell text-yellow-500"></i> Notifikasi
             </h1>
-            <button onclick="markAllReadAndRefresh()" class="btn btn-sm btn-secondary">
+            <button id="btn-mark-all-read" disabled onclick="markAllReadAndRefresh()" class="btn btn-sm btn-secondary">
                 <i class="fas fa-check-double mr-2"></i>Tandai Semua Dibaca
             </button>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div id="notifications-page-list" class="divide-y divide-gray-100">
                 <div class="p-8 text-center text-gray-500">
                     <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
@@ -27,7 +27,7 @@ export async function renderNotifications() {
                 </div>
             </div>
             
-            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center">
+            <div id="notifications-page-footer" class="notification-footer hidden bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center">
                  <button onclick="loadMoreNotifications()" id="btn-load-more" class="text-sm text-blue-600 font-medium hover:text-blue-800 disabled:opacity-50">
                     Muat Lebih Banyak
                  </button>
@@ -47,6 +47,9 @@ window.loadPageNotifications = async function (offset = 0, append = false) {
     try {
         const res = await api(`/notifications?limit=20&offset=${offset}`);
         const notifications = res.data.notifications || [];
+        const markAll = document.getElementById('btn-mark-all-read');
+        if (markAll) markAll.disabled = !(res.data.unread_count > 0 || notifications.some(n => !n.is_read));
+        document.getElementById('notifications-page-footer')?.classList.toggle('hidden', notifications.length < 20);
 
         if (notifications.length === 0 && !append) {
             list.innerHTML = `
@@ -54,7 +57,7 @@ window.loadPageNotifications = async function (offset = 0, append = false) {
                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <i class="far fa-bell-slash text-2xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900">Tidak ada notifikasi</h3>
+                    <h2 class="text-lg font-medium text-gray-900">Tidak ada notifikasi</h2>
                     <p class="text-gray-500 max-w-sm mt-1">Anda belum memiliki notifikasi apapun saat ini.</p>
                 </div>
             `;
@@ -79,7 +82,7 @@ window.loadPageNotifications = async function (offset = 0, append = false) {
             const iconClass = iconMap[n.type] || iconMap.info;
 
             return `
-                <div class="p-4 hover:bg-gray-50 transition-colors ${n.is_read ? '' : 'bg-blue-50/40 relative'} group">
+                <div class="p-4 hover:bg-gray-50 transition-colors ${n.is_read ? '' : 'notification-unread bg-blue-50/40 relative'} group">
                     <div class="flex gap-4">
                         <div class="flex-shrink-0 mt-1">
                             <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconClass.split(' ').slice(1).join(' ')}">
@@ -88,7 +91,7 @@ window.loadPageNotifications = async function (offset = 0, append = false) {
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
-                                <h4 class="text-sm font-bold text-gray-900 ${n.is_read ? '' : 'text-blue-800'}">${escapeHtml(n.title)}</h4>
+                                <h2 class="text-sm font-bold text-gray-900 ${n.is_read ? '' : 'text-blue-800'}">${escapeHtml(n.title)}</h2>
                                 <span class="text-xs text-gray-500 whitespace-nowrap ml-2">${formatTime(n.created_at)}</span>
                             </div>
                             <p class="text-sm text-gray-600 mt-1 whitespace-pre-wrap">${escapeHtml(n.message)}</p>

@@ -2,7 +2,7 @@
 // Handles standard response format and errors
 
 import { state } from './state.js';
-import { showToast } from './utils.js';
+import { showToast, hasActiveAiJob, getActiveAiJobSignal } from './utils.js';
 
 const API_BASE = '/api';
 let csrfRetryCount = 0;
@@ -58,6 +58,9 @@ export function getCsrfToken() {
  * Handles authentication, CSRF, and error responses
  */
 export async function api(path, options = {}) {
+  if (options.method?.toUpperCase() === 'POST' && /\/(rpp|kisi|analisis-cp|program-sekolah|presentation|tts|surat|proker|laporan)\/(generate(?:-section)?|outline|patch-slide|custom)(?:$|\?)/.test(path) && hasActiveAiJob() && options.signal !== getActiveAiJobSignal()) {
+    throw new Error('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.');
+  }
     let cleanPath = path;
     if (cleanPath.startsWith('/api/')) {
         cleanPath = cleanPath.substring(4);
@@ -102,18 +105,21 @@ export async function api(path, options = {}) {
         mergedOptions.body = JSON.stringify(mergedOptions.body);
     }
 
+    const controller = new AbortController();
+    const cancel = () => controller.abort(options.signal.reason || new DOMException('Permintaan dibatalkan.', 'AbortError'));
+    if (options.signal?.aborted) cancel();
+    else options.signal?.addEventListener('abort', cancel, { once: true });
+    let id;
     try {
-        const controller = new AbortController();
         const isAiOperation = path.includes('analisis-cp') || path.includes('generate') || path.includes('extract') || path.includes('lampiran') || path.includes('kisi');
         const defaultTimeout = isAiOperation ? 120000 : 30000;
         const timeoutMs = options.timeout || defaultTimeout;
-        const id = setTimeout(() => controller.abort(), timeoutMs);
+        id = setTimeout(() => controller.abort(), timeoutMs);
         mergedOptions.signal = controller.signal;
         // Remove non-fetch properties
         delete mergedOptions.timeout;
 
         const response = await fetch(url, mergedOptions);
-        clearTimeout(id);
 
         // Handle rate limiting
         if (response.status === 429) {
@@ -161,6 +167,7 @@ export async function api(path, options = {}) {
 
         return data;
     } catch (error) {
+        if (options.signal?.aborted) throw options.signal.reason || new DOMException('Permintaan dibatalkan.', 'AbortError');
         if (error instanceof ApiError) {
             throw error;
         }
@@ -180,10 +187,13 @@ export async function api(path, options = {}) {
         if (error.name === 'AbortError') {
             msg = 'Request timeout. Server terlalu lama merespons (AI sedang sibuk).';
         } else if (error.message.includes('Failed to fetch')) {
-            msg = 'Tidak dapat menyambung ke server. Pastikan Anda membuka http://localhost:5173';
+            msg = 'Tidak dapat menyambung ke server. Periksa koneksi, lalu coba lagi.';
         }
 
         throw new ApiError(msg, 'NETWORK_ERROR', 0);
+    } finally {
+        clearTimeout(id);
+        options.signal?.removeEventListener('abort', cancel);
     }
 }
 

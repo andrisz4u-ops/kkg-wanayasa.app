@@ -1,0 +1,217 @@
+@media screen {
+  /* Keep selected controls on the RuangKKG green scale while preserving distinct status colors. */
+  .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem.bg-sky-500 {
+    min-height: 40px;
+    padding-inline: 10px;
+    color: #fff;
+    background: #176b4b;
+    border: 1px solid #176b4b;
+    box-shadow: none;
+  }
+  .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem.bg-purple-600 {
+    min-height: 40px;
+    padding-inline: 10px;
+    color: #fff;
+    background: #0b3529;
+    border: 1px solid #0b3529;
+    box-shadow: none;
+  }
+  .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem:focus-visible {
+    outline: 3px solid #0b3529;
+    outline-offset: 2px;
+  }
+  .feature-workspace[data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate {
+    min-height: 52px;
+    color: #fff;
+    background: #176b4b;
+    background-image: none;
+    border: 1px solid #176b4b;
+    border-radius: 10px;
+    box-shadow: none;
+    letter-spacing: 0;
+  }
+  .feature-workspace[data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate:hover {
+    background: #11583d;
+    border-color: #11583d;
+  }
+  .feature-workspace[data-composition] :is(.fc-action-dock .rpp-generate-btn, .fc-wide-action) {
+    min-width: min(100%, 280px);
+    min-height: 56px;
+    border-radius: 10px;
+    letter-spacing: 0;
+  }
+  .feature-workspace[data-composition] :is(.fc-action-dock .rpp-generate-btn, .fc-wide-action):focus-visible {
+    outline: 3px solid #0b3529;
+    outline-offset: 3px;
+  }
+  .dark .feature-workspace[data-composition] :is(.fc-action-dock .rpp-generate-btn, .fc-wide-action):focus-visible {
+    outline-color: #bef2c9;
+  }
+
+  #game-catalog-filter-chips button.bg-teal-500 {
+    color: #fff;
+    background-color: #176b4b !important;
+    box-shadow: none;
+  }
+  #game-catalog-filter-chips button:focus-visible,
+  #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn):focus-visible {
+    outline: 3px solid #0b3529;
+    outline-offset: 2px;
+  }
+  .dark .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem:focus-visible,
+  .dark #game-catalog-filter-chips button:focus-visible,
+  .dark #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn):focus-visible {
+    outline-color: #bef2c9;
+  }
+
+  #panel-dashboard > :first-child {
+    padding: 26px 30px;
+    color: #f4fff8;
+    background: linear-gradient(125deg, #0b3529, #10533b);
+    border: 1px solid #287355;
+    border-radius: 18px;
+    box-shadow: none;
+  }
+  #panel-dashboard > :first-child .fw-decoration { display: none; }
+  #panel-dashboard > :first-child h2 { color: #fff; }
+  #panel-dashboard > :first-child p { color: #d3ebda; }
+  #panel-dashboard > :first-child > div:first-child > span:first-child {
+    color: #b8eac8;
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(220, 255, 227, .2);
+  }
+  #panel-dashboard > :first-child #dashboard-mode-label {
+    color: #d3ebda;
+    background: rgba(255, 255, 255, .06);
+    border-color: rgba(220, 255, 227, .25);
+  }
+  #panel-dashboard > :first-child .flex-wrap > button:not(:first-child) {
+    color: #f0fff3;
+    background: rgba(255, 255, 255, .09);
+    border-color: rgba(214, 255, 225, .35);
+    box-shadow: none;
+  }
+  #panel-dashboard > :first-child .flex-wrap > button:not(:first-child):hover {
+    background: rgba(255, 255, 255, .16);
+  }
+
+  #panel-dashboard > .grid:has(#total-guru) { gap: 14px; }
+  #panel-dashboard > .grid:has(#total-guru) > div {
+    padding: 20px;
+    background: #fff;
+    border-color: #d8e7dc;
+    border-radius: 16px;
+    box-shadow: none;
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  #panel-dashboard > .grid:has(#total-guru) > div:hover {
+    border-color: #9dbfa7;
+    background: #fbfdfb;
+    transform: none;
+  }
+  #panel-dashboard > .grid:has(#total-guru) > div > div:first-child > span:first-child {
+    width: 40px;
+    height: 40px;
+    color: #176b4b;
+    background: #eaf3ec;
+    border-color: #d8e7dc;
+  }
+  #panel-dashboard > .grid:has(#total-guru) > div h3 {
+    color: #17382b;
+    font-size: 32px;
+    line-height: 1.15;
+  }
+
+  #panel-dashboard > .grid:has(#metric-new-users) { gap: 10px; }
+  #panel-dashboard > .grid:has(#metric-new-users) > div {
+    padding: 14px 16px;
+    background: #f3f8f4;
+    border-color: #e0ebe2;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+  #panel-dashboard > .grid:has(#metric-new-users) > div p:first-child {
+    color: #506b5c;
+    letter-spacing: .08em;
+  }
+  #panel-dashboard > .grid:has(#metric-new-users) > div p:last-child {
+    color: #17382b;
+    font-size: 22px;
+  }
+  #panel-dashboard > .grid:has(#metric-new-users) > div:has(#metric-pending-users) {
+    background: #fff8e8;
+    border-color: #f0dfb3;
+  }
+  #panel-dashboard > .grid:has(#metric-new-users) > div:has(#metric-pending-users) p { color: #875c11; }
+
+  #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn).bg-primary-600 {
+    color: #fff !important;
+    background-color: #176b4b !important;
+    background-image: none !important;
+    border-color: #176b4b !important;
+    box-shadow: none;
+  }
+  #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn).bg-primary-600:hover {
+    background-color: #11583d !important;
+    border-color: #11583d !important;
+  }
+
+  .dark #panel-dashboard > .grid:has(#total-guru) > div {
+    color: #eef8f0;
+    background: #1b2c24;
+    border-color: #3a5443;
+  }
+  .dark #panel-dashboard > .grid:has(#total-guru) > div p { color: #bbd1c1; }
+  .dark #panel-dashboard > .grid:has(#total-guru) > div h3 { color: #eef8f0; }
+  .dark #panel-dashboard > .grid:has(#total-guru) > div > div:first-child > span:first-child {
+    color: #a2e4b4;
+    background: #294a36;
+    border-color: #3a5443;
+  }
+  .dark #panel-dashboard > .grid:has(#total-guru) > div > div:first-child > span:last-child {
+    color: #bbd1c1;
+    background: #243b2d;
+    border-color: #3a5443;
+  }
+  .dark #panel-dashboard > .grid:has(#metric-new-users) > div {
+    background: #243b2d;
+    border-color: #3a5443;
+  }
+  .dark #panel-dashboard > .grid:has(#metric-new-users) > div p:first-child { color: #bbd1c1; }
+  .dark #panel-dashboard > .grid:has(#metric-new-users) > div p:last-child { color: #eef8f0; }
+  .dark #panel-dashboard > .grid:has(#metric-new-users) > div:has(#metric-pending-users) {
+    background: #3b3020;
+    border-color: #6b5530;
+  }
+  .dark #panel-dashboard > .grid:has(#metric-new-users) > div:has(#metric-pending-users) p { color: #f1daa2; }
+
+  .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-welcome { gap: 14px; }
+  .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-hero-actions { margin-top: 18px; }
+  .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-studio-agenda { padding: 16px; }
+
+  @media (max-width: 600px) {
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-welcome { padding: 18px 16px 15px; gap: 12px; }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-welcome-description { margin-top: 7px; line-height: 1.5; }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-welcome-context { padding-top: 11px; }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-hero-actions { margin-top: 13px; }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-hero-side .wk-today { margin-bottom: 7px; }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-studio-agenda { padding: 10px 12px; }
+    #panel-dashboard > :first-child { padding: 20px 18px; }
+    #panel-dashboard > .grid:has(#total-guru) > div { padding: 16px; }
+    .feature-workspace[data-composition] :is(.fc-action-dock .rpp-generate-btn, .fc-wide-action) {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  @media (min-width: 381px) and (max-width: 600px) {
+    #panel-dashboard > .grid:has(#total-guru),
+    #panel-dashboard > .grid:has(#metric-new-users) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+  #panel-dashboard > .grid:has(#total-guru) > div { transition: none; }
+}

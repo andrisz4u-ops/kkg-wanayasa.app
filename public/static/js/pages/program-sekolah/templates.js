@@ -35,8 +35,6 @@ export const PROGRAM_TEMPLATES = [
         options: [
           '108 JP per Tahun (Rata-rata Kelas 1-5 SD)',
           '96 JP per Tahun (Kelas 6 SD)',
-          '144 JP per Tahun (Jenjang SMP)',
-          '180 JP per Tahun (Jenjang SMA/SMK)',
         ],
         default: '108 JP per Tahun (Rata-rata Kelas 1-5 SD)',
         hint: 'Sesuai ketentuan alokasi 20-30% jam pelajaran intrakurikuler Permendikdasmen No. 13/2025.',

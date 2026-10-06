@@ -130,7 +130,9 @@ laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c)
             penutup_saran: extractRegex(p('B\\.\\s*Saran'), null)
         };
 
-        return successResponse(c, parsed);
+        const missingSections = Object.entries(parsed).filter(([, value]) => !value.trim()).map(([key]) => key);
+        if (missingSections.length === Object.keys(parsed).length) throw new Error('Jawaban AI belum memuat bagian laporan yang dapat ditinjau. Silakan coba lagi.');
+        return successResponse(c, { ...parsed, _generation: { partial: missingSections.length > 0, missingSections } });
 
     } catch (e: any) {
         console.error('Error generating AI content:', e);

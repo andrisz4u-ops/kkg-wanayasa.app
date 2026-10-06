@@ -3,9 +3,11 @@ import { AIService } from '../services/ai';
 import { generateCrossword } from '../lib/crossword';
 import { successResponse, Errors } from '../lib/response';
 import { recordAIGeneration } from '../lib/telemetry';
+import { requireSession } from '../lib/session-middleware';
 import type { AppBindings, AppVariables } from '../types/env';
 
 const ttsRoutes = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
+ttsRoutes.use('*', requireSession);
 
 /**
  * AI Crossword Generator
@@ -91,9 +93,9 @@ ttsRoutes.post('/generate', async (c) => {
         try {
             const user = c.get('user');
             await recordAIGeneration(c.env.DB, {
-                user_id: user?.id || 1,
-                user_nama: user?.nama || 'Guru',
-                sekolah: user?.sekolah || 'SD Negeri Binaan',
+                user_id: user.id,
+                user_nama: user.nama,
+                sekolah: user.sekolah || user.sekolah_nama || '',
                 feature_type: 'TTS',
                 mata_pelajaran: mataPelajaran,
                 topik: topik,

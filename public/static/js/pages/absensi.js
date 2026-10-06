@@ -2,16 +2,18 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { formatDate, formatDateTime, escapeHtml, showToast } from '../utils.js';
+import { renderLoadFailure, renderEmptyState } from '../ui-load-state.js';
 
 export async function renderAbsensi() {
   let kegiatan = [];
-  try { const res = await api('/absensi/kegiatan'); kegiatan = res.data || []; } catch (e) { }
+  let loadFailed = false;
+  try { const res = await api('/absensi/kegiatan'); kegiatan = res.data || []; } catch (e) { loadFailed = true; }
 
   return `
   <div class="fade-in max-w-5xl mx-auto py-8 px-4">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100"><i class="fas fa-calendar-check text-purple-500 mr-2"></i>Absensi Digital</h1>
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100"><i class="fas fa-calendar-check text-purple-500 mr-2"></i>Presensi kegiatan</h1>
         <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Kelola kehadiran kegiatan KKG</p>
       </div>
       <div class="flex gap-2">
@@ -49,7 +51,7 @@ export async function renderAbsensi() {
     <div id="rekap-container" class="hidden mb-8"></div>
 
     <div class="space-y-4">
-      ${kegiatan.length > 0 ? kegiatan.map(k => `
+      ${loadFailed ? renderLoadFailure('Kegiatan presensi belum dapat dimuat', 'absensi') : kegiatan.length > 0 ? kegiatan.map(k => `
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-500 transition">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex-1">
@@ -63,12 +65,12 @@ export async function renderAbsensi() {
             </div>
             <div class="flex flex-wrap gap-2">
               ${state.user?.role === 'admin' ? `<button onclick="showQRCode(${k.id})" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition"><i class="fas fa-qrcode mr-1"></i>QR</button>` : ''}
-              ${state.user ? `<button onclick="checkinAbsensi(${k.id})" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"><i class="fas fa-check mr-1"></i>Check-in</button>` : ''}
+              ${state.user ? `<button onclick="checkinAbsensi(${k.id})" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition"><i class="fas fa-check mr-1"></i>Catat kehadiran</button>` : ''}
               <button onclick="viewAbsensi(${k.id}, '${escapeHtml(k.nama_kegiatan)}')" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium dark:text-gray-200"><i class="fas fa-list mr-1"></i>Daftar Hadir</button>
             </div>
           </div>
         </div>
-      `).join('') : '<div class="text-center py-12 text-gray-400 dark:text-gray-500"><i class="fas fa-calendar-times text-4xl mb-4 block"></i>Belum ada data kegiatan.</div>'}
+      `).join('') : renderEmptyState('Belum ada kegiatan presensi', 'Pengurus dapat menambahkan Kegiatan Baru. Setelah kegiatan tersedia, anggota dapat mencatat kehadiran atau memindai QR.')}
     </div>
 
     <div id="absensi-detail" class="hidden mt-8"></div>

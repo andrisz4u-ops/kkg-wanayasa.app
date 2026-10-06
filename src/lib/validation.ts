@@ -193,6 +193,8 @@ export const presentationOutlineItemSchema = z.object({
 });
 
 export const presentationOutlineSchema = z.object({
+    tujuanPembelajaran: z.string().max(1000).optional().default(''),
+    extraInstructions: z.string().max(2000).optional().default(''),
     mataPelajaran: z.string().max(120).optional().default('IPAS'),
     topik: z.string().min(1, 'Topik harus diisi').max(2000),
     jenjangKelas: z.string().max(80).optional().default('Kelas 5'),
@@ -212,6 +214,10 @@ export const presentationOutlineResponseSchema = z.object({
 });
 
 export const presentationGenerateSchema = z.object({
+    tujuanPembelajaran: z.string().max(1000).optional().default(''),
+    extraInstructions: z.string().max(2000).optional().default(''),
+    aspectRatio: z.enum(['16:9', '4:3']).optional().default('16:9'),
+    usePhotos: z.boolean().optional().default(false),
     mataPelajaran: z.string().max(120).optional().default('IPAS'),
     topik: z.string().min(1, 'Topik harus diisi').max(2000),
     jenjangKelas: z.string().max(80).optional().default('Kelas 5'),

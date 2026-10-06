@@ -1,0 +1,2023 @@
+{
+  "date": "2026-10-03",
+  "method": "DOM read-only; live local demo teacher and admin; existing data only",
+  "rows": [
+    {
+      "page": "kisi",
+      "buttonCount": 12,
+      "contentHeight": 904,
+      "contentWidth": 1440,
+      "fieldCount": 19,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "ASESMEN A4EDU",
+        "IDENTITAS",
+        "KURIKULUM & MATERI",
+        "KARAKTERISTIK"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Galeri Visual (200 SVG)",
+          "w": 188
+        },
+        {
+          "h": 40,
+          "text": "Riwayat Lokal",
+          "w": 135
+        },
+        {
+          "h": 40,
+          "text": "Bank Soal Kolaboratif 0",
+          "w": 177
+        },
+        {
+          "h": 40,
+          "text": "Pilih Visual SVG",
+          "w": 106
+        },
+        {
+          "h": 40,
+          "text": "Muat CP BSKAP 2025",
+          "w": 141
+        },
+        {
+          "h": 40,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "+",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "+",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "+",
+          "w": 36
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "TEXTAREA",
+        "input-cp-text",
+        "INPUT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 17
+    },
+    {
+      "page": "rpp",
+      "buttonCount": 13,
+      "contentHeight": 947,
+      "contentWidth": 1440,
+      "fieldCount": 16,
+      "fontFamilies": [
+        "Orbitron, Inter, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "RPP MERDEKA",
+        "Identitas",
+        "Kurikulum",
+        "Strategi"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Riwayat RPP Tersimpan",
+          "w": 198
+        },
+        {
+          "h": 40,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "+",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "Muat CP BSKAP 2025",
+          "w": 141
+        },
+        {
+          "h": 40,
+          "text": "Keimanan & Ketakwaan",
+          "w": 160
+        },
+        {
+          "h": 40,
+          "text": "Kewargaan",
+          "w": 90
+        },
+        {
+          "h": 40,
+          "text": "Penalaran Kritis",
+          "w": 113
+        },
+        {
+          "h": 40,
+          "text": "Kreativitas",
+          "w": 86
+        },
+        {
+          "h": 40,
+          "text": "Kolaborasi",
+          "w": 86
+        },
+        {
+          "h": 40,
+          "text": "Kemandirian",
+          "w": 97
+        },
+        {
+          "h": 40,
+          "text": "Kesehatan",
+          "w": 85
+        },
+        {
+          "h": 40,
+          "text": "Komunikasi",
+          "w": 91
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "SELECT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 15
+    },
+    {
+      "page": "analisis-cp",
+      "buttonCount": 15,
+      "contentHeight": 968,
+      "contentWidth": 1440,
+      "fieldCount": 12,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "ANALISIS CP, TP, & ATP",
+        "Identitas Dokumen",
+        "Sumber Buku Ajar",
+        "Review Struktur Bab"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "CP Kolaboratif",
+          "w": 142
+        },
+        {
+          "h": 40,
+          "text": "Riwayat Saya",
+          "w": 133
+        },
+        {
+          "h": 40,
+          "text": "Lihat Rincian",
+          "w": 88
+        },
+        {
+          "h": 40,
+          "text": "PDF",
+          "w": 63
+        },
+        {
+          "h": 40,
+          "text": "Teks",
+          "w": 64
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 26
+        },
+        {
+          "h": 40,
+          "text": "1 Tahun Penuh",
+          "w": 120
+        },
+        {
+          "h": 40,
+          "text": "Semester 1 Saja",
+          "w": 120
+        },
+        {
+          "h": 40,
+          "text": "Semester 2 Saja",
+          "w": 120
+        },
+        {
+          "h": 40,
+          "text": "Semua Smt 1",
+          "w": 91
+        },
+        {
+          "h": 40,
+          "text": "Semua Smt 2",
+          "w": 93
+        },
+        {
+          "h": 40,
+          "text": "Bagi 2 (Auto)",
+          "w": 93
+        }
+      ],
+      "unnamedFieldIds": [
+        "input-nama-sekolah",
+        "select-mata-pelajaran",
+        "select-jenjang-kelas",
+        "SELECT",
+        "select-target-semester",
+        "input-nama-kepala-sekolah",
+        "input-nip-kepala-sekolah",
+        "INPUT",
+        "INPUT",
+        "analisis-ai-model-select",
+        "select-book-profile",
+        "input-sumber-buku"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 12
+    },
+    {
+      "page": "slide",
+      "buttonCount": 14,
+      "contentHeight": 943,
+      "contentWidth": 1440,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Rancang Slide Pembelajaran Interaktif"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "6 Slide",
+          "w": 60
+        },
+        {
+          "h": 40,
+          "text": "8 Slide",
+          "w": 61
+        },
+        {
+          "h": 40,
+          "text": "10 Slide",
+          "w": 66
+        },
+        {
+          "h": 40,
+          "text": "12 Slide",
+          "w": 65
+        },
+        {
+          "h": 40,
+          "text": "15 Slide ⭐",
+          "w": 84
+        },
+        {
+          "h": 40,
+          "text": "20 Slide",
+          "w": 69
+        },
+        {
+          "h": 40,
+          "text": "Parameter AI",
+          "w": 113
+        },
+        {
+          "h": 40,
+          "text": "Riwayat Slide",
+          "w": 116
+        },
+        {
+          "h": 42,
+          "text": "Rancang Outline Dulu",
+          "w": 178
+        },
+        {
+          "h": 42,
+          "text": "Pilih Template",
+          "w": 140
+        },
+        {
+          "h": 40,
+          "text": "Bumi & Tata Surya (IPAS Kelas 6)",
+          "w": 209
+        },
+        {
+          "h": 40,
+          "text": "Pecahan & Desimal (Matematika Kelas 5)",
+          "w": 260
+        }
+      ],
+      "unnamedFieldIds": [
+        "sg-main-prompt"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 1
+    },
+    {
+      "page": "games",
+      "buttonCount": 13,
+      "contentHeight": 1441,
+      "contentWidth": 1626,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Pusat Game Edukasi Interaktif\n                \n                  IFP Edition",
+        "Game Edukasi Layar Sentuh IFP / Smart Board",
+        "Teka-Teki Silang (TTS)",
+        "Si Jago Berhitung",
+        "Ular Tangga Kelas",
+        "Peta Buta & Puzzle Anatomi",
+        "Tarik Tambang Cerdas Cermat",
+        "Cari Kata Raksasa",
+        "Duel Pinisi Kata"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Volume: Tinggi",
+          "w": 139
+        },
+        {
+          "h": 42,
+          "text": "Layar Penuh IFP",
+          "w": 142
+        },
+        {
+          "h": 40,
+          "text": "Semua (7)",
+          "w": 84
+        },
+        {
+          "h": 40,
+          "text": "Fase A (Kls 1–2)",
+          "w": 114
+        },
+        {
+          "h": 40,
+          "text": "Fase B (Kls 3–4)",
+          "w": 117
+        },
+        {
+          "h": 40,
+          "text": "Fase C (Kls 5–6)",
+          "w": 117
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "materi",
+      "buttonCount": 1,
+      "contentHeight": 641,
+      "contentWidth": 1440,
+      "fieldCount": 3,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Repository Materi",
+        "Belum ada materi yang diupload"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Upload Materi",
+          "w": 147
+        }
+      ],
+      "unnamedFieldIds": [
+        "filter-jenis",
+        "filter-jenjang",
+        "filter-search"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 3
+    },
+    {
+      "page": "absensi",
+      "buttonCount": 6,
+      "contentHeight": 518,
+      "contentWidth": 1440,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Absensi Digital",
+        "Workshop Kurikulum Merdeka",
+        "Rapat Rutin KKG Februari 2026"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Scan QR",
+          "w": 98
+        },
+        {
+          "h": 40,
+          "text": "Rekap",
+          "w": 86
+        },
+        {
+          "h": 40,
+          "text": "Check-in",
+          "w": 103
+        },
+        {
+          "h": 40,
+          "text": "Daftar Hadir",
+          "w": 120
+        },
+        {
+          "h": 40,
+          "text": "Check-in",
+          "w": 103
+        },
+        {
+          "h": 40,
+          "text": "Daftar Hadir",
+          "w": 120
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "forum",
+      "buttonCount": 1,
+      "contentHeight": 588,
+      "contentWidth": 1440,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Forum Diskusi",
+        "Sharing Best Practice: Pembelajaran Diferensiasi di SD",
+        "Tips Membuat RPP Kurikulum Merdeka"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Topik Baru",
+          "w": 109
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "guru",
+      "buttonCount": 0,
+      "contentHeight": 1153,
+      "contentWidth": 1440,
+      "fieldCount": 1,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Direktori Guru",
+        "Guru Kelas 5",
+        "Admin KKG Gugus 3",
+        "Guru Mata Pelajaran Lain",
+        "Ahmad Fauzi",
+        "Budi Santoso",
+        "Dewi Lestari",
+        "Siti Nurhaliza"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [
+        "guru-search"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 1
+    },
+    {
+      "page": "kalender",
+      "buttonCount": 7,
+      "contentHeight": 891,
+      "contentWidth": 1440,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Kalender Kegiatan",
+        "Oktober 2026"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Tambah Event",
+          "w": 129
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 40
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 40
+        },
+        {
+          "h": 40,
+          "text": "Hari Ini",
+          "w": 65
+        },
+        {
+          "h": 40,
+          "text": "Bulan",
+          "w": 58
+        },
+        {
+          "h": 40,
+          "text": "Minggu",
+          "w": 69
+        },
+        {
+          "h": 40,
+          "text": "Daftar",
+          "w": 63
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "pengumuman",
+      "buttonCount": 0,
+      "contentHeight": 1409,
+      "contentWidth": 1440,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Pengumuman",
+        "Jadwal Rapat Rutin KKG Bulan Februari 2026",
+        "Selamat Datang di Portal Digital KKG Gugus 3 Wanayasa",
+        "Workshop Kurikulum Merdeka Belajar"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "profile",
+      "buttonCount": 2,
+      "contentHeight": 1327,
+      "contentWidth": 1440,
+      "fieldCount": 11,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Profil Pendidik",
+        "Siti Nurhaliza",
+        "Data Pribadi & Kepegawaian",
+        "Ganti Password Akun"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "SELECT",
+        "SELECT",
+        "mapel-custom-input",
+        "INPUT",
+        "INPUT",
+        "INPUT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 11
+    },
+    {
+      "page": "notifications",
+      "buttonCount": 1,
+      "contentHeight": 613,
+      "contentWidth": 1440,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Notifikasi",
+        "Tidak ada notifikasi"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Tandai Semua Dibaca",
+          "w": 177
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "rpp",
+      "screen": "mobile",
+      "buttonCount": 13,
+      "contentHeight": 2029,
+      "contentWidth": 375,
+      "fieldCount": 16,
+      "fontFamilies": [
+        "Orbitron, Inter, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "RPP MERDEKA",
+        "Identitas",
+        "Kurikulum",
+        "Strategi"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 44,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 44,
+          "text": "+",
+          "w": 36
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "SELECT"
+      ],
+      "viewport": 390,
+      "withoutAssociatedName": 15,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 2029,
+        "rootWidth": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "page": "analisis-cp",
+      "screen": "mobile",
+      "buttonCount": 31,
+      "contentHeight": 2579,
+      "contentWidth": 375,
+      "fieldCount": 28,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "ANALISIS CP, TP, & ATP",
+        "Identitas Dokumen",
+        "Sumber Buku Ajar",
+        "Review Struktur Bab"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 44,
+          "text": "",
+          "w": 26
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        },
+        {
+          "h": 44,
+          "text": "",
+          "w": 20
+        }
+      ],
+      "unnamedFieldIds": [
+        "input-nama-sekolah",
+        "select-mata-pelajaran",
+        "select-jenjang-kelas",
+        "SELECT",
+        "select-target-semester",
+        "input-nama-kepala-sekolah",
+        "input-nip-kepala-sekolah",
+        "INPUT",
+        "INPUT",
+        "analisis-ai-model-select",
+        "select-book-profile",
+        "input-sumber-buku"
+      ],
+      "viewport": 390,
+      "withoutAssociatedName": 28,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 2579,
+        "rootWidth": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "page": "slide",
+      "screen": "mobile",
+      "buttonCount": 14,
+      "contentHeight": 1228,
+      "contentWidth": 375,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Rancang Slide Pembelajaran Interaktif"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [
+        "sg-main-prompt"
+      ],
+      "viewport": 390,
+      "withoutAssociatedName": 1,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 1228,
+        "rootWidth": 390,
+        "viewport": 390
+      }
+    },
+    {
+      "page": "slide",
+      "screen": "tablet",
+      "buttonCount": 14,
+      "contentHeight": 992,
+      "contentWidth": 753,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Rancang Slide Pembelajaran Interaktif"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "6 Slide",
+          "w": 60
+        },
+        {
+          "h": 40,
+          "text": "8 Slide",
+          "w": 61
+        },
+        {
+          "h": 40,
+          "text": "10 Slide",
+          "w": 66
+        },
+        {
+          "h": 40,
+          "text": "12 Slide",
+          "w": 65
+        },
+        {
+          "h": 40,
+          "text": "15 Slide ⭐",
+          "w": 84
+        },
+        {
+          "h": 40,
+          "text": "20 Slide",
+          "w": 69
+        },
+        {
+          "h": 40,
+          "text": "Parameter AI",
+          "w": 113
+        },
+        {
+          "h": 40,
+          "text": "Riwayat Slide",
+          "w": 116
+        },
+        {
+          "h": 42,
+          "text": "Rancang Outline Dulu",
+          "w": 178
+        },
+        {
+          "h": 42,
+          "text": "Pilih Template",
+          "w": 140
+        },
+        {
+          "h": 40,
+          "text": "Bumi & Tata Surya (IPAS Kelas 6)",
+          "w": 209
+        },
+        {
+          "h": 40,
+          "text": "Pecahan & Desimal (Matematika Kelas 5)",
+          "w": 260
+        }
+      ],
+      "unnamedFieldIds": [
+        "sg-main-prompt"
+      ],
+      "viewport": 768,
+      "withoutAssociatedName": 1,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 992,
+        "rootWidth": 768,
+        "viewport": 768
+      }
+    },
+    {
+      "page": "rpp",
+      "screen": "tablet",
+      "buttonCount": 13,
+      "contentHeight": 1452,
+      "contentWidth": 753,
+      "fieldCount": 16,
+      "fontFamilies": [
+        "Orbitron, Inter, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "RPP MERDEKA",
+        "Identitas",
+        "Kurikulum",
+        "Strategi"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Riwayat RPP Tersimpan",
+          "w": 198
+        },
+        {
+          "h": 40,
+          "text": "−",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "+",
+          "w": 36
+        },
+        {
+          "h": 40,
+          "text": "Muat CP BSKAP 2025",
+          "w": 141
+        },
+        {
+          "h": 40,
+          "text": "Keimanan & Ketakwaan",
+          "w": 160
+        },
+        {
+          "h": 40,
+          "text": "Kewargaan",
+          "w": 90
+        },
+        {
+          "h": 40,
+          "text": "Penalaran Kritis",
+          "w": 113
+        },
+        {
+          "h": 40,
+          "text": "Kreativitas",
+          "w": 86
+        },
+        {
+          "h": 40,
+          "text": "Kolaborasi",
+          "w": 86
+        },
+        {
+          "h": 40,
+          "text": "Kemandirian",
+          "w": 97
+        },
+        {
+          "h": 40,
+          "text": "Kesehatan",
+          "w": 85
+        },
+        {
+          "h": 40,
+          "text": "Komunikasi",
+          "w": 91
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "INPUT",
+        "INPUT",
+        "SELECT"
+      ],
+      "viewport": 768,
+      "withoutAssociatedName": 15,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 1452,
+        "rootWidth": 768,
+        "viewport": 768
+      }
+    },
+    {
+      "page": "analisis-cp",
+      "screen": "tablet",
+      "buttonCount": 31,
+      "contentHeight": 2389,
+      "contentWidth": 753,
+      "fieldCount": 28,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "ANALISIS CP, TP, & ATP",
+        "Identitas Dokumen",
+        "Sumber Buku Ajar",
+        "Review Struktur Bab"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "CP Kolaboratif\n              0",
+          "w": 142
+        },
+        {
+          "h": 40,
+          "text": "Riwayat Saya",
+          "w": 133
+        },
+        {
+          "h": 40,
+          "text": "Lihat Rincian",
+          "w": 88
+        },
+        {
+          "h": 40,
+          "text": "PDF",
+          "w": 63
+        },
+        {
+          "h": 40,
+          "text": "Teks",
+          "w": 64
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 26
+        },
+        {
+          "h": 40,
+          "text": "1 Tahun Penuh",
+          "w": 207
+        },
+        {
+          "h": 40,
+          "text": "Semester 1 Saja",
+          "w": 207
+        },
+        {
+          "h": 40,
+          "text": "Semester 2 Saja",
+          "w": 207
+        },
+        {
+          "h": 40,
+          "text": "Semua Smt 1",
+          "w": 91
+        },
+        {
+          "h": 40,
+          "text": "Semua Smt 2",
+          "w": 93
+        },
+        {
+          "h": 40,
+          "text": "Bagi 2 (Auto)",
+          "w": 93
+        }
+      ],
+      "unnamedFieldIds": [
+        "input-nama-sekolah",
+        "select-mata-pelajaran",
+        "select-jenjang-kelas",
+        "SELECT",
+        "select-target-semester",
+        "input-nama-kepala-sekolah",
+        "input-nip-kepala-sekolah",
+        "INPUT",
+        "INPUT",
+        "analisis-ai-model-select",
+        "select-book-profile",
+        "input-sumber-buku"
+      ],
+      "viewport": 768,
+      "withoutAssociatedName": 28,
+      "geometry": {
+        "controlsOutsideViewport": [],
+        "documentOverflow": false,
+        "mainScrollHeight": 2389,
+        "rootWidth": 768,
+        "viewport": 768
+      }
+    },
+    {
+      "page": "home-public",
+      "buttonCount": 22,
+      "contentHeight": 6510,
+      "contentWidth": 1738,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "\"Bricolage Grotesque\", \"Plus Jakarta Sans\", system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Satu perintah guru,jadi RPP lengkap dalam hitungan menit.",
+        "Dari dokumen kurikulum sampai kelas yang hidup — satu alur AI.",
+        "Dokumen CP yang rumit — AI yang membedahnya.",
+        "Dokumentasi kegiatan komunitas",
+        "Platform SaaS Pedagogis Independen untuk Pendidik Indonesia.",
+        "Andris Hadiansyah",
+        "SaaS Komersial Independen",
+        "Kepatuhan & Kontak",
+        "Harga yang masuk akal untuk urusan guru.",
+        "Guru & pengurus yang sudah merasakan bedanya.",
+        "Pertanyaan yang Sering Diajukan.",
+        "Siap memangkas waktu menyusun perangkat ajar — minggu ini juga?"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 38,
+          "text": "Lanjut ke Modul 2: Buat RPP",
+          "w": 223
+        },
+        {
+          "h": 40,
+          "text": "Bulanan",
+          "w": 93
+        },
+        {
+          "h": 40,
+          "text": "Tahunan Hemat 18%",
+          "w": 176
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "login",
+      "buttonCount": 4,
+      "contentHeight": 956,
+      "contentWidth": 1754,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "RuangKKG Digital"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Kembali ke Beranda",
+          "w": 154
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "INPUT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 2
+    },
+    {
+      "page": "program-sekolah",
+      "buttonCount": 2,
+      "contentHeight": 2237,
+      "contentWidth": 1440,
+      "fieldCount": 15,
+      "fontFamilies": [
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Program Kerja & Pembiasaan Sekolah",
+        "Identitas Satuan Pendidikan & Penyusun",
+        "Pilih Jenis Program Sekolah",
+        "Parameter Khusus: Program Kokurikuler Profil Lulusan (8 Dimensi)"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Riwayat Dokumen",
+          "w": 160
+        }
+      ],
+      "unnamedFieldIds": [
+        "inp-nama-sekolah",
+        "inp-tahun-ajaran",
+        "inp-jenjang",
+        "inp-kota",
+        "inp-penyusun",
+        "inp-nip-penyusun",
+        "inp-kepala-sekolah",
+        "inp-nip-kepala-sekolah",
+        "inp-opsi-pengesahan",
+        "field-tema",
+        "field-alokasiJp",
+        "field-modelJadwal"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 15
+    },
+    {
+      "page": "surat",
+      "buttonCount": 6,
+      "contentHeight": 1258,
+      "contentWidth": 1510,
+      "fieldCount": 10,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Generator Surat"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Riwayat Surat",
+          "w": 144
+        },
+        {
+          "h": 42,
+          "text": "AI Generator",
+          "w": 144
+        },
+        {
+          "h": 42,
+          "text": "Template",
+          "w": 121
+        }
+      ],
+      "unnamedFieldIds": [
+        "jenis_kegiatan",
+        "tempat_kegiatan",
+        "tanggal_kegiatan",
+        "waktu_kegiatan",
+        "agenda",
+        "peserta",
+        "penanggung_jawab",
+        "model",
+        "lampiran"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 9
+    },
+    {
+      "page": "proker",
+      "buttonCount": 3,
+      "contentHeight": 1120,
+      "contentWidth": 1510,
+      "fieldCount": 11,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Generator Program Kerja"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Riwayat",
+          "w": 96
+        },
+        {
+          "h": 40,
+          "text": "Tambah",
+          "w": 86
+        }
+      ],
+      "unnamedFieldIds": [
+        "SELECT",
+        "SELECT",
+        "TEXTAREA",
+        "TEXTAREA",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "TEXTAREA"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 11
+    },
+    {
+      "page": "laporan",
+      "buttonCount": 9,
+      "contentHeight": 1624,
+      "contentWidth": 1510,
+      "fieldCount": 6,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Laporan Kegiatan (LPJ) KKG",
+        "Informasi Dasar Kegiatan",
+        "Pilih AI Provider (Dikelola Administrator)",
+        "Lampiran Foto Dokumentasi Kegiatan",
+        "Siap Menyusun Laporan Pertanggungjawaban?"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Riwayat LPJ\n                    \n            ",
+          "w": 153
+        },
+        {
+          "h": 42,
+          "text": "Reset Form",
+          "w": 119
+        },
+        {
+          "h": 42,
+          "text": "Form & Parameter",
+          "w": 169
+        },
+        {
+          "h": 42,
+          "text": "Pratinjau Dokumen A4",
+          "w": 189
+        },
+        {
+          "h": 40,
+          "text": "Unggah Foto Kegiatan",
+          "w": 181
+        }
+      ],
+      "unnamedFieldIds": [
+        "input-judul_laporan",
+        "input-periode",
+        "input-waktu",
+        "input-tempat",
+        "input-narasumber",
+        "input-ai_model"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 6
+    },
+    {
+      "page": "admin-dashboard",
+      "buttonCount": 22,
+      "contentHeight": 3035,
+      "contentWidth": 1510,
+      "fieldCount": 4,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Selamat datang, Admin",
+        "5",
+        "0",
+        "0",
+        "2",
+        "SLA Operasional",
+        "Aksi Prioritas",
+        "To-Do Operasional Hari Ini",
+        "Tren Aktivitas",
+        "Persetujuan User",
+        "Log Aktivitas",
+        "Distribusi Anggota"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "User Baru",
+          "w": 120
+        },
+        {
+          "h": 42,
+          "text": "Data Sekolah",
+          "w": 141
+        },
+        {
+          "h": 42,
+          "text": "Profil KKG",
+          "w": 117
+        },
+        {
+          "h": 42,
+          "text": "Audit Log",
+          "w": 117
+        },
+        {
+          "h": 40,
+          "text": "7 Hari",
+          "w": 66
+        },
+        {
+          "h": 40,
+          "text": "30 Hari",
+          "w": 75
+        },
+        {
+          "h": 40,
+          "text": "90 Hari",
+          "w": 75
+        },
+        {
+          "h": 40,
+          "text": "Nyaman",
+          "w": 81
+        },
+        {
+          "h": 40,
+          "text": "Ringkas",
+          "w": 80
+        },
+        {
+          "h": 40,
+          "text": "Terapkan",
+          "w": 87
+        },
+        {
+          "h": 40,
+          "text": "Buka Situs Publik",
+          "w": 119
+        },
+        {
+          "h": 40,
+          "text": "Kelola User",
+          "w": 66
+        }
+      ],
+      "unnamedFieldIds": [
+        "sla-threshold-input",
+        "dashboard-trend-select",
+        "dashboard-activity-select",
+        "school-analytics-month"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 4
+    },
+    {
+      "page": "admin-users",
+      "buttonCount": 5,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 5,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Manajemen Pengguna",
+        "Approval Queue"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Tambah User",
+          "w": 149
+        },
+        {
+          "h": 40,
+          "text": "Setujui Terpilih",
+          "w": 110
+        },
+        {
+          "h": 40,
+          "text": "Tolak Terpilih",
+          "w": 100
+        },
+        {
+          "h": 40,
+          "text": "Export CSV",
+          "w": 93
+        },
+        {
+          "h": 40,
+          "text": "Muat Ulang",
+          "w": 91
+        }
+      ],
+      "unnamedFieldIds": [
+        "bulk-reject-reason",
+        "pending-check-all",
+        "user-search-input",
+        "user-role-filter",
+        "users-check-all"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 5
+    },
+    {
+      "page": "admin-sekolah",
+      "buttonCount": 1,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 1,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Data Sekolah"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Tambah Sekolah",
+          "w": 165
+        }
+      ],
+      "unnamedFieldIds": [
+        "sekolah-check-all"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 1
+    },
+    {
+      "page": "admin-cp",
+      "buttonCount": 6,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Kelola Capaian Pembelajaran (CP)"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Reset Semua ke Standar BSKAP",
+          "w": 237
+        },
+        {
+          "h": 40,
+          "text": "Tambah Mapel/CP",
+          "w": 167
+        },
+        {
+          "h": 40,
+          "text": "Semua Fase",
+          "w": 99
+        },
+        {
+          "h": 40,
+          "text": "Fase A (Kelas 1-2)",
+          "w": 132
+        },
+        {
+          "h": 40,
+          "text": "Fase B (Kelas 3-4)",
+          "w": 135
+        },
+        {
+          "h": 40,
+          "text": "Fase C (Kelas 5-6)",
+          "w": 136
+        }
+      ],
+      "unnamedFieldIds": [
+        "cp-filter-mapel",
+        "cp-filter-search"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 2
+    },
+    {
+      "page": "admin-ai-providers",
+      "buttonCount": 9,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Kelola AI Provider"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Refresh",
+          "w": 98
+        },
+        {
+          "h": 42,
+          "text": "Tambah Provider",
+          "w": 166
+        },
+        {
+          "h": 40,
+          "text": "+ Gemini 2.0 Flash",
+          "w": 132
+        },
+        {
+          "h": 40,
+          "text": "+ OpenAI GPT-4o",
+          "w": 130
+        },
+        {
+          "h": 40,
+          "text": "+ Claude Sonnet",
+          "w": 122
+        },
+        {
+          "h": 40,
+          "text": "+ Groq LLaMA 3.3",
+          "w": 128
+        },
+        {
+          "h": 40,
+          "text": "+ OpenRouter",
+          "w": 108
+        },
+        {
+          "h": 40,
+          "text": "+ Ollama (Lokal)",
+          "w": 120
+        },
+        {
+          "h": 40,
+          "text": "+ Vultr (Z-Image Turbo)",
+          "w": 161
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "admin-logs",
+      "buttonCount": 0,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 2,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Log Audit Sistem"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [
+        "log-filter-action",
+        "log-filter-search"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 2
+    },
+    {
+      "page": "admin-templates",
+      "buttonCount": 4,
+      "contentHeight": 880,
+      "contentWidth": 1510,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      ],
+      "heading": [
+        "Template Surat"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 42,
+          "text": "Buat Template",
+          "w": 154
+        },
+        {
+          "h": 40,
+          "text": "Semua",
+          "w": 74
+        },
+        {
+          "h": 40,
+          "text": "Undangan",
+          "w": 93
+        },
+        {
+          "h": 40,
+          "text": "Tugas",
+          "w": 68
+        }
+      ],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    },
+    {
+      "page": "admin-profil",
+      "buttonCount": 5,
+      "contentHeight": 3622,
+      "contentWidth": 1510,
+      "fieldCount": 27,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace"
+      ],
+      "heading": [
+        "Identitas & Logo",
+        "Tema & Warna Dasar Portal",
+        "Alamat Sekretariat",
+        "Struktur Inti",
+        "Kontak Resmi",
+        "Kustomisasi Beranda & Landing Page",
+        "Kutipan Sambutan / Testimoni Beranda",
+        "Konfigurasi AI & Sistem",
+        "Supabase Storage (File Upload)",
+        "Generator Gambar AI (Vultr Serverless / Z-Image Turbo)",
+        "Zona Bahaya"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Simpan Tema Warna Sekarang",
+          "w": 226
+        },
+        {
+          "h": 40,
+          "text": "Buka Kelola AI Provider",
+          "w": 192
+        },
+        {
+          "h": 40,
+          "text": "Clear Cache",
+          "w": 147
+        },
+        {
+          "h": 40,
+          "text": "Reset Database",
+          "w": 161
+        }
+      ],
+      "unnamedFieldIds": [
+        "profil-nama_kkg",
+        "profil-tahun_ajaran",
+        "profil-npsn_sekolah_induk",
+        "profil-nama_sekolah_induk",
+        "profil-alamat_sekretariat",
+        "profil-kecamatan",
+        "profil-kabupaten",
+        "profil-provinsi",
+        "profil-kode_pos",
+        "profil-nama_ketua",
+        "profil-nama_sekretaris",
+        "profil-nama_bendahara"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 27
+    },
+    {
+      "page": "tts-studio",
+      "buttonCount": 11,
+      "contentHeight": 917,
+      "contentWidth": 1611,
+      "fieldCount": 6,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Teka-Teki Silang (TTS)",
+        "Teka-Teki Silang Pembelajaran"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Katalog Game",
+          "w": 131
+        },
+        {
+          "h": 40,
+          "text": "Volume: Tinggi",
+          "w": 133
+        },
+        {
+          "h": 40,
+          "text": "Layar Penuh IFP",
+          "w": 136
+        },
+        {
+          "h": 42,
+          "text": "Riwayat TTS",
+          "w": 125
+        },
+        {
+          "h": 40,
+          "text": "Mode AI Generator",
+          "w": 217
+        },
+        {
+          "h": 40,
+          "text": "Mode Kustom (Manual)",
+          "w": 217
+        },
+        {
+          "h": 40,
+          "text": "Sistem Pencernaan Manusia",
+          "w": 184
+        },
+        {
+          "h": 40,
+          "text": "Bumi, Bulan & Tata Surya",
+          "w": 164
+        },
+        {
+          "h": 40,
+          "text": "Pahlawan & Kemerdekaan",
+          "w": 173
+        },
+        {
+          "h": 40,
+          "text": "Kearifan Lokal & Budaya",
+          "w": 162
+        }
+      ],
+      "unnamedFieldIds": [
+        "SELECT",
+        "SELECT",
+        "SELECT",
+        "TEXTAREA",
+        "SELECT",
+        "INPUT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 6
+    },
+    {
+      "page": "tts-manual",
+      "buttonCount": 11,
+      "contentHeight": 928,
+      "contentWidth": 1611,
+      "fieldCount": 9,
+      "fontFamilies": [
+        "\"Plus Jakarta Sans\", Inter, system-ui, sans-serif",
+        "Inter, \"Plus Jakarta Sans\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Teka-Teki Silang (TTS)",
+        "Teka-Teki Silang Pembelajaran"
+      ],
+      "overflow": false,
+      "smallButtons": [
+        {
+          "h": 40,
+          "text": "Katalog Game",
+          "w": 131
+        },
+        {
+          "h": 40,
+          "text": "Volume: Tinggi",
+          "w": 133
+        },
+        {
+          "h": 40,
+          "text": "Layar Penuh IFP",
+          "w": 136
+        },
+        {
+          "h": 42,
+          "text": "Riwayat TTS",
+          "w": 125
+        },
+        {
+          "h": 40,
+          "text": "Mode AI Generator",
+          "w": 217
+        },
+        {
+          "h": 40,
+          "text": "Mode Kustom (Manual)",
+          "w": 217
+        },
+        {
+          "h": 40,
+          "text": "Tambah Kata",
+          "w": 117
+        },
+        {
+          "h": 40,
+          "text": "Hapus baris",
+          "w": 24
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 24
+        },
+        {
+          "h": 40,
+          "text": "",
+          "w": 24
+        }
+      ],
+      "unnamedFieldIds": [
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT",
+        "INPUT"
+      ],
+      "viewport": 1754,
+      "withoutAssociatedName": 9
+    },
+    {
+      "page": "home-teacher",
+      "buttonCount": 20,
+      "contentHeight": 1535,
+      "contentWidth": 1480,
+      "fieldCount": 0,
+      "fontFamilies": [
+        "Inter, \"Segoe UI\", system-ui, sans-serif"
+      ],
+      "heading": [
+        "Selamat datang, Siti",
+        "Agenda KKG",
+        "Perangkat ajar",
+        "Dokumen terakhir",
+        "Pengumuman",
+        "Akses komunitas",
+        "Dari rekan pendidik"
+      ],
+      "overflow": false,
+      "smallButtons": [],
+      "unnamedFieldIds": [],
+      "viewport": 1754,
+      "withoutAssociatedName": 0
+    }
+  ]
+}

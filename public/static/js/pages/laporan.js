@@ -182,24 +182,24 @@ export async function renderLaporan() {
                                 <i class="fas fa-brain text-lg"></i>
                             </div>
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Pilih AI Provider (Dikelola Administrator)</h3>
-                                <p class="text-xs text-gray-500">Pilihan model AI disinkronkan secara dinamis dari database penyedia AI yang dikonfigurasi oleh Admin</p>
+                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Model AI</h3>
+                                <p class="text-xs text-gray-500">Pilih model untuk menyusun draf berdasarkan informasi kegiatan.</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 self-start sm:self-auto">
                             <i class="fas fa-server text-[10px]"></i>
-                            <span>Admin AI Gateway</span>
+                            <span>Pengaturan model</span>
                         </div>
                     </div>
 
                     <div class="space-y-4 pt-1">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Model / Engine AI Aktif <span class="text-rose-500">*</span>
+                                Model AI <span class="text-rose-500">*</span>
                             </label>
                             <div class="relative">
                                 <select id="input-ai_model" name="ai_model" class="w-full px-4 py-3.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white font-semibold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm cursor-pointer">
-                                    <option value="">Memuat daftar provider AI admin...</option>
+                                    <option value="">Memuat model AI...</option>
                                 </select>
                                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                                     <i class="fas fa-chevron-down text-xs"></i>
@@ -221,17 +221,6 @@ export async function renderLaporan() {
                             </span>
                         </div>
 
-                        <!-- TOMBOL UTAMA: BUAT / GENERATE LAPORAN DENGAN AI (LANGSUNG SETELAH PILIH AI) -->
-                        <div class="pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center gap-3">
-                            <button type="button" onclick="generateAIContent()" class="btn-generate-ai-trigger w-full sm:flex-1 py-4 px-6 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-extrabold text-base shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-98">
-                                <i class="fas fa-magic text-amber-300 text-lg"></i>
-                                <span>Buat / Generate Laporan dengan AI</span>
-                            </button>
-                            <button type="button" onclick="switchStudioTab('preview')" class="w-full sm:w-auto py-4 px-5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
-                                <i class="fas fa-eye text-indigo-500"></i>
-                                <span>Lihat Pratinjau Manual</span>
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -263,26 +252,23 @@ export async function renderLaporan() {
                     <div id="foto-empty-state" class="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                         <i class="fas fa-images text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
                         <p class="text-sm font-medium text-gray-500">Belum ada foto dokumentasi yang dilampirkan (Opsional).</p>
-                        <p class="text-xs text-gray-400 mt-1">Anda dapat langsung membuat laporan dengan tombol di atas, atau melampirkan foto terlebih dahulu.</p>
+                        <p class="text-xs text-gray-400 mt-1">Tambahkan foto jika diperlukan, lalu gunakan tombol Buat Laporan di bawah.</p>
                     </div>
                 </div>
 
                 <!-- 4. GENERATE BANNER ACTION (Cadangan di Bawah) -->
-                <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="lpj-generate-banner bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                     <div class="relative z-10 space-y-1 text-center md:text-left">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-semibold mb-2">
-                            <i class="fas fa-sparkles text-amber-300"></i> AI Studio Generator
-                        </div>
-                        <h3 class="text-xl md:text-2xl font-bold">Siap Menyusun Laporan Pertanggungjawaban?</h3>
+                        <h3 class="text-xl md:text-2xl font-bold">Tinjau informasi kegiatan, lalu susun draf</h3>
                         <p class="text-blue-100 text-sm max-w-xl">
                             AI akan menyusun draf resmi lengkap dari Pendahuluan, Waktu/Tempat, Uraian Materi, Hasil & Dampak, hingga Lembar Pengesahan.
                         </p>
                     </div>
 
-                    <div class="relative z-10 flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    <div class="lpj-banner-actions relative z-10 flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                         <button type="button" onclick="generateAIContent()" class="btn-generate-ai-trigger w-full sm:w-auto px-8 py-4 bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer active:scale-95 whitespace-nowrap">
-                            <i class="fas fa-magic text-indigo-600"></i>
-                            <span>Buat / Generate Laporan dengan AI</span>
+                            <i class="fas fa-file-lines text-indigo-600"></i>
+                            <span>Buat Laporan</span>
                         </button>
                         <button type="button" onclick="switchStudioTab('preview')" class="w-full sm:w-auto px-5 py-4 bg-indigo-700/60 hover:bg-indigo-700 text-white font-semibold rounded-xl border border-indigo-400/40 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer whitespace-nowrap">
                             <i class="fas fa-eye"></i>
@@ -916,7 +902,7 @@ window.generateAIContent = async () => {
 
             syncFormToPreview();
             document.getElementById('preview-indicator')?.classList.remove('hidden');
-            showToast('Draf Laporan Kegiatan berhasil dibuat oleh AI!', 'success');
+            showToast(d._generation?.partial ? `Draf sebagian tersedia. Lengkapi ${d._generation.missingSections.length} bagian kosong sebelum digunakan.` : 'Draf laporan siap ditinjau. Periksa isi sebelum digunakan.', d._generation?.partial ? 'info' : 'success');
             
             // Otomatis arahkan ke Pratinjau Dokumen A4
             switchStudioTab('preview');

@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-01T23:26:27.718Z",
+  "method": "identical HTML, all computed non-custom properties hashed per element, width and height compared in equal 1400px iframe viewports",
+  "results": [
+    {
+      "tab": "data-cp",
+      "htmlIdentical": true,
+      "elements": 104,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "analisis",
+      "htmlIdentical": true,
+      "elements": 105,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "atp-elemen",
+      "htmlIdentical": true,
+      "elements": 94,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "prota",
+      "htmlIdentical": true,
+      "elements": 76,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "promes",
+      "htmlIdentical": true,
+      "elements": 710,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "rpe",
+      "htmlIdentical": true,
+      "elements": 394,
+      "propertiesPerElement": 478,
+      "differences": []
+    },
+    {
+      "tab": "kktp",
+      "htmlIdentical": true,
+      "elements": 175,
+      "propertiesPerElement": 478,
+      "differences": []
+    }
+  ]
+}

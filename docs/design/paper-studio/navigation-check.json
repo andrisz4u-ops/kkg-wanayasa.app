@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-01T23:30:02.114Z",
+  "routes": [
+    {
+      "tool": "Buat RPP",
+      "url": "http://127.0.0.1:5173/rpp",
+      "headings": [
+        "RPP MERDEKA"
+      ]
+    },
+    {
+      "tool": "Analisis CP",
+      "url": "http://127.0.0.1:5173/analisis-cp",
+      "headings": [
+        "ANALISIS CP, TP, & ATP"
+      ]
+    },
+    {
+      "tool": "Buat asesmen Soal dan kisi-kisi",
+      "url": "http://127.0.0.1:5173/kisi",
+      "headings": [
+        "ASESMEN A4EDU"
+      ]
+    },
+    {
+      "tool": "Buat slide Media presentasi kelas",
+      "url": "http://127.0.0.1:5173/slide",
+      "headings": [
+        "\n          Rancang Slide Pembelajaran Interaktif\n        "
+      ]
+    },
+    {
+      "tool": "Presensi Kehadiran kegiatan KKG",
+      "url": "http://127.0.0.1:5173/absensi",
+      "headings": [
+        "Absensi Digital"
+      ]
+    },
+    {
+      "tool": "Bank materi Materi dari rekan pendidik",
+      "url": "http://127.0.0.1:5173/materi",
+      "headings": [
+        "\n          Repository Materi\n        "
+      ]
+    },
+    {
+      "tool": "Forum diskusi",
+      "url": "http://127.0.0.1:5173/forum",
+      "headings": [
+        "Forum Diskusi"
+      ]
+    },
+    {
+      "tool": "Game edukasi",
+      "url": "http://127.0.0.1:5173/games",
+      "headings": [
+        "\n                Pusat Game Edukasi Interaktif\n                \n                  IFP Edition\n                \n              "
+      ]
+    },
+    {
+      "tool": "Buka kalender",
+      "url": "http://127.0.0.1:5173/kalender",
+      "headings": [
+        "Kalender Kegiatan",
+        ""
+      ]
+    }
+  ],
+  "menu": {
+    "topEscapeRestoresTrigger": true,
+    "mobileEscapeRestoresTrigger": true,
+    "contentInertRestored": true,
+    "mobileTabTrap": true,
+    "accountEscapeRestoresTrigger": true
+  }
+}

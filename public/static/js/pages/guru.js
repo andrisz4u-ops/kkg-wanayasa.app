@@ -2,14 +2,16 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
 import { escapeHtml } from '../utils.js';
+import { renderLoadFailure, renderEmptyState } from '../ui-load-state.js';
 
 export async function renderGuru() {
   let guruList = [];
+  let loadFailed = false;
   try {
     const res = await api('/guru');
     guruList = res.data || [];
   } catch (e) {
-    console.error(e);
+    loadFailed = true;
   }
 
   return `
@@ -54,7 +56,7 @@ export async function renderGuru() {
     </div>
 
     <div id="guru-list" class="space-y-10">
-      ${guruList.length > 0 ? renderGuruGroups(guruList) : '<div class="text-center py-12 text-[var(--color-text-tertiary)]">Belum ada data guru.</div>'}
+      ${loadFailed ? renderLoadFailure('Direktori guru belum dapat dimuat', 'guru') : guruList.length > 0 ? renderGuruGroups(guruList) : renderEmptyState('Belum ada anggota yang ditampilkan', 'Data guru akan muncul setelah anggota terdaftar. Pengurus KKG dapat mengelola anggota melalui Panel Kontrol.')}
     </div>
   </div>`;
 }

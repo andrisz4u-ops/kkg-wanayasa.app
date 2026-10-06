@@ -1,0 +1,61 @@
+@media screen {
+  .slide-classroom-studio { --ss-ink: var(--fw-ink, #17382b); --ss-muted: var(--fw-muted, #506b5c); --ss-paper: var(--fw-paper, #fff); --ss-soft: var(--fw-soft, #eaf3ec); --ss-line: var(--fw-line, #d8e7dc); color: var(--ss-ink); }
+  .slide-classroom-studio * { box-sizing: border-box; }
+  .slide-classroom-studio h1 { font: 600 clamp(26px, 3vw, 36px)/1.2 Georgia, serif; }
+  .slide-classroom-studio h2 { font: 600 22px/1.3 Georgia, serif; }
+  .ss-header { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 22px; }
+  .feature-workspace .slide-classroom-studio > .ss-header { display: flex; align-items: center; }
+  .ss-header p { max-width: 680px; color: var(--ss-muted); margin-top: 8px; line-height: 1.6; }
+  .ss-panel { padding: 24px; border: 1px solid var(--ss-line); border-radius: 18px; background: var(--ss-paper); min-width: 0; }
+  .ss-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .slide-classroom-studio button, .slide-classroom-studio select, .slide-classroom-studio input { min-height: 44px; }
+  .slide-classroom-studio button { padding: 10px 16px; border: 1px solid var(--ss-line); border-radius: 10px; color: var(--ss-ink); background: var(--ss-paper); font-weight: 600; cursor: pointer; transition: background-color .16s, transform .16s; }
+  .slide-classroom-studio button:disabled { cursor: not-allowed; opacity: .6; }
+  .slide-classroom-studio button.ss-primary { color: #fff; background: #176b4b; border-color: #176b4b; }
+  .slide-classroom-studio :is(button, input, textarea, select, summary):focus-visible { outline: 3px solid #2c936b; outline-offset: 3px; }
+  .slide-classroom-studio label { display: block; font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
+  .slide-classroom-studio :is(input, textarea, select) { display: block; width: 100%; border: 1px solid var(--ss-line); border-radius: 9px; background: var(--ss-paper); color: var(--ss-ink); padding: 10px 12px; margin-top: 6px; font: 400 15px/1.5 system-ui, sans-serif; }
+  .slide-classroom-studio textarea { min-height: 90px; resize: vertical; }
+  .feature-workspace .slide-classroom-studio #sg-main-prompt { min-height: 112px; }
+  .ss-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+  .ss-brief { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 20px; align-items: start; }
+  .ss-example { background: var(--ss-soft); border-radius: 16px; padding: 18px; }
+  .ss-example p { margin: 12px 0; color: var(--ss-muted); }
+  .ss-model-status, .ss-save-status { font-size: 13px; color: var(--ss-muted); }
+  .ss-model-status[data-error=true], .ss-save-status[data-error=true] { color: #b34028; }
+  .dark .ss-model-status[data-error=true], .dark .ss-save-status[data-error=true] { color: #ffbda8; }
+  .ss-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .ss-template { text-align: left; padding: 16px !important; min-width: 0; }
+  .ss-template[aria-pressed=true] { border: 2px solid #2c936b; background: var(--ss-soft); }
+  .ss-template-previews { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .ss-template-previews > div:first-child { grid-row: span 2; align-self: center; }
+  .ss-template-preview { aspect-ratio: 16/9; overflow: hidden; border-radius: 7px; border: 1px solid var(--ss-line); }
+  .ss-template strong { display: block; font-size: 20px; margin-bottom: 6px; }
+  .ss-template p { color: var(--ss-muted); font-weight: 400; font-size: 14px; line-height: 1.6; }
+  .ss-generation-bar { margin-top: 18px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .ss-generation-bar label { width: min(100%, 360px); margin: 0; }
+  .ss-editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+  .ss-canvas { background: #12251e; border-radius: 16px; padding: 12px; min-width: 0; }
+  .ss-canvas svg { width: 100%; height: auto; }
+  .ss-slide-control { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
+  .ss-slide-control span { margin-right: auto; }
+  .ss-slide-strip { display: flex; gap: 10px; overflow-x: auto; padding: 8px 3px 16px; }
+  .ss-slide-strip button { flex: 0 0 150px; padding: 8px; }
+  .ss-slide-strip button[aria-current=true] { border: 2px solid #2c936b; background: var(--ss-soft); }
+  .ss-slide-strip span { display: block; font-size: 12px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ss-quality { background: var(--ss-soft); border: 1px solid var(--ss-line); border-radius: 12px; padding: 14px 18px; margin: 12px 0; line-height: 1.6; font-size: 14px; }
+  .ss-quality ul { list-style: disc; padding-left: 20px; }
+  .ss-outline-row { border-bottom: 1px solid var(--ss-line); padding: 20px 0; }
+  .ss-presenter { position: fixed; inset: 0; z-index: 10000; background: #10221b; padding: 12px; display: flex; flex-direction: column; color: #fff; }
+  .ss-presenter.hidden { display: none; }
+  .ss-presenter-stage { min-height: 0; flex: 1; display: grid; place-items: center; overflow: auto; }
+  .ss-presenter-stage svg { max-width: 100%; max-height: 80dvh; width: auto !important; }
+  .ss-presenter button { min-height: 44px; padding: 8px 16px; background: #fff; color: #14392e; border-radius: 8px; }
+  .ss-presenter button:focus-visible { outline: 3px solid #bef2c9; outline-offset: 3px; }
+  .ss-presenter nav { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding-top: 12px; }
+  .ss-presenter-notes { padding: 12px 20px; white-space: pre-wrap; max-height: 25dvh; overflow-y: auto; background: #203b2c; }
+  .slide-classroom-studio details > summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+  @media (max-width: 1100px) { .ss-editor { grid-template-columns: minmax(0, 1fr); } .ss-editor > aside { order: 2; } }
+  @media (max-width: 767px) { .ss-brief, .ss-gallery { grid-template-columns: minmax(0, 1fr); } .ss-panel { padding: 16px; } .ss-fields { grid-template-columns: minmax(0, 1fr); } .ss-header { margin-bottom: 16px; } .ss-editor { gap: 14px; } .ss-canvas { padding: 6px; } }
+  @media (prefers-reduced-motion: reduce) { .slide-classroom-studio button { transition: none; } }
+}

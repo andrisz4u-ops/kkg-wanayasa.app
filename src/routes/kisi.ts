@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
 import { UnsplashService } from '../services/unsplash';
@@ -1802,6 +1803,7 @@ kisi.post('/generate', async (c) => {
 });
 
 // Generate Asesmen (Soal) via AI Stream (SSE - Live Monitor)
+kisi.use('/generate-stream', requireSession);
 kisi.post('/generate-stream', async (c) => {
     try {
         // 1. Auth Gate: Tolak request jika belum login
@@ -1842,6 +1844,7 @@ kisi.post('/generate-stream', async (c) => {
 
         const preferredSlug = aiProvider ? (SLUG_MAP[aiProvider] || aiProvider) : undefined;
         const finalData: any = { pg: [], isian: null, uraian: [] };
+        const warnings: string[] = [];
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
             buildAssessmentPrompt({
@@ -1850,8 +1853,11 @@ kisi.post('/generate-stream', async (c) => {
                 isianType, isGambarEnabled
             });
 
+        const job = await createStreamJob(c, 'kisi', body);
+        if ('response' in job) return job.response;
         c.header('X-Accel-Buffering', 'no');
-        return streamSSE(c, async (stream) => {
+        return streamSSE(c, async (rawStream) => {
+            const stream = job.attach(rawStream, ai);
             try {
                 // Step 1: Analisis Kurikulum & CP
                 const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
@@ -1945,6 +1951,9 @@ kisi.post('/generate-stream', async (c) => {
                             isianType
                         });
                     } catch (step3Err: any) {
+                        job.signal.throwIfAborted();
+                        if (!finalData.pg.length) throw step3Err;
+                        warnings.push('Soal isian dan uraian belum selesai. Hasil PG tersedia untuk ditinjau; lengkapi bagian yang hilang sebelum digunakan.');
                         // Step 3 gagal (biasanya karena reasoning model menghabiskan token budget).
                         // Jika Step 2 (PG) sudah berhasil, JANGAN batalkan seluruh proses.
                         // Kirim warning ke client dan lanjutkan dengan data PG yang sudah ada.
@@ -2020,6 +2029,9 @@ kisi.post('/generate-stream', async (c) => {
                     bodyConfig: body,
                     preferredSlug: preferredSlug || null
                 });
+                if (finalData.pg.length < totalPG) warnings.push(`Soal PG tersedia ${finalData.pg.length} dari ${totalPG} yang diminta.`);
+                if (finalData.uraian.length < totalUraian) warnings.push(`Soal uraian tersedia ${finalData.uraian.length} dari ${totalUraian} yang diminta.`);
+                finalData._generation = { partial: warnings.length > 0, warnings, requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
 
                 // Step 6: Selesai & Kirimkan Payload Final
                 await stream.writeSSE({
@@ -2037,10 +2049,13 @@ kisi.post('/generate-stream', async (c) => {
                     event: 'done',
                     data: JSON.stringify({
                         success: true,
-                        data: finalData
+                        data: finalData,
+                        partial: warnings.length > 0,
+                        warnings
                     })
                 });
             } catch (err: any) {
+                if (job.signal.aborted) return;
                 console.error('Kisi Stream Error:', err);
                 await stream.writeSSE({
                     event: 'error',
@@ -2048,7 +2063,7 @@ kisi.post('/generate-stream', async (c) => {
                         message: err.message || 'Gagal menghasilkan asesmen secara streaming'
                     })
                 });
-            }
+            } finally { await job.dispose(); }
         });
     } catch (e: any) {
         console.error('Kisi Route Stream Error:', e);

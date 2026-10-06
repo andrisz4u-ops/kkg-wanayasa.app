@@ -1,5 +1,6 @@
 
 import { api } from '../api.js';
+import { renderLoadFailure } from '../ui-load-state.js';
 import { state } from '../state.js';
 import { formatDateTime, escapeHtml, nl2br, showToast } from '../utils.js';
 
@@ -74,11 +75,12 @@ function openPengumumanModal(contentHtml) {
 }
 
 export async function renderPengumuman() {
+  let loadFailed = false;
   try {
     const res = await api('/pengumuman');
     currentPengumumanList = res.data || [];
   } catch (e) {
-    console.error(e);
+    loadFailed = true;
     currentPengumumanList = [];
   }
 
@@ -120,7 +122,7 @@ export async function renderPengumuman() {
     </div>
 
     <div class="grid gap-8">
-      ${currentPengumumanList.length > 0 ? currentPengumumanList.map(p => `
+      ${loadFailed ? renderLoadFailure('Pengumuman belum dapat dimuat', 'pengumuman') : currentPengumumanList.length > 0 ? currentPengumumanList.map(p => `
         <div class="bg-white/80 rounded-[40px] p-6 md:p-10 border border-teal-500/10 hover:border-teal-500/30 transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-teal-500/10 motion-safe:hover:-translate-y-1 group relative overflow-hidden backdrop-blur-sm">
           <!-- Decoration -->
           <div class="absolute top-0 right-0 p-12 opacity-[0.03] transform group-hover:scale-110 transition-transform duration-700 pointer-events-none">

@@ -1,0 +1,12 @@
+# Tindak lanjut audit antislop 016: landing page
+
+Tanggal: 4 Oktober 2026. Pengguna menyetujui perbaikan seluruh temuan 1 sampai 6 pada `audit-016-2026-10-04.md`.
+
+1. **HIGH, R-25 / R-34: selesai.** Warna teks CTA kini ditetapkan secara eksplisit di atas tombol hijau pada tema terang maupun gelap. Kontras label di bagian Tentang dan tombol instal juga diperbaiki; tautan dalam paragraf dibedakan dengan garis bawah. Pemindaian axe terbaru menunjukkan 0 pelanggaran pada desktop dan ponsel di kedua tema. Beberapa pemeriksaan kontras pada latar bertingkat tetap berstatus *incomplete* dan memerlukan peninjauan visual.
+2. **HIGH, R-32: selesai.** Tab modul yang belum aktif memiliki outline fokus khusus. Dengan Tab pada ponsel, fokus pada tab RPP terbaca `:focus-visible=true` dan outline solid 3px; tombol panah kanan mengubah tab yang dipilih.
+3. **HIGH, R-17 / R-36 / R-38: selesai.** Angka waktu/halaman, diskon, periode gratis, jumlah pengguna, dan jaminan keamanan yang belum diverifikasi dihapus dari dua versi landing. Contoh RPP dan game diberi label ilustrasi; nama pada papan game menjadi label peserta contoh. Informasi privasi mengarah ke halaman kebijakan yang dapat dibuka, sedangkan pertanyaan paket mengarah ke alamat kontak. Judul dokumen pada render SPA dan HTML awal kini selaras.
+4. **MEDIUM, R-19: selesai.** Animasi pengetikan hero berjalan sekali lalu menampilkan hasil tetap. Dalam browser, fase tetap `result` setelah lebih dari 6 detik, kartu prompt tersembunyi dan kartu hasil terlihat.
+5. **LOW, R-20 / R-31: selesai.** Bagian Tentang menempatkan alur kerja guru dan komunitas terlebih dahulu, merangkum cerita perintis, dan memberikan tautan kebijakan serta kontak. Bahasa internal tentang model bisnis tidak lagi mendominasi.
+6. **LOW, R-31: selesai.** Menu ponsel ke FAQ mengubah hash menjadi `#faq`, menempatkan fokus pada bagian itu, dan tombol Kembali memulihkan posisi beranda. URL langsung `#tentang` dan `#mod-game` membuka bagian/tab terkait; tab melalui keyboard turut memperbarui hash.
+
+Verifikasi: `npm run build` berhasil; 35 tes pada `feature-composition`, `feature-design`, dan `ui-refinement` lulus; `git diff --check` tidak menemukan kesalahan whitespace. Browser lokal pada lebar 1440 dan 390 piksel tidak menunjukkan overflow horizontal atau galat konsol. Pemindaian axe mencatat 0 pelanggaran pada kedua tema setelah perbaikan. Klik menu ponsel, FAQ, tab, tombol CTA ke `/login`, serta tautan Kebijakan Privasi ke `/privacy-policy` berhasil.

@@ -97,7 +97,7 @@ function findMatchingClientSchool(inputName) {
  */
 export function renderLogin() {
   return `
-    <div class="min-h-screen relative flex items-center justify-center py-12 px-4 overflow-hidden bg-[var(--color-bg-primary)]">
+    <div role="main" class="min-h-screen relative flex items-center justify-center py-12 px-4 overflow-hidden bg-[var(--color-bg-primary)]">
       <div class="absolute inset-0 overflow-hidden pointer-events-none fade-in">
         <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#c5a059]/5 rounded-full blur-[100px] opacity-70"></div>
         <div class="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-[#111111]/5 rounded-full blur-[100px] opacity-70"></div>
@@ -109,7 +109,7 @@ export function renderLogin() {
             <i class="fas fa-graduation-cap text-3xl text-[#111111]"></i>
           </div>
           <h1 id="kkg-name" class="font-display text-4xl font-semibold text-[var(--color-text-primary)] tracking-tighter mb-2">RuangKKG Digital</h1>
-          <p id="kkg-address-subtitle" class="text-[var(--color-text-tertiary)] font-medium tracking-wide uppercase text-xs">AI EdTech SaaS Platform</p>
+          <p id="kkg-address-subtitle" class="text-[var(--color-text-secondary)] font-medium text-xs">Portal Guru SD dan KKG</p>
         </div>
 
         <div class="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] p-8 md:p-10 border border-[var(--color-border-subtle)] relative overflow-hidden group">

@@ -8,6 +8,7 @@ import { validate, validateId, generateSuratSchema, generateSppdSchema } from '.
 import { logger } from '../lib/logger';
 import { hitungHPlus1, generateSppdBuffer } from '../lib/docx/sppd';
 import type { SuratUndangan } from '../types';
+import { reserveSuratNumbers, SuratNumberConflict } from '../lib/surat-numbering';
 
 let isSuratSchemaEnsured = false;
 
@@ -91,6 +92,8 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
   }
 
   const startTime = Date.now();
+  let reservation: Awaited<ReturnType<typeof reserveSuratNumbers>> | undefined;
+  let saved = false;
 
   try {
     const body = await c.req.json();
@@ -125,10 +128,6 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     // Generate nomor surat
     const currentYear = new Date().getFullYear();
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count: any = await c.env.DB.prepare(
-      'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
-    ).bind(String(currentYear)).first();
-
     const settingsRows = await c.env.DB.prepare(
       "SELECT key, value FROM settings WHERE key IN ('nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten')"
     ).all();
@@ -138,7 +137,11 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const isTugas = /tugas|spt|penugasan/i.test(jenis_kegiatan) || /tugas|spt|penugasan/i.test(agenda);
     const kodeSurat = isTugas ? 'ST' : 'UND';
     const gugusCode = settingsMap.gugus ? `KKG-G${settingsMap.gugus}` : 'KKG';
-    const nomorSurat = `${String((count?.cnt || 0) + 1).padStart(3, '0')}/${gugusCode}/${kodeSurat}/${currentMonth}/${currentYear}`;
+    reservation = await reserveSuratNumbers(c.env.DB, {
+      year: currentYear, userId: user.id,
+      makeNumbers: sequence => ({ surat: `${sequence}/${gugusCode}/${kodeSurat}/${currentMonth}/${currentYear}` }),
+    });
+    const nomorSurat = reservation.numbers.surat;
 
     // Build prompt
     const prompt = buildSuratPrompt({
@@ -191,7 +194,7 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     }
 
     // Save to database
-    const result = await c.env.DB.prepare(`
+    const insert = c.env.DB.prepare(`
       INSERT INTO surat_undangan 
       (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
        tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status)
@@ -207,7 +210,9 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       JSON.stringify(peserta || []),
       penanggung_jawab || user.nama,
       isiSurat
-    ).run();
+    );
+    const [result] = await c.env.DB.batch([insert, reservation.issueStatement(nomorSurat)]);
+    saved = true;
 
     logger.info('Surat created', {
       userId: user.id,
@@ -225,8 +230,11 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     }, 'Surat undangan berhasil dibuat', 201);
 
   } catch (e: any) {
+    if (e instanceof SuratNumberConflict) return Errors.conflict(c, e.message);
     logger.error('Generate surat error', e, { userId: user.id });
     return Errors.internal(c);
+  } finally {
+    if (reservation && !saved) await reservation.release().catch(error => logger.warn('Release surat number failed', { error: error.message }));
   }
 });
 
@@ -241,6 +249,8 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     return Errors.unauthorized(c);
   }
 
+  let reservation: Awaited<ReturnType<typeof reserveSuratNumbers>> | undefined;
+  let saved = false;
   try {
     const body = await c.req.json();
 
@@ -262,22 +272,21 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const currentMonthNum = new Date().getMonth() + 1;
     const romawiBulan = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][currentMonthNum - 1] || 'IX';
 
-    let sequenceNum = '001';
-    try {
-      const count: any = await c.env.DB.prepare(
-        'SELECT COUNT(*) as cnt FROM surat_undangan WHERE strftime("%Y", created_at) = ?'
-      ).bind(String(currentYear)).first();
-      sequenceNum = String((count?.cnt || 0) + 1).padStart(3, '0');
-    } catch {
-      sequenceNum = String(Math.floor(Math.random() * 900) + 100);
-    }
-
     const cleanKodeSekolah = (data.sekolah_asal_nama || 'SDN')
       .replace(/SD NEGERI/i, 'SDN')
       .replace(/[^a-zA-Z0-9]/g, '');
 
-    const nomorSPT = data.nomor_surat_tugas || `421.2 / ${sequenceNum} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`;
-    const nomorSPPD = data.nomor_sppd || `090 / ${sequenceNum} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`;
+    reservation = await reserveSuratNumbers(c.env.DB, {
+      year: currentYear, userId: user.id,
+      automatic: !data.nomor_surat_tugas || !data.nomor_sppd,
+      manualNumbers: [data.nomor_surat_tugas || '', data.nomor_sppd || ''],
+      makeNumbers: sequence => ({
+        spt: data.nomor_surat_tugas || `421.2 / ${sequence} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`,
+        sppd: data.nomor_sppd || `090 / ${sequence} / ${cleanKodeSekolah} / ${romawiBulan} / ${currentYear}`,
+      }),
+    });
+    const nomorSPT = reservation.numbers.spt;
+    const nomorSPPD = reservation.numbers.sppd;
 
     // Auto-calculate H+1 date for LHP if not provided
     const tanggalLHP = data.tanggal_lhp || hitungHPlus1(data.tanggal_kegiatan);
@@ -353,8 +362,13 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     await ensureSuratUndanganSchema(c.env.DB);
 
     let suratId: number;
+    const saveSppd = async (insert: D1PreparedStatement) => {
+      const [result] = await c.env.DB.batch([insert, reservation!.issueStatement(nomorSPT)]);
+      saved = true;
+      return result;
+    };
     try {
-      const result = await c.env.DB.prepare(`
+      const insert = c.env.DB.prepare(`
         INSERT INTO surat_undangan 
         (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
          tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
@@ -371,7 +385,8 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
         data.kepala_sekolah_asal,
         isiLhp,
         JSON.stringify(metadataPayload)
-      ).run();
+      );
+      const result = await saveSppd(insert);
       suratId = result.meta.last_row_id;
     } catch (insertErr: any) {
       logger.warn('Primary SPPD insert failed, trying force alter and retry', { error: insertErr.message });
@@ -383,7 +398,7 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
       } catch (_) {}
 
       try {
-        const retryResult = await c.env.DB.prepare(`
+        const insert = c.env.DB.prepare(`
           INSERT INTO surat_undangan 
           (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
            tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status, tipe_surat, metadata)
@@ -400,12 +415,13 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
           data.kepala_sekolah_asal,
           isiLhp,
           JSON.stringify(metadataPayload)
-        ).run();
+        );
+        const retryResult = await saveSppd(insert);
         suratId = retryResult.meta.last_row_id;
       } catch (retryErr: any) {
         logger.error('Retry SPPD insert failed, falling back to legacy schema', retryErr);
         const legacyPayload = `<!--SPPD_METADATA_JSON:${JSON.stringify(metadataPayload)}-->\n${isiLhp}`;
-        const fallbackResult = await c.env.DB.prepare(`
+        const insert = c.env.DB.prepare(`
           INSERT INTO surat_undangan 
           (user_id, nomor_surat, jenis_kegiatan, tanggal_kegiatan, waktu_kegiatan, 
            tempat_kegiatan, agenda, peserta, penanggung_jawab, isi_surat, status)
@@ -421,7 +437,8 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
           JSON.stringify(data.daftar_guru),
           data.kepala_sekolah_asal,
           legacyPayload
-        ).run();
+        );
+        const fallbackResult = await saveSppd(insert);
         suratId = fallbackResult.meta.last_row_id;
       }
     }
@@ -446,8 +463,12 @@ surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     }, 'Paket Surat Tugas & SPPD berhasil dibuat', 201);
 
   } catch (e: any) {
+    if (e instanceof SuratNumberConflict) return Errors.conflict(c, e.message);
+    if (e instanceof RangeError) return Errors.validation(c, e.message);
     logger.error('Generate SPPD error', e, { userId: user.id });
     return Errors.internal(c, e?.message || 'Terjadi kesalahan internal saat memproses dokumen SPPD');
+  } finally {
+    if (reservation && !saved) await reservation.release().catch(error => logger.warn('Release SPPD number failed', { error: error.message }));
   }
 });
 

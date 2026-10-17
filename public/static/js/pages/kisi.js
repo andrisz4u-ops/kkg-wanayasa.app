@@ -55,6 +55,28 @@ function clearPendingGeneration(attempt) {
   } catch {}
 }
 
+export function resolveRenderableImageSrc(image) {
+  if (!image) return '';
+  if (typeof image === 'string') {
+    const s = image.trim();
+    if (s.startsWith('data:image/svg+xml;utf8,')) {
+      return 'data:image/svg+xml;charset=utf-8,' + s.slice('data:image/svg+xml;utf8,'.length);
+    }
+    return s;
+  }
+  if (image.svg && typeof image.svg === 'string' && image.svg.trim()) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(image.svg.trim())}`;
+  }
+  if (image.url && typeof image.url === 'string') {
+    const u = image.url.trim();
+    if (u.startsWith('data:image/svg+xml;utf8,')) {
+      return 'data:image/svg+xml;charset=utf-8,' + u.slice('data:image/svg+xml;utf8,'.length);
+    }
+    return u;
+  }
+  return '';
+}
+
 export async function renderKisi() {
   if (!state.user) {
     return renderLockedFeature(
@@ -2324,10 +2346,10 @@ function renderResult(data, formData, packageOptions = {}) {
     const image = typeof question.gambar === 'string' ? { url: question.gambar } : question.gambar || {};
     const required = Boolean(question.gambar || question.visual_stimulus || question.visual_required || question.imageUnavailable);
     if (!required) return '';
-    const source = image.url || (image.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(image.svg)}` : '');
+    const source = resolveRenderableImageSrc(image);
     const failed = question.imageUnavailable || !source;
     return `<div class="soal-image-container ${failed ? 'image-load-failed' : ''} relative group inline-block my-2" data-type="${type}" data-no="${escapeHtml(question.no)}" style="border:1px solid #e2e8f0; border-radius:6px; padding:4px; background:#fff; max-width:100%;">
-      ${source ? `<img src="${escapeHtml(source)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(image.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
+      ${source ? `<img src="${escapeHtml(source)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(image.title || (image.svg ? 'Diagram' : 'Gambar Ilustrasi'))}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
       ${image.credit ? `<div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5">${escapeHtml(image.credit)}</div>` : ''}
       <div class="image-hover-actions print:hidden absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100">
         <button type="button" class="btn-change-soal-image rounded bg-blue-600 px-2 py-1 text-[10px] font-bold text-white" data-type="${type}" data-qindex="${index}">Ganti</button>
@@ -2386,6 +2408,7 @@ function renderResult(data, formData, packageOptions = {}) {
       const opts = q.opsi || {};
       const pgImage = typeof q.gambar === 'string' ? { url: q.gambar } : q.gambar || {};
       const hasPgVisual = Boolean(q.gambar || q.visual_stimulus || q.visual_required || q.imageUnavailable);
+      const pgSource = resolveRenderableImageSrc(pgImage);
       const allShort = Object.values(opts).every(v => (v || '').length < 20);
       const anyLong = Object.values(opts).some(v => (v || '').length > 55);
       const colClass = allShort ? 'cols-4' : anyLong ? 'cols-1' : 'cols-2';
@@ -2450,11 +2473,11 @@ function renderResult(data, formData, packageOptions = {}) {
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 4px 0 6px 0; text-align:left;">
-                    <div class="soal-image-container ${(!pgImage.url && !pgImage.svg) || q.imageUnavailable ? 'image-load-failed' : ''} relative group inline-block" data-type="pg" data-no="${q.no}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background:#fff; max-width: 100%;">
-                      ${pgImage.url ? `<img src="${escapeHtml(pgImage.url)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(pgImage.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : pgImage.svg ? `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(pgImage.svg)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(pgImage.title || 'Diagram')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
+                    <div class="soal-image-container ${(!pgSource) || q.imageUnavailable ? 'image-load-failed' : ''} relative group inline-block" data-type="pg" data-no="${q.no}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background:#fff; max-width: 100%;">
+                      ${pgSource ? `<img src="${escapeHtml(pgSource)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(pgImage.title || (pgImage.svg ? 'Diagram' : 'Gambar Ilustrasi'))}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
                       ${pgImage.credit ? `
                         <div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
-                          <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>
+                          <i class="${q.gambar?.type === 'svg' || pgImage.svg ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>
                           <span>${escapeHtml(pgImage.credit)}</span>
                         </div>
                       ` : ''}
@@ -2466,7 +2489,7 @@ function renderResult(data, formData, packageOptions = {}) {
                           <i class="fas fa-trash-alt"></i>
                         </button>
                       </div>
-                      <div class="image-failed-alert ${(!pgImage.url && !pgImage.svg) || q.imageUnavailable ? '' : 'hidden'} items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
+                      <div class="image-failed-alert ${(!pgSource) || q.imageUnavailable ? '' : 'hidden'} items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
                         <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar soal #${q.no} tidak dapat dimuat. Unggah ulang file asli atau pilih pengganti.</span>
                         <div class="flex items-center gap-1.5">
                           <button type="button" class="btn-change-soal-image px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-camera mr-1"></i>Ganti</button>
@@ -3014,7 +3037,7 @@ function openSoalEditor(type, index, data, formData) {
   }
 
   // Gambar Section
-  let currentGambarUrl = q.gambar?.url || '';
+  let currentGambarUrl = resolveRenderableImageSrc(q.gambar);
   const gambarSectionHTML = `
     <div style="margin-bottom:14px; padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -3265,7 +3288,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
   else if (type === 'uraian') q = data.uraian?.[qIdx];
   if (!q) return;
 
-  let selectedImageUrl = q.gambar?.url || '';
+  let selectedImageUrl = resolveRenderableImageSrc(q.gambar);
   let selectedSvg = q.gambar?.svg || '';
   let selectedTitle = q.gambar?.title || '';
   let pendingUploadAssetId = createAssessmentAssetId();
@@ -3582,7 +3605,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
   });
 
   const updatePreview = (url) => {
-    selectedImageUrl = url;
+    selectedImageUrl = resolveRenderableImageSrc(url);
     if (url) {
       previewImg.src = url;
       previewImg.style.display = 'block';

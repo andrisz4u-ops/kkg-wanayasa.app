@@ -21,7 +21,7 @@ vi.mock('../public/static/js/utils.js', async importOriginal => {
   return { ...actual, showToast: toastMock, showLoading: vi.fn(), hideLoading: vi.fn(), populateAiModelSelect: vi.fn(), streamPost: streamMock, openAiLiveMonitor: monitorMock };
 });
 
-import { renderKisi, initKisi } from '../public/static/js/pages/kisi.js';
+import { renderKisi, initKisi, resolveRenderableImageSrc } from '../public/static/js/pages/kisi.js';
 
 const generated = () => ({
   pg: [
@@ -368,5 +368,22 @@ describe('assessment package UI client integration', () => {
     finishPreflight({ ready: true, images: new Map(), failures: [] });
     await vi.waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('akun berubah'), 'error'));
     expect(docxMock).not.toHaveBeenCalled();
+  });
+
+  it('normalizes SVG data URIs and resolves raw SVGs safely', () => {
+    expect(resolveRenderableImageSrc(null)).toBe('');
+    expect(resolveRenderableImageSrc('')).toBe('');
+    expect(resolveRenderableImageSrc('/api/banksoal/42/assets/asset-1')).toBe('/api/banksoal/42/assets/asset-1');
+    expect(resolveRenderableImageSrc('data:image/svg+xml;utf8,%3Csvg%3E%3C%2Fsvg%3E'))
+      .toBe('data:image/svg+xml;charset=utf-8,%3Csvg%3E%3C%2Fsvg%3E');
+    expect(resolveRenderableImageSrc({ svg: '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>' }))
+      .toBe('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%2F%3E%3C%2Fsvg%3E');
+    expect(resolveRenderableImageSrc({
+      url: 'data:image/svg+xml;utf8,%3Csvg%20old%3E%3C%2Fsvg%3E',
+      svg: '<svg new></svg>',
+    })).toBe('data:image/svg+xml;charset=utf-8,%3Csvg%20new%3E%3C%2Fsvg%3E');
+    expect(resolveRenderableImageSrc({
+      url: 'data:image/svg+xml;utf8,%3Csvg%20fromurl%3E%3C%2Fsvg%3E',
+    })).toBe('data:image/svg+xml;charset=utf-8,%3Csvg%20fromurl%3E%3C%2Fsvg%3E');
   });
 });

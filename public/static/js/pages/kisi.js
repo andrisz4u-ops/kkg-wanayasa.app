@@ -341,6 +341,7 @@ export async function renderKisi() {
         <div id="kisi-save-state" class="print:hidden max-w-[210mm] mx-auto mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700" role="status" aria-live="polite">
           <span id="kisi-save-state-label">Belum disimpan</span>
           <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="kisi-save-cloud" class="rounded-lg bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer"><i class="fas fa-cloud-upload-alt"></i> Simpan ke Bank Soal</button>
             <button type="button" id="kisi-save-retry" class="hidden rounded-lg border border-amber-300 px-2.5 py-1 font-semibold text-amber-800">Coba simpan lagi</button>
             <button type="button" id="kisi-save-local" class="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold">Simpan salinan di perangkat</button>
             <button type="button" id="kisi-save-server" class="hidden rounded-lg border border-indigo-300 px-2.5 py-1 font-semibold text-indigo-800">Muat versi server</button>
@@ -1051,6 +1052,8 @@ function updateAssessmentSaveState({ status, label, error, context }) {
   statusLabel.dataset.saveStatus = status;
   root.classList.toggle('border-rose-300', status === 'failed' || status === 'conflict');
   root.classList.toggle('bg-rose-50', status === 'failed' || status === 'conflict');
+  const isServerSaved = Boolean(context?.packageId && status === 'saved');
+  document.getElementById('kisi-save-cloud')?.classList.toggle('hidden', isServerSaved);
   document.getElementById('kisi-save-retry')?.classList.toggle('hidden', status !== 'failed');
   document.getElementById('kisi-save-server')?.classList.toggle('hidden', status !== 'conflict' && status !== 'failed' || !context?.packageId);
 }
@@ -2171,6 +2174,19 @@ export function initKisi() {
     }
   });
 
+  document.getElementById('kisi-save-cloud')?.addEventListener('click', async () => {
+    try {
+      showLoading('Menyimpan ke Bank Soal...', 'Mengunggah dan mengamankan aset stimulus');
+      commitAssessmentEdit(_lastGeneratedData, _lastFormData);
+      await assessmentPackageSync.flush();
+      hideLoading();
+      showToast('Paket soal berhasil disimpan ke Bank Soal!', 'success');
+      loadBankSoalCountBadge();
+    } catch (error) {
+      hideLoading();
+      showToast(error.message || 'Gagal menyimpan ke Bank Soal.', 'error');
+    }
+  });
   document.getElementById('kisi-save-retry')?.addEventListener('click', async () => {
     try { await assessmentPackageSync.retry(); showToast('Perubahan berhasil disimpan.', 'success'); }
     catch (error) { showToast(error.message || 'Gagal menyimpan perubahan.', 'error'); }

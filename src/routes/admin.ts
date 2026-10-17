@@ -206,9 +206,42 @@ admin.get('/analytics/schools', async (c) => {
          WHERE strftime('%Y-%m', created_at) = ?
          GROUP BY sekolah`;
 
-    const statsRes = requestedMonth === 'all'
-      ? await c.env.DB.prepare(statsQuery).all()
-      : await c.env.DB.prepare(statsQuery).bind(requestedMonth).all();
+    let statsRes: any;
+    try {
+      statsRes = requestedMonth === 'all'
+        ? await c.env.DB.prepare(statsQuery).all()
+        : await c.env.DB.prepare(statsQuery).bind(requestedMonth).all();
+    } catch (err: any) {
+      if (String(err?.message || err).includes('classification_quality')) {
+        const fallbackQuery = requestedMonth === 'all'
+          ? `SELECT 
+               sekolah,
+               COUNT(*) as total_all,
+               SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
+               SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
+               SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide,
+               SUM(CASE WHEN feature_type NOT IN ('RPP', 'ASESMEN', 'SLIDE') THEN 1 ELSE 0 END) as total_other,
+               0 as total_legacy_uncertain
+             FROM ai_generation_logs
+             GROUP BY sekolah`
+          : `SELECT 
+               sekolah,
+               COUNT(*) as total_all,
+               SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
+               SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
+               SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide,
+               SUM(CASE WHEN feature_type NOT IN ('RPP', 'ASESMEN', 'SLIDE') THEN 1 ELSE 0 END) as total_other,
+               0 as total_legacy_uncertain
+             FROM ai_generation_logs
+             WHERE strftime('%Y-%m', created_at) = ?
+             GROUP BY sekolah`;
+        statsRes = requestedMonth === 'all'
+          ? await c.env.DB.prepare(fallbackQuery).all()
+          : await c.env.DB.prepare(fallbackQuery).bind(requestedMonth).all();
+      } else {
+        throw err;
+      }
+    }
 
     const statsMap = new Map<string, any>();
     (statsRes.results || []).forEach((row: any) => {

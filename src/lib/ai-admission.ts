@@ -20,19 +20,27 @@ export const requireAIAdmission: MiddlewareHandler<{
   const now = Math.floor(Date.now() / 1000);
   const windowStart = Math.floor(now / windowSeconds) * windowSeconds;
 
-  const admitted = await c.env.DB.prepare(`
-    INSERT INTO ai_user_admission (user_id, window_start, request_count)
-    VALUES (?, ?, 1)
-    ON CONFLICT(user_id) DO UPDATE SET
-      window_start = CASE WHEN excluded.window_start > ai_user_admission.window_start THEN excluded.window_start ELSE ai_user_admission.window_start END,
-      request_count = CASE WHEN excluded.window_start > ai_user_admission.window_start THEN 1 ELSE ai_user_admission.request_count + 1 END
-    WHERE excluded.window_start > ai_user_admission.window_start
-       OR (excluded.window_start = ai_user_admission.window_start AND ai_user_admission.request_count < ?)
-    RETURNING request_count
-  `).bind(user.id, windowStart, maxRequests).first();
+  try {
+    const admitted = await c.env.DB.prepare(`
+      INSERT INTO ai_user_admission (user_id, window_start, request_count)
+      VALUES (?, ?, 1)
+      ON CONFLICT(user_id) DO UPDATE SET
+        window_start = CASE WHEN excluded.window_start > ai_user_admission.window_start THEN excluded.window_start ELSE ai_user_admission.window_start END,
+        request_count = CASE WHEN excluded.window_start > ai_user_admission.window_start THEN 1 ELSE ai_user_admission.request_count + 1 END
+      WHERE excluded.window_start > ai_user_admission.window_start
+         OR (excluded.window_start = ai_user_admission.window_start AND ai_user_admission.request_count < ?)
+      RETURNING request_count
+    `).bind(user.id, windowStart, maxRequests).first();
 
-  if (!admitted) {
-    return Errors.rateLimited(c, Math.max(1, windowStart + windowSeconds - now));
+    if (!admitted) {
+      return Errors.rateLimited(c, Math.max(1, windowStart + windowSeconds - now));
+    }
+  } catch (err: any) {
+    if (String(err?.message || err).includes('no such table: ai_user_admission')) {
+      console.warn('[AI Admission] Table ai_user_admission not ready, allowing request gracefully.');
+    } else {
+      throw err;
+    }
   }
   await next();
 };

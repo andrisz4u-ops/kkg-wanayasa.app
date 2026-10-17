@@ -197,8 +197,9 @@ export class AssessmentPackageSync {
 
   async uploadImageUrl(sourceUrl, { assetId = uuid(), name = '' } = {}) {
     const url = new URL(sourceUrl, globalThis.location?.origin || 'https://ruangkkg.my.id');
-    const allowed = ['sewr2.vultrobjects.com', 'upload.wikimedia.org'];
-    if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !allowed.includes(url.hostname.toLowerCase())) {
+    const host = url.hostname.toLowerCase();
+    const isAllowed = host === 'upload.wikimedia.org' || host === 'sewr2.vultrobjects.com' || /^[a-z0-9-]+\.vultrobjects\.com$/.test(host);
+    if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !isAllowed) {
       throw new Error('Sumber gambar ini tidak dapat disimpan permanen. Unggah file asli atau pilih diagram dari galeri.');
     }
     const controller = new AbortController();

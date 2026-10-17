@@ -188,12 +188,15 @@ export async function ingestTrustedAssessmentImage(db: D1Database, ownerId: numb
     const detected = sniff(bytes); if (!detected || detected !== match[1]) throw new TrustedImageIngestError('invalid_image');
     return persistAssessmentAsset(db, ownerId, bytes, detected);
   }
-  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !['sewr2.vultrobjects.com','upload.wikimedia.org'].includes(url.hostname.toLowerCase())) throw new TrustedImageIngestError('untrusted_host');
+  const host = url.hostname.toLowerCase();
+  const isTrustedHost = host === 'upload.wikimedia.org' || host === 'sewr2.vultrobjects.com' || /^[a-z0-9-]+\.vultrobjects\.com$/.test(host);
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !isTrustedHost) throw new TrustedImageIngestError('untrusted_host');
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const response = await fetch(url, { redirect: 'error', signal: controller.signal, headers: { Accept: 'image/png,image/jpeg,image/webp' } });
     if (!response.ok || !response.body) throw new TrustedImageIngestError('expired_or_missing');
-    const declared = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+    const rawDeclared = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+    const declared = rawDeclared === 'image/jpg' ? 'image/jpeg' : rawDeclared;
     if (!['image/png','image/jpeg','image/webp'].includes(declared || '')) throw new TrustedImageIngestError('invalid_image');
     const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let total = 0;
     while (true) { const {done,value} = await reader.read(); if (done) break; total += value.length; if (total > ASSESSMENT_ASSET_MAX_BYTES) { await reader.cancel(); throw new TrustedImageIngestError('too_large'); } chunks.push(value); }

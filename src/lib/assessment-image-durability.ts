@@ -213,7 +213,7 @@ export async function normalizeAssessmentImages(
         unavailable(item, reason);
         warnings.push({ questionNo: questionLabel(item, index), reason });
       } else {
-        const requiresImage = item.imageRequired === true || /(?:perhatikan|amatilah|lihat|berdasarkan)\s+(?:gambar|foto|diagram|ilustrasi)|look\s+at\s+the\s+(?:picture|image|diagram)/i.test(String(item.soal || ''));
+        const requiresImage = item.imageRequired === true || /(?:perhatikan|amatilah|lihat|berdasarkan)\s+(?:gambar|foto|diagram)|(?:perhatikan|amatilah)\s+ilustrasi\s+(?:berikut|di\s+bawah)|look\s+at\s+the\s+(?:picture|image|diagram)/i.test(String(item.soal || ''));
         if (requiresImage) {
           unavailable(item, 'required_image_missing');
           warnings.push({ questionNo: questionLabel(item, index), reason: 'required_image_missing' });

@@ -180,7 +180,7 @@ function prepareQuestionImage(item: any): string | null {
     return null;
   }
   const hasSource = !!image && ['url', 'dataUri', 'src', 'gambar', 'data', 'svg'].some(key => typeof image[key] === 'string' && image[key].trim());
-  const requiresStimulus = item.imageRequired === true || /(?:perhatikan|amatilah|lihat|berdasarkan)\s+(?:gambar|foto|diagram|ilustrasi)|look\s+at\s+the\s+(?:picture|image|diagram)/i.test(String(item.soal || ''));
+  const requiresStimulus = item.imageRequired === true || /(?:perhatikan|amatilah|lihat|berdasarkan)\s+(?:gambar|foto|diagram)|(?:perhatikan|amatilah)\s+ilustrasi\s+(?:berikut|di\s+bawah)|look\s+at\s+the\s+(?:picture|image|diagram)/i.test(String(item.soal || ''));
   const reason = image?.imageUnavailable === true
     ? FAILURE_REASONS.has(String(image.imageUnavailableReason || image.imageWarningReason)) ? String(image.imageUnavailableReason || image.imageWarningReason) : 'image_unavailable'
     : hasSource || requiresStimulus ? 'required_image_missing' : null;

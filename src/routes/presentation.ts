@@ -8,6 +8,7 @@ import { createStreamJob } from '../lib/ai-stream-job';
 import { recordAIGeneration } from '../lib/telemetry';
 import { presentationOutlineSchema, presentationOutlineResponseSchema, presentationGenerateSchema, presentationPatchSlideSchema, validate } from '../lib/validation';
 import { type AppBindings, type AppVariables } from '../types/env';
+import { requireAIAdmission } from '../lib/ai-admission';
 import { normalizeGeneratedDeck, normalizeSlide, deckIssues, slideIssues, isLearningObjectivesSlide, LAYOUTS } from '../../public/static/js/slides/lesson-model.js';
 import { buildScene } from '../../public/static/js/slides/scene.js';
 import { getTemplate } from '../../public/static/js/slides/templates.js';
@@ -76,10 +77,10 @@ async function generate(ai: AIService, input: any, step: (index: number, message
     }
     deck.meta = { ...deck.meta, version: 2, slideCount: deck.slides.length, requestedSlideCount: input.slideCount, durationMs: Date.now() - started, attachedImages: 0, imagePolicy: 'diagram_terstruktur', provider: raw?._aiMeta?.provider };
     updateLayoutReview(deck, input);
-    await step(4, deck.meta.quality.partial ? 'Materi yang sudah tersedia disimpan sebagai draf sebagian. Lengkapi slide yang ditandai di editor.' : deck.meta.quality.layoutWarnings.length ? 'Draf materi tersedia. Beberapa bidang teks perlu dirapikan di editor sebelum diekspor.' : 'Menyiapkan slide dan catatan untuk ditinjau guru.');
+    await step(4, deck.meta.quality?.partial ? 'Materi yang sudah tersedia disimpan sebagai draf sebagian. Lengkapi slide yang ditandai di editor.' : deck.meta.quality?.layoutWarnings?.length ? 'Draf materi tersedia. Beberapa bidang teks perlu dirapikan di editor sebelum diekspor.' : 'Menyiapkan slide dan catatan untuk ditinjau guru.');
     return deck;
 }
-presentation.post('/outline', async c => {
+presentation.post('/outline', requireAIAdmission, async c => {
     try {
         const parsed = validate(presentationOutlineSchema, await c.req.json());
         if (!parsed.success) return Errors.validation(c, 'Brief slide belum lengkap.', parsed.errors);
@@ -92,7 +93,7 @@ presentation.post('/outline', async c => {
         return validated.success ? successResponse(c, validated.data) : Errors.validation(c, 'Kerangka belum sesuai struktur.', validated.errors);
     } catch (error: any) { return generationError(c, error); }
 });
-presentation.post('/generate', async c => {
+presentation.post('/generate', requireAIAdmission, async c => {
     try {
         const parsed = validate(presentationGenerateSchema, await c.req.json());
         if (!parsed.success) return Errors.validation(c, 'Brief slide belum lengkap.', parsed.errors);
@@ -103,7 +104,7 @@ presentation.post('/generate', async c => {
         await telemetry(c, deck, input); return successResponse(c, deck);
     } catch (error: any) { return generationError(c, error); }
 });
-presentation.post('/generate-stream', async c => {
+presentation.post('/generate-stream', requireAIAdmission, async c => {
     try {
         const body = await c.req.json(), parsed = validate(presentationGenerateSchema, body);
         if (!parsed.success) return Errors.validation(c, 'Brief slide belum lengkap.', parsed.errors);
@@ -115,8 +116,9 @@ presentation.post('/generate-stream', async c => {
             try {
                 const deck = await generate(ai, parsed.data, async (step, message) => { await stream.writeSSE({ event: 'step', data: JSON.stringify({ step, totalSteps: 4, message }) }); }, text => { void stream.writeSSE({ event: 'token', data: JSON.stringify({ text }) }).catch(() => {}); }, async () => { await stream.writeSSE({ event: 'reset', data: JSON.stringify({ message: 'Memperbaiki draf berdasarkan pemeriksaan struktur.' }) }); });
                 job.signal.throwIfAborted(); await attachPhotos(c, deck, parsed.data); job.signal.throwIfAborted(); updateLayoutReview(deck, parsed.data); await telemetry(c, deck, parsed.data);
-                const warnings = [...deck.meta.quality.contentIssues, deck.meta.quality.countWarning, ...deck.meta.quality.layoutWarnings].filter(Boolean);
-                await stream.writeSSE({ event: 'done', data: JSON.stringify({ success: true, partial: deck.meta.quality.partial, warnings, data: deck }) });
+                const quality = deck.meta.quality;
+                const warnings = [...(quality?.contentIssues || []), quality?.countWarning, ...(quality?.layoutWarnings || [])].filter(Boolean);
+                await stream.writeSSE({ event: 'done', data: JSON.stringify({ success: true, partial: quality?.partial, warnings, data: deck }) });
             } catch (error: any) { if (!job.signal.aborted) await stream.writeSSE({ event: 'error', data: JSON.stringify({ message: error.message, code: error.code || ErrorCodes.AI_ERROR, status: error.code === 'AI_OUTPUT_INVALID' ? 422 : 500, details: error.details }) }); }
             finally { await job.dispose(); }
         });
@@ -134,7 +136,7 @@ async function telemetry(c: any, deck: any, input: any) {
     const user = c.get('user');
     await recordAIGeneration(c.env.DB, { user_id: user.id, user_nama: user.nama, sekolah: user.sekolah || '', feature_type: 'SLIDE', topik: input.topik, mata_pelajaran: input.mataPelajaran, jenjang_kelas: input.jenjangKelas, ai_provider: input.aiProvider, duration_ms: deck.meta.durationMs });
 }
-presentation.post('/patch-slide', async c => {
+presentation.post('/patch-slide', requireAIAdmission, async c => {
     try {
         const parsed = validate(presentationPatchSlideSchema, await c.req.json());
         if (!parsed.success) return Errors.validation(c, 'Instruksi revisi belum lengkap.', parsed.errors);

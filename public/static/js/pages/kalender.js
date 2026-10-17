@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { state } from '../state.js';
 import { escapeHtml, showToast } from '../utils.js';
 import { openUiDialog, closeUiDialog } from '../ui-dialog.js';
-import { renderLoadFailure } from '../ui-load-state.js';
+import { renderLoadFailure, renderLoadingLines } from '../ui-load-state.js';
 
 let currentDate = new Date();
 let currentView = 'month';
@@ -151,7 +151,7 @@ export async function initKalender() {
 async function loadEvents() {
     loadFailed = false;
     const body = document.getElementById('calendar-body');
-    if (body) body.innerHTML = '<p role="status" class="text-center py-8">Memuat agenda kegiatan…</p>';
+    if (body) body.innerHTML = `<div class="text-center py-4"><p class="text-sm text-gray-500 dark:text-gray-400">Memuat agenda kegiatan…</p>${renderLoadingLines('Memuat agenda kegiatan')}</div>`;
     try {
         const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
         const res = await api(`/calendar/events?month=${month}`);

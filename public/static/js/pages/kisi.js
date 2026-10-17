@@ -4,8 +4,56 @@ import { setGenerationNotice } from '../ai-generation-notice.js';
 import { showToast, showLoading, hideLoading, populateAiModelSelect, escapeHtml, getActiveTahunAjaran, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
 import { state } from '../state.js';
 import { renderLockedFeature } from '../components.js';
-import { generateAsesmenDocx, preloadAsesmenImages } from '../asesmen-docx.js';
+import { generateAsesmenDocx, prepareAssessmentExportImages, preloadAsesmenImages } from '../asesmen-docx.js';
 import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
+import { createAssessmentPackageSync, createAssessmentAssetId, ASSESSMENT_SAVE_LABELS } from '../assessment-package-sync.js';
+
+function getPendingAssessmentBackupKey(owner = state.user?.id) {
+  return owner == null ? null : `kkg_kisi_pending_${String(owner)}`;
+}
+
+function hasPendingAssessmentBackup(owner = state.user?.id) {
+  try { return Boolean(getPendingAssessmentBackupKey(owner) && localStorage.getItem(getPendingAssessmentBackupKey(owner))); }
+  catch { return false; }
+}
+
+function generationAttemptKey(owner = state.user?.id) {
+  return owner == null ? null : `kkg_kisi_generation_pending_${String(owner)}`;
+}
+
+function readPendingGeneration(owner = state.user?.id) {
+  try {
+    const key = generationAttemptKey(owner);
+    const record = key && sessionStorage.getItem(key);
+    if (!record) return null;
+    const attempt = JSON.parse(record);
+    return attempt?.owner === String(owner) && attempt.payload && typeof attempt.payload === 'object' && !Array.isArray(attempt.payload) &&
+      typeof attempt.payload.topik === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attempt.payload.clientDocumentId || '') ? attempt : null;
+  } catch { return null; }
+}
+
+function updatePendingGenerationButton(owner = state.user?.id) {
+  document.getElementById('btn-recover-generation')?.classList.toggle('hidden', !readPendingGeneration(owner));
+}
+
+function writePendingGeneration(attempt) {
+  try {
+    const key = generationAttemptKey(attempt.owner);
+    if (!key) return false;
+    sessionStorage.setItem(key, JSON.stringify(attempt));
+    updatePendingGenerationButton(attempt.owner);
+    return true;
+  } catch { return false; }
+}
+
+function clearPendingGeneration(attempt) {
+  try {
+    const key = generationAttemptKey(attempt.owner);
+    const current = key && readPendingGeneration(attempt.owner);
+    if (key && current?.payload?.clientDocumentId === attempt.payload.clientDocumentId) sessionStorage.removeItem(key);
+    updatePendingGenerationButton(attempt.owner);
+  } catch {}
+}
 
 export async function renderKisi() {
   if (!state.user) {
@@ -43,6 +91,8 @@ export async function renderKisi() {
             <button type="button" id="btn-bank-soal" class="px-4 py-2.5 rounded-2xl bg-violet-50 dark:bg-violet-950/40 text-violet-800 dark:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-500/30 text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer">
               <i class="fas fa-database text-violet-500"></i> Bank Soal Kolaboratif <span id="bank-soal-count-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-violet-600 text-white font-bold ml-1"></span>
             </button>
+            ${hasPendingAssessmentBackup(state.user?.id) ? `<button type="button" id="btn-recover-local-assessment" class="px-4 py-2.5 rounded-2xl bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer">Pulihkan salinan lokal</button>` : ''}
+            <button type="button" id="btn-recover-generation" class="${readPendingGeneration(state.user?.id) ? '' : 'hidden'} px-4 py-2.5 rounded-2xl bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer">Ambil hasil proses sebelumnya</button>
           </div>
         </div>
 
@@ -265,6 +315,16 @@ export async function renderKisi() {
             <i class="fas fa-check-circle text-emerald-500"></i> Otomatis update Word (.docx) & PDF
           </div>
         </div>
+
+        <div id="kisi-save-state" class="print:hidden max-w-[210mm] mx-auto mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700" role="status" aria-live="polite">
+          <span id="kisi-save-state-label">Belum disimpan</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="kisi-save-retry" class="hidden rounded-lg border border-amber-300 px-2.5 py-1 font-semibold text-amber-800">Coba simpan lagi</button>
+            <button type="button" id="kisi-save-local" class="rounded-lg border border-slate-300 px-2.5 py-1 font-semibold">Simpan salinan di perangkat</button>
+            <button type="button" id="kisi-save-server" class="hidden rounded-lg border border-indigo-300 px-2.5 py-1 font-semibold text-indigo-800">Muat versi server</button>
+          </div>
+        </div>
+        <div id="kisi-print-warning" class="hidden max-w-[210mm] mx-auto mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert"></div>
 
         <!-- A4 Canvas -->
         <div id="asesmen-canvas" class="asesmen-a4 preview-only">
@@ -835,9 +895,6 @@ export async function renderKisi() {
           padding: 0 !important;
           font-family: 'Times New Roman', 'Noto Sans Sundanese', Times, serif !important;
         }
-        .soal-image-container.image-load-failed {
-          display: none !important;
-        }
         .soal-image-container {
           border: none !important;
           padding: 2px 0 !important;
@@ -937,6 +994,273 @@ let _lastGeneratedData = {};
 let _currentActiveTab = 'soal';
 let _selectedBatchItems = new Map();
 let _editModeActive = false; // Default: mode edit non-aktif pada canvas
+let _kisiBeforePrintBound = false;
+
+const assessmentPackageSync = createAssessmentPackageSync({
+  ownerProvider: () => state.user?.id ?? null,
+  onStatus: updateAssessmentSaveState,
+  onSaved: (context) => {
+    if (assessmentPackageSync.context?.token !== context.token) return;
+    if (context.visibility === 'shared') {
+      context.visibility = 'private-reapproval';
+      assessmentPackageSync.context.visibility = 'private-reapproval';
+      assessmentPackageSync.setStatus('saved');
+    }
+    if (_lastGeneratedData && assessmentPackageSync.context?.token === context.token) {
+      _lastGeneratedData._persistence = {
+        ...(_lastGeneratedData._persistence || {}),
+        packageId: context.packageId,
+        revision: context.revision,
+        saveStatus: 'saved',
+        imageWarnings: assessmentPackageSync.imageWarnings.slice(),
+      };
+    }
+  },
+});
+
+function updateAssessmentSaveState({ status, label, error, context }) {
+  const root = document.getElementById('kisi-save-state');
+  const statusLabel = document.getElementById('kisi-save-state-label');
+  if (!root || !statusLabel) return;
+  const visibilityNote = status === 'saved' && context?.visibility === 'private-reapproval' ? ' — kembali privat; ajukan moderasi lagi jika ingin berbagi' : '';
+  const warningCount = assessmentPackageSync.imageWarnings?.length || 0;
+  const imageNote = warningCount ? ` — ${warningCount} gambar perlu dipulihkan` : '';
+  statusLabel.textContent = status === 'failed' && error?.message ? `${label} — ${error.message}` : `${label}${visibilityNote}${imageNote}`;
+  statusLabel.dataset.saveStatus = status;
+  root.classList.toggle('border-rose-300', status === 'failed' || status === 'conflict');
+  root.classList.toggle('bg-rose-50', status === 'failed' || status === 'conflict');
+  document.getElementById('kisi-save-retry')?.classList.toggle('hidden', status !== 'failed');
+  document.getElementById('kisi-save-server')?.classList.toggle('hidden', status !== 'conflict' && status !== 'failed' || !context?.packageId);
+}
+
+function packageMetadata(formData = {}) {
+  const data = formData || {};
+  return {
+    mata_pelajaran: data.mataPelajaran || '',
+    topik: data.topik || '',
+    jenjang_kelas: data.jenjangKelas || '',
+    semester: data.semester || null,
+    jenis_ujian: data.jenisUjian || null,
+    capaian_pembelajaran: data.capaianPembelajaran || null,
+    jumlah_pg: Number(data.jumlahPG) || 0,
+    jumlah_isian: Number(data.jumlahIsian) || 0,
+    jumlah_uraian: Number(data.jumlahUraian) || 0,
+    isian_type: data.isianType || 'Standard',
+    hots_ratio: data.hotsRatio || '30:40:30',
+    ai_provider: data.aiProvider || null,
+  };
+}
+
+function activateAssessmentPackage(data, formData, { force = false, owner = state.user?.id, foreign = false, visibility } = {}) {
+  const persistence = data?._persistence || {};
+  const packageId = persistence.packageId ?? null;
+  const current = assessmentPackageSync.context;
+  if (!force && current && String(current.packageId || '') === String(packageId || '') && current.owner === (owner == null ? null : String(owner))) return current;
+  const context = assessmentPackageSync.setContext({
+    packageId,
+    revision: persistence.revision == null ? null : Number(persistence.revision),
+    owner,
+    foreign,
+    visibility: visibility || (data?.is_public ? 'shared' : 'private'),
+  });
+  assessmentPackageSync.imageWarnings = Array.isArray(persistence.imageWarnings) ? persistence.imageWarnings.slice() : [];
+  if (persistence.saveStatus === 'failed' && !context.packageId) assessmentPackageSync.edit(data, packageMetadata(formData));
+  return context;
+}
+
+function saveLocalAssessmentCopy(data = _lastGeneratedData, formData = _lastFormData) {
+  if (!data || !formData) return null;
+  const contextOwner = assessmentPackageSync.context?.owner;
+  if (contextOwner != null && String(contextOwner) !== String(state.user?.id ?? '')) {
+    const key = getPendingAssessmentBackupKey(contextOwner);
+    if (!key) return null;
+    try {
+      localStorage.setItem(key, JSON.stringify({ inputData: formData, content: data, packageId: assessmentPackageSync.context?.packageId, revision: assessmentPackageSync.context?.revision, savedAt: new Date().toISOString() }));
+      return { id: key, ownerScoped: true };
+    } catch { return null; }
+  }
+  return saveDocArchive({
+    module: 'kisi',
+    title: `${formData.mataPelajaran || 'Asesmen'} - ${formData.topik || 'Topik'} (${formData.jenjangKelas || 'SD'})`,
+    subtitle: `${formData.jenisUjian || 'Ulangan'} | ${formData.semester || 'Smt 1'}`,
+    inputData: formData,
+    content: data,
+    extra: { packageId: assessmentPackageSync.context?.packageId || null, revision: assessmentPackageSync.context?.revision || null },
+  });
+}
+
+function preserveLocalBeforeSwitch() {
+  const dirty = assessmentPackageSync.snapshot && assessmentPackageSync.savedVersion < assessmentPackageSync.version;
+  if (!dirty && !['failed', 'conflict'].includes(assessmentPackageSync.status)) return true;
+  if (!confirm('Ada perubahan yang belum tersimpan di server. Simpan salinan lokal sebelum beralih dokumen?')) return false;
+  const localCopy = saveLocalAssessmentCopy();
+  if (!localCopy) {
+    showToast('Salinan lokal gagal disimpan; dokumen tetap dibuka agar perubahan tidak hilang.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function commitAssessmentEdit(data, formData, { immediate = false } = {}) {
+  activateAssessmentPackage(data, formData);
+  saveLocalAssessmentCopy(data, formData);
+  assessmentPackageSync.edit(data, packageMetadata(formData));
+  return immediate ? assessmentPackageSync.flush() : Promise.resolve({ queued: true });
+}
+
+function showPrintWarning(failures) {
+  const warning = document.getElementById('kisi-print-warning');
+  if (!warning) return;
+  if (!failures?.length) {
+    warning.classList.add('hidden');
+    warning.replaceChildren();
+    return;
+  }
+  warning.classList.remove('hidden');
+  const questions = failures.map(item => `Soal ${item.section} nomor ${item.number}`).join(', ');
+  const message = document.createElement('p');
+  message.className = 'm-0';
+  message.textContent = `Cetak dan PDF ditahan karena gambar belum siap: ${questions}. Unggah ulang gambar asli atau pilih pengganti sebelum melanjutkan.`;
+  warning.replaceChildren(message);
+  const context = assessmentPackageSync.context;
+  if (context?.packageId && !context.foreign) {
+    const recoveryToken = context.token;
+    const recover = document.createElement('button');
+    recover.type = 'button';
+    recover.className = 'print:hidden mt-2 rounded-lg border border-amber-500 px-3 py-1.5 text-xs font-bold';
+    recover.textContent = 'Coba pulihkan gambar dari sumber lama';
+    recover.addEventListener('click', async () => {
+      recover.disabled = true;
+      try {
+        await assessmentPackageSync.flush();
+        if (!assessmentPackageSync.current(recoveryToken)) return;
+        const active = assessmentPackageSync.context;
+        const response = await api(`/banksoal/${encodeURIComponent(active.packageId)}/recover-images`, { method: 'POST', body: { baseRevision: active.revision } });
+        if (!assessmentPackageSync.current(recoveryToken)) return;
+        const result = response?.data || response;
+        const loaded = await api(`/banksoal/${encodeURIComponent(result.packageId || active.packageId)}`);
+        if (!assessmentPackageSync.current(recoveryToken)) return;
+        const detail = loaded?.data || loaded;
+        renderResult({ ...detail.content, _persistence: detail._persistence }, _lastFormData, { force: true, owner: state.user?.id, visibility: Number(detail.is_public) === 1 ? 'shared' : 'private' });
+        showToast('Pemulihan gambar selesai. Periksa kembali setiap soal sebelum mencetak.', 'info');
+      } catch (error) {
+        showToast(error.message || 'Sumber gambar lama tidak dapat dipulihkan. Unggah file asli atau pilih pengganti.', 'error');
+      } finally { recover.disabled = false; }
+    });
+    warning.append(recover);
+  }
+}
+
+function warnForNativeAssessmentPrint() {
+  if (!document.getElementById('asesmen-canvas')) return;
+  const failures = [...document.querySelectorAll('#asesmen-canvas .soal-image-container')]
+    .filter(container => {
+      const images = [...container.querySelectorAll('img')];
+      return container.classList.contains('image-load-failed') || images.length === 0 || images.some(image => !image.complete || image.naturalWidth <= 0);
+    })
+    .map(container => ({ section: container.dataset.type || 'soal', number: container.dataset.no || '?', category: 'load-failed' }));
+  if (failures.length) showPrintWarning(failures);
+}
+
+function imageWarningLocations(warnings = [], data = _lastGeneratedData) {
+  const locations = warnings.map(warning => {
+    const match = String(warning).match(/\b(pg|isian|uraian)\b[^0-9]{0,12}(\d+)/i);
+    if (!match) return null;
+    const section = match[1].toLowerCase();
+    const index = Number(match[2]);
+    const questions = section === 'pg' ? data?.pg : section === 'isian' ? data?.isian?.data : data?.uraian;
+    return { section, number: questions?.[index]?.no ?? index + 1, category: 'load-failed' };
+  }).filter(Boolean);
+  return locations.length ? locations : warnings.length ? [{ section: 'soal', number: '?', category: 'load-failed' }] : [];
+}
+
+async function preflightAssessmentForPrint(data) {
+  const result = await prepareAssessmentExportImages(data);
+  return result?.failures || [];
+}
+
+function exportStamp(data = _lastGeneratedData, formData = _lastFormData) {
+  const context = assessmentPackageSync.context;
+  const resultView = document.getElementById('asesmen-result-view');
+  const canvas = document.getElementById('asesmen-canvas');
+  return {
+    data,
+    formData,
+    owner: String(state.user?.id ?? ''),
+    token: context?.token,
+    context,
+    pageRoot: document.getElementById('asesmen-page'),
+    resultView,
+    canvas,
+    version: assessmentPackageSync.version,
+    revision: context?.revision,
+  };
+}
+
+function exportStampUnchanged(stamp, { allowRevisionAdvance = false } = {}) {
+  const context = assessmentPackageSync.context;
+  return Boolean(stamp && assessmentPackageSync.current(stamp.token) && context === stamp.context &&
+    stamp.owner === String(state.user?.id ?? '') && stamp.data === _lastGeneratedData && stamp.formData === _lastFormData &&
+    stamp.resultView === document.getElementById('asesmen-result-view') && stamp.resultView?.isConnected && !stamp.resultView.classList.contains('hidden') &&
+    stamp.pageRoot === document.getElementById('asesmen-page') && stamp.pageRoot?.isConnected && !stamp.resultView.closest('.hidden, [hidden]') &&
+    stamp.canvas === document.getElementById('asesmen-canvas') && stamp.canvas?.isConnected &&
+    stamp.version === assessmentPackageSync.version && (allowRevisionAdvance || stamp.revision === context?.revision));
+}
+
+function localizedExportFailure(error) {
+  const failures = Array.isArray(error?.failures) ? error.failures : [];
+  if (!failures.length) return error?.message || 'Gambar wajib belum dapat dimuat. Unggah ulang file asli atau pilih pengganti.';
+  const questions = failures.map(item => `Soal ${item.section} nomor ${item.number}`).join(', ');
+  return `File belum dibuat karena gambar pada ${questions} tidak tersedia. Unggah ulang gambar asli atau pilih pengganti. Gambar dari tautan lama mungkin sudah kedaluwarsa.`;
+}
+
+async function createAssessmentDocx(data, formData, { active = data === _lastGeneratedData } = {}) {
+  const intent = active ? exportStamp(data, formData) : null;
+  if (active) {
+    if (!exportStampUnchanged(intent)) throw new Error('Dokumen aktif atau akun berubah. Buka kembali asesmen yang ingin diunduh.');
+    await assessmentPackageSync.flush();
+    if (!exportStampUnchanged(intent, { allowRevisionAdvance: true })) throw new Error('Dokumen aktif atau akun berubah saat penyimpanan. Berkas tidak dibuat.');
+    if (assessmentPackageSync.status !== 'saved' || !assessmentPackageSync.context?.packageId) throw new Error('Perubahan belum tersimpan di server. Coba simpan lagi sebelum mengunduh DOCX.');
+  }
+  const stamp = active ? exportStamp(data, formData) : null;
+  const snapshot = JSON.parse(JSON.stringify(data));
+  const kopSuratUrl = state.user?.kop_surat_url || `${window.location.origin}/static/kop_surat.png`;
+  const preparedImages = await prepareAssessmentExportImages(snapshot);
+  if (!preparedImages?.ready) throw Object.assign(new Error('Required image preflight failed'), { failures: preparedImages?.failures || [] });
+  if (active && !exportStampUnchanged(stamp)) throw new Error('Soal atau akun berubah saat gambar diperiksa. Simpan perubahan lalu unduh ulang.');
+  const blob = await generateAsesmenDocx(snapshot, formData, kopSuratUrl, { preparedImages });
+  if (active && !exportStampUnchanged(stamp)) throw new Error('Soal, akun, atau halaman berubah saat file disiapkan. Berkas tidak diunduh.');
+  return blob;
+}
+
+async function makeDurableQuestionImage(url, { svg = '', existing = null, title = '', credit = '', assetId = createAssessmentAssetId() } = {}) {
+  if (!url) return null;
+  if (existing?.url === url && (existing.assetId || existing.svg)) return { ...existing };
+  if (svg) {
+    return { url, svg, type: 'svg', title: title || existing?.title || 'Diagram', credit: credit || existing?.credit || 'Examplate Visual Engine', deskripsi: existing?.deskripsi || title || 'Diagram', params: existing?.params };
+  }
+  let asset;
+  if (/^data:image\/(?:png|jpeg|webp);/i.test(url)) {
+    const blob = await fetch(url).then(response => response.blob());
+    asset = await assessmentPackageSync.uploadImage(blob, { assetId, name: title });
+  } else if (/^https:\/\//i.test(url)) {
+    asset = await assessmentPackageSync.uploadImageUrl(url, { assetId, name: title });
+  } else if (existing?.assetId) {
+    asset = existing;
+  } else {
+    throw new Error('Gambar ini belum memiliki salinan permanen. Unggah ulang file asli atau pilih diagram dari galeri.');
+  }
+  return {
+    ...(existing || {}),
+    ...asset,
+    svg: undefined,
+    params: undefined,
+    type: 'photo',
+    title: title || existing?.title || 'Gambar Ilustrasi',
+    credit: credit || existing?.credit || 'Upload Manual',
+    deskripsi: existing?.deskripsi || title || 'Gambar Ilustrasi',
+  };
+}
 
 // Helper sinkronisasi UI mode edit
 function syncEditModeUI() {
@@ -1311,6 +1635,21 @@ export function initKisi() {
 
   populateAiModelSelect('select[name="aiProvider"]');
 
+  document.getElementById('btn-recover-local-assessment')?.addEventListener('click', () => {
+    const key = getPendingAssessmentBackupKey(state.user?.id);
+    if (!key || !confirm('Pulihkan salinan lokal tersimpan? Paket server asli tidak akan ditimpa.')) return;
+    try {
+      const backup = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!backup?.content || !backup?.inputData) throw new Error('Salinan lokal tidak lengkap.');
+      const content = { ...backup.content };
+      delete content._persistence;
+      assessmentPackageSync.setContext({ owner: state.user?.id, clientDocumentId: createAssessmentAssetId() });
+      renderResult(content, backup.inputData, { force: true, owner: state.user?.id, foreign: false });
+      localStorage.removeItem(key);
+      showToast('Salinan lokal dipulihkan sebagai draf baru. Paket sebelumnya tidak ditimpa.', 'success');
+    } catch (error) { showToast(error.message || 'Salinan lokal tidak dapat dipulihkan.', 'error'); }
+  });
+
   // Check incoming Smart Content Bridge data from RPP
   try {
     const rawBridge = sessionStorage.getItem('kkg_bridge_data');
@@ -1454,10 +1793,29 @@ export function initKisi() {
       return;
     }
 
+    const pendingAttempt = readPendingGeneration(state.user?.id);
+    if (pendingAttempt && !confirm('Masih ada proses asesmen sebelumnya yang hasilnya belum dipastikan. Mulai proses baru dengan biaya AI terpisah?')) return;
+
+    if (assessmentPackageSync.snapshot && assessmentPackageSync.savedVersion < assessmentPackageSync.version) {
+      try {
+        await assessmentPackageSync.flush();
+        if (assessmentPackageSync.savedVersion < assessmentPackageSync.version || assessmentPackageSync.status !== 'saved') throw new Error('Simpan perubahan dokumen sebelumnya sebelum membuat asesmen baru.');
+      } catch (error) {
+        saveLocalAssessmentCopy();
+        showToast(`${error.message || 'Perubahan belum tersimpan.'} Salinan lokal tetap tersedia.`, 'error');
+        return;
+      }
+    }
+
     const isStreaming = localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
     const submitButton = form.querySelector('[type="submit"]');
     if (submitButton?.disabled || hasActiveAiJob()) { showToast('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.', 'info'); return; }
     if (submitButton) submitButton.disabled = true;
+    const clientDocumentId = globalThis.crypto?.randomUUID?.() || createAssessmentAssetId();
+    data.clientDocumentId = clientDocumentId;
+    const attempt = { owner: String(state.user?.id ?? ''), payload: JSON.parse(JSON.stringify(data)), createdAt: Date.now() };
+    if (!writePendingGeneration(attempt)) showToast('Peramban tidak dapat menyimpan ID pemulihan sesi ini. Jika hasil proses tidak diterima, proses lama mungkin tidak dapat diperiksa ulang.', 'warning');
+    const generationContext = assessmentPackageSync.setContext({ owner: state.user?.id, clientDocumentId });
     try {
     if (isStreaming) {
       const monitor = openAiLiveMonitor({
@@ -1498,8 +1856,13 @@ export function initKisi() {
 
         if (finalResultData) {
           monitor.complete(() => {
+            if (!assessmentPackageSync.current(generationContext.token)) {
+              showToast('Hasil proses lama diabaikan karena dokumen aktif sudah berubah.', 'info');
+              return;
+            }
             _editModeActive = false;
             renderResult(finalResultData, data);
+            clearPendingGeneration(attempt);
             const modelInfo = finalResultData?._meta?.model ? ` (${finalResultData._meta.model})` : '';
 
             const archived = saveDocArchive({
@@ -1533,9 +1896,12 @@ export function initKisi() {
           timeout: 300000 // 5 menit untuk AI generation agar tidak timeout
         });
 
+        if (!assessmentPackageSync.current(generationContext.token)) return;
+
         if (result.success) {
           _editModeActive = false;
           renderResult(result.data, data);
+          clearPendingGeneration(attempt);
           const modelInfo = result.data?._meta?.model ? ` (${result.data._meta.model})` : '';
 
           // Auto-archive document
@@ -1564,22 +1930,72 @@ export function initKisi() {
     } finally { if (submitButton) submitButton.disabled = false; }
   });
 
+  document.getElementById('btn-recover-generation')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const attempt = readPendingGeneration(state.user?.id);
+    if (!attempt || button.disabled) return;
+    const pageRoot = document.getElementById('asesmen-page');
+    const owner = String(state.user?.id ?? '');
+    const priorContext = assessmentPackageSync.context;
+    if (!preserveLocalBeforeSwitch()) return;
+    if (_lastGeneratedData && !document.getElementById('asesmen-result-view')?.classList.contains('hidden')) {
+      const backup = saveLocalAssessmentCopy();
+      if (!backup) {
+        showToast('Salinan lokal gagal disimpan; asesmen saat ini tetap terbuka dan hasil pemulihan tidak dimuat.', 'error');
+        return;
+      }
+    }
+    const versionAtStart = assessmentPackageSync.version;
+    const dataAtStart = _lastGeneratedData;
+    const formDataAtStart = _lastFormData;
+    const clientDocumentAtStart = priorContext?.clientDocumentId ?? null;
+    if (!confirm('Periksa hasil dari proses sebelumnya menggunakan ID yang sama. Jika proses masih berjalan/berakhir tanpa hasil, server akan menolak tanpa memulai AI baru.')) return;
+    button.disabled = true;
+    try {
+      const result = await api('/kisi/generate', { method: 'POST', headers: { 'X-Assessment-Replay-Only': '1' }, body: attempt.payload, timeout: 300000 });
+      if (!pageRoot?.isConnected || pageRoot !== document.getElementById('asesmen-page') || owner !== String(state.user?.id ?? '') || readPendingGeneration(owner)?.payload?.clientDocumentId !== attempt.payload.clientDocumentId || assessmentPackageSync.context !== priorContext || assessmentPackageSync.version !== versionAtStart || _lastGeneratedData !== dataAtStart || _lastFormData !== formDataAtStart || (priorContext?.clientDocumentId ?? null) !== clientDocumentAtStart) return;
+      if (!result?.success || !result.data) {
+        showToast(result?.error?.message || 'Hasil proses sebelumnya belum tersedia. Catatan tetap disimpan; tidak ada proses baru yang dimulai.', 'warning');
+        return;
+      }
+      const recoveredData = result.data;
+      const formData = { ...attempt.payload };
+      delete formData.clientDocumentId;
+      assessmentPackageSync.setContext({ owner, clientDocumentId: attempt.payload.clientDocumentId });
+      _editModeActive = false;
+      renderResult(recoveredData, formData);
+      const archived = saveDocArchive({
+        module: 'kisi', title: `${formData.mataPelajaran || 'Asesmen'} - ${formData.topik || 'Topik'} (${formData.jenjangKelas || 'SD'})`,
+        subtitle: `${formData.jenisUjian || 'Ulangan'} | ${formData.semester || 'Smt 1'}`, inputData: formData, content: recoveredData,
+      });
+      clearPendingGeneration(attempt);
+      loadBankSoalCountBadge();
+      showToast(archived ? 'Hasil proses sebelumnya dipulihkan dan disimpan di perangkat.' : 'Hasil dipulihkan, tetapi arsip perangkat gagal disimpan.', archived ? 'success' : 'warning');
+    } catch (error) {
+      showToast(error.message || 'Hasil proses sebelumnya belum dapat diperiksa. Catatan tetap tersimpan; tidak ada pengulangan otomatis.', 'warning');
+      updatePendingGenerationButton(owner);
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+  });
+
   // Archive Drawer Handler
   const handleOpenKisiArchive = () => {
     openArchiveDrawer({
       module: 'kisi',
       moduleName: 'Asesmen & Soal',
       onSelect: (item) => {
+        if (!preserveLocalBeforeSwitch()) return;
         _editModeActive = false;
-        renderResult(item.content, item.inputData);
+        const localContent = { ...(item.content || {}) };
+        delete localContent._persistence;
+        renderResult(localContent, item.inputData, { force: true, owner: state.user?.id, foreign: false });
         showToast(`Membuka riwayat: ${item.title}`, 'info');
       },
       onDownloadDocx: async (item) => {
         showToast('Menyiapkan file DOCX...', 'info');
         try {
-          const origin = window.location.origin;
-          const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
-          const blob = await generateAsesmenDocx(item.content, item.inputData, kopSuratUrl);
+          const blob = await createAssessmentDocx(item.content, item.inputData, { active: false });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -1592,7 +2008,7 @@ export function initKisi() {
           URL.revokeObjectURL(url);
           showToast('File .docx berhasil diunduh!', 'success');
         } catch (e) {
-          showToast('Gagal mengunduh: ' + e.message, 'error');
+          showToast(localizedExportFailure(e), 'error');
         }
       }
     });
@@ -1662,7 +2078,33 @@ export function initKisi() {
   });
 
   // Print
-  document.getElementById('btn-print')?.addEventListener('click', () => window.print());
+  document.getElementById('btn-print')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const intent = exportStamp();
+    try {
+      if (!exportStampUnchanged(intent)) throw new Error('Dokumen aktif atau akun berubah. Buka kembali asesmen sebelum mencetak.');
+      await assessmentPackageSync.flush();
+      if (!exportStampUnchanged(intent, { allowRevisionAdvance: true })) throw new Error('Dokumen aktif atau akun berubah saat penyimpanan. Cetak dibatalkan.');
+      if (assessmentPackageSync.status !== 'saved' || !assessmentPackageSync.context?.packageId) throw new Error('Perubahan belum tersimpan di server. Coba simpan lagi sebelum mencetak.');
+      const stamp = exportStamp();
+      const printSnapshot = JSON.parse(JSON.stringify(stamp.data));
+      const failures = await preflightAssessmentForPrint(printSnapshot);
+      if (failures.length) {
+        showPrintWarning(failures);
+        throw new Error('Cetak ditahan sampai gambar yang disebutkan tersedia.');
+      }
+      if (!exportStampUnchanged(stamp)) throw new Error('Soal berubah saat gambar diperiksa. Simpan perubahan lalu coba cetak lagi.');
+      showPrintWarning([]);
+      window.print();
+    } catch (error) {
+      showToast(error.message || 'Cetak belum dapat dimulai.', 'error');
+    } finally { button.disabled = false; }
+  });
+  if (!_kisiBeforePrintBound) {
+    window.addEventListener('beforeprint', warnForNativeAssessmentPrint);
+    _kisiBeforePrintBound = true;
+  }
 
   // View Switcher Tabs (Naskah Soal, Matriks Kisi-Kisi, Kunci & Rubrik, Paket Lengkap)
   const applyTabSelection = (tabKey) => {
@@ -1693,7 +2135,11 @@ export function initKisi() {
   });
 
   // Toggle Edit Mode in Result View
-  document.getElementById('btn-toggle-edit-mode')?.addEventListener('click', () => {
+  document.getElementById('btn-toggle-edit-mode')?.addEventListener('click', async () => {
+    if (!_editModeActive && assessmentPackageSync.context?.foreign) {
+      try { await ensureEditablePackageCopy(); }
+      catch (error) { showToast(error.message || 'Paket ini tidak dapat disalin untuk diedit.', 'error'); return; }
+    }
     _editModeActive = !_editModeActive;
     syncEditModeUI();
     if (_editModeActive) {
@@ -1701,6 +2147,32 @@ export function initKisi() {
     } else {
       showToast('Mode Pratinjau Bersih: Tombol edit disembunyikan.', 'info');
     }
+  });
+
+  document.getElementById('kisi-save-retry')?.addEventListener('click', async () => {
+    try { await assessmentPackageSync.retry(); showToast('Perubahan berhasil disimpan.', 'success'); }
+    catch (error) { showToast(error.message || 'Gagal menyimpan perubahan.', 'error'); }
+  });
+  document.getElementById('kisi-save-local')?.addEventListener('click', () => {
+    const saved = saveLocalAssessmentCopy();
+    showToast(saved ? 'Salinan lokal disimpan untuk pemulihan offline.' : 'Salinan lokal belum dapat disimpan.', saved ? 'success' : 'error');
+  });
+  document.getElementById('kisi-save-server')?.addEventListener('click', async () => {
+    const contextAtStart = assessmentPackageSync.context;
+    if (!contextAtStart?.packageId || !confirm('Muat versi server? Salinan lokal perubahan saat ini akan disimpan terlebih dahulu.')) return;
+    const backup = saveLocalAssessmentCopy();
+    if (!backup) {
+      showToast('Salinan lokal gagal disimpan (ruang penyimpanan mungkin penuh). Versi server tidak dimuat dan perubahan tetap terbuka.', 'error');
+      return;
+    }
+    try {
+      const server = await assessmentPackageSync.loadServer();
+      if (server?.stale) return;
+      if (!assessmentPackageSync.current(contextAtStart.token) || assessmentPackageSync.context !== contextAtStart) return;
+      if (!server?.content) throw new Error('Versi server tidak memiliki konten yang dapat dibuka.');
+      renderResult({ ...server.content, _persistence: server._persistence }, _lastFormData, { force: true, owner: state.user?.id, foreign: false, visibility: Number(server.is_public) === 1 ? 'shared' : 'private' });
+      showToast('Versi server dimuat. Salinan lokal sebelumnya tetap tersimpan.', 'info');
+    } catch (error) { showToast(error.message || 'Gagal memuat versi server.', 'error'); }
   });
 
   // Download .docx (ASLI - menggunakan docx.js)
@@ -1718,10 +2190,9 @@ export function initKisi() {
       // Nonaktifkan tombol saat proses
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menyiapkan .docx...'; }
 
-      const origin = window.location.origin;
-      const kopSuratUrl = state.user?.kop_surat_url || `${origin}/static/kop_surat.png`;
-
-      const blob = await generateAsesmenDocx(data, fd, kopSuratUrl);
+      const downloadIntent = exportStamp(data, fd);
+      const blob = await createAssessmentDocx(data, fd);
+      if (!exportStampUnchanged(downloadIntent, { allowRevisionAdvance: true })) throw new Error('Dokumen atau akun berubah sebelum unduhan dimulai. Berkas tidak diunduh.');
 
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
@@ -1730,6 +2201,11 @@ export function initKisi() {
         .replace(/\s+/g, '_').replace(/_{2,}/g, '_');
       a.download = `${fileName}.docx`;
       document.body.appendChild(a);
+      if (!exportStampUnchanged(downloadIntent, { allowRevisionAdvance: true })) {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        throw new Error('Dokumen atau akun berubah sebelum unduhan dimulai. Berkas tidak diunduh.');
+      }
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
@@ -1737,7 +2213,7 @@ export function initKisi() {
       showToast('File .docx berhasil diunduh!', 'success');
 } catch (err) {
       console.error('DOCX generation error:', err);
-      showToast('Gagal membuat file .docx: ' + err.message, 'error');
+      showToast(localizedExportFailure(err), 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download mr-2"></i>Unduh .docx'; }
     }
@@ -1766,10 +2242,11 @@ export function initKisi() {
   });
 }
 
-function renderResult(data, formData) {
+function renderResult(data, formData, packageOptions = {}) {
   // Simpan formData dan raw data ke module scope untuk download handler
   _lastFormData = formData;
   _lastGeneratedData = data;
+  activateAssessmentPackage(data, formData, packageOptions);
 
   // Pre-load seluruh buffer gambar soal ke RAM secara senyap agar saat tombol unduh docx ditekan prosesnya instan
   try { preloadAsesmenImages(data); } catch (_) {}
@@ -1795,6 +2272,13 @@ function renderResult(data, formData) {
   document.getElementById('asesmen-form-view').classList.add('hidden');
   document.getElementById('asesmen-result-view').classList.remove('hidden');
   setGenerationNotice(document.getElementById('asesmen-result-view'), data._generation);
+  updateAssessmentSaveState({
+    status: assessmentPackageSync.status,
+    label: ASSESSMENT_SAVE_LABELS[assessmentPackageSync.status],
+    error: assessmentPackageSync.error,
+    context: assessmentPackageSync.context,
+  });
+  showPrintWarning(imageWarningLocations(assessmentPackageSync.imageWarnings, data));
 
   const canvas = document.getElementById('asesmen-canvas');
 
@@ -1834,6 +2318,26 @@ function renderResult(data, formData) {
     if (l.includes('3')) return `<span class="badge-level-l3">L3</span>`;
     if (l.includes('2')) return `<span class="badge-level-l2">L2</span>`;
     return `<span class="badge-level-l1">L1</span>`;
+  };
+
+  const renderQuestionImage = (question, type, index) => {
+    const image = typeof question.gambar === 'string' ? { url: question.gambar } : question.gambar || {};
+    const required = Boolean(question.gambar || question.visual_stimulus || question.visual_required || question.imageUnavailable);
+    if (!required) return '';
+    const source = image.url || (image.svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(image.svg)}` : '');
+    const failed = question.imageUnavailable || !source;
+    return `<div class="soal-image-container ${failed ? 'image-load-failed' : ''} relative group inline-block my-2" data-type="${type}" data-no="${escapeHtml(question.no)}" style="border:1px solid #e2e8f0; border-radius:6px; padding:4px; background:#fff; max-width:100%;">
+      ${source ? `<img src="${escapeHtml(source)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(image.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
+      ${image.credit ? `<div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5">${escapeHtml(image.credit)}</div>` : ''}
+      <div class="image-hover-actions print:hidden absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100">
+        <button type="button" class="btn-change-soal-image rounded bg-blue-600 px-2 py-1 text-[10px] font-bold text-white" data-type="${type}" data-qindex="${index}">Ganti</button>
+        <button type="button" class="btn-remove-soal-image rounded bg-rose-600 px-2 py-1 text-[10px] font-bold text-white" data-type="${type}" data-qindex="${index}">Hapus</button>
+      </div>
+      <div class="image-failed-alert ${failed ? '' : 'hidden'} items-center gap-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-950">
+        <span>Gambar soal #${escapeHtml(question.no)} tidak tersedia. Unggah file asli atau pilih pengganti.</span>
+        <button type="button" class="btn-change-soal-image print:hidden rounded bg-blue-600 px-2 py-1 font-bold text-white" data-type="${type}" data-qindex="${index}">Perbaiki</button>
+      </div>
+    </div>`;
   };
 
   // -------------------------------------------------------------
@@ -1880,6 +2384,8 @@ function renderResult(data, formData) {
 
     data.pg.forEach(q => {
       const opts = q.opsi || {};
+      const pgImage = typeof q.gambar === 'string' ? { url: q.gambar } : q.gambar || {};
+      const hasPgVisual = Boolean(q.gambar || q.visual_stimulus || q.visual_required || q.imageUnavailable);
       const allShort = Object.values(opts).every(v => (v || '').length < 20);
       const anyLong = Object.values(opts).some(v => (v || '').length > 55);
       const colClass = allShort ? 'cols-4' : anyLong ? 'cols-1' : 'cols-2';
@@ -1928,7 +2434,7 @@ function renderResult(data, formData) {
       // Quality Gate badge tidak ditampilkan di canvas butir soal
       const auditBadgeHTML = '';
 
-      if (q.gambar && q.gambar.url) {
+      if (hasPgVisual) {
         htmlSoal += `
           <div class="soal-item-wrapper ${isChecked ? 'soal-item-selected' : ''}" data-type="pg" data-no="${q.no}">
             ${actionsHTML}
@@ -1944,12 +2450,12 @@ function renderResult(data, formData) {
                   ${auditBadgeHTML}
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
                   <div style="margin: 4px 0 6px 0; text-align:left;">
-                    <div class="soal-image-container relative group inline-block" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background:#fff; max-width: 100%;">
-                      <img src="${q.gambar.url}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(q.gambar.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">
-                      ${q.gambar.credit ? `
+                    <div class="soal-image-container ${(!pgImage.url && !pgImage.svg) || q.imageUnavailable ? 'image-load-failed' : ''} relative group inline-block" data-type="pg" data-no="${q.no}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background:#fff; max-width: 100%;">
+                      ${pgImage.url ? `<img src="${escapeHtml(pgImage.url)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(pgImage.title || 'Gambar Ilustrasi')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : pgImage.svg ? `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(pgImage.svg)}" style="max-width:320px; width:auto; height:auto; max-height:200px; object-fit:contain; display:block; border-radius:4px;" alt="${escapeHtml(pgImage.title || 'Diagram')}" onerror="this.onerror=null; this.closest('.soal-image-container')?.classList.add('image-load-failed');">` : ''}
+                      ${pgImage.credit ? `
                         <div class="image-credit-badge print:hidden text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 font-medium">
                           <i class="${q.gambar.type === 'svg' ? 'fas fa-bezier-curve text-sky-600' : 'fas fa-camera text-emerald-600'}"></i>
-                          <span>${escapeHtml(q.gambar.credit)}</span>
+                          <span>${escapeHtml(pgImage.credit)}</span>
                         </div>
                       ` : ''}
                       <div class="image-hover-actions absolute top-1.5 right-1.5 flex items-center gap-1 print:hidden opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1960,8 +2466,8 @@ function renderResult(data, formData) {
                           <i class="fas fa-trash-alt"></i>
                         </button>
                       </div>
-                      <div class="image-failed-alert hidden print:hidden items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
-                        <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar tidak dapat dimuat</span>
+                      <div class="image-failed-alert ${(!pgImage.url && !pgImage.svg) || q.imageUnavailable ? '' : 'hidden'} items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
+                        <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar soal #${q.no} tidak dapat dimuat. Unggah ulang file asli atau pilih pengganti.</span>
                         <div class="flex items-center gap-1.5">
                           <button type="button" class="btn-change-soal-image px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-camera mr-1"></i>Ganti</button>
                           <button type="button" class="btn-remove-soal-image px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-trash-alt mr-1"></i>Hapus</button>
@@ -2088,8 +2594,9 @@ function renderResult(data, formData) {
           let qData = data.isian.data[p.originalIndex];
           if (qData) {
             const stmt = `${p.number}. ${qData.soal.replace(/^(Mendatar:|Menurun:)\s*/i, '').trim()}`;
-            if (p.direction === 'H') mendatar.push({ num: p.number, text: stmt });
-            else menurun.push({ num: p.number, text: stmt });
+            const imageHtml = renderQuestionImage(qData, 'isian', p.originalIndex);
+            if (p.direction === 'H') mendatar.push({ num: p.number, text: stmt, imageHtml });
+            else menurun.push({ num: p.number, text: stmt, imageHtml });
           }
         });
 
@@ -2100,11 +2607,11 @@ function renderResult(data, formData) {
                   <tr>
                     <td style="width:50%; padding-right:15px; vertical-align:top;">
                       <h4 style="margin-bottom:8px; font-weight:bold; text-decoration:underline;">MENDATAR</h4>
-                      ${mendatar.map(t => `<div style="margin-bottom:6px; text-align:justify">${t.text}</div>`).join('')}
+                      ${mendatar.map(t => `<div style="margin-bottom:6px; text-align:justify">${t.text}${t.imageHtml}</div>`).join('')}
                     </td>
                     <td style="width:50%; padding-left:15px; vertical-align:top;">
                       <h4 style="margin-bottom:8px; font-weight:bold; text-decoration:underline;">MENURUN</h4>
-                      ${menurun.map(t => `<div style="margin-bottom:6px; text-align:justify">${t.text}</div>`).join('')}
+                      ${menurun.map(t => `<div style="margin-bottom:6px; text-align:justify">${t.text}${t.imageHtml}</div>`).join('')}
                     </td>
                   </tr>
                 </table>`;
@@ -2130,6 +2637,7 @@ function renderResult(data, formData) {
                 </td>
                 <td style="vertical-align:top; padding:1px 0;">
                   <div class="soal-text">${formatSoalText(q.soal)}</div>
+                  ${renderQuestionImage(q, 'isian', isianIdx)}
                 </td>
               </tr>
             </table>
@@ -2168,6 +2676,7 @@ function renderResult(data, formData) {
               </td>
               <td style="vertical-align:top; padding:1px 0;">
                 <div class="soal-text" style="margin-bottom:14px;">${formatSoalText(q.soal)}</div>
+                ${renderQuestionImage(q, 'uraian', uraianIdx)}
               </td>
             </tr>
           </table>
@@ -2359,6 +2868,9 @@ function renderResult(data, formData) {
 
       if (targetQ) {
         delete targetQ.gambar;
+        delete targetQ.visual_stimulus;
+        delete targetQ.imageUnavailable;
+        commitAssessmentEdit(data, formData);
         renderResult(data, formData);
         showToast(`Gambar pada nomor ${targetQ.no} berhasil dihapus.`, 'info');
       }
@@ -2454,6 +2966,7 @@ function renderResult(data, formData) {
 // INLINE SOAL EDITOR MODAL
 // ============================================================
 function openSoalEditor(type, index, data, formData) {
+  const activeToken = assessmentPackageSync.context?.token;
   const existing = document.querySelector('.soal-editor-overlay');
   if (existing) existing.remove();
 
@@ -2593,6 +3106,7 @@ function openSoalEditor(type, index, data, formData) {
 
   // Gambar state & event bindings in modal editor
   let modalSelectedImageUrl = currentGambarUrl;
+  let pendingUploadAssetId = createAssessmentAssetId();
   const imgPreviewBox = overlay.querySelector('#editor-image-preview-box');
   const imgThumb = overlay.querySelector('#editor-img-thumb');
   const imgStatus = overlay.querySelector('#editor-img-status');
@@ -2617,13 +3131,14 @@ function openSoalEditor(type, index, data, formData) {
   fileUpload?.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Ukuran file maksimal 5MB.', 'error');
+      if (file.size > 512 * 1024) {
+        showToast('Ukuran gambar maksimal 512 KiB.', 'error');
         return;
       }
       const reader = new FileReader();
       reader.onload = (re) => {
         updateModalImagePreview(re.target.result);
+        pendingUploadAssetId = createAssessmentAssetId();
         if (urlInput) urlInput.value = '';
         showToast('Gambar lokal berhasil dipilih.', 'info');
       };
@@ -2635,12 +3150,14 @@ function openSoalEditor(type, index, data, formData) {
     const url = urlInput?.value.trim();
     if (!url) { showToast('Masukkan link URL gambar.', 'error'); return; }
     updateModalImagePreview(url);
+    pendingUploadAssetId = createAssessmentAssetId();
     if (fileUpload) fileUpload.value = '';
     showToast('Link gambar dipasang.', 'info');
   });
 
   overlay.querySelector('#btn-editor-remove-img')?.addEventListener('click', () => {
     updateModalImagePreview('');
+    pendingUploadAssetId = null;
     if (urlInput) urlInput.value = '';
     if (fileUpload) fileUpload.value = '';
     showToast('Gambar dilepas dari soal ini.', 'info');
@@ -2661,9 +3178,24 @@ function openSoalEditor(type, index, data, formData) {
   overlay.querySelector('.btn-editor-cancel').addEventListener('click', () => overlay.remove());
 
   // Save
-  overlay.querySelector('.btn-editor-save').addEventListener('click', () => {
+  overlay.querySelector('.btn-editor-save').addEventListener('click', async () => {
     const newSoal = overlay.querySelector('#edit-soal-text').value.trim();
     if (!newSoal) { showToast('Teks soal tidak boleh kosong.', 'error'); return; }
+
+    let durableImage = null;
+    if (modalSelectedImageUrl) {
+      try {
+        durableImage = await makeDurableQuestionImage(modalSelectedImageUrl, {
+          existing: q.gambar,
+          title: fileUpload?.files?.[0]?.name || q.gambar?.title,
+          assetId: pendingUploadAssetId || undefined,
+      });
+      } catch (error) { showToast(error.message || 'Gambar belum tersimpan permanen.', 'error'); return; }
+      if (activeToken && !assessmentPackageSync.current(activeToken)) {
+        showToast('Paket sudah berubah. Perubahan pada jendela lama tidak diterapkan.', 'warning');
+        return;
+      }
+    }
 
     q.soal = cleanPromptDebris(newSoal);
 
@@ -2679,13 +3211,13 @@ function openSoalEditor(type, index, data, formData) {
     if (newLevel) q.level = newLevel;
 
     // Update gambar
-    if (modalSelectedImageUrl) {
-      q.gambar = {
-        url: modalSelectedImageUrl,
-        deskripsi: q.gambar?.deskripsi || 'Gambar Ilustrasi'
-      };
+    if (durableImage) {
+      q.gambar = durableImage;
+      delete q.imageUnavailable;
     } else {
       delete q.gambar;
+      delete q.visual_stimulus;
+      delete q.imageUnavailable;
     }
 
     if (isPG) {
@@ -2713,6 +3245,7 @@ function openSoalEditor(type, index, data, formData) {
 
     overlay.remove();
     document.removeEventListener('keydown', escHandler);
+    commitAssessmentEdit(data, formData);
     renderResult(data, formData);
     showToast(`Soal & Kisi-Kisi ${typeLabel} No. ${q.no} berhasil diperbarui.`, 'success');
   });
@@ -2722,6 +3255,7 @@ function openSoalEditor(type, index, data, formData) {
 // DEDICATED QUICK CHANGE IMAGE MODAL (Upload, Link URL, & SVG Visual Engine)
 // ============================================================
 function openChangeImageModal(type, qIdx, data, formData) {
+  const activeToken = assessmentPackageSync.context?.token;
   const existing = document.querySelector('.soal-image-modal-overlay');
   if (existing) existing.remove();
 
@@ -2734,6 +3268,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
   let selectedImageUrl = q.gambar?.url || '';
   let selectedSvg = q.gambar?.svg || '';
   let selectedTitle = q.gambar?.title || '';
+  let pendingUploadAssetId = createAssessmentAssetId();
 
   const overlay = document.createElement('div');
   overlay.className = 'soal-editor-overlay soal-image-modal-overlay';
@@ -3100,12 +3635,13 @@ function openChangeImageModal(type, qIdx, data, formData) {
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Ukuran file gambar maksimal 5MB.', 'error');
+      if (file.size > 512 * 1024) {
+        showToast('Ukuran gambar maksimal 512 KiB.', 'error');
         return;
       }
       const reader = new FileReader();
       reader.onload = (re) => {
+        pendingUploadAssetId = createAssessmentAssetId();
         selectedSvg = '';
         selectedTitle = file.name;
         updatePreview(re.target.result);
@@ -3125,6 +3661,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
     }
     selectedSvg = '';
     selectedTitle = 'Gambar Internet';
+    pendingUploadAssetId = createAssessmentAssetId();
     updatePreview(url);
     fileInput.value = '';
     showToast('Link gambar berhasil dimuat.', 'info');
@@ -3134,6 +3671,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
   overlay.querySelector('#modal-btn-remove-this-img').addEventListener('click', () => {
     selectedSvg = '';
     selectedTitle = '';
+    pendingUploadAssetId = null;
     updatePreview('');
     urlInput.value = '';
     fileInput.value = '';
@@ -3153,29 +3691,40 @@ function openChangeImageModal(type, qIdx, data, formData) {
   document.addEventListener('keydown', escImgHandler);
 
   // Save
-  overlay.querySelector('#modal-btn-save-image').addEventListener('click', () => {
+  overlay.querySelector('#modal-btn-save-image').addEventListener('click', async () => {
+    let durableImage = null;
     if (selectedImageUrl) {
-      q.gambar = {
-        url: selectedImageUrl,
-        svg: selectedSvg || undefined,
-        type: selectedSvg ? 'svg' : (selectedImageUrl.includes('image/svg+xml') ? 'svg' : 'photo'),
-        title: selectedTitle || q.gambar?.title || 'Gambar Ilustrasi',
-        credit: selectedSvg ? 'Examplate Visual Engine' : (q.gambar?.credit || 'Upload Manual'),
-        deskripsi: q.gambar?.deskripsi || selectedTitle || 'Gambar Ilustrasi',
-        params: currentActiveSvgType ? { ...currentActiveParams } : (q.gambar?.params || undefined)
-      };
+      try {
+        durableImage = await makeDurableQuestionImage(selectedImageUrl, {
+          svg: selectedSvg,
+          existing: q.gambar,
+          title: selectedTitle,
+          credit: selectedSvg ? 'Examplate Visual Engine' : 'Upload Manual',
+          assetId: pendingUploadAssetId || undefined,
+      });
+      } catch (error) { showToast(error.message || 'Gambar belum tersimpan permanen.', 'error'); return; }
+      if (activeToken && !assessmentPackageSync.current(activeToken)) {
+        showToast('Paket sudah berubah. Stimulus pada jendela lama tidak diterapkan.', 'warning');
+        return;
+      }
+    }
+    if (selectedImageUrl) {
+      q.gambar = { ...durableImage, params: currentActiveSvgType ? { ...currentActiveParams } : durableImage?.params };
+      delete q.imageUnavailable;
       if (currentActiveSvgType) {
         q.visual_stimulus = {
           type: currentActiveSvgType,
           params: { ...currentActiveParams }
         };
-      }
+      } else if (!selectedSvg) delete q.visual_stimulus;
     } else {
       delete q.gambar;
       delete q.visual_stimulus;
+      delete q.imageUnavailable;
     }
     overlay.remove();
     document.removeEventListener('keydown', escImgHandler);
+    commitAssessmentEdit(data, formData);
     renderResult(data, formData);
     showToast(selectedImageUrl ? `Stimulus pada soal nomor ${q.no} berhasil diperbarui.` : `Gambar pada nomor ${q.no} berhasil dihapus.`, 'success');
   });
@@ -3209,6 +3758,7 @@ function deleteSoal(type, index, data, formData) {
   if (data.isian?.data) data.isian.data.forEach(q => { q.no = runNo++; });
   if (data.uraian) data.uraian.forEach(q => { q.no = runNo++; });
 
+  commitAssessmentEdit(data, formData);
   renderResult(data, formData);
   showToast(`Soal ${typeLabel} No. ${qNo} berhasil dihapus. Nomor soal diperbarui otomatis.`, 'info');
 }
@@ -3261,6 +3811,7 @@ function batchDeleteSoal(data, formData) {
 
   _selectedBatchItems.clear();
   updateBatchBarUI();
+  commitAssessmentEdit(data, formData);
   renderResult(data, formData);
 
   saveDocArchive({
@@ -3276,6 +3827,7 @@ function batchDeleteSoal(data, formData) {
 
 function openBatchRegenerateModal(selectedList, data, formData) {
   if (!selectedList || selectedList.length === 0) return;
+  const packageToken = assessmentPackageSync.context?.token;
 
   const existing = document.querySelector('.batch-regen-overlay');
   if (existing) existing.remove();
@@ -3458,8 +4010,20 @@ function openBatchRegenerateModal(selectedList, data, formData) {
         timeout: 180000
       });
 
+      if (packageToken && !assessmentPackageSync.current(packageToken)) return;
+
       if (res.success && Array.isArray(res.data?.items)) {
         const replacements = res.data.items;
+
+        for (const replacement of replacements) {
+          if (replacement?.gambar?.url && !replacement.gambar.assetId && !replacement.gambar.svg) {
+            replacement.gambar = await makeDurableQuestionImage(replacement.gambar.url, {
+              title: replacement.gambar.title || 'Stimulus soal',
+              credit: replacement.gambar.credit || 'Sumber gambar',
+            });
+          }
+        }
+        if (packageToken && !assessmentPackageSync.current(packageToken)) return;
 
         replacements.forEach(rep => {
           if (!rep || !rep.no) return;
@@ -3494,6 +4058,7 @@ function openBatchRegenerateModal(selectedList, data, formData) {
         _selectedBatchItems.clear();
         updateBatchBarUI();
         closeModal();
+        commitAssessmentEdit(data, formData);
         renderResult(data, formData);
 
         // Auto-archive
@@ -3795,6 +4360,26 @@ function openInteractiveCrosswordGame(cw, data, formData) {
 // Bank Soal Kolaboratif — Full Slide-Over Drawer
 // ============================================
 
+async function ensureEditablePackageCopy() {
+  const original = assessmentPackageSync.context;
+  if (!original?.packageId || !original.foreign) return;
+  const localCopy = saveLocalAssessmentCopy();
+  if (!localCopy) throw new Error('Salinan lokal gagal dibuat; paket asli tetap tidak berubah.');
+  original.copyClientDocumentId ||= createAssessmentAssetId();
+  const copyResponse = await api(`/banksoal/${encodeURIComponent(original.packageId)}/copy`, { method: 'POST', body: { clientDocumentId: original.copyClientDocumentId } });
+  if (!assessmentPackageSync.current(original.token)) return;
+  const copy = copyResponse?.data || copyResponse;
+  const packageId = copy?.packageId ?? copy?.id;
+  if (!packageId) throw new Error('Server belum mengembalikan identitas salinan paket.');
+  const detailResponse = await api(`/banksoal/${encodeURIComponent(packageId)}`);
+  if (!assessmentPackageSync.current(original.token)) return;
+  const detail = detailResponse?.data || detailResponse;
+  if (!detail?.content || String(detail.user_id) !== String(state.user?.id)) throw new Error('Salinan paket belum dapat diverifikasi sebagai milik akun ini.');
+  _editModeActive = false;
+  renderResult({ ...detail.content, _persistence: detail._persistence }, _lastFormData, { force: true, owner: state.user?.id, foreign: false, visibility: 'private' });
+  showToast('Salinan privat dibuat. Paket asli tidak berubah; penyuntingan dilakukan pada salinan Anda.', 'success');
+}
+
 async function loadBankSoalCountBadge() {
   try {
     const res = await api('/banksoal/stats');
@@ -3847,12 +4432,84 @@ function renderStars(rating, size = 'text-xs') {
   return h;
 }
 
+// Stage3: status berbagi privat-by-default. is_public = niat berbagi, bukan jaminan tampil.
+function bsShareStatus(item) {
+  if (!item) return { key: 'private', label: 'Privat' };
+  if (Number(item.is_hidden) === 1) return { key: 'hidden', label: 'Disembunyikan moderator' };
+  if (Number(item.is_public) !== 1) return { key: 'private', label: 'Privat' };
+  if (item.moderation_status === 'approved') return { key: 'approved', label: 'Disetujui · tampil publik' };
+  return { key: 'pending', label: 'Menunggu moderasi' };
+}
+
+function bsStatusBadge(item) {
+  const s = bsShareStatus(item);
+  const cls = s.key === 'approved'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
+    : s.key === 'pending'
+      ? 'bg-amber-50 text-amber-700 border-amber-200/70'
+      : s.key === 'hidden'
+        ? 'bg-rose-50 text-rose-700 border-rose-200/70'
+        : 'bg-slate-100 text-slate-600 border-slate-200/70';
+  return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}" title="is_public bukan jaminan tampil publik">${escBs(s.label)}</span>`;
+}
+
+async function setBankSoalShare(id, share) {
+  const res = await api(`/banksoal/${id}/share`, { method: 'POST', body: { share } });
+  if (!res?.success) throw new Error(res?.message || 'Gagal memperbarui status berbagi');
+  return res.data;
+}
+
+function bindShareButtons(scope) {
+  scope.querySelectorAll('.bs-share-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      btn.disabled = true;
+      try {
+        await setBankSoalShare(id, true);
+        showToast('Diajukan untuk moderasi. Belum tampil publik sampai disetujui admin.', 'success');
+        loadBankSoalCountBadge();
+        activeBankSoalRefresh?.();
+        document.getElementById('banksoal-detail-modal')?.remove();
+      } catch (err) {
+        showToast(err.message || 'Gagal mengajukan berbagi', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  scope.querySelectorAll('.bs-withdraw-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      if (!confirm('Tarik kembali soal ini ke privat? Soal tidak lagi tampil untuk guru lain.')) return;
+      btn.disabled = true;
+      try {
+        await setBankSoalShare(id, false);
+        showToast('Soal dikembalikan ke privat.', 'info');
+        loadBankSoalCountBadge();
+        activeBankSoalRefresh?.();
+        document.getElementById('banksoal-detail-modal')?.remove();
+      } catch (err) {
+        showToast(err.message || 'Gagal menarik kembali', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 // Global reference for refreshing active modal in-place
 let activeBankSoalRefresh = null;
+let _bankSoalLoadNonce = 0;
 
 async function applyBankSoalPackage(id) {
+  if (!preserveLocalBeforeSwitch()) return;
+  const loadNonce = ++_bankSoalLoadNonce;
+  const ownerAtStart = String(state.user?.id ?? '');
   try {
     const res = await api(`/banksoal/${id}`);
+    if (loadNonce !== _bankSoalLoadNonce || String(state.user?.id ?? '') !== ownerAtStart) return;
     if (!res.success || !res.data) {
       showToast('Gagal memuat paket soal', 'error');
       return;
@@ -3861,6 +4518,7 @@ async function applyBankSoalPackage(id) {
     try {
       await api(`/banksoal/${id}/use`, { method: 'POST' });
     } catch (_) {}
+    if (loadNonce !== _bankSoalLoadNonce || String(state.user?.id ?? '') !== ownerAtStart) return;
 
     const formData = {
       mataPelajaran: soal.mata_pelajaran,
@@ -3883,7 +4541,8 @@ async function applyBankSoalPackage(id) {
 
     // Render into result view
     _editModeActive = false;
-    renderResult(soal.content, formData);
+    const content = { ...soal.content, _persistence: soal._persistence };
+    renderResult(content, formData, { force: true, owner: soal.user_id, foreign: String(soal.user_id) !== String(state.user?.id), visibility: Number(soal.is_public) === 1 ? 'shared' : 'private' });
     showToast(`Paket soal "${soal.topik}" berhasil dimuat! Siap dicetak atau diekspor ke Word.`, 'success');
   } catch (err) {
     showToast('Gagal menerapkan paket soal: ' + (err.message || 'Error'), 'error');
@@ -3957,6 +4616,7 @@ async function openBankSoalDrawer(initialFilters = {}) {
           </div>
         </div>
         <div class="flex items-center gap-2">
+          ${state.user?.role === 'admin' ? `<button id="bs-moderation-btn" class="h-9 px-3 rounded-full bg-amber-400/20 hover:bg-amber-400/30 border border-amber-300/40 text-white text-xs font-semibold transition-colors cursor-pointer" title="Antrean moderasi: hanya ajuan eksplisit pemilik">Moderasi</button>` : ''}
           <button id="bs-refresh-btn" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer" title="Segarkan data">
             <i class="fas fa-rotate text-xs"></i>
           </button>
@@ -4130,7 +4790,10 @@ async function openBankSoalDrawer(initialFilters = {}) {
         `;
       } else {
         grid.innerHTML = items.map(item => {
-          const isMine = (item.user_id === state.user?.id) || (state.user?.role === 'admin');
+          const isOwner = item.user_id === state.user?.id;
+          const isMine = isOwner || (state.user?.role === 'admin');
+          const canShare = isOwner && Number(item.is_hidden) !== 1 && Number(item.is_public) !== 1;
+          const canWithdraw = isOwner && (Number(item.is_public) === 1 || Number(item.is_hidden) === 1);
           return `
             <div class="banksoal-card bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700/80 shadow-xs hover:shadow-md hover:border-violet-300 dark:hover:border-violet-600 transition-all flex flex-col justify-between group" data-id="${item.id}">
               <div>
@@ -4145,6 +4808,7 @@ async function openBankSoalDrawer(initialFilters = {}) {
                     </span>
                     ${item.jenis_ujian ? `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${escBs(item.jenis_ujian)}</span>` : ''}
                     ${isMine ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70"><i class="fas fa-check mr-1"></i>Milik Anda</span>` : ''}
+                    ${isMine ? bsStatusBadge(item) : ''}
                   </div>
 
                   <div class="flex items-center gap-1 shrink-0">
@@ -4192,6 +4856,10 @@ async function openBankSoalDrawer(initialFilters = {}) {
                     <i class="fas fa-download text-[11px]"></i> Gunakan
                   </button>
                 </div>
+                ${isOwner ? `<div class="flex items-center gap-2 pt-1">
+                  ${canShare ? `<button type="button" class="bs-share-btn flex-1 py-1.5 px-3 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold transition-colors cursor-pointer" data-id="${item.id}" title="Soal baru selalu privat. Berbagi bersifat opt-in dan perlu persetujuan admin."><i class="fas fa-share-alt text-[11px] mr-1"></i>Bagikan · perlu moderasi</button>` : ''}
+                  ${canWithdraw ? `<button type="button" class="bs-withdraw-btn flex-1 py-1.5 px-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer" data-id="${item.id}"><i class="fas fa-lock text-[11px] mr-1"></i>Tarik ke privat</button>` : ''}
+                </div><p class="text-[10px] text-slate-400">Soal baru selalu privat. Berbagi bersifat opt-in dan perlu persetujuan admin.</p>` : ''}
               </div>
             </div>
           `;
@@ -4260,6 +4928,8 @@ async function openBankSoalDrawer(initialFilters = {}) {
           }
         });
       });
+
+      bindShareButtons(grid);
 
       paginationContainer?.querySelectorAll('.bs-page-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -4374,6 +5044,11 @@ async function openBankSoalDrawer(initialFilters = {}) {
     loadBankSoalData();
   });
 
+  // Moderation queue (admin only; button only rendered for admin)
+  document.getElementById('bs-moderation-btn')?.addEventListener('click', () => {
+    openBankSoalModerationQueue();
+  });
+
   // Initial load
   loadBankSoalData();
 }
@@ -4412,7 +5087,13 @@ async function openBankSoalDetail(id) {
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">${escBs(soal.mata_pelajaran)}</span>
             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">${escBs(soal.jenjang_kelas)}</span>
             ${soal.jenis_ujian ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">${escBs(soal.jenis_ujian)}</span>` : ''}
+            ${(soal.user_id === state.user?.id || state.user?.role === 'admin') ? bsStatusBadge(soal) : ''}
           </div>
+          ${soal.user_id === state.user?.id ? `<div class="flex flex-wrap items-center gap-2 mt-2">
+            ${Number(soal.is_hidden) !== 1 && Number(soal.is_public) !== 1 ? `<button type="button" class="bs-share-btn px-3 py-1.5 rounded-xl border border-emerald-200 text-emerald-700 text-xs font-semibold cursor-pointer" data-id="${soal.id}">Bagikan · perlu moderasi</button>` : ''}
+            ${(Number(soal.is_public) === 1 || Number(soal.is_hidden) === 1) ? `<button type="button" class="bs-withdraw-btn px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold cursor-pointer" data-id="${soal.id}">Tarik ke privat</button>` : ''}
+            <span class="text-[10px] text-slate-400">Soal baru selalu privat; is_public bukan jaminan tampil.</span>
+          </div>` : ''}
           <h3 class="font-display text-lg font-bold text-slate-900 dark:text-white">${escBs(soal.topik)}</h3>
           <p class="text-xs text-slate-500 mt-1">Dibuat oleh <strong>${escBs(soal.user_nama)}</strong> · ${escBs(soal.sekolah || '')} · ${formatBsDate(soal.created_at)}</p>
         </div>
@@ -4561,6 +5242,82 @@ async function openBankSoalDetail(id) {
   document.getElementById('bs-rate-btn')?.addEventListener('click', () => {
     openBankSoalRatingModal(id, soal.my_review);
   });
+
+  bindShareButtons(modal);
+}
+
+async function openBankSoalModerationQueue() {
+  if (state.user?.role !== 'admin') {
+    showToast('Antrean moderasi hanya untuk admin.', 'error');
+    return;
+  }
+  document.getElementById('banksoal-moderation-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'banksoal-moderation-modal';
+  modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-fade-in';
+  modal.innerHTML = `
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="bs-mod-backdrop"></div>
+    <div class="bg-white dark:bg-slate-900 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative z-10 border border-slate-200/70 p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-bold text-base">Antrean moderasi bank soal</h3>
+        <button id="bs-mod-close" class="w-8 h-8 rounded-full border border-slate-200 cursor-pointer"><i class="fas fa-times text-xs"></i></button>
+      </div>
+      <p class="text-xs text-slate-500 mb-4">Hanya ajuan eksplisit pemilik (pending, bukan legacy). Menyetujui tidak membuat soal privat menjadi publik.</p>
+      <p role="status" class="text-xs text-slate-500">Memuat antrean…</p>
+      <div id="bs-mod-list" class="space-y-3 mt-3"></div>
+    </div>`;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelector('#bs-mod-close')?.addEventListener('click', close);
+  modal.querySelector('#bs-mod-backdrop')?.addEventListener('click', close);
+  try {
+    const res = await api('/banksoal/moderation/queue?page=1&limit=20');
+    const items = res?.data?.items || [];
+    const list = modal.querySelector('#bs-mod-list');
+    modal.querySelector('[role="status"]')?.remove();
+    if (!items.length) {
+      list.innerHTML = '<p class="text-xs text-slate-500">Tidak ada ajuan pending.</p>';
+      return;
+    }
+    list.innerHTML = items.map(q => `
+      <div class="p-3 rounded-2xl border border-slate-200 flex flex-col gap-2" data-id="${q.id}" data-revision="${Number(q.revision) || 0}" data-content-hash="${escBs(q.content_hash || '')}">
+        <div class="flex items-center justify-between gap-2">
+          <strong class="text-sm">${escBs(q.topik)} · ${escBs(q.mata_pelajaran)} · ${escBs(q.jenjang_kelas)}</strong>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">pending</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Oleh ${escBs(q.user_nama)} · ${formatBsDate(q.created_at)}</p>
+        <div class="flex gap-2">
+          <button type="button" class="bs-mod-approve px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold cursor-pointer" data-id="${q.id}" data-revision="${Number(q.revision) || 0}">Setujui</button>
+          <button type="button" class="bs-mod-hide px-3 py-1.5 rounded-xl border border-rose-200 text-rose-700 text-xs font-semibold cursor-pointer" data-id="${q.id}" data-revision="${Number(q.revision) || 0}">Sembunyikan</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('.bs-mod-approve').forEach(b => {
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          await api(`/banksoal/moderation/${b.dataset.id}/approve`, { method: 'POST', body: { expectedRevision: Number(b.dataset.revision) } });
+          showToast('Ajuan disetujui. Hanya item opt-in yang tampil publik.', 'success');
+          b.closest('[data-id]')?.remove();
+          activeBankSoalRefresh?.();
+        } catch (e) { showToast(e.message || 'Gagal menyetujui', 'error'); }
+        finally { b.disabled = false; }
+      });
+    });
+    list.querySelectorAll('.bs-mod-hide').forEach(b => {
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+          await api(`/banksoal/moderation/${b.dataset.id}/hide`, { method: 'POST', body: { expectedRevision: Number(b.dataset.revision) } });
+          showToast('Ajuan disembunyikan dari akses komunitas.', 'info');
+          b.closest('[data-id]')?.remove();
+          activeBankSoalRefresh?.();
+        } catch (e) { showToast(e.message || 'Gagal menyembunyikan', 'error'); }
+        finally { b.disabled = false; }
+      });
+    });
+  } catch (e) {
+    modal.querySelector('[role="status"]')?.replaceChildren(document.createTextNode(e.message || 'Gagal memuat antrean.'));
+  }
 }
 
 function openBankSoalRatingModal(soalId, existingReview) {
@@ -5197,4 +5954,3 @@ function insertVisualStimulusToForm(item) {
 
   showToast(`Stimulus visual "${item.name}" berhasil disisipkan ke Topik Asesmen!`, 'success');
 }
-

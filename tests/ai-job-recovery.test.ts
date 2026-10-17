@@ -52,7 +52,7 @@ describe('Job result recovery and account ownership', () => {
   it('aborts and disposes the monitor when the authenticated account changes', async () => {
     monitor = openAiLiveMonitor({ title: 'RPP privat' });
     state.user = { id: 2, nama: 'Akun lain' };
-    document.querySelector('#main-content')!.append(document.createElement('section'));
+    document.querySelector('#main-content')!.appendChild(document.createElement('section'));
     await vi.waitFor(() => expect(document.querySelector('#ai-live-monitor-modal')).toBeNull());
     expect(monitor.signal.aborted).toBe(true);
     expect(hasActiveAiJob()).toBe(false);
@@ -67,9 +67,9 @@ describe('Job result recovery and account ownership', () => {
       vi.mocked(getCurrentUser).mockResolvedValue(null);
       expect((await app.request('/jobs/private-job-123', {}, { DB: db })).status).toBe(401);
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 2 } as any);
-      expect((await app.request('/jobs/private-job-123', {}, { DB: db })).status).toBe(404);
+      expect((await app.request('/jobs/private-job-123', { headers: { 'X-Session-Id': 'test-session' } }, { DB: db })).status).toBe(404);
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 1 } as any);
-      expect(await (await app.request('/jobs/private-job-123', {}, { DB: db })).json()).toMatchObject({ success: true, data: { state: 'completed', result: { data: { hasil: 'Draf privat' } } } });
+      expect(await (await app.request('/jobs/private-job-123', { headers: { 'X-Session-Id': 'test-session' } }, { DB: db })).json()).toMatchObject({ success: true, data: { state: 'completed', result: { data: { hasil: 'Draf privat' } } } });
     } finally { db.close(); }
   });
   it('does not render a private result if the account changes while restoring its origin page', async () => {
@@ -85,7 +85,7 @@ describe('Job result recovery and account ownership', () => {
     expect(window.navigate).toHaveBeenCalledWith('rpp');
     state.user = { id: 2, nama: 'Akun lain' };
     root.dataset.featurePage = 'rpp';
-    root.append(document.createElement('section'));
+    root.appendChild(document.createElement('section'));
     finishNavigation!();
     await vi.waitFor(() => expect(hasActiveAiJob()).toBe(false));
     expect(review).not.toHaveBeenCalled();

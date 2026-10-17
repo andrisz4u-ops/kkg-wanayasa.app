@@ -253,7 +253,7 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
                 {
                     no: 1,
                     soal: 'Soal lama dengan sedikit kesalahan',
-                    opsi: { A: 'Salah', B: 'Salah', C: 'Benar', D: 'Salah' },
+                    opsi: { A: 'Pilihan awal', B: 'Pilihan kedua', C: 'Jawaban benar', D: 'Pilihan akhir' },
                     kunci: 'A', // Kunci awal salah
                     level: 'L2'
                 },
@@ -306,6 +306,43 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             // Item 2: verified
             expect(healedItems[1].audit.status).toBe('verified');
             expect(healedItems[1].audit.quality_score).toBe(98);
+        });
+
+        it('flags missing verifier rows and incomplete checks without fabricated scores', () => {
+            const items = [
+                { soal: 'Pertanyaan valid?', opsi: { A: 'Satu', B: 'Dua', C: 'Tiga', D: 'Empat' }, kunci: 'A' },
+                { soal: 'Pertanyaan lain?', opsi: { A: 'Satu', B: 'Dua', C: 'Tiga', D: 'Empat' }, kunci: 'B' }
+            ];
+            const { healedItems } = applyVerificationRepairs(items, [{
+                index: 0, verdict: 'PASS', quality_score: 99, key_verified: true,
+                kaidah_puspendik: true, hots_valid: true
+            }], 'Kelas 4');
+
+            expect(healedItems[0].audit.status).toBe('flagged');
+            expect(healedItems[0].audit.distraktor_homogen).toBe(false);
+            expect(healedItems[0].audit.quality_score).toBe(0);
+            expect(healedItems[1].audit.status).toBe('flagged');
+            expect(healedItems[1].audit.key_verified).toBe(false);
+            expect(healedItems[1].audit.quality_score).toBe(0);
+        });
+
+        it('revalidates AI repairs and flags repairs that remain deterministically invalid', () => {
+            const item = { soal: 'Pertanyaan lama?', opsi: { A: 'Satu', B: 'Dua', C: 'Tiga', D: 'Empat' }, kunci: 'A' };
+            const checks = {
+                index: 0, verdict: 'REPAIR', quality_score: 95, key_verified: true,
+                kaidah_puspendik: true, hots_valid: true, distraktor_homogen: true
+            };
+            const invalid = applyVerificationRepairs([item], [{
+                ...checks, repaired_opsi: { A: 'Sama', B: 'Sama', C: 'Tiga', D: 'Empat' }
+            }], 'Kelas 4').healedItems[0];
+            expect(invalid.audit.status).toBe('flagged');
+            expect(invalid.audit.quality_score).toBe(0);
+
+            const valid = applyVerificationRepairs([item], [{
+                ...checks, repaired_soal: 'Pertanyaan baru yang valid?'
+            }], 'Kelas 4').healedItems[0];
+            expect(valid.audit.status).toBe('repaired');
+            expect(valid.audit.quality_score).toBe(95);
         });
     });
 
@@ -363,6 +400,9 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             expect(result.finalData._audit.overall_quality_score).toBe(97);
             expect(result.finalData.pg[0].audit).toBeDefined();
             expect(result.finalData.pg[0].audit.quality_score).toBe(97);
+            expect(result.finalData.pg[0].audit.status).toBe('verified');
+            expect(result.summary.passed_count).toBe(1);
+            expect(result.summary.flagged_count).toBe(0);
         });
 
         it('should gracefully degrade using Heuristics Tier if AI Verifier fails or times out', async () => {
@@ -394,6 +434,11 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             expect(result.finalData.pg[0].soal).toBe('Apa fungsi jantung?');
             expect(result.finalData._audit).toBeDefined();
             expect(result.finalData._audit.total_reviewed).toBe(1);
+            expect(result.finalData.pg[0].audit.status).toBe('flagged');
+            expect(result.finalData.pg[0].audit.quality_score).toBe(0);
+            expect(result.summary.flagged_count).toBe(1);
+            expect(result.summary.passed_count).toBe(0);
+            expect(result.summary.overall_quality_score).toBe(0);
         });
 
         it('should purge irrelevant Andrey Sizov Russian circuit photo when attached to non-circuit question', () => {

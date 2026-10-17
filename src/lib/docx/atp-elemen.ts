@@ -827,7 +827,7 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
     const tpParagraphs: Paragraph[] = (group.items && group.items.length > 0)
       ? group.items.map(it => new Paragraph({
           spacing: { after: 50 },
-          alignment: AlignmentType.JUSTIFY,
+          alignment: AlignmentType.JUSTIFIED,
           children: [
             new TextRun({ text: `${it.kode_tp}  `, bold: true, size: 18, font: 'Times New Roman' }),
             new TextRun({ text: sanitizeText(it.tp), size: 18, font: 'Times New Roman' })
@@ -835,7 +835,7 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
         }))
       : [new Paragraph({
           spacing: { after: 30 },
-          alignment: AlignmentType.JUSTIFY,
+          alignment: AlignmentType.JUSTIFIED,
           children: [
             new TextRun({
               text: isAljabarKelas5
@@ -882,7 +882,7 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
           verticalAlign: VerticalAlign.TOP,
           children: [
             new Paragraph({
-              alignment: AlignmentType.JUSTIFY,
+              alignment: AlignmentType.JUSTIFIED,
               spacing: { after: 30 },
               children: [new TextRun({ text: sanitizeText(group.cp), size: 18, font: 'Times New Roman' })]
             })
@@ -989,23 +989,23 @@ export async function generateAtpElemenDocxBuffer(data: AnalisisCpDocxInput): Pr
   // Signature Table
   const tahunAjaran = metadata.tahun_pembelajaran || '2026/2027';
   const titimangsa = getKaldikTitimangsa(tahunAjaran, 1);
-  const signatureTable = createSignatureTable(
-    metadata.kepala_sekolah || '-',
-    metadata.nip_kepala_sekolah || '-',
-    metadata.guru || '-',
-    metadata.nip_guru || '-',
-    titimangsa
-  );
+  const signatureTable = createSignatureTable({
+    kepalaSekolah: metadata.kepala_sekolah || '-',
+    nipKepalaSekolah: metadata.nip_kepala_sekolah || '-',
+    guru: metadata.guru || '-',
+    nipGuru: metadata.nip_guru || '-',
+    titimangsa,
+  });
 
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
-            orientation: PageOrientation.LANDSCAPE,
             size: {
-              width: 16838, // A4 Landscape
-              height: 11906,
+              orientation: PageOrientation.LANDSCAPE,
+              width: 11906, // A4 Landscape; docx swaps width/height for landscape sections.
+              height: 16838,
             },
             margin: {
               top: 720,

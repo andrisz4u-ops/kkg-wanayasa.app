@@ -9,10 +9,16 @@ beforeEach(async () => {
   document.body.innerHTML = '<div id="app"><main id="main-content" data-feature-page="slide"></main></div>';
   appState = (await import('../public/static/js/state.js')).state;
   appState.user = { id: 91, nama: 'Guru uji', role: 'user' }; appState.currentPage = 'slide';
-  mocks.api.mockReset().mockResolvedValue({ success: true, data: mocks.providers }); mocks.stream.mockReset();
+  mocks.api.mockReset().mockImplementation(async (path: string, options?: any) => {
+    if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
+    if (path.startsWith('/document-drafts?')) return { success: true, data: [] };
+    if (options?.method === 'PUT' && path.startsWith('/document-drafts/presentation/')) return { success: true, data: { revision: Number(options.body.baseRevision) + 1 } };
+    if (options?.method === 'POST' && path.includes('/checkpoints')) return { success: true, data: { revision: 1 } };
+    return { success: true, data: {} };
+  }); mocks.stream.mockReset();
   studio = await import('../public/static/js/pages/slide.js'); monitor = await import('../public/static/js/ai-live-monitor.js');
   document.querySelector('#main-content')!.innerHTML = studio.renderSlide(); studio.initSlide();
-  await vi.waitFor(() => expect(document.querySelector<HTMLSelectElement>('#sg-model-select')!.value).toBe('api'));
+  await vi.waitFor(() => expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api'));
 });
 afterEach(() => { document.querySelector<HTMLButtonElement>('#monitor-dismiss-btn')?.click(); vi.unstubAllGlobals(); vi.restoreAllMocks(); document.body.innerHTML = ''; });
 describe('Teacher-facing Slide workflow', () => {
@@ -25,19 +31,19 @@ describe('Teacher-facing Slide workflow', () => {
     document.querySelector<HTMLButtonElement>('[data-template="jelajah-ipas"]')!.click();
     expect(document.querySelector('#sg-design-summary')!.textContent).toContain('Jelajah IPAS');
     expect(document.querySelector('#sg-model-status')!.textContent).toContain('Model yang dipilih');
-    expect(document.querySelector<HTMLSelectElement>('#sg-model-select')!.value).toBe('api');
+    expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api');
   });
   it('sends the displayed model and complete brief even when the teacher never changes the model dropdown', async () => {
     const deck = (await import('../public/static/js/slides/examples.js')).exampleDeck();
     mocks.stream.mockImplementation(async (_url, _data, onEvent) => { onEvent('done', { data: deck }); });
     const form = document.querySelector<HTMLFormElement>('#sg-brief-form')!;
     (form.elements.namedItem('topik') as HTMLTextAreaElement).value = 'Pecahan dengan kertas lipat';
-    (form.elements.namedItem('jenjangKelas') as HTMLSelectElement).value = 'Kelas 3';
+    (form.elements.namedItem('jenjangKelas') as unknown as HTMLSelectElement).value = 'Kelas 3';
     expect(form.elements.namedItem('tujuanPembelajaran')).toBeNull();
     expect(form.textContent).not.toContain('Tujuan belajar');
     (form.elements.namedItem('extraInstructions') as HTMLTextAreaElement).value = 'Tanpa alat digital';
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(document.querySelector<HTMLSelectElement>('#sg-model-select')!.value).toBe('api'));
+    await vi.waitFor(() => expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api'));
     document.querySelector<HTMLButtonElement>('#sg-generate')!.click(); document.querySelector<HTMLButtonElement>('#sg-generate')!.click();
     await vi.waitFor(() => expect(mocks.stream).toHaveBeenCalledTimes(1));
     expect(mocks.stream.mock.calls[0][1]).toMatchObject({ aiProvider: 'api', jenjangKelas: 'Kelas 3', extraInstructions: 'Tanpa alat digital' });
@@ -46,7 +52,7 @@ describe('Teacher-facing Slide workflow', () => {
     await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>('#monitor-review-btn')!.hidden).toBe(false));
     document.querySelector<HTMLButtonElement>('#monitor-review-btn')!.click();
     await vi.waitFor(() => expect(document.querySelector('#sg-slide-render-area svg')).not.toBeNull());
-    expect(document.querySelector('#sg-save-status')!.textContent).toContain('tersimpan di perangkat ini');
+    await vi.waitFor(() => expect(document.querySelector('.ss-save-status')!.textContent).toContain('Tersimpan di server'));
   });
   it('keeps a layout-warning draft editable and blocks export only until the marked text is fixed', async () => {
     const deck = (await import('../public/static/js/slides/examples.js')).exampleDeck();
@@ -56,7 +62,7 @@ describe('Teacher-facing Slide workflow', () => {
     const form = document.querySelector<HTMLFormElement>('#sg-brief-form')!;
     (form.elements.namedItem('topik') as HTMLTextAreaElement).value = 'Pecahan di kelas';
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(document.querySelector<HTMLSelectElement>('#sg-model-select')!.value).toBe('api'));
+    await vi.waitFor(() => expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api'));
     document.querySelector<HTMLButtonElement>('#sg-generate')!.click();
     await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>('#monitor-review-btn')!.hidden).toBe(false));
     expect(document.querySelector('#monitor-message')!.textContent).toContain('Rapikan bidang teks');
@@ -80,7 +86,7 @@ describe('Teacher-facing Slide workflow', () => {
     const form = document.querySelector<HTMLFormElement>('#sg-brief-form')!;
     (form.elements.namedItem('topik') as HTMLTextAreaElement).value = 'Bentuk di sekitar kita';
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(document.querySelector<HTMLSelectElement>('#sg-model-select')!.value).toBe('api'));
+    await vi.waitFor(() => expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api'));
     document.querySelector<HTMLButtonElement>('#sg-generate')!.click();
     await vi.waitFor(() => expect(document.querySelector('#monitor-review-btn')!.textContent).toContain('parsial'));
     expect(document.querySelector('#monitor-message')!.textContent).toContain('Lengkapi slide');
@@ -131,5 +137,86 @@ describe('Teacher-facing Slide workflow', () => {
     document.querySelector<HTMLButtonElement>('.btn-open-archive')!.click();
     expect(document.querySelector<HTMLInputElement>('[data-field="title"]')!.value).toBe('Versi untuk kelas tiga');
     expect(document.querySelector('#kkg-archive-drawer-root')).toBeNull();
+  });
+  it('restores a server draft by listing metadata then fetching its owner-scoped detail payload', async () => {
+    const detail = { module: 'presentation', document_id: 'remote-draft', title: 'Draf lintas perangkat', revision: 3, payload: { config: { topik: 'Kelas pecahan' }, deck: (await import('../public/static/js/slides/examples.js')).exampleDeck(), template: 'matematika-visual', outline: [], index: 0 } };
+    mocks.api.mockImplementation(async (path: string, options?: any) => {
+      if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
+      if (path.startsWith('/document-drafts?')) return { success: true, data: [{ document_id: detail.document_id, title: detail.title, revision: 3, server_updated_at: '2026-10-16' }] };
+      if (path === `/document-drafts/presentation/${detail.document_id}`) return { success: true, data: detail };
+      if (options?.method === 'PUT') return { success: true, data: { revision: Number(options.body.baseRevision) + 1 } };
+      return { success: true, data: {} };
+    });
+    vi.stubGlobal('confirm', () => true);
+    document.querySelector<HTMLButtonElement>('#sg-server-drafts')!.click();
+    await vi.waitFor(() => expect(document.querySelector('.ss-server-draft')).not.toBeNull());
+    document.querySelector<HTMLButtonElement>('.ss-server-draft')!.click();
+    await vi.waitFor(() => expect((window as any).slideGenState.config.topik).toBe('Kelas pecahan'));
+    expect(mocks.api).toHaveBeenCalledWith(`/document-drafts/presentation/${detail.document_id}`);
+    expect(document.querySelector('#sg-slide-render-area svg')).not.toBeNull();
+  });
+  it('keeps offline edits locally and offers explicit conflict recovery without overwriting the remote draft', async () => {
+    const writes: any[] = [];
+    mocks.api.mockImplementation(async (path: string, options?: any) => {
+      if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
+      if (options?.method === 'PUT' && path.startsWith('/document-drafts/presentation/')) {
+        writes.push({ path, body: options.body });
+        if (writes.length === 1) throw Object.assign(new Error('stale'), { status: 409, code: 'REVISION_CONFLICT' });
+        return { success: true, data: { revision: 1 } };
+      }
+      return { success: true, data: [] };
+    });
+    document.querySelector<HTMLButtonElement>('#sg-example')!.click();
+    await vi.waitFor(() => expect(document.querySelector('#sg-conflict-actions')).not.toBeNull());
+    const localKey = 'kkg_slide_studio_v2_91';
+    expect(JSON.parse(localStorage.getItem(localKey)!).deck.slides.length).toBeGreaterThan(0);
+    expect(writes).toHaveLength(1);
+    (window as any).slideGenState.saveStatus = 'Status dirender ulang';
+    document.querySelector('#main-content')!.innerHTML = studio.renderSlide(); studio.initSlide();
+    expect(document.querySelector('#sg-conflict-actions')).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('#sg-save-local-copy')!.click();
+    await vi.waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[1].path).not.toBe(writes[0].path);
+    expect(writes[1].body.baseRevision).toBe(0);
+    expect(JSON.parse(localStorage.getItem(localKey)!).deck.slides.length).toBeGreaterThan(0);
+  });
+  it('retains an edited deck in the existing local draft when the server is offline', async () => {
+    mocks.api.mockImplementation(async (path: string, options?: any) => {
+      if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
+      if (options?.method === 'PUT') throw new Error('network unavailable');
+      return { success: true, data: [] };
+    });
+    document.querySelector<HTMLButtonElement>('#sg-example')!.click();
+    await vi.waitFor(() => expect(document.querySelector('.ss-save-status')!.textContent).toContain('Offline'));
+    const draft = JSON.parse(localStorage.getItem('kkg_slide_studio_v2_91')!);
+    expect(draft.deck.slides.length).toBeGreaterThan(0);
+    expect(draft.serverDocumentId).toBeTruthy();
+    expect(Number.isFinite(draft.serverRevision)).toBe(true);
+  });
+  it('flushes an immediate editor change before saving its checkpoint revision', async () => {
+    const writes: any[] = [];
+    const checkpoints: any[] = [];
+    mocks.api.mockImplementation(async (path: string, options?: any) => {
+      if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
+      if (options?.method === 'PUT' && path.startsWith('/document-drafts/presentation/')) {
+        writes.push(options.body);
+        return { success: true, data: { revision: options.body.baseRevision + 1 } };
+      }
+      if (options?.method === 'POST' && path.includes('/checkpoints')) {
+        checkpoints.push(options.body);
+        return { success: true, data: { revision: options.body.baseRevision } };
+      }
+      return { success: true, data: [] };
+    });
+    document.querySelector<HTMLButtonElement>('#sg-example')!.click();
+    await vi.waitFor(() => expect(writes).toHaveLength(1));
+    const title = document.querySelector<HTMLInputElement>('[data-field="title"]')!;
+    title.value = 'Perubahan terakhir sebelum checkpoint';
+    title.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector<HTMLButtonElement>('#sg-save-checkpoint')!.click();
+    await vi.waitFor(() => expect(checkpoints).toHaveLength(1));
+    expect(writes).toHaveLength(2);
+    expect(writes[1].payload.deck.slides[0].title).toBe('Perubahan terakhir sebelum checkpoint');
+    expect(checkpoints[0].baseRevision).toBe(writes[1].baseRevision + 1);
   });
 });

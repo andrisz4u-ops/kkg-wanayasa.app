@@ -14,6 +14,8 @@
   .feature-workspace .ui-load-state h2 { font-size: 20px; margin-bottom: 8px; }
   .feature-workspace .ui-load-state p { color: var(--fw-muted); max-width: 48ch; margin: 0 auto 16px; }
   .feature-workspace .ui-load-state button { background: var(--fw-accent); color: #fff; border-radius: 8px; padding: 10px 18px; min-height: 44px; }
+  .feature-workspace .ui-load-state .ui-empty-art { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; background: var(--fw-soft); border: 1px solid var(--fw-line); display: grid; place-items: center; color: var(--fw-accent); }
+  .feature-workspace .ui-load-state .ui-empty-art svg { width: 30px; height: 30px; }
   .feature-workspace[data-feature-page="login"] a { color: var(--fw-ink); text-decoration: underline; text-underline-offset: 3px; }
   .feature-workspace[data-feature-page="login"] :is(#login-form, #register-form) button[type="submit"] { background: #176b4b; color: #fff; border-color: #176b4b; }
   .feature-workspace[data-feature-page="login"] :is(#login-form, #register-form) button[type="submit"]:hover { background: #11583d; }

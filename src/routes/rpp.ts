@@ -9,6 +9,11 @@ import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings } from '../types/env';
+import { requireAIAdmission } from '../lib/ai-admission';
+import { attachCurriculumProvenance, recordCurriculumSnapshot } from '../lib/curriculum-provenance';
+import { getDynamicCPWithSource, getFaseFromKelas } from '../lib/cp-data';
+import type { CurriculumOrigin } from '../lib/curriculum-provenance';
+import { copyBytesToArrayBuffer } from '../lib/binary';
 
 const rpp = new Hono<{ Bindings: AppBindings }>();
 
@@ -40,20 +45,24 @@ export function calculateTimeDistribution(alokasiWaktu?: string) {
 }
 
 // Helper perumusan prompt RPP Deep Learning
-export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, totalMinutes: number) {
+export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, totalMinutes: number, curriculumSource?: { origin: Exclude<CurriculumOrigin, 'mixed'>; regulationLabel?: string | null }) {
   const {
     namaSekolah, namaGuru, mataPelajaran, topik, jenjangKelas,
     semester, alokasiWaktu, strategi, jumlahPertemuan,
     profilLulusan, lampirkanLKPD, aiProvider
   } = body;
 
-  const regName = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
-    ? 'Kepka BKPDM No. 020 Tahun 2026'
-    : 'BSKAP No. 046 Tahun 2025';
-
+  const origin = curriculumSource?.origin;
+  const sourceDescription = origin === 'user-input'
+    ? 'masukan guru (belum ditinjau)'
+    : origin === 'd1'
+      ? `entri katalog D1 yang belum ditinjau${curriculumSource?.regulationLabel ? `; label tersimpan: ${curriculumSource.regulationLabel} (bukan verifikasi)` : ''}`
+      : origin === 'static'
+        ? 'fallback katalog statis aplikasi yang belum ditinjau'
+        : 'sumber yang belum ditentukan dan belum diverifikasi';
   const userCP = baseCP
-    ? `Gunakan Capaian Pembelajaran resmi ${regName} berikut sebagai dasar: "${baseCP}". Sesuaikan CP ini agar sangat spesifik dan relevan dengan topik "${topik}".`
-    : `Buatlah Capaian Pembelajaran (CP) yang sesuai dengan Kurikulum Merdeka (${regName}) secara otomatis untuk mata pelajaran dan topik ini.`;
+    ? `Gunakan teks CP dari ${sourceDescription} sebagai konteks, tanpa menganggapnya telah diverifikasi: "${baseCP}". Sesuaikan rumusan CP agar relevan dengan topik "${topik}".`
+    : 'Tidak ada teks CP sumber yang tersedia; jangan menyajikan teks yang dibuat sebagai kutipan atau verifikasi resmi. Susun draf pembelajaran berdasarkan topik yang diberikan.';
 
   const profileDimensions = Array.isArray(profilLulusan)
     ? profilLulusan.join(', ')
@@ -201,7 +210,7 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
 }
 
 // Generate RPP (Standar / Non-Streaming)
-rpp.post('/generate', async (c) => {
+rpp.post('/generate', requireSession, requireAIAdmission, async (c) => {
   try {
     const body = await c.req.json();
     const {
@@ -214,13 +223,12 @@ rpp.post('/generate', async (c) => {
 
     const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
 
-    const getMatchedCP = async () => {
-      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
-      return await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
-    };
-
-    const baseCP = await getMatchedCP();
-    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
+    const cpSource = capaianPembelajaran && String(capaianPembelajaran).trim()
+      ? { text: String(capaianPembelajaran), origin: 'user-input' as const, subject: mataPelajaran || '', phase: '' }
+      : await getDynamicCPWithSource(c.env.DB, mataPelajaran, jenjangKelas);
+    const baseCP = cpSource.text;
+    const curriculum = await recordCurriculumSnapshot({ db: c.env.DB, subject: mataPelajaran || cpSource.subject, phase: cpSource.phase || getFaseFromKelas(jenjangKelas) || '', components: { cp: { text: baseCP || '', origin: cpSource.origin } }, regulationLabel: cpSource.origin === 'd1' ? cpSource.regulationLabel : undefined });
+    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes, cpSource);
 
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
@@ -240,7 +248,7 @@ rpp.post('/generate', async (c) => {
       const sessionId = getCookie(c.req.header('Cookie'), 'session');
       const user = await getCurrentUser(c.env.DB, sessionId);
       await recordAIGeneration(c.env.DB, {
-        user_id: user?.id || 1,
+        user_id: user?.id,
         user_nama: user?.nama || (namaGuru || 'Guru'),
         sekolah: user?.sekolah || (namaSekolah || 'SD Negeri Binaan'),
         feature_type: 'RPP',
@@ -251,7 +259,7 @@ rpp.post('/generate', async (c) => {
       });
     } catch (_) {}
 
-    return successResponse(c, replacePesertaDidik(result));
+    return successResponse(c, attachCurriculumProvenance(replacePesertaDidik(result), curriculum));
   } catch (e: any) {
     console.error('RPP Gen Error:', e);
     return Errors.internal(c, e.message);
@@ -259,7 +267,7 @@ rpp.post('/generate', async (c) => {
 });
 
 // Generate RPP Stream (SSE - Live Monitor)
-rpp.use('/generate-stream', requireSession);
+rpp.use('/generate-stream', requireSession, requireAIAdmission);
 rpp.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -277,13 +285,12 @@ rpp.post('/generate-stream', async (c) => {
 
     const { totalMinutes, timeDist } = calculateTimeDistribution(body.alokasiWaktu);
 
-    const getMatchedCP = async () => {
-      if (capaianPembelajaran && String(capaianPembelajaran).trim()) return capaianPembelajaran;
-      return await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
-    };
-
-    const baseCP = await getMatchedCP();
-    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes);
+    const cpSource = capaianPembelajaran && String(capaianPembelajaran).trim()
+      ? { text: String(capaianPembelajaran), origin: 'user-input' as const, subject: mataPelajaran || '', phase: '' }
+      : await getDynamicCPWithSource(c.env.DB, mataPelajaran, jenjangKelas);
+    const baseCP = cpSource.text;
+    const curriculum = await recordCurriculumSnapshot({ db: c.env.DB, subject: mataPelajaran || cpSource.subject, phase: cpSource.phase || getFaseFromKelas(jenjangKelas) || '', components: { cp: { text: baseCP || '', origin: cpSource.origin } }, regulationLabel: cpSource.origin === 'd1' ? cpSource.regulationLabel : undefined });
+    const prompt = buildRppPrompt(body, baseCP, timeDist, totalMinutes, cpSource);
 
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
@@ -300,14 +307,18 @@ rpp.post('/generate-stream', async (c) => {
     return streamSSE(c, async (rawStream) => {
       const stream = job.attach(rawStream, ai);
       try {
-        const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp')) ? 'Kepka BKPDM 020/2026' : 'BSKAP 046/2025';
+        const cpAttribution = cpSource.origin === 'user-input'
+          ? 'masukan guru yang belum ditinjau'
+          : cpSource.origin === 'd1'
+            ? `entri katalog D1 yang belum ditinjau${cpSource.regulationLabel ? ` (label tersimpan: ${cpSource.regulationLabel})` : ''}`
+            : 'fallback katalog statis aplikasi yang belum ditinjau';
         await stream.writeSSE({
           event: 'step',
           data: JSON.stringify({
             step: 1,
             totalSteps: 4,
-            title: `Analisis CP ${regTitle}`,
-            message: `Menelaah kesiapan murid & CP resmi ${regTitle} untuk topik "${topik}"...`,
+            title: 'Menelaah sumber CP',
+            message: `Menelaah kesiapan murid menggunakan ${cpAttribution} untuk topik "${topik}"; teks belum diverifikasi.`,
             percent: 20
           })
         });
@@ -353,7 +364,7 @@ rpp.post('/generate-stream', async (c) => {
           const sessionId = getCookie(c.req.header('Cookie'), 'session');
           const user = await getCurrentUser(c.env.DB, sessionId);
           await recordAIGeneration(c.env.DB, {
-            user_id: user?.id || 1,
+            user_id: user?.id,
             user_nama: user?.nama || (namaGuru || 'Guru'),
             sekolah: user?.sekolah || (namaSekolah || 'SD Negeri Binaan'),
             feature_type: 'RPP',
@@ -379,7 +390,7 @@ rpp.post('/generate-stream', async (c) => {
           event: 'done',
           data: JSON.stringify({
             success: true,
-            data: replacePesertaDidik(result)
+            data: attachCurriculumProvenance(replacePesertaDidik(result), curriculum)
           })
         });
       } catch (err: any) {
@@ -455,7 +466,7 @@ rpp.post('/docx', async (c) => {
     const topikStr = String(inputData.topik || 'Topik').replace(/[/\\?%*:|"<>]/g, '').replace(/\s+/g, '_');
     const filename = `RPP_${mata}_${topikStr}.docx`;
 
-    return new Response(buffer, {
+    return new Response(copyBytesToArrayBuffer(buffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
@@ -469,7 +480,7 @@ rpp.post('/docx', async (c) => {
 });
 
 // Generate Lampiran Rubrik & Penilaian
-rpp.post('/lampiran', async (c) => {
+rpp.post('/lampiran', requireSession, requireAIAdmission, async (c) => {
   try {
     const body = await c.req.json();
     const { mataPelajaran, topik, jenjangKelas, aiProvider } = body;
@@ -534,43 +545,45 @@ Wajib mengisi minimal 4-5 baris tabel untuk kognitif dan keterampilan.`;
 });
 
 // Save RPP
-rpp.post('/save', async (c) => {
+rpp.post('/save', requireSession, async (c) => {
   try {
     const body = await c.req.json();
     const user: any = c.get('user' as any);
+    if (!user?.id) return Errors.unauthorized(c);
     const {
       mataPelajaran, topik, jenjangKelas, semester, alokasiWaktu, strategi,
       content, inputData
     } = body;
 
-    const result = await c.env.DB.prepare(`
+    const result: any = await c.env.DB.prepare(`
       INSERT INTO rpp_history (
         user_id, mata_pelajaran, topik, jenjang_kelas, semester, alokasi_waktu, strategi,
         content_json, input_data_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING id
     `).bind(
-      user?.id || 1,
+      user.id,
       mataPelajaran, topik, jenjangKelas, semester, alokasiWaktu, strategi,
       JSON.stringify(content), JSON.stringify(inputData)
-    ).run();
+    ).first();
 
-    return successResponse(c, { id: result.results[0].id }, 'RPP saved successfully');
+    return successResponse(c, { id: result.id }, 'RPP saved successfully');
   } catch (e: any) {
     return Errors.internal(c, e.message);
   }
 });
 
 // Get History
-rpp.get('/history', async (c) => {
+rpp.get('/history', requireSession, async (c) => {
   try {
     const user: any = c.get('user' as any);
+    if (!user?.id) return Errors.unauthorized(c);
     const result = await c.env.DB.prepare(`
       SELECT id, mata_pelajaran, topik, jenjang_kelas, created_at 
       FROM rpp_history 
       WHERE user_id = ? 
       ORDER BY created_at DESC
-    `).bind(user?.id || 1).all();
+    `).bind(user.id).all();
     return successResponse(c, result.results);
   } catch (e: any) {
     return Errors.internal(c, e.message);
@@ -578,10 +591,12 @@ rpp.get('/history', async (c) => {
 });
 
 // Get Detail
-rpp.get('/:id', async (c) => {
+rpp.get('/:id', requireSession, async (c) => {
   try {
     const id = c.req.param('id');
-    const result = await c.env.DB.prepare(`SELECT * FROM rpp_history WHERE id = ?`).bind(id).first();
+    const user: any = c.get('user' as any);
+    if (!user?.id) return Errors.unauthorized(c);
+    const result = await c.env.DB.prepare(`SELECT * FROM rpp_history WHERE id = ? AND user_id = ?`).bind(id, user.id).first();
     if (!result) return Errors.notFound(c, 'RPP not found');
     result.content_json = JSON.parse(result.content_json as string);
     result.input_data_json = JSON.parse(result.input_data_json as string);

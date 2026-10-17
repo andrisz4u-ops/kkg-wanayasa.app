@@ -282,7 +282,7 @@ export async function renderAdmin() {
                 </span>
                 <div>
                   <h3 class="font-display text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Peringkat Penggunaan AI per Sekolah</h3>
-                  <p class="text-xs text-slate-500 font-light mt-0.5">Statistik pemanfaatan fitur AI (RPP, Asesmen & Slide) seluruh sekolah anggota gugus</p>
+                  <p class="text-xs text-slate-500 font-light mt-0.5">Aktivitas AI per sekolah, termasuk CP, RPP, asesmen, slide, TTS, dan program sekolah.</p>
                 </div>
               </div>
             </div>
@@ -308,7 +308,7 @@ export async function renderAdmin() {
             <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100/80 shadow-sm">
               <p class="text-[10px] uppercase tracking-wider font-semibold text-indigo-600 mb-1">Total Generasi AI</p>
               <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-total">0</h4>
-              <p class="text-[10px] text-slate-500 mt-1">Dokumen dibuat guru</p>
+              <p class="text-[10px] text-slate-500 mt-1">Proses AI yang tercatat</p>
             </div>
             <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100/80 shadow-sm">
               <p class="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 mb-1">RPP / Modul Ajar</p>
@@ -316,7 +316,7 @@ export async function renderAdmin() {
               <p class="text-[10px] text-slate-500 mt-1">Format Word siap pakai</p>
             </div>
             <div class="p-4 rounded-2xl bg-sky-50/60 border border-sky-100/80 shadow-sm">
-              <p class="text-[10px] uppercase tracking-wider font-semibold text-sky-600 mb-1">Asesmen & TTS</p>
+              <p class="text-[10px] uppercase tracking-wider font-semibold text-sky-600 mb-1">Asesmen</p>
               <h4 class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display" id="school-stat-asesmen">0</h4>
               <p class="text-[10px] text-slate-500 mt-1">Soal HOTS & kisi-kisi</p>
             </div>
@@ -326,6 +326,8 @@ export async function renderAdmin() {
               <p class="text-[10px] text-slate-500 mt-1">Media ajar presentasi</p>
             </div>
           </div>
+
+          <p id="school-analytics-data-note" role="status" class="hidden text-xs text-slate-600 mb-4"></p>
 
           <!-- Podium Cards Top 3 -->
           <div id="school-podium-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
@@ -340,6 +342,7 @@ export async function renderAdmin() {
                   <th class="px-3 py-3.5 text-center">RPP 📄</th>
                   <th class="px-3 py-3.5 text-center">Soal 🧩</th>
                   <th class="px-3 py-3.5 text-center">Slide 📽️</th>
+                  <th class="px-3 py-3.5 text-center">Fitur lain</th>
                   <th class="px-4 py-3.5 text-center">Total AI</th>
                   <th class="px-4 py-3.5">Guru Paling Aktif</th>
                   <th class="px-4 py-3.5 text-center">Status</th>
@@ -347,7 +350,7 @@ export async function renderAdmin() {
               </thead>
               <tbody id="school-leaderboard-tbody" class="divide-y divide-slate-100 bg-white">
                 <tr>
-                  <td colspan="8" class="text-center py-8 text-slate-400">
+                  <td colspan="9" class="text-center py-8 text-slate-400">
                     <i class="fas fa-spinner fa-spin mr-2"></i>Memuat data analitik sekolah...
                   </td>
                 </tr>

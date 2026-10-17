@@ -11,7 +11,10 @@ import { renderAdminLayout, syncAdminContext } from '../public/static/js/layouts
 import { mountWorkspaceLayout } from '../public/static/js/layouts/workspace.js';
 import { navigate, readAdminPanelLocation, updateAdminPanelLocation } from '../public/static/js/router.js';
 
-vi.mock('../public/static/js/api.js', () => ({ api: vi.fn(async () => ({ data: [] })) }));
+vi.mock('../public/static/js/api.js', () => ({
+  api: vi.fn(async () => ({ data: [] })),
+  getCsrfToken: vi.fn(() => 'test-csrf-token'),
+}));
 vi.mock('../public/static/js/asesmen-docx.js', () => ({ generateAsesmenDocx: vi.fn(), preloadAsesmenImages: vi.fn() }));
 
 beforeEach(() => {
@@ -132,11 +135,11 @@ describe('Refined teacher forms', () => {
   it('keeps all refinement styles inside screen media', () => {
     const css = postcss.parse(readFileSync('src/styles/workspace-refinement.css', 'utf8'));
     css.walkRules(rule => {
-      let parent = rule.parent;
+      let parent: postcss.Node | undefined = rule.parent as postcss.Node | undefined;
       let screen = false;
       while (parent) {
-        if (parent.type === 'atrule' && parent.name === 'media' && parent.params === 'screen') screen = true;
-        parent = parent.parent;
+        if (parent.type === 'atrule' && (parent as postcss.AtRule).name === 'media' && (parent as postcss.AtRule).params === 'screen') screen = true;
+        parent = parent.parent as postcss.Node | undefined;
       }
       expect(screen, rule.selector).toBe(true);
     });
@@ -212,7 +215,7 @@ describe('Administration in the shared workspace', () => {
   });
 
   it.each(['admin', 'super_admin', 'operator'])('retains role-specific context destinations for %s without a second sidebar', role => {
-    state.user.role = role;
+    state.user!.role = role;
     document.body.innerHTML = renderAdminLayout('<section id="content">Contenu</section>', 'users');
     expect(document.querySelector('.control-sidebar')).toBe(null);
     expect(document.getElementById('content')).not.toBe(null);

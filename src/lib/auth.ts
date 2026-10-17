@@ -1,6 +1,8 @@
 // Auth utilities for password hashing and session management
 // Using PBKDF2 with salt for secure password hashing
 
+import { DEFAULT_TENANT_ID } from './tenant';
+
 const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const SALT_LENGTH = 16;
@@ -178,13 +180,20 @@ export async function getCurrentUser(db: D1Database, sessionId: string | undefin
   }
 
   const result = await db.prepare(`
-    SELECT u.id, u.nama, u.email, COALESCE(u.role_label, u.role) as role, u.role_label, u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.sekolah_id,
+    SELECT u.id, u.nama, u.email, COALESCE(u.role_label, u.role) as role, u.role_label, u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.sekolah_id, u.tenant_id,
            s.nama as sekolah_nama, s.kepala_sekolah, s.nip_kepala_sekolah, s.kop_surat_url, s.npsn, s.alamat as sekolah_alamat
     FROM sessions sess 
     JOIN users u ON sess.user_id = u.id 
     LEFT JOIN sekolah s ON u.sekolah_id = s.id
     WHERE sess.id = ? AND sess.expires_at > datetime('now')
   `).bind(sessionId).first();
+
+  // Multi-organization data queries are not isolated yet. Reject sessions from
+  // other tenants until every route enforces ownership of its records.
+  if (result && (result as any).tenant_id && (result as any).tenant_id !== DEFAULT_TENANT_ID) {
+    sessionUserCache.delete(sessionId);
+    return null;
+  }
 
   if (!isTest) {
     if (result) {
@@ -200,7 +209,7 @@ export async function getCurrentUser(db: D1Database, sessionId: string | undefin
 /**
  * Parse cookie from header
  */
-export function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
+export function getCookie(cookieHeader: string | null | undefined, name: string): string | undefined {
   if (!cookieHeader) return undefined;
   const cookies = cookieHeader.split(';').map(c => c.trim());
   for (const cookie of cookies) {

@@ -924,6 +924,9 @@ async function init() {
     })
     .catch(() => {
       console.log('ℹ️ No active session');
+      // Session is gone (expired/revoked on another device): drop the UI-only
+      // login marker so the next hard reload shows the landing page directly.
+      try { document.cookie = 'kkg_logged_in=; Path=/; Max-Age=0'; } catch (e) {}
     });
 
   const settingsPromise = api('/settings/public', { timeout: 4000 })
@@ -990,6 +993,12 @@ async function init() {
   // Finally, render once with all data ready
   await render();
 
+  // Tear down the pre-paint boot shell (added by the inline head script when
+  // the login marker was present): the skeleton node lives outside #app so
+  // render() does not remove it. Always runs — logged in or not — so the
+  // skeleton can never get stuck on screen.
+  teardownBootShell();
+
   // Background tasks after first render
   if (state.user) {
     setInterval(() => fetchUnreadCount(), 60000);
@@ -1050,9 +1059,20 @@ setInterval(() => {
   if (typeof state !== 'undefined' && state.user) fetchUnreadCount();
 }, 30000);
 
+// Removes the pre-paint boot shell (skeleton + html.kkg-boot-auth class).
+// Safe to call multiple times and in any auth state.
+function teardownBootShell() {
+  try {
+    document.documentElement.classList.remove('kkg-boot-auth');
+    const skeleton = document.getElementById('boot-skeleton');
+    if (skeleton) skeleton.remove();
+  } catch (e) {}
+}
+
 // Start the app
 init().catch(e => {
   console.error(e);
+  teardownBootShell();
   const el = document.getElementById('loading-status');
   if (el) {
     el.textContent = 'Error: ' + e.message;

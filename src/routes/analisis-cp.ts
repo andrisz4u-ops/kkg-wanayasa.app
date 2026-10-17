@@ -3,7 +3,8 @@ import { streamSSE } from 'hono/streaming';
 import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
 import { successResponse, Errors } from '../lib/response';
-import { getOfficialCP, getOfficialCPElements, cpElementsData, getDynamicCP, getDynamicCPElements, getFaseFromKelas } from '../lib/cp-data';
+import { getOfficialCP, getOfficialCPElements, cpElementsData, getDynamicCP, getDynamicCPElements, getDynamicCPWithSource, getDynamicCPElementsWithSource, getFaseFromKelas } from '../lib/cp-data';
+import { recordCurriculumSnapshot, attachCurriculumProvenance, type CurriculumProvenance } from '../lib/curriculum-provenance';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { generateAnalisisCpDocxBuffer, type AnalisisCpDocxInput } from '../lib/docx/analisis-cp';
@@ -17,6 +18,7 @@ import { getOfficialCpDocumentData } from '../lib/cp-document-data';
 import { getAlokasiWaktuResmi, balanceSemesterJpItems } from '../lib/alokasi-waktu';
 import { runCpQualityGate } from '../lib/cp-validator';
 import { type AppBindings } from '../types/env';
+import { requireAIAdmission } from '../lib/ai-admission';
 
 export { groupAnalysisDataByElements, getOfficialCpDocumentData, runCpQualityGate };
 
@@ -335,8 +337,10 @@ export function buildAnalisisCpPrompt(params: {
   targetSemester: string;
   baseCP: string | null;
   elementsCP: any;
+  curriculumAttribution?: string;
+  onCurriculumFragments?: (fragments: { elementsText: string; ipasGuidance?: string }) => void;
 }) {
-  const { namaSekolah, mataPelajaran, jenjangKelas, fase, tahunAjaran, chapters, targetSemester, baseCP, elementsCP } = params;
+  const { namaSekolah, mataPelajaran, jenjangKelas, fase, tahunAjaran, chapters, targetSemester, baseCP, elementsCP, curriculumAttribution, onCurriculumFragments } = params;
 
   const kelasNum = (jenjangKelas.match(/\d+/) || ['5'])[0];
   const filteredChapters = chapters.filter(ch => {
@@ -349,6 +353,7 @@ export function buildAnalisisCpPrompt(params: {
 
   const normMapel = (mataPelajaran || '').toLowerCase();
   const isIpas = normMapel.includes('ipas') || normMapel.includes('ilmu pengetahuan alam') || normMapel.includes('sains');
+  const elementsText = elementsCP ? JSON.stringify(elementsCP, null, 2) : '';
 
   const elemenRule = isIpas
     ? `2. [KOLOM ELEMEN / CAPAIAN PEMBELAJARAN - WAJIB FORMAT DWI-ELEMEN UNTUK IPAS]:
@@ -389,6 +394,11 @@ export function buildAnalisisCpPrompt(params: {
    "[Akidah] Mengenal rukun iman dan mengimani sifat-sifat Allah SWT..."
    DILARANG MENGARANG teks CP baru di luar substansi resmi pemerintah.`;
 
+  const ipasGuidance = isIpas
+    ? `Panduan statis internal aplikasi (belum ditinjau dan bukan bukti sumber resmi):\n${elemenRule}`
+    : undefined;
+  onCurriculumFragments?.({ elementsText, ipasGuidance });
+
   const tpRule = isIpas
     ? `5. [KOLOM TP (TUJUAN PEMBELAJARAN)]:
    Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson).
@@ -397,7 +407,7 @@ export function buildAnalisisCpPrompt(params: {
    Rumuskan Tujuan Pembelajaran yang operasional, jelas, terukur, dan berbasis kompetensi (Taksonomi Bloom/Anderson: Mendesain, Menjelaskan, Mengidentifikasi, Menganalisis, Menyajikan, dll).
    Contoh: "Mendesain percobaan sederhana untuk membuktikan sifat cahaya dan menjelaskan hasilnya."`;
 
-  return `Anda adalah Pakar Analisis Kurikulum Merdeka Terverifikasi BSKAP Kemendikbudristek RI.
+  return `Anda adalah asisten penyusun analisis pembelajaran. Teks katalog dan panduan statis di bawah ini belum diverifikasi.
 Tugas Anda adalah menyusun dokumen resmi:
 \"ANALISIS CP, TP, DAN ATP\"
 Standar Dokumen Mutu Pendidikan Sekolah Dasar Berbasis Buku Ajar.
@@ -417,18 +427,18 @@ IDENTITAS DOKUMEN:
 - Tahun Pembelajaran: ${tahunAjaran || '2025/2026'}
 - Target Analisis: ${targetSemester === '1' ? 'Semester 1 Saja' : targetSemester === '2' ? 'Semester 2 Saja' : 'Setahun Penuh (Semester 1 dan 2)'}
 
-CAPAIAN PEMBELAJARAN (CP) RESMI PEMERINTAH (${(mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp')) ? 'Kepka BKPDM No. 020 Tahun 2026' : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk')) ? 'Muatan Lokal Kurikulum Merdeka' : 'BSKAP No. 046 Tahun 2025'}):
-${baseCP || 'Gunakan Capaian Pembelajaran standar resmi untuk mata pelajaran dan fase ini.'}
+CAPAIAN PEMBELAJARAN (CP; sumber: ${curriculumAttribution || 'katalog yang belum ditinjau'}):
+${baseCP || 'Tidak ada teks CP sumber yang tersedia; jangan mengklaim teks yang dibuat sebagai kutipan atau verifikasi resmi.'}
 
-DETAIL ELEMEN CP RESMI:
-${elementsCP ? JSON.stringify(elementsCP, null, 2) : 'Gunakan elemen kurikulum resmi yang sesuai.'}
+DETAIL ELEMEN CP (sumber katalog yang belum ditinjau):
+${elementsText || 'Tidak ada teks elemen CP sumber yang tersedia.'}
 
 DAFTAR BAB & MATERI POKOK BUKU TEKS YANG DIAJARKAN:
 ${JSON.stringify(filteredChapters, null, 2)}
 
 PETUNJUK ANALISIS KEDINASAN (SANGAT KETAT):
 1. [KOLOM BAB]: Tuliskan nama bab secara lengkap sesuai data buku di atas.
-${elemenRule}
+${ipasGuidance || elemenRule}
 3. [KOLOM MATERI POKOK]: Rincikan 2 sampai 4 submateri/topik pokok penting dalam bab tersebut dengan nomor urut (contoh: \"1. Sifat Cahaya\", \"2. Indra Penglihatan (Mata)\", \"3. Sifat Bunyi\", \"4. Indra Pendengaran (Telinga)\").
 4. [KOLOM KODE TP]: Wajib menggunakan format kelas.nomor_urut.
    Untuk ${jenjangKelas} (Kelas ${kelasNum}):
@@ -482,7 +492,7 @@ Keluarkan HANYA JSON valid dengan struktur berikut:
 }
 
 // 1. Ekstraksi Struktur Bab dari Teks Buku
-analisisCp.post('/extract-structure', async (c) => {
+analisisCp.post('/extract-structure', requireSession, requireAIAdmission, async (c) => {
   let body: any = {};
   try {
     body = await c.req.json();
@@ -746,8 +756,10 @@ analisisCp.delete('/book-profiles/:id', async (c) => {
 
 // Helper resolve CP
 async function resolveOfficialCP(mataPelajaran: string, jenjangKelas: string, db?: any) {
-  const official = db ? await getDynamicCP(db, mataPelajaran, jenjangKelas) : getOfficialCP(mataPelajaran, jenjangKelas);
-  const elements = db ? await getDynamicCPElements(db, mataPelajaran, jenjangKelas) : null;
+  const cpResolved = await getDynamicCPWithSource(db, mataPelajaran, jenjangKelas);
+  const elementsResolved = await getDynamicCPElementsWithSource(db, mataPelajaran, jenjangKelas);
+  const official = cpResolved.text;
+  const elements = elementsResolved.elements;
   const fase = getFaseFromKelas(jenjangKelas) || 'Fase C';
   const faseCode = fase.replace('Fase ', '').trim();
 
@@ -774,7 +786,18 @@ async function resolveOfficialCP(mataPelajaran: string, jenjangKelas: string, db
     finalElements = matchedKey && cpElementsData[matchedKey]?.[fase] ? cpElementsData[matchedKey][fase] : null;
   }
 
-  return { officialCP: official, elementsCP: finalElements, faseCode, fase };
+  return {
+    officialCP: official, elementsCP: finalElements, faseCode, fase,
+    provenanceComponents: {
+      cp: { text: official || '', origin: cpResolved.origin },
+      ...(finalElements ? { elements: { text: JSON.stringify(finalElements, null, 2), origin: elementsResolved.elements ? elementsResolved.origin : 'static' } } : {}),
+    },
+    provenanceSubject: cpResolved.subject,
+    regulationLabel: cpResolved.regulationLabel || elementsResolved.regulationLabel || undefined,
+    curriculumAttribution: cpResolved.origin === 'd1'
+      ? `entri katalog D1 yang belum ditinjau${cpResolved.regulationLabel ? `; label tersimpan: ${cpResolved.regulationLabel} (bukan verifikasi)` : ''}`
+      : 'fallback katalog statis aplikasi yang belum ditinjau',
+  };
 }
 
 // Helper: Perbaikan dan Pengayaan Elemen IPAS (Pemahaman IPAS + Keterampilan Proses)
@@ -1181,7 +1204,7 @@ export function validateAndRepairAnalysisResult(rawResult: any, inputChapters: a
 }
 
 // 2. Generate Analisis CP (Non-Streaming)
-analisisCp.post('/generate', async (c) => {
+analisisCp.post('/generate', requireSession, requireAIAdmission, async (c) => {
   try {
     const body = await c.req.json();
     const {
@@ -1196,9 +1219,11 @@ analisisCp.post('/generate', async (c) => {
     const ai = new AIService(c.env);
     await ai.loadProviders(c.env.DB);
 
-    const { officialCP, elementsCP, faseCode, fase } = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
+    const resolved = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
+    const { officialCP, elementsCP, faseCode, fase } = resolved;
     const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
 
+    let promptFragments: { elementsText: string; ipasGuidance?: string } = { elementsText: '' };
     const prompt = buildAnalisisCpPrompt({
       namaSekolah,
       mataPelajaran,
@@ -1208,8 +1233,16 @@ analisisCp.post('/generate', async (c) => {
       chapters: distributedChapters,
       targetSemester: targetSemester || 'all',
       baseCP: officialCP,
-      elementsCP
+      elementsCP,
+      curriculumAttribution: resolved.curriculumAttribution,
+      onCurriculumFragments: fragments => { promptFragments = fragments; }
     });
+    const provenanceComponents = {
+      ...resolved.provenanceComponents,
+      ...(promptFragments.elementsText && resolved.provenanceComponents.elements ? { elements: { ...resolved.provenanceComponents.elements, text: promptFragments.elementsText } } : {}),
+      ...(promptFragments.ipasGuidance ? { ipas_guidance: { text: promptFragments.ipasGuidance, origin: 'static' as const } } : {}),
+    };
+    const provenance = await recordCurriculumSnapshot({ db: c.env.DB, subject: mataPelajaran || resolved.provenanceSubject, phase: fase, components: provenanceComponents, regulationLabel: resolved.regulationLabel });
 
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
@@ -1233,7 +1266,7 @@ analisisCp.post('/generate', async (c) => {
     });
 
     // Run Quality Gate Verification & Audit
-    const { data: auditedResult, audit } = runCpQualityGate(result, distributedChapters, {
+    const { data: auditedResult, audit } = await runCpQualityGate(result, distributedChapters, {
       namaSekolah,
       namaGuru,
       mataPelajaran,
@@ -1250,7 +1283,7 @@ analisisCp.post('/generate', async (c) => {
       const sessionId = getCookie(c.req.header('Cookie'), 'session');
       const user = await getCurrentUser(c.env.DB, sessionId);
       await recordAIGeneration(c.env.DB, {
-        user_id: user?.id || 1,
+        user_id: user?.id,
         user_nama: user?.nama || (namaGuru || 'Guru'),
         sekolah: user?.sekolah || (namaSekolah || 'SDN'),
         feature_type: 'ANALISIS_CP',
@@ -1261,7 +1294,7 @@ analisisCp.post('/generate', async (c) => {
       });
     } catch (_) {}
 
-    return successResponse(c, auditedResult);
+    return successResponse(c, attachCurriculumProvenance(auditedResult, provenance));
   } catch (e: any) {
     console.error('Analisis CP Gen Error:', e);
     return Errors.internal(c, e.message);
@@ -1269,7 +1302,7 @@ analisisCp.post('/generate', async (c) => {
 });
 
 // 3. Generate Analisis CP Stream (SSE Live Monitor)
-analisisCp.use('/generate-stream', requireSession);
+analisisCp.use('/generate-stream', requireSession, requireAIAdmission);
 analisisCp.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -1285,9 +1318,11 @@ analisisCp.post('/generate-stream', async (c) => {
     const ai = new AIService(c.env);
     await ai.loadProviders(c.env.DB);
 
-    const { officialCP, elementsCP, faseCode, fase } = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
+    const resolved = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
+    const { officialCP, elementsCP, faseCode, fase } = resolved;
     const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
 
+    let promptFragments: { elementsText: string; ipasGuidance?: string } = { elementsText: '' };
     const prompt = buildAnalisisCpPrompt({
       namaSekolah,
       mataPelajaran,
@@ -1297,8 +1332,16 @@ analisisCp.post('/generate-stream', async (c) => {
       chapters: distributedChapters,
       targetSemester: targetSemester || 'all',
       baseCP: officialCP,
-      elementsCP
+      elementsCP,
+      curriculumAttribution: resolved.curriculumAttribution,
+      onCurriculumFragments: fragments => { promptFragments = fragments; }
     });
+    const provenanceComponents = {
+      ...resolved.provenanceComponents,
+      ...(promptFragments.elementsText && resolved.provenanceComponents.elements ? { elements: { ...resolved.provenanceComponents.elements, text: promptFragments.elementsText } } : {}),
+      ...(promptFragments.ipasGuidance ? { ipas_guidance: { text: promptFragments.ipasGuidance, origin: 'static' as const } } : {}),
+    };
+    const provenance = await recordCurriculumSnapshot({ db: c.env.DB, subject: mataPelajaran || resolved.provenanceSubject, phase: fase, components: provenanceComponents, regulationLabel: resolved.regulationLabel });
 
     const slugMap: Record<string, string> = {
       vertex: 'vertex-proxy',
@@ -1315,18 +1358,13 @@ analisisCp.post('/generate-stream', async (c) => {
     return streamSSE(c, async (rawStream) => {
       const stream = job.attach(rawStream, ai);
       try {
-        const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
-          ? 'Kepka BKPDM 020/2026'
-          : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
-            ? 'Muatan Lokal'
-            : 'BSKAP 046/2025';
         await stream.writeSSE({
           event: 'step',
           data: JSON.stringify({
             step: 1,
             totalSteps: 5,
-            title: `Sinkronisasi CP ${regTitle}`,
-            message: `Memvalidasi capaian pembelajaran resmi untuk ${mataPelajaran} (${jenjangKelas})...`,
+            title: 'Menelaah sumber CP',
+            message: `Menggunakan ${resolved.curriculumAttribution} untuk ${mataPelajaran} (${jenjangKelas}); teks belum diverifikasi.`,
             percent: 20
           })
         });
@@ -1430,7 +1468,7 @@ analisisCp.post('/generate-stream', async (c) => {
           const sessionId = getCookie(c.req.header('Cookie'), 'session');
           const user = await getCurrentUser(c.env.DB, sessionId);
           await recordAIGeneration(c.env.DB, {
-            user_id: user?.id || 1,
+            user_id: user?.id,
             user_nama: user?.nama || (namaGuru || 'Guru'),
             sekolah: user?.sekolah || (namaSekolah || 'SDN'),
             feature_type: 'ANALISIS_CP',
@@ -1448,7 +1486,7 @@ analisisCp.post('/generate-stream', async (c) => {
             step: 5,
             totalSteps: 5,
             title: 'Finalisasi & Perakitan Hasil',
-            message: `Audit Selesai: Skor Mutu ${audit.summary.overall_quality_score}/100 (${audit.summary.grade_label}) • ${audit.summary.passed_count} Lolos, ${audit.summary.repaired_count} Diperbaiki`,
+            message: `Pemeriksaan struktur selesai: ${audit.summary.overall_quality_score}/100 (${audit.summary.grade_label}) • ${audit.summary.structure_passed_count} Lolos pemeriksaan struktur, ${audit.summary.repaired_count} Diperbaiki • Tetap perlu tinjauan guru`,
             percent: 100
           })
         });
@@ -1457,7 +1495,7 @@ analisisCp.post('/generate-stream', async (c) => {
           event: 'done',
           data: JSON.stringify({
             success: true,
-            data: auditedResult,
+            data: attachCurriculumProvenance(auditedResult, provenance),
             audit
           })
         });

@@ -21,6 +21,7 @@ export interface AnalisisCpSubItem {
   materi_pokok: string;
   tp: string;
   atp: string;
+  alokasi_waktu?: string;
 }
 
 export interface AnalisisCpBab {

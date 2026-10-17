@@ -9,6 +9,9 @@ import { logger } from '../lib/logger';
 import { hitungHPlus1, generateSppdBuffer } from '../lib/docx/sppd';
 import type { SuratUndangan } from '../types';
 import { reserveSuratNumbers, SuratNumberConflict } from '../lib/surat-numbering';
+import { requireSession } from '../lib/session-middleware';
+import { requireAIAdmission } from '../lib/ai-admission';
+import { copyBytesToArrayBuffer } from '../lib/binary';
 
 let isSuratSchemaEnsured = false;
 
@@ -83,7 +86,7 @@ surat.get('/settings', async (c) => {
 // ============================================
 // Generate Surat Undangan (AI)
 // ============================================
-surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+surat.post('/generate', requireSession, requireAIAdmission, rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
 
@@ -241,7 +244,7 @@ surat.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
 // ============================================
 // Generate Surat Tugas & SPPD (AI + Auto-Fill)
 // ============================================
-surat.post('/generate-sppd', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+surat.post('/generate-sppd', requireSession, requireAIAdmission, rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
 
@@ -775,7 +778,7 @@ surat.get('/:id/download', async (c) => {
 
       logger.info('SPPD downloaded', { userId: user.id, suratId: idValidation.id });
 
-      return new Response(buffer, {
+      return new Response(copyBytesToArrayBuffer(buffer), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'Content-Disposition': `attachment; filename="${filename}"`,
@@ -808,7 +811,7 @@ surat.get('/:id/download', async (c) => {
     logger.info('Surat downloaded', { userId: user.id, suratId: idValidation.id });
 
     // Return as downloadable file
-    return new Response(buffer, {
+    return new Response(copyBytesToArrayBuffer(buffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename}"`,

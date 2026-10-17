@@ -40,7 +40,7 @@ describe('Feature design boundaries', () => {
     mountFeatureDesign('forum', document.getElementById('app'));
     const article = document.createElement('article');
     article.innerHTML = '<h3>Diskusi</h3><button>Buka</button>';
-    document.getElementById('thread-list')!.append(article);
+    document.getElementById('thread-list')!.appendChild(article);
     await vi.waitFor(() => expect(article.classList.contains('fs-collection-item')).toBe(true));
     expect(document.getElementById('analisis-canvas')!.outerHTML).toBe(before);
   });
@@ -48,8 +48,8 @@ describe('Feature design boundaries', () => {
   it('limits studio rules to screen media and styled UI markers', () => {
     const css = postcss.parse(readFileSync(resolve('src/styles/feature-studio.css'), 'utf8'));
     css.walkRules(rule => {
-      let parent = rule.parent;
-      while (parent && !(parent.type === 'atrule' && parent.name === 'media' && parent.params === 'screen')) parent = parent.parent;
+      let parent: postcss.Node | undefined = rule.parent as postcss.Node | undefined;
+      while (parent && !(parent.type === 'atrule' && (parent as postcss.AtRule).name === 'media' && (parent as postcss.AtRule).params === 'screen')) parent = parent.parent as postcss.Node | undefined;
       expect(parent, rule.selector).toBeTruthy();
       expect(rule.selector).toContain('.feature-workspace');
     });
@@ -102,7 +102,7 @@ describe('Feature design boundaries', () => {
     const dialog = document.createElement('div');
     dialog.id = 'test-modal';
     dialog.innerHTML = '<div class="bg-white rounded-xl p-6"><input id="dialog-input" value="Materi"><div id="asesmen-canvas"><h2>Hasil</h2></div></div>';
-    document.body.append(dialog);
+    document.body.appendChild(dialog);
     await vi.waitFor(() => expect(document.getElementById('dialog-input')!.classList.contains('fw-field')).toBe(true));
     expect(document.getElementById('asesmen-canvas')!.outerHTML).toBe('<div id="asesmen-canvas"><h2>Hasil</h2></div>');
     mountFeatureDesign('home', document.getElementById('app'));
@@ -149,14 +149,14 @@ describe('Feature design boundaries', () => {
     const output = document.createElement('div');
     output.id = 'sg-slide-render-area';
     output.innerHTML = '<h2>Materi slide</h2>';
-    panel.append(output);
+    panel.appendChild(output);
     await vi.waitFor(() => expect(panel.classList.contains('fw-panel')).toBe(false));
     expect(panel.classList.contains('os-reveal')).toBe(false);
     expect([...panel.classList].some(name => name.startsWith('os-step-'))).toBe(false);
     expect(output.outerHTML).toBe('<div id="sg-slide-render-area"><h2>Materi slide</h2></div>');
   });
 
-  it('limits staggered entry to five safe surfaces and keeps repeated decoration idempotent', () => {
+  it('limits staggered entry to eight safe surfaces and keeps repeated decoration idempotent', () => {
     document.body.innerHTML = `<div id="app"><main id="main-content"><div><h1>Bank materi</h1></div>
       ${Array.from({ length: 8 }, (_, index) => `<section class="bg-white rounded-xl p-6 border"><h2>Bidang ${index}</h2><input value="${index}"></section>`).join('')}
       <div class="bg-white rounded-xl p-6 border" id="protected"><div id="rpp-canvas">Dokumen</div></div>
@@ -164,21 +164,30 @@ describe('Feature design boundaries', () => {
     const app = document.getElementById('app')!;
     mountFeatureDesign('materi', app);
     const entrance = [...document.querySelectorAll('.os-reveal')];
-    expect(entrance).toHaveLength(5);
+    expect(entrance).toHaveLength(8);
     const classes = entrance.map(element => element.className);
     mountFeatureDesign('materi', app);
     expect([...document.querySelectorAll('.os-reveal')].map(element => element.className)).toEqual(classes);
     expect(document.getElementById('protected')!.classList.contains('os-reveal')).toBe(false);
   });
 
+  it('plays a one-shot page entry that cleans up after itself', () => {
+    document.body.innerHTML = '<div id="app"><main id="main-content"><div><h1>Judul halaman</h1></div></main></div>';
+    mountFeatureDesign('materi', document.getElementById('app'));
+    const root = document.getElementById('main-content')!;
+    expect(root.classList.contains('os-page-enter')).toBe(true);
+    root.dispatchEvent(new Event('animationend'));
+    expect(root.classList.contains('os-page-enter')).toBe(false);
+  });
+
   it('keeps every new style rule inside screen media so print styles remain intact', () => {
     const css = postcss.parse(readFileSync(resolve('src/styles/features.css'), 'utf8'));
     css.walkRules(rule => {
-      let parent = rule.parent;
+      let parent: postcss.Node | undefined = rule.parent as postcss.Node | undefined;
       let screenOnly = false;
       while (parent) {
-        if (parent.type === 'atrule' && parent.name === 'media' && parent.params === 'screen') screenOnly = true;
-        parent = parent.parent;
+        if (parent.type === 'atrule' && (parent as postcss.AtRule).name === 'media' && (parent as postcss.AtRule).params === 'screen') screenOnly = true;
+        parent = parent.parent as postcss.Node | undefined;
       }
       expect(screenOnly, rule.selector).toBe(true);
     });

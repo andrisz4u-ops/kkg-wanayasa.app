@@ -14,6 +14,7 @@ import {
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { validate, createUserAdminSchema, updateUserAdminSchema, resetPasswordSchema, updateSettingsSchema, listUsersQuerySchema, auditLogsQuerySchema, bulkApproveSchema, cleanupLogsSchema, createAiProviderSchema, updateAiProviderSchema } from '../lib/validation';
 import { AIService, parseKeyPool } from '../services/ai';
+import { requireAIAdmission } from '../lib/ai-admission';
 import { cpData, cpElementsData, seedDefaultCPToDatabase } from '../lib/cp-data';
 
 import type { DashboardStats } from '../types';
@@ -188,7 +189,9 @@ admin.get('/analytics/schools', async (c) => {
            COUNT(*) as total_all,
            SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
            SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
-           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide
+           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide,
+           SUM(CASE WHEN feature_type NOT IN ('RPP', 'ASESMEN', 'SLIDE') THEN 1 ELSE 0 END) as total_other,
+           SUM(CASE WHEN classification_quality = 'legacy_uncertain' THEN 1 ELSE 0 END) as total_legacy_uncertain
          FROM ai_generation_logs
          GROUP BY sekolah`
       : `SELECT 
@@ -196,7 +199,9 @@ admin.get('/analytics/schools', async (c) => {
            COUNT(*) as total_all,
            SUM(CASE WHEN feature_type = 'RPP' THEN 1 ELSE 0 END) as total_rpp,
            SUM(CASE WHEN feature_type = 'ASESMEN' THEN 1 ELSE 0 END) as total_asesmen,
-           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide
+           SUM(CASE WHEN feature_type = 'SLIDE' THEN 1 ELSE 0 END) as total_slide,
+           SUM(CASE WHEN feature_type NOT IN ('RPP', 'ASESMEN', 'SLIDE') THEN 1 ELSE 0 END) as total_other,
+           SUM(CASE WHEN classification_quality = 'legacy_uncertain' THEN 1 ELSE 0 END) as total_legacy_uncertain
          FROM ai_generation_logs
          WHERE strftime('%Y-%m', created_at) = ?
          GROUP BY sekolah`;
@@ -239,7 +244,9 @@ admin.get('/analytics/schools', async (c) => {
         total_all: 0,
         total_rpp: 0,
         total_asesmen: 0,
-        total_slide: 0
+        total_slide: 0,
+        total_other: 0,
+        total_legacy_uncertain: 0
       };
       const topTeacher = topTeacherMap.get(sch.nama) || null;
 
@@ -254,6 +261,8 @@ admin.get('/analytics/schools', async (c) => {
         total_rpp: Number(stats.total_rpp) || 0,
         total_asesmen: Number(stats.total_asesmen) || 0,
         total_slide: Number(stats.total_slide) || 0,
+        total_other: Number(stats.total_other) || 0,
+        total_legacy_uncertain: Number(stats.total_legacy_uncertain) || 0,
         top_teacher: topTeacher,
       };
     });
@@ -273,6 +282,8 @@ admin.get('/analytics/schools', async (c) => {
           total_rpp: Number(row.total_rpp) || 0,
           total_asesmen: Number(row.total_asesmen) || 0,
           total_slide: Number(row.total_slide) || 0,
+          total_other: Number(row.total_other) || 0,
+          total_legacy_uncertain: Number(row.total_legacy_uncertain) || 0,
           top_teacher: topTeacher,
         });
       }
@@ -294,6 +305,8 @@ admin.get('/analytics/schools', async (c) => {
     const totalRpp = schoolLeaderboard.reduce((sum, s) => sum + s.total_rpp, 0);
     const totalAsesmen = schoolLeaderboard.reduce((sum, s) => sum + s.total_asesmen, 0);
     const totalSlide = schoolLeaderboard.reduce((sum, s) => sum + s.total_slide, 0);
+    const totalOther = schoolLeaderboard.reduce((sum, s) => sum + s.total_other, 0);
+    const totalLegacyUncertain = schoolLeaderboard.reduce((sum, s) => sum + s.total_legacy_uncertain, 0);
     const activeSchoolsCount = schoolLeaderboard.filter(s => s.total_all > 0).length;
 
     return successResponse(c, {
@@ -304,6 +317,8 @@ admin.get('/analytics/schools', async (c) => {
         total_rpp: totalRpp,
         total_asesmen: totalAsesmen,
         total_slide: totalSlide,
+        total_other: totalOther,
+        total_legacy_uncertain: totalLegacyUncertain,
         active_schools_count: activeSchoolsCount,
         total_schools_count: schoolLeaderboard.length,
         top_school: schoolLeaderboard[0] || null
@@ -1573,7 +1588,7 @@ admin.delete('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async 
 });
 
 // POST /admin/ai-providers/:id/check — Check Live
-admin.post('/ai-providers/:id/check', requireStrictAdmin, providerWriteLimit, async (c) => {
+admin.post('/ai-providers/:id/check', requireStrictAdmin, requireAIAdmission, providerWriteLimit, async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
     if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);
@@ -1589,7 +1604,7 @@ admin.post('/ai-providers/:id/check', requireStrictAdmin, providerWriteLimit, as
 });
 
 // POST /admin/ai-providers/:id/test-image — Live Image Generation Test
-admin.post('/ai-providers/:id/test-image', requireStrictAdmin, providerWriteLimit, async (c) => {
+admin.post('/ai-providers/:id/test-image', requireStrictAdmin, requireAIAdmission, providerWriteLimit, async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
     if (!id || id <= 0) return c.json({ success: false, error: { code: 'INVALID_ID', message: 'ID tidak valid' } }, 400);

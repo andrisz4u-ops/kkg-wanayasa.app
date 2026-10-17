@@ -7,14 +7,94 @@ import { UnsplashService } from '../services/unsplash';
 import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
-import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getFaseFromKelas } from '../lib/cp-data';
+import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getDynamicCPWithSource, getDynamicCPElementsWithSource, getFaseFromKelas } from '../lib/cp-data';
 import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
 import { validate, createAssessmentSchema } from '../lib/validation';
 import { runAssessmentQualityGate, validateQuestionHeuristics } from '../lib/assessment-validator';
 import { type AppBindings } from '../types/env';
+import { attachCurriculumProvenance, recordCurriculumSnapshot } from '../lib/curriculum-provenance';
+import { createOwnedAssessmentPackage, normalizeAssetUrls, AssessmentPackageWriteError } from '../lib/assessment-packages';
+import { normalizeAssessmentImages } from '../lib/assessment-image-durability';
+import { acquireAssessmentGenerationRequest, endAssessmentGenerationRequest, completeAssessmentGenerationRequest, loadAssessmentGenerationRequest, type AssessmentGenerationFence } from '../lib/assessment-generation-requests';
+import { readKisiAssessmentJson, hashKisiAssessmentSemanticInput } from '../lib/kisi-assessment-generation';
+import { requireAIAdmission } from '../lib/ai-admission';
 
 const kisi = new Hono<{ Bindings: AppBindings }>();
+
+const ASSESSMENT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+class AssessmentGenerationSettlementError extends Error {}
+
+async function readAssessmentGeneration(c: any) {
+    const parsedBody = await readKisiAssessmentJson(c.req.raw);
+    if (!parsedBody.ok) return { response: Errors.badRequest(c, parsedBody.reason === 'too_large' ? 'Data input asesmen terlalu besar.' : 'Data input asesmen tidak valid.') };
+    const rawBody: any = parsedBody.value;
+    const requestedId = rawBody && typeof rawBody === 'object' && !Array.isArray(rawBody) ? rawBody.clientDocumentId : undefined;
+    if (requestedId !== undefined && (typeof requestedId !== 'string' || !ASSESSMENT_UUID.test(requestedId))) return { response: Errors.badRequest(c, 'Identitas dokumen asesmen tidak valid.') };
+    const validation = validate(createAssessmentSchema, rawBody);
+    if (!validation.success) return { response: Errors.validation(c, 'Data input asesmen tidak valid', validation.errors) };
+    const body: any = { ...validation.data, clientDocumentId: requestedId || crypto.randomUUID() };
+    if (!(body.jumlahPG + body.jumlahIsian + body.jumlahUraian)) return { response: Errors.badRequest(c, 'Minimal harus ada 1 butir soal yang dibuat (PG, Isian, atau Uraian).') };
+    return { body, clientDocumentId: body.clientDocumentId, identityProvided: !!requestedId };
+}
+
+async function admitAssessmentAI(c: any) {
+    // Run the shared middleware as an adapter so it retains its exact policy,
+    // configured defaults, and response behavior without a second SQL path.
+    return await requireAIAdmission(c, async () => {}) || null;
+}
+
+async function reserveAssessmentGeneration(c: any, body: any, user: any, channel: 'normal' | 'sse', identityProvided: boolean) {
+    const clientDocumentId = body.clientDocumentId;
+    delete body.clientDocumentId;
+    const replayOnly = c.req.header('X-Assessment-Replay-Only') === '1';
+    if (replayOnly && !identityProvided) return { response: c.json({ success: false, message: 'Identitas dokumen diperlukan untuk pemulihan.' }, 409) };
+    if (replayOnly) {
+        const record = await loadAssessmentGenerationRequest(c.env.DB, Number(user.id), clientDocumentId);
+        if (!record || record.state !== 'completed') return { response: c.json({ success: false, message: 'Hasil tersimpan tidak tersedia.' }, 409) };
+        if (record.requestHash !== await hashKisiAssessmentSemanticInput(body)) return { response: c.json({ success: false, message: 'Masukan tidak cocok dengan hasil tersimpan.' }, 409) };
+        return { replay: await assessmentGenerationReplay(c, record, clientDocumentId, channel) };
+    }
+    const result = await acquireAssessmentGenerationRequest(c.env.DB, { ownerId: Number(user.id), clientDocumentId, semanticInput: body });
+    if (result.kind === 'conflict') return { response: c.json({ success: false, code: result.code, message: 'Permintaan asesmen sebelumnya masih berjalan atau telah berakhir.' }, 409) };
+    if (result.kind === 'completed') return { replay: await assessmentGenerationReplay(c, result.record, clientDocumentId, channel) };
+    // Make the owned reservation visible to the route's outer error handler before
+    // admission executes, so an admission storage error cannot strand it as running.
+    (c as any).set('assessmentGenerationFence', result.fence);
+    const admissionError = await admitAssessmentAI(c);
+    if (admissionError) {
+        await endAssessmentGenerationRequest(c.env.DB, result.fence, 'failed', 'AI_ADMISSION_REJECTED');
+        return { response: admissionError };
+    }
+    return { fence: { ...result.fence, ...(channel === 'sse' ? { jobId: c.req.header('X-AI-Job-Id') || undefined } : {}) } as AssessmentGenerationFence };
+}
+
+async function assessmentGenerationReplay(c: any, record: any, clientDocumentId: string, channel: 'normal' | 'sse') {
+    if (record.packageId) {
+        const row: any = await c.env.DB.prepare(`SELECT id,revision,content,content_hash,is_public,moderation_status,legacy_compat,is_hidden FROM bank_soal WHERE id=? AND user_id=? AND client_document_id=?`).bind(record.packageId, record.ownerId, clientDocumentId).first();
+        if (!row) return c.json({ success: false, message: 'Paket hasil tersimpan tidak lagi tersedia.' }, 409);
+        try {
+            const current = normalizeAssetUrls(JSON.parse(row.content), row.id);
+            const data = current.content;
+            data._persistence = { packageId: row.id, revision: row.revision, saveStatus: 'saved', contentHash: row.content_hash, visibility: { is_public: row.is_public, moderation_status: row.moderation_status, legacy_compat: row.legacy_compat, is_hidden: row.is_hidden } };
+            data.clientDocumentId = clientDocumentId;
+            return replayResponse(c, channel, { success: true, data });
+        } catch { return c.json({ success: false, message: 'Hasil tersimpan tidak valid.' }, 409); }
+    }
+    const data: any = record.result;
+    if (!data || data._persistence?.saveStatus !== 'failed') return c.json({ success: false, message: 'Hasil tersimpan tidak tersedia.' }, 409);
+    data.clientDocumentId = clientDocumentId;
+    return replayResponse(c, channel, { success: true, data });
+}
+
+function replayResponse(c: any, channel: 'normal' | 'sse', result: any) {
+    if (channel === 'normal') return successResponse(c, result.data);
+    const generation = result.data?._generation;
+    const warnings = Array.isArray(generation?.warnings) ? generation.warnings : [];
+    const replay = { ...result, partial: Boolean(generation?.partial), warnings };
+    return streamSSE(c, async stream => { await stream.writeSSE({ event: 'done', data: JSON.stringify(replay) }); });
+}
 
 // Helper autentikasi pengguna dari sesi cookie atau Authorization bearer header
 async function getAuthenticatedUser(c: any): Promise<any | null> {
@@ -162,6 +242,42 @@ export const normalizeItemKisiMetadata = (item: any, defaultBentuk: string, defa
     item.bentuk = item.bentuk || defaultBentuk;
     return item;
 };
+
+/** Resolve the single CP string that is used by assessment prompts and snapshot that exact value. */
+export async function resolveAssessmentCurriculumProvenance(
+    db: any,
+    mataPelajaran: string,
+    jenjangKelas: string,
+    suppliedCP?: unknown
+) {
+    const userCP = suppliedCP != null && String(suppliedCP).trim() ? String(suppliedCP).trim() : null;
+    const resolved = userCP
+        ? { text: userCP, origin: 'user-input' as const, subject: mataPelajaran || '', phase: getFaseFromKelas(jenjangKelas) || '' }
+        : await getDynamicCPWithSource(db, mataPelajaran, jenjangKelas);
+    const elementsResolved = await getDynamicCPElementsWithSource(db, mataPelajaran, jenjangKelas);
+    const cpText = resolved.text || '';
+    const elementsText = elementsResolved.elements ? JSON.stringify(elementsResolved.elements, null, 2) : '';
+    const components: Record<string, { text: string; origin: 'd1' | 'static' | 'user-input' }> = {
+        cp: { text: cpText, origin: resolved.origin },
+    };
+    if (elementsText) components.elements = { text: elementsText, origin: elementsResolved.origin };
+    const provenance = await recordCurriculumSnapshot({
+        db,
+        subject: mataPelajaran || resolved.subject,
+        phase: resolved.phase || getFaseFromKelas(jenjangKelas) || '',
+        components,
+        regulationLabel: resolved.origin === 'd1' ? resolved.regulationLabel : elementsResolved.regulationLabel || undefined,
+    });
+    const attribution = resolved.origin === 'user-input'
+        ? 'masukan guru (belum ditinjau)'
+        : resolved.origin === 'd1'
+            ? `entri katalog D1 yang belum ditinjau${resolved.regulationLabel ? `; label tersimpan: ${resolved.regulationLabel}` : ''}`
+            : 'fallback katalog statis aplikasi yang belum ditinjau';
+    const elementsAttribution = elementsResolved.origin === 'd1'
+        ? `entri elemen katalog D1 yang belum ditinjau${elementsResolved.regulationLabel ? `; label tersimpan: ${elementsResolved.regulationLabel}` : ''}`
+        : 'fallback elemen katalog statis aplikasi yang belum ditinjau';
+    return { resolvedCP: cpText, resolvedElements: elementsText, provenance, attribution, elementsAttribution, origin: resolved.origin };
+}
 
 // Helper: dapatkan deskripsi adaptasi kelas
 export const getKelasAdaptation = (kelas: string): string => {
@@ -884,7 +1000,7 @@ export const resolveQuestionVisualStimulus = async (
         const requiresDiagram = !forcePhotoOnly && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
 
         if (requiresDiagram) {
-            delete q.gambar;
+            markQuestionImageUnavailable(q, 'required_diagram_missing');
             delete q.visual_stimulus;
             delete q.gambar_keyword;
             delete q.gambar_prompt_en;
@@ -935,7 +1051,7 @@ export const resolveQuestionVisualStimulus = async (
         // Jika keyword tetap kosong atau terlalu generik, batalkan pencarian foto acak
         if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
             console.warn(`[PhotoSlot] Soal ${q.no || '?'}: Keyword kosong/generik, skip foto`);
-            delete q.gambar;
+            markQuestionImageUnavailable(q, 'image_search_unavailable');
             delete q.visual_stimulus;
             return;
         }
@@ -954,7 +1070,7 @@ export const resolveQuestionVisualStimulus = async (
                 // Cegah duplikasi foto kembar di butir soal berbeda dalam satu paket
                 if (usedImageUrls?.has(img.url) || usedImageUrls?.has(canonicalUrl) || usedImageIds?.has(imgId) || usedStimulusSignatures?.has(`url:${canonicalUrl}`)) {
                     console.warn(`[DiversityGuard] Soal ${q.no || '?'}: Duplicate photo URL rejected: ${canonicalUrl}`);
-                    delete q.gambar;
+                    markQuestionImageUnavailable(q, 'duplicate_image_rejected');
                     delete q.visual_stimulus;
                     return;
                 }
@@ -970,12 +1086,12 @@ export const resolveQuestionVisualStimulus = async (
                     type: (img.source as string) === 'vultr-ai' ? 'ai' : 'photo'
                 };
             } else {
-                delete q.gambar;
+                markQuestionImageUnavailable(q, 'image_search_unavailable');
                 delete q.visual_stimulus;
             }
         } catch (e) {
             console.error('Image search error:', e);
-            delete q.gambar;
+            markQuestionImageUnavailable(q, 'image_search_unavailable');
             delete q.visual_stimulus;
         }
     }
@@ -1110,13 +1226,16 @@ export const buildAssessmentPrompt = (params: {
     jenjangKelas: string;
     semester?: string;
     resolvedCP: string;
+    resolvedElements?: string;
+    curriculumAttribution?: string;
+    elementsAttribution?: string;
     hotsRatio?: string;
     isianType?: string;
     isGambarEnabled?: boolean;
 }): string => {
     const {
         type, startNo, count, totalPrevPG = 0, totalIsian = 0, totalUraian = 0,
-        mataPelajaran, topik, jenjangKelas, semester, resolvedCP, hotsRatio,
+        mataPelajaran, topik, jenjangKelas, semester, resolvedCP, resolvedElements, curriculumAttribution, elementsAttribution, hotsRatio,
         isianType, isGambarEnabled = true
     } = params;
     const isPG = type === 'pg';
@@ -1251,14 +1370,8 @@ export const buildAssessmentPrompt = (params: {
         └──────────────────────────────────────────────────────────────────────────
 
         II. ATURAN WAJIB KISI-KISI & PENYUSUNAN SOAL:
-        ${(() => {
-            const regName = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
-                ? 'Kepka BKPDM No. 020 Tahun 2026'
-                : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
-                    ? 'Muatan Lokal Kurikulum Merdeka'
-                    : 'BSKAP No. 046 Tahun 2025';
-            return `1. CP (Capaian Pembelajaran): ${resolvedCP ? `Berdasarkan rujukan resmi ${regName}: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : `Formulasikan otomatis sesuai capaian pembelajaran resmi ${regName} untuk topik ini`}`;
-        })()}
+        1. CP (Capaian Pembelajaran): ${resolvedCP ? `Gunakan teks dari ${curriculumAttribution || 'sumber belum ditentukan'} sebagai konteks, tanpa menganggapnya telah diverifikasi: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : 'Tidak ada teks CP sumber yang tersedia; jangan mengklaim rumusan CP sebagai kutipan atau verifikasi resmi.'}
+        1a. Elemen CP: ${resolvedElements ? `Gunakan elemen berikut dari ${elementsAttribution || 'sumber belum ditentukan'} sebagai konteks, tanpa menganggapnya telah diverifikasi: ${resolvedElements}` : 'Tidak ada teks elemen CP sumber yang tersedia.'}
         2. LINGKUP MATERI: ${topik}
         3. PROPORSI TARGET LEVEL: ${hotsRatio || '30:40:30'} (L1 : L2 : L3). Terapkan secara presisi!
         4. TUGAS: ${taskDesc}
@@ -1335,17 +1448,85 @@ function normalizeAssessmentItems(finalData: any, resolvedCP: string, topik: str
     }
 }
 
+function markQuestionImageUnavailable(question: any, reason = 'image_unavailable') {
+    const image = question?.gambar && typeof question.gambar === 'object' ? { ...question.gambar } : {};
+    delete image.url;
+    delete image.svg;
+    delete image.dataUri;
+    delete image.assetId;
+    image.imageUnavailable = true;
+    image.imageUnavailableReason = reason;
+    question.gambar = image;
+}
+
 // Helper: Simpan telemetri dan persistensi ke Bank Soal secara aman & non-blocking
-async function saveAssessmentTelemetryAndBankSoal(
+export async function saveAssessmentTelemetryAndBankSoal(
     db: D1Database,
     user: any,
     validated: any,
     finalData: any,
-    preferredSlug?: string | null
+    preferredSlug?: string | null,
+    generationFence?: AssessmentGenerationFence
 ) {
+    let persistence: any = { packageId: null, revision: null, saveStatus: 'failed', imageWarnings: [] };
+    const warnings: Array<{ questionNo: number | string; reason: string }> = [];
+    // Never trust model-provided persistence metadata, and guarantee a server-owned
+    // failure contract even if validation, image ingest, or package creation fails.
+    delete finalData._persistence;
+    finalData._persistence = persistence;
+    // Image durability and package persistence are authoritative and independent
+    // from best-effort analytics.
+    let normalizedContent: any;
+    try {
+        if (!user?.id) throw new Error('authenticated_owner_required');
+        const normalized = await normalizeAssessmentImages(db, user.id, finalData);
+        normalizedContent = normalized.content;
+        // The normalizer mutates the supplied object in place; retain that safe
+        // normalized value for any fenced failed-save recovery result.
+        warnings.push(...normalized.warnings);
+        await ensureBankSoalTables(db);
+        const created = await createOwnedAssessmentPackage(db, {
+            ownerId: Number(user.id),
+            clientDocumentId: validated.clientDocumentId || null,
+            content: normalized.content,
+            ...(generationFence ? { generationFence } : {}),
+            metadata: {
+                user_nama: user.nama || validated.namaGuru || 'Guru',
+                sekolah: user.sekolah || validated.namaSekolah || '',
+                mata_pelajaran: validated.mataPelajaran || '',
+                topik: validated.topik || '',
+                jenjang_kelas: validated.jenjangKelas || '',
+                semester: validated.semester || null,
+                jenis_ujian: validated.jenisUjian || null,
+                capaian_pembelajaran: validated.capaianPembelajaran || null,
+                jumlah_pg: validated.jumlahPG || 0,
+                jumlah_isian: validated.jumlahIsian || 0,
+                jumlah_uraian: validated.jumlahUraian || 0,
+                isian_type: validated.isianType || 'Standard',
+                hots_ratio: validated.hotsRatio || '30:40:30',
+                ai_provider: preferredSlug || null,
+            },
+        });
+        const packageContent = normalizeAssetUrls(created.content, created.packageId);
+        for (const warning of packageContent.warnings) warnings.push({ questionNo: 0, reason: warning });
+        for (const key of Object.keys(finalData)) delete finalData[key];
+        Object.assign(finalData, packageContent.content);
+        persistence = { packageId: created.packageId, revision: created.revision, saveStatus: created.saveStatus, imageWarnings: warnings };
+        finalData._persistence = persistence;
+    } catch (error) {
+        if (generationFence && error instanceof AssessmentPackageWriteError && error.code === 'generation_fenced_conflict') throw error;
+        console.warn('[BankSoal] Package save failed:', error instanceof Error ? error.message : 'unknown');
+        if (generationFence && !normalizedContent) throw error;
+        persistence = { packageId: null, revision: null, saveStatus: 'failed', imageWarnings: warnings };
+        finalData._persistence = persistence;
+        if (generationFence) {
+            const settled = await completeAssessmentGenerationRequest(db, generationFence, { packageId: null, result: finalData });
+            if (!settled.completed) throw new AssessmentGenerationSettlementError();
+        }
+    }
     try {
         await recordAIGeneration(db, {
-            user_id: user?.id || 1,
+            user_id: user?.id,
             user_nama: user?.nama || (validated.namaGuru || 'Guru'),
             sekolah: user?.sekolah || (validated.namaSekolah || 'SD Negeri Binaan'),
             feature_type: 'ASESMEN',
@@ -1355,39 +1536,6 @@ async function saveAssessmentTelemetryAndBankSoal(
             ai_provider: preferredSlug || undefined,
         });
 
-        // Persistensi ke Bank Soal (respek preferensi isPublic: 1 = Publik, 0 = Pribadi)
-        const isPublicVal = (validated.isPublic === false || validated.isPublic === 'false' || validated.isPublic === 0 || validated.isPublic === '0') ? 0 : 1;
-        try {
-            await ensureBankSoalTables(db);
-            await db.prepare(`
-                INSERT INTO bank_soal (
-                    user_id, user_nama, sekolah, mata_pelajaran, topik,
-                    jenjang_kelas, semester, jenis_ujian, capaian_pembelajaran,
-                    jumlah_pg, jumlah_isian, jumlah_uraian, isian_type, hots_ratio,
-                    content, ai_provider, is_public
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).bind(
-                user?.id || 1,
-                user?.nama || (validated.namaGuru || 'Guru'),
-                user?.sekolah || (validated.namaSekolah || ''),
-                validated.mataPelajaran || '',
-                validated.topik || '',
-                validated.jenjangKelas || '',
-                validated.semester || null,
-                validated.jenisUjian || null,
-                validated.capaianPembelajaran || null,
-                validated.jumlahPG || 0,
-                validated.jumlahIsian || 0,
-                validated.jumlahUraian || 0,
-                validated.isianType || 'Standard',
-                validated.hotsRatio || '30:40:30',
-                JSON.stringify(finalData),
-                preferredSlug || null,
-                isPublicVal
-            ).run();
-        } catch (bankErr) {
-            console.warn('[BankSoal] Auto-save failed (non-blocking):', bankErr);
-        }
     } catch (e) {
         console.warn('[Telemetry] Save failed (non-blocking):', e);
     }
@@ -1502,10 +1650,9 @@ export async function enrichAndNormalizePG(
 
         for (const q of deduped) {
             if (!targetSelected.has(q)) {
-                delete q.gambar;
+                if (q.gambar || q.visual_stimulus) markQuestionImageUnavailable(q, 'image_not_selected');
                 delete q.gambar_keyword;
                 delete q.gambar_prompt_en;
-                delete q.visual_stimulus;
                 continue;
             }
 
@@ -1532,7 +1679,7 @@ export async function enrichAndNormalizePG(
 
                 if (seenCanonicalUrls.has(canonicalUrl) || seenCanonicalUrls.has(rawUrl)) {
                     console.warn(`[PacketDiversityGuard] Question #${q.no}: Duplicate image URL stripped (${canonicalUrl}).`);
-                    delete q.gambar;
+                    markQuestionImageUnavailable(q, 'duplicate_image_rejected');
                     delete q.visual_stimulus;
                     delete q.gambar_keyword;
                     delete q.gambar_prompt_en;
@@ -1546,41 +1693,20 @@ export async function enrichAndNormalizePG(
                 const sig = buildStimulusSignature(q.visual_stimulus);
                 if (seenSvgSignatures.has(sig)) {
                     console.warn(`[PacketDiversityGuard] Question #${q.no}: Duplicate SVG signature stripped (${sig}).`);
-                    delete q.gambar;
+                    markQuestionImageUnavailable(q, 'duplicate_visual_rejected');
                     delete q.visual_stimulus;
                 } else {
                     seenSvgSignatures.add(sig);
                 }
             }
 
-            if (!q.gambar && !q.visual_stimulus) {
-                q.soal = q.soal
-                    .replace(/^(?:(?:perhatikan|amatilah)\s+(?:the\s+)?(?:gambar|foto|diagram|ilustrasi)(?:\s+[a-z0-9_-]+)?\s+(?:berikut|di\s+bawah\s+ini)?|look\s+at\s+the\s+(?:picture|image|illustration)(?:\s+below)?)[\s!.,:]*/i, '')
-                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '')
-                    .replace(/tokoh\s+pada\s+gambar\s+tersebut/gi, 'Tokoh yang')
-                    .replace(/pada\s+gambar\s+tersebut/gi, 'tersebut')
-                    .replace(/in\s+the\s+picture/gi, '')
-                    .replace(/berdasarkan\s+gambar\s+tersebut,?\s*/gi, '')
-                    .trim();
-                if (q.soal.length > 0) {
-                    q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                }
-            }
-            q.soal = normalizeSoalMarkdown(q.soal);
+            // Do not rewrite image-dependent question text as a fallback for a missing image.
         }
     } else {
         for (const q of deduped) {
-            delete q.gambar;
             delete q.gambar_keyword;
             delete q.gambar_prompt_en;
-            delete q.visual_stimulus;
-            q.soal = q.soal
-                .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '');
-            if (q.soal.length > 0) {
-                q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-            }
-            q.soal = normalizeSoalMarkdown(q.soal);
+            if (q.gambar || q.visual_stimulus) markQuestionImageUnavailable(q, 'image_generation_disabled');
         }
     }
 
@@ -1609,7 +1735,6 @@ export function processIsianAndUraian(
         if (finalData.isian.data && Array.isArray(finalData.isian.data)) {
             finalData.isian.data = finalData.isian.data.slice(0, totalIsian);
             finalData.isian.data.forEach((q: any) => {
-                delete q.gambar;
                 delete q.gambar_keyword;
                 q.soal = normalizeSoalMarkdown(q.soal);
             });
@@ -1635,7 +1760,6 @@ export function processIsianAndUraian(
     if (totalUraian > 0 && result?.uraian && Array.isArray(result.uraian)) {
         finalData.uraian = result.uraian.slice(0, totalUraian);
         finalData.uraian.forEach((q: any) => {
-            delete q.gambar;
             delete q.gambar_keyword;
             q.soal = normalizeSoalMarkdown(q.soal);
         });
@@ -1663,23 +1787,27 @@ export async function finalizeAssessmentPackage(
         user?: any;
         bodyConfig?: any;
         preferredSlug?: string | null;
+        generationFence?: AssessmentGenerationFence;
     }
 ) {
-    const { resolvedCP, topik, isianType, totalPG, db, user, bodyConfig, preferredSlug } = options;
+    const { resolvedCP, topik, isianType, totalPG, db, user, bodyConfig, preferredSlug, generationFence } = options;
 
+    // The persistence contract is server-owned on every code path, including callers
+    // that intentionally do not have a persistence binding.
+    finalData._persistence = { packageId: null, revision: null, saveStatus: 'failed', imageWarnings: [] };
     // Normalisasi metadata kisi-kisi untuk seluruh butir soal (PG, Isian, Uraian)
     normalizeAssessmentItems(finalData, resolvedCP, topik, isianType || 'Standard', totalPG);
 
     // Telemetri & Bank Soal Persistence (non-blocking)
     if (db && bodyConfig) {
-        await saveAssessmentTelemetryAndBankSoal(db, user, bodyConfig, finalData, preferredSlug || null);
+        await saveAssessmentTelemetryAndBankSoal(db, user, bodyConfig, finalData, preferredSlug || null, generationFence);
     }
 
     return finalData;
 }
 
 // Generate Asesmen (Soal) via AI (Standar)
-kisi.post('/generate', async (c) => {
+kisi.post('/generate', requireSession, async (c) => {
     try {
         // 1. Auth Gate: Tolak request jika belum login
         const user = await getAuthenticatedUser(c);
@@ -1688,13 +1816,15 @@ kisi.post('/generate', async (c) => {
         }
 
         // 2. Validasi Input Payload dengan Zod
-        const rawBody = await c.req.json();
-        const validation = validate(createAssessmentSchema, rawBody);
-        if (!validation.success) {
-            return Errors.validation(c, 'Data input asesmen tidak valid', validation.errors);
-        }
-
-        const body = validation.data;
+        const parsedRequest = await readAssessmentGeneration(c);
+        if ('response' in parsedRequest) return parsedRequest.response;
+        const { body, clientDocumentId, identityProvided } = parsedRequest;
+        const reservation = await reserveAssessmentGeneration(c, body, user, 'normal', identityProvided);
+        if ('response' in reservation) return reservation.response;
+        if ('replay' in reservation) return reservation.replay;
+        const generationFence = reservation.fence;
+        body.clientDocumentId = clientDocumentId;
+        (c as any).set('assessmentGenerationFence', generationFence);
         const {
             namaSekolah, namaGuru, nipGuru, mataPelajaran, topik,
             jenjangKelas, semester, jenisUjian, capaianPembelajaran,
@@ -1706,26 +1836,22 @@ kisi.post('/generate', async (c) => {
         const totalIsian = jumlahIsian || 0;
         const totalUraian = jumlahUraian || 0;
 
-        if (totalPG + totalIsian + totalUraian === 0) {
-            return Errors.badRequest(c, 'Minimal harus ada 1 butir soal yang dibuat (PG, Isian, atau Uraian).');
-        }
-
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
 
-        // Dapatkan rujukan resmi Capaian Pembelajaran BSKAP No. 046 Tahun 2025 (atau Database Admin)
-        const officialCP = await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
-        const resolvedCP = (capaianPembelajaran && String(capaianPembelajaran).trim()) || officialCP || '';
+        // The exact resolved CP text is the prompt input and the content identity snapshot.
+        const { resolvedCP, resolvedElements, provenance, attribution, elementsAttribution } = await resolveAssessmentCurriculumProvenance(c.env.DB, mataPelajaran, jenjangKelas, capaianPembelajaran);
 
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
 
         const preferredSlug = aiProvider ? (SLUG_MAP[aiProvider] || aiProvider) : undefined;
         const finalData: any = { pg: [], isian: null, uraian: [] };
+        finalData.clientDocumentId = clientDocumentId;
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
             buildAssessmentPrompt({
                 type, startNo, count, totalPrevPG, totalIsian, totalUraian,
-                mataPelajaran, topik, jenjangKelas, semester, resolvedCP, hotsRatio,
+                mataPelajaran, topik, jenjangKelas, semester, resolvedCP, resolvedElements, curriculumAttribution: attribution, elementsAttribution, hotsRatio,
                 isianType, isGambarEnabled
             });
 
@@ -1782,6 +1908,12 @@ kisi.post('/generate', async (c) => {
             preferredSlug
         });
 
+        Object.assign(finalData, attachCurriculumProvenance(finalData, provenance));
+        const generationWarnings: string[] = [];
+        if (finalData.pg.length < totalPG) generationWarnings.push(`Soal PG tersedia ${finalData.pg.length} dari ${totalPG} yang diminta.`);
+        if (finalData.uraian.length < totalUraian) generationWarnings.push(`Soal uraian tersedia ${finalData.uraian.length} dari ${totalUraian} yang diminta.`);
+        finalData._generation = { partial: generationWarnings.length > 0, warnings: generationWarnings, requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
+
         // Finalisasi paket asesmen (Normalisasi matriks kisi-kisi, Telemetri, & Bank Soal)
         await finalizeAssessmentPackage(finalData, {
             resolvedCP,
@@ -1791,13 +1923,21 @@ kisi.post('/generate', async (c) => {
             db: c.env.DB,
             user,
             bodyConfig: body,
-            preferredSlug: preferredSlug || null
+            preferredSlug: preferredSlug || null,
+            generationFence
         });
+
+        finalData.clientDocumentId = clientDocumentId;
 
         return successResponse(c, finalData);
 
     } catch (e: any) {
         console.error('Asesmen Gen Error:', e);
+        const fence = (c as any).get('assessmentGenerationFence') as AssessmentGenerationFence | undefined;
+        if (fence) await endAssessmentGenerationRequest(c.env.DB, fence, e?.name === 'AbortError' ? 'cancelled' : 'failed', e?.name === 'AbortError' ? 'REQUEST_CANCELLED' : 'GENERATION_FAILED').catch(() => {});
+        if (e instanceof AssessmentGenerationSettlementError || e instanceof AssessmentPackageWriteError && e.code === 'generation_fenced_conflict') {
+            return c.json({ success: false, message: 'Hasil asesmen tidak dapat disimpan karena izin generasi telah berakhir.' }, 409);
+        }
         return Errors.internal(c, e.message);
     }
 });
@@ -1813,13 +1953,15 @@ kisi.post('/generate-stream', async (c) => {
         }
 
         // 2. Validasi Input Payload dengan Zod
-        const rawBody = await c.req.json();
-        const validation = validate(createAssessmentSchema, rawBody);
-        if (!validation.success) {
-            return Errors.validation(c, 'Data input asesmen tidak valid', validation.errors);
-        }
-
-        const body = validation.data;
+        const parsedRequest = await readAssessmentGeneration(c);
+        if ('response' in parsedRequest) return parsedRequest.response;
+        const { body, clientDocumentId, identityProvided } = parsedRequest;
+        const reservation = await reserveAssessmentGeneration(c, body, user, 'sse', identityProvided);
+        if ('response' in reservation) return reservation.response;
+        if ('replay' in reservation) return reservation.replay;
+        const generationFence = reservation.fence;
+        body.clientDocumentId = clientDocumentId;
+        (c as any).set('assessmentGenerationFence', generationFence);
         const {
             namaSekolah, namaGuru, nipGuru, mataPelajaran, topik,
             jenjangKelas, semester, jenisUjian, capaianPembelajaran,
@@ -1831,47 +1973,43 @@ kisi.post('/generate-stream', async (c) => {
         const totalIsian = jumlahIsian || 0;
         const totalUraian = jumlahUraian || 0;
 
-        if (totalPG + totalIsian + totalUraian === 0) {
-            return Errors.badRequest(c, 'Minimal harus ada 1 butir soal yang dibuat (PG, Isian, atau Uraian).');
-        }
-
         const isGambarEnabled = useGambar !== false && useGambar !== 'false' && useGambar !== 0 && useGambar !== '0';
-        const officialCP = await getDynamicCP(c.env.DB, mataPelajaran, jenjangKelas);
-        const resolvedCP = (capaianPembelajaran && String(capaianPembelajaran).trim()) || officialCP || '';
+        const { resolvedCP, resolvedElements, provenance, attribution, elementsAttribution } = await resolveAssessmentCurriculumProvenance(c.env.DB, mataPelajaran, jenjangKelas, capaianPembelajaran);
 
         const ai = new AIService(c.env);
         await ai.loadProviders(c.env.DB);
 
         const preferredSlug = aiProvider ? (SLUG_MAP[aiProvider] || aiProvider) : undefined;
         const finalData: any = { pg: [], isian: null, uraian: [] };
+        finalData.clientDocumentId = clientDocumentId;
         const warnings: string[] = [];
 
         const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
             buildAssessmentPrompt({
                 type, startNo, count, totalPrevPG, totalIsian, totalUraian,
-                mataPelajaran, topik, jenjangKelas, semester, resolvedCP, hotsRatio,
+                mataPelajaran, topik, jenjangKelas, semester, resolvedCP, resolvedElements, curriculumAttribution: attribution, elementsAttribution, hotsRatio,
                 isianType, isGambarEnabled
             });
 
         const job = await createStreamJob(c, 'kisi', body);
-        if ('response' in job) return job.response;
+        if ('response' in job) {
+            await endAssessmentGenerationRequest(c.env.DB, generationFence, 'failed', 'STREAM_JOB_REJECTED');
+            return c.json({ success: false, message: 'Identitas proses SSE sudah digunakan atau telah berakhir.' }, 409);
+        }
+        const jobFence: AssessmentGenerationFence = { ...generationFence, jobId: job.id };
+        (c as any).set('assessmentGenerationFence', jobFence);
         c.header('X-Accel-Buffering', 'no');
         return streamSSE(c, async (rawStream) => {
             const stream = job.attach(rawStream, ai);
             try {
                 // Step 1: Analisis Kurikulum & CP
-                const regTitle = (mataPelajaran?.toLowerCase().includes('agama') || mataPelajaran?.toLowerCase().includes('paibp'))
-                    ? 'Kepka BKPDM 020/2026'
-                    : (mataPelajaran?.toLowerCase().includes('sunda') || mataPelajaran?.toLowerCase().includes('tatanen') || mataPelajaran?.toLowerCase().includes('akpk'))
-                        ? 'Muatan Lokal'
-                        : 'BSKAP 046/2025';
                 await stream.writeSSE({
                     event: 'step',
                     data: JSON.stringify({
                         step: 1,
                         totalSteps: 6,
                         title: 'Analisis CP & Materi',
-                        message: `Menelaah materi "${topik}" berdasar rujukan resmi ${regTitle} (${jenjangKelas || 'SD'})...`,
+                        message: `Menelaah materi "${topik}" dengan CP dari ${attribution} (${jenjangKelas || 'SD'}).`,
                         percent: 15
                     })
                 });
@@ -2018,6 +2156,14 @@ kisi.post('/generate-stream', async (c) => {
                     })
                 });
 
+                Object.assign(finalData, attachCurriculumProvenance(finalData, provenance));
+
+                // Persist the exact partial contract before package save and ledger
+                // completion, so immediate recovery and cross-channel replay agree.
+                if ((finalData.pg?.length || 0) < totalPG) warnings.push(`Soal PG tersedia ${finalData.pg?.length || 0} dari ${totalPG} yang diminta.`);
+                if ((finalData.uraian?.length || 0) < totalUraian) warnings.push(`Soal uraian tersedia ${finalData.uraian?.length || 0} dari ${totalUraian} yang diminta.`);
+                finalData._generation = { partial: warnings.length > 0, warnings: [...warnings], requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
+
                 // Finalisasi paket asesmen (Normalisasi matriks kisi-kisi, Telemetri, & Bank Soal)
                 await finalizeAssessmentPackage(finalData, {
                     resolvedCP,
@@ -2027,11 +2173,11 @@ kisi.post('/generate-stream', async (c) => {
                     db: c.env.DB,
                     user,
                     bodyConfig: body,
-                    preferredSlug: preferredSlug || null
+                    preferredSlug: preferredSlug || null,
+                    generationFence: jobFence
                 });
-                if (finalData.pg.length < totalPG) warnings.push(`Soal PG tersedia ${finalData.pg.length} dari ${totalPG} yang diminta.`);
-                if (finalData.uraian.length < totalUraian) warnings.push(`Soal uraian tersedia ${finalData.uraian.length} dari ${totalUraian} yang diminta.`);
-                finalData._generation = { partial: warnings.length > 0, warnings, requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
+                finalData.clientDocumentId = clientDocumentId;
+                finalData._generation = { partial: Boolean(finalData._generation?.partial), warnings: [...(finalData._generation?.warnings || [])], requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
 
                 // Step 6: Selesai & Kirimkan Payload Final
                 await stream.writeSSE({
@@ -2050,13 +2196,17 @@ kisi.post('/generate-stream', async (c) => {
                     data: JSON.stringify({
                         success: true,
                         data: finalData,
-                        partial: warnings.length > 0,
-                        warnings
+                        partial: Boolean(finalData._generation.partial),
+                        warnings: finalData._generation.warnings
                     })
                 });
             } catch (err: any) {
-                if (job.signal.aborted) return;
+                if (job.signal.aborted) {
+                    await endAssessmentGenerationRequest(c.env.DB, jobFence, 'cancelled', 'REQUEST_CANCELLED').catch(() => {});
+                    return;
+                }
                 console.error('Kisi Stream Error:', err);
+                await endAssessmentGenerationRequest(c.env.DB, jobFence, 'failed', 'GENERATION_FAILED').catch(() => {});
                 await stream.writeSSE({
                     event: 'error',
                     data: JSON.stringify({
@@ -2067,6 +2217,8 @@ kisi.post('/generate-stream', async (c) => {
         });
     } catch (e: any) {
         console.error('Kisi Route Stream Error:', e);
+        const fence = (c as any).get('assessmentGenerationFence') as AssessmentGenerationFence | undefined;
+        if (fence) await endAssessmentGenerationRequest(c.env.DB, fence, e?.name === 'AbortError' ? 'cancelled' : 'failed', e?.name === 'AbortError' ? 'REQUEST_CANCELLED' : 'PRE_STREAM_FAILED').catch(() => {});
         return Errors.internal(c, e.message);
     }
 });
@@ -2170,7 +2322,7 @@ OUTPUT FORMAT WAJIB (JSON MURNI TANPA MARKDOWN):
 }
 
 // Endpoint: Surgical Batch Question Regeneration (1 Single Call)
-kisi.post('/regenerate-batch', async (c) => {
+kisi.post('/regenerate-batch', requireSession, requireAIAdmission, async (c) => {
     try {
         const user = await getAuthenticatedUser(c);
         if (!user) {
@@ -2260,8 +2412,10 @@ kisi.post('/regenerate-batch', async (c) => {
             }
         }
 
+        const normalized = await normalizeAssessmentImages(c.env.DB, user.id, { pg: healedReplacements });
         return successResponse(c, {
-            items: healedReplacements
+            items: normalized.content.pg,
+            imageWarnings: normalized.warnings,
         });
     } catch (e: any) {
         console.error('Batch Regenerate Error:', e);
@@ -2270,4 +2424,3 @@ kisi.post('/regenerate-batch', async (c) => {
 });
 
 export default kisi;
-

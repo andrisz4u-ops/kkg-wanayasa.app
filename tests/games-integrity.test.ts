@@ -6,7 +6,7 @@ import { LADDERS, SNAKES, CHALLENGE_TILES } from '../public/static/js/pages/game
 describe('Game Hub Data Integrity Tests', () => {
   it('should have valid word search sets with matching solutions, team separation, and both horizontal and vertical patterns', () => {
     let wsErrors = 0;
-    const fases = ['fase-a', 'fase-b', 'fase-c'];
+    const fases = ['fase-a', 'fase-b', 'fase-c'] as const;
 
     fases.forEach(fase => {
       const pkgs = WORD_SETS_BY_FASE[fase];
@@ -30,7 +30,7 @@ describe('Game Hub Data Integrity Tests', () => {
         }
 
         // Verify each team's words and solutions
-        ['red', 'blue'].forEach(team => {
+        (['red', 'blue'] as const).forEach(team => {
           const teamData = pkg[team];
           expect(teamData.grid.length).toBe(expectedSize);
           teamData.grid.forEach(row => expect(row.length).toBe(expectedSize));

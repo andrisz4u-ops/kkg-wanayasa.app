@@ -1,13 +1,13 @@
 /**
  * Telemetry & Analytics Helper for AI Generations
- * Non-blocking, isolated logging of RPP, Asesmen, and Slide generations
+ * Non-blocking, isolated logging of AI generation by feature.
  */
 
 export interface LogAIOptions {
     user_id?: number;
     user_nama?: string;
     sekolah?: string;
-    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE' | 'TTS' | 'ANALISIS_CP';
+    feature_type: 'RPP' | 'ASESMEN' | 'SLIDE' | 'TTS' | 'ANALISIS_CP' | 'PROGRAM_SEKOLAH' | 'PROGRAM_SEKOLAH_SECTION';
     mata_pelajaran?: string;
     topik?: string;
     jenjang_kelas?: string;
@@ -21,8 +21,7 @@ export interface LogAIOptions {
  */
 export async function recordAIGeneration(db: D1Database, opts: LogAIOptions): Promise<void> {
     try {
-        const safeFeature = ['RPP', 'ASESMEN', 'SLIDE'].includes(opts.feature_type) ? opts.feature_type : 'RPP';
-        const safeTopic = opts.feature_type === 'ANALISIS_CP' ? `[Analisis CP] ${opts.topik || ''}` : (opts.topik || null);
+        if (!Number.isInteger(opts.user_id) || Number(opts.user_id) < 1) return;
 
         await db.prepare(`
             INSERT INTO ai_generation_logs (
@@ -30,12 +29,12 @@ export async function recordAIGeneration(db: D1Database, opts: LogAIOptions): Pr
                 mata_pelajaran, topik, jenjang_kelas, ai_provider, duration_ms
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
-            opts.user_id || 1,
+            opts.user_id,
             opts.user_nama || 'Guru',
             opts.sekolah || 'SD Negeri Binaan',
-            safeFeature,
+            opts.feature_type,
             opts.mata_pelajaran || null,
-            safeTopic,
+            opts.topik || null,
             opts.jenjang_kelas || null,
             opts.ai_provider || null,
             opts.duration_ms || 0

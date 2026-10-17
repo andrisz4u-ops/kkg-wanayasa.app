@@ -43,7 +43,10 @@ describe('Failed loads remain distinct from successful empty collections', () =>
     let reject: (error: Error) => void;
     vi.mocked(api).mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
     const loading = initKalender();
-    expect(document.querySelector('#calendar-body [role="status"]')?.textContent).toContain('Memuat agenda');
+    const loadingStatus = document.querySelector('#calendar-body [role="status"]');
+    expect(loadingStatus).not.toBeNull();
+    expect(document.querySelector('#calendar-body')?.textContent).toContain('Memuat agenda kegiatan');
+    expect(document.querySelectorAll('#calendar-body .fw-loading-lines > span')).toHaveLength(3);
     reject!(new Error('Connection unavailable'));
     await loading;
     expect(document.querySelector('#calendar-body [role="alert"]')).not.toBeNull();
@@ -56,11 +59,11 @@ describe('Failed loads remain distinct from successful empty collections', () =>
 
   it('keeps the new audit styles away from printed documents', () => {
     postcss.parse(readFileSync('src/styles/audit-refinement.css', 'utf8')).walkRules(rule => {
-      let parent = rule.parent;
+      let parent: postcss.Node | undefined = rule.parent as postcss.Node | undefined;
       let screen = false;
       while (parent) {
-        if (parent.type === 'atrule' && parent.name === 'media' && parent.params === 'screen') screen = true;
-        parent = parent.parent;
+        if (parent.type === 'atrule' && (parent as postcss.AtRule).name === 'media' && (parent as postcss.AtRule).params === 'screen') screen = true;
+        parent = parent.parent as postcss.Node | undefined;
       }
       expect(screen, rule.selector).toBe(true);
     });

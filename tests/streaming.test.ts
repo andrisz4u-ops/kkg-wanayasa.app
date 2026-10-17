@@ -171,11 +171,13 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
                 },
                 'Menganalisis hubungan antarkomponen biotik dan abiotik dalam ekosistem.',
                 timeDist,
-                totalMinutes
+                totalMinutes,
+                { origin: 'user-input' }
             );
 
             expect(prompt).toContain('Ekosistem Hutan Hujan Tropis');
-            expect(prompt).toContain('BSKAP No. 046 Tahun 2025');
+            expect(prompt).toContain('masukan guru (belum ditinjau)');
+            expect(prompt).not.toContain('BSKAP No. 046 Tahun 2025');
             expect(prompt).toContain('Mindful');
             expect(prompt).toContain('Meaningful');
             expect(prompt).toContain('Joyful');

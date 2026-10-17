@@ -47,8 +47,24 @@
   .feature-workspace[data-composition] .fc-dimensions .rpp-profil-tags { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .feature-workspace[data-composition] .fc-dimensions .rpp-tag { padding: 9px 12px; border-radius: 8px; min-height: 44px; }
   .feature-workspace[data-composition] .fc-action-dock { display: flex; justify-content: center; margin-top: 14px; padding: 14px 0 0; border-top: 1px solid var(--fw-line); }
-  .feature-workspace[data-composition] .fw-cp-generate-action { display: flex; justify-content: center; padding-top: 12px; }
+  .feature-workspace[data-composition] .fw-cp-generate-action { display: flex; flex-wrap: wrap; justify-content: center; padding-top: 12px; }
   .feature-workspace[data-composition] .fw-cp-generate-action #btn-submit-generate { width: 100%; }
+  .feature-workspace[data-composition] .fw-form-progress { background: var(--fw-paper); border: 1px solid var(--fw-line); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .feature-workspace[data-composition] .fw-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .feature-workspace[data-composition] .fw-progress-title { font-size: 13px; font-weight: 700; color: var(--fw-ink); }
+  .feature-workspace[data-composition] .fw-progress-status { font-size: 12px; color: var(--fw-muted); text-align: right; }
+  .feature-workspace[data-composition] .fw-progress-bar { height: 8px; border-radius: 999px; background: var(--fw-soft); border: 1px solid var(--fw-line); overflow: hidden; }
+  .feature-workspace[data-composition] .fw-progress-fill { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--fw-dark), var(--fw-accent)); transition: width 200ms ease; }
+  .feature-workspace[data-composition] .fw-progress-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .feature-workspace[data-composition] .fw-progress-steps li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid var(--fw-line); border-radius: 10px; background: var(--fw-field); font-size: 12px; color: var(--fw-muted); }
+  .feature-workspace[data-composition] .fw-progress-steps .fw-step-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .feature-workspace[data-composition] .fw-progress-steps .fw-step-count { font-weight: 700; flex-shrink: 0; }
+  .feature-workspace[data-composition] .fw-progress-steps li.is-done { border-color: var(--fw-accent); color: var(--fw-ink); background: var(--fw-soft); }
+  .feature-workspace[data-composition] .fw-progress-steps li.is-optional { border-style: dashed; }
+  .feature-workspace[data-composition] .fc-action-dock { flex-wrap: wrap; }
+  .feature-workspace[data-composition] .asesmen-action-footer { flex-wrap: wrap; }
+  .feature-workspace[data-composition] .fw-cta-status { flex: 1 1 100%; font-size: 12px; color: var(--fw-muted); margin: 0 0 8px; text-align: center; }
+  .feature-workspace[data-composition] .fw-action.is-ready { box-shadow: 0 8px 20px #0b352933; }
   .feature-workspace[data-composition] :is(.fc-action-dock .rpp-generate-btn, .fc-wide-action) { min-width: 240px; min-height: 52px; }
   .feature-workspace[data-composition] .asesmen-counter-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .feature-workspace[data-composition] .asesmen-counter-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; background: var(--fw-field); border: 1px solid var(--fw-line); border-radius: 10px; }
@@ -176,6 +192,9 @@
     .feature-workspace[data-composition] :is(.fc-planning-grid, .fc-assessment-grid, #analisis-cp-form.fc-curriculum-grid) > :last-child { grid-column: 1 / -1; }
     .feature-workspace[data-composition] #rpp-form.fc-planning-grid > .fc-options-panel { grid-column: 1 / -1; }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .feature-workspace[data-composition] .fw-progress-fill { transition: none; }
+  }
   @media (max-width: 1100px) {
     .feature-workspace[data-composition] :is(.fc-program-workspace, .fc-report-grid) { grid-template-columns: minmax(0, 1fr); }
     .feature-workspace[data-composition] .fc-report-grid > :is(.fc-report-info, .fc-report-model, .fc-report-photos) { grid-column: auto; grid-row: auto; }
@@ -196,6 +215,10 @@
     .feature-workspace[data-composition] :is(.fc-identity-strip, .fc-primary-panel, .fc-options-panel, .fc-context-panel, .fc-curriculum-identity, .fw-cp-source-card, .fw-cp-review-card, .fc-form-section) { padding: 16px; }
     .feature-workspace[data-composition] :is(.fc-planning-grid, .fc-assessment-grid, #analisis-cp-form.fc-curriculum-grid) > :last-child { grid-column: auto; }
     .feature-workspace[data-composition] .fc-dimensions .rpp-profil-tags { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-workspace[data-composition] .fw-form-progress { padding: 12px 14px; }
+    .feature-workspace[data-composition] .fw-progress-steps { grid-template-columns: minmax(0, 1fr); }
+    .feature-workspace[data-composition] .fw-progress-head { flex-direction: column; gap: 4px; }
+    .feature-workspace[data-composition] .fw-progress-status { text-align: left; }
     .feature-workspace[data-composition] :is(.fc-identity-strip, .fc-primary-panel, .fc-options-panel, .fc-context-panel) :is(.rpp-row, .asesmen-row) { flex-wrap: wrap; }
     .feature-workspace[data-composition] :is(.rpp-col, .asesmen-col) { flex-basis: 130px; }
     .feature-workspace[data-composition] #analisis-cp-form .fc-curriculum-fields .grid.grid-cols-2:has(:is(#select-mata-pelajaran, #select-target-semester)) { grid-template-columns: minmax(0, 1fr); }

@@ -577,6 +577,40 @@ export async function getDynamicCP(db: any, mataPelajaran: string, jenjangKelas:
   return getOfficialCP(mataPelajaran, jenjangKelas);
 }
 
+/** Source-aware companion resolver; legacy string helpers above remain unchanged. */
+export async function getDynamicCPWithSource(db: any, mataPelajaran: string, jenjangKelas: string): Promise<{ text: string | null; origin: 'd1' | 'static'; subject: string; phase: string; regulationLabel?: string | null }> {
+  const phase = getFaseFromKelas(jenjangKelas) || '';
+  if (db && phase && mataPelajaran) {
+    try {
+      const rows = await db.prepare('SELECT mata_pelajaran, fase, teks_cp, regulasi FROM capaian_pembelajaran WHERE fase = ?').bind(phase).all();
+      const available = (rows?.results || []).map((row: any) => row.mata_pelajaran);
+      const matched = matchSubjectKey(mataPelajaran, available);
+      const row = (rows?.results || []).find((entry: any) => entry.mata_pelajaran === matched);
+      if (row?.teks_cp?.trim()) return { text: row.teks_cp.trim(), origin: 'd1', subject: row.mata_pelajaran, phase, regulationLabel: row.regulasi || null };
+    } catch (_) { /* use exact static fallback below */ }
+  }
+  const text = getOfficialCP(mataPelajaran, jenjangKelas);
+  return { text, origin: 'static', subject: mataPelajaran, phase };
+}
+
+/** Source-aware companion resolver for element JSON; legacy helper remains unchanged. */
+export async function getDynamicCPElementsWithSource(db: any, mataPelajaran: string, jenjangKelas: string): Promise<{ elements: Record<string, string> | null; origin: 'd1' | 'static'; subject: string; phase: string; regulationLabel?: string | null }> {
+  const phase = getFaseFromKelas(jenjangKelas) || '';
+  if (db && phase && mataPelajaran) {
+    try {
+      const rows = await db.prepare('SELECT mata_pelajaran, fase, elemen_json, regulasi FROM capaian_pembelajaran WHERE fase = ?').bind(phase).all();
+      const available = (rows?.results || []).map((row: any) => row.mata_pelajaran);
+      const matched = matchSubjectKey(mataPelajaran, available);
+      const row = (rows?.results || []).find((entry: any) => entry.mata_pelajaran === matched);
+      if (row?.elemen_json) {
+        const elements = JSON.parse(row.elemen_json);
+        if (elements && typeof elements === 'object' && Object.keys(elements).length) return { elements, origin: 'd1', subject: row.mata_pelajaran, phase, regulationLabel: row.regulasi || null };
+      }
+    } catch (_) { /* use exact static fallback below */ }
+  }
+  return { elements: getOfficialCPElements(mataPelajaran, jenjangKelas), origin: 'static', subject: mataPelajaran, phase };
+}
+
 /**
  * Helper dinamis: mengambil Elemen CP dari database D1 terlebih dahulu,
  * dengan fallback aman ke data statis jika tidak ditemukan di DB.

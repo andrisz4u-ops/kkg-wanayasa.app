@@ -18,9 +18,10 @@ import {
   registerSchema,
   changePasswordSchema
 } from '../lib/validation';
-import { logger } from '../lib/logger';
+import { logger, createRequestContext } from '../lib/logger';
 import { createAuditLog } from '../lib/audit';
 import { findMatchingSchool, formatStandardSchoolName } from '../lib/school-normalizer';
+import { DEFAULT_TENANT_ID } from '../lib/tenant';
 import type { User, LoginRequest, RegisterRequest } from '../types';
 
 type Bindings = { DB: D1Database };
@@ -34,10 +35,12 @@ auth.get('/csrf-token', (c) => {
   const csrfToken = generateCSRFToken();
   const isProduction = !c.req.url.includes('localhost');
 
-  // Set CSRF cookie
-  c.res.headers.append(
+  // Set CSRF cookie (c.header with append: mutasi langsung c.res.headers hilang
+  // bila tak ada middleware yang memanggil c.header sebelumnya)
+  c.header(
     'Set-Cookie',
-    `csrf_token=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`
+    `csrf_token=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`,
+    { append: true }
   );
 
   return successResponse(c, { csrf_token: csrfToken });
@@ -73,7 +76,7 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     // Find user with school information
     const user: any = await c.env.DB.prepare(`
       SELECT u.id, u.email, u.password_hash, u.nama, COALESCE(u.role_label, u.role) as role, u.role_label,
-             u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.is_approved, u.sekolah_id,
+             u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.is_approved, u.sekolah_id, u.tenant_id,
              s.nama as sekolah_nama, s.kepala_sekolah, s.nip_kepala_sekolah, s.kop_surat_url
       FROM users u
       LEFT JOIN sekolah s ON u.sekolah_id = s.id
@@ -83,6 +86,11 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     if (!user) {
       logger.auth('login_failed', undefined, { reason: 'user_not_found', email });
       return Errors.unauthorized(c, 'Email atau password salah');
+    }
+
+    if (user.tenant_id && user.tenant_id !== DEFAULT_TENANT_ID) {
+      logger.auth('login_failed', user.id, { reason: 'tenant_not_enabled' });
+      return Errors.forbidden(c, 'Akses organisasi ini belum tersedia.');
     }
 
     // Check if approved (except for admin/operator which are usually pre-approved or internal)
@@ -123,8 +131,12 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     const isProduction = c.req.raw.url.startsWith('https://');
     const cookieOptions = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`;
 
-    c.res.headers.append('Set-Cookie', `session=${sessionId}; ${cookieOptions}`);
-    c.res.headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`);
+    c.header('Set-Cookie', `session=${sessionId}; ${cookieOptions}`, { append: true });
+    c.header('Set-Cookie', `csrf_token=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`, { append: true });
+    // UI-only login marker (deliberately NOT HttpOnly): lets the boot shell hide the
+    // pre-rendered public landing page before /auth/me resolves, avoiding a landing
+    // flash on hard reload for logged-in users. Never used for auth decisions.
+    c.header('Set-Cookie', `kkg_logged_in=1; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${isProduction ? '; Secure' : ''}`, { append: true });
 
     // Update last_login_at timestamp (ISO-8601 UTC format with explicit 'Z')
     const loginTimestamp = new Date().toISOString();
@@ -189,16 +201,8 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
       }
     }, 'Login berhasil');
   } catch (e: any) {
-    logger.error('Login error', e);
-    // DEBUG: Return detailed error message
-    return c.json({
-      success: false,
-      error: {
-        code: ErrorCodes.INTERNAL_ERROR,
-        message: 'Login system error: ' + (e.message || 'Unknown error'),
-        details: e.stack // Optional: Return stack trace if needed
-      }
-    }, 500);
+    logger.error('Login error', e instanceof Error ? e : new Error('Unknown login error'), createRequestContext(c));
+    return Errors.internal(c);
   }
 });
 
@@ -339,9 +343,10 @@ auth.post('/logout', async (c) => {
       }
     }
 
-    // Clear cookies
-    c.res.headers.append('Set-Cookie', 'session=; Path=/; Max-Age=0');
-    c.res.headers.append('Set-Cookie', 'csrf_token=; Path=/; Max-Age=0');
+    // Clear cookies (including the UI-only login marker)
+    c.header('Set-Cookie', 'session=; Path=/; Max-Age=0', { append: true });
+    c.header('Set-Cookie', 'csrf_token=; Path=/; Max-Age=0', { append: true });
+    c.header('Set-Cookie', 'kkg_logged_in=; Path=/; Max-Age=0', { append: true });
 
     return successResponse(c, null, 'Logout berhasil');
   } catch (e: any) {
@@ -362,8 +367,10 @@ auth.get('/me', async (c) => {
 
     let user: any = await getCurrentUser(c.env.DB, sessionId);
     if (!user) {
-      // Clear invalid session cookie
-      c.res.headers.append('Set-Cookie', 'session=; Path=/; Max-Age=0');
+      // Clear invalid session cookie (and the UI-only login marker so the boot
+      // shell no longer hides the landing page for this browser)
+      c.header('Set-Cookie', 'session=; Path=/; Max-Age=0', { append: true });
+      c.header('Set-Cookie', 'kkg_logged_in=; Path=/; Max-Age=0', { append: true });
       return Errors.unauthorized(c);
     }
 
@@ -383,6 +390,13 @@ auth.get('/me', async (c) => {
         await c.env.DB.prepare('UPDATE users SET sekolah_id = ? WHERE id = ?').bind(resolvedSekolahId, user.id).run();
       }
     }
+
+    // Refresh the UI-only login marker so browsers whose session predates the
+    // marker (logged in before this shipped) self-heal: the next hard reload
+    // will hide the pre-rendered landing shell before first paint. Never used
+    // for auth decisions.
+    const meIsProduction = c.req.raw.url.startsWith('https://');
+    c.header('Set-Cookie', `kkg_logged_in=1; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${meIsProduction ? '; Secure' : ''}`, { append: true });
 
     return successResponse(c, {
       user: {

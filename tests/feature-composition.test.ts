@@ -117,6 +117,57 @@ describe('Feature composition preserves existing contracts', () => {
     }
   });
 
+  it('removes shared form-completion panels from all consumers without changing forms or generation indicators', () => {
+    const fixtures = [
+      ['rpp', '<form id="rpp-form"><div class="rpp-card"><h2>Identitas</h2><input name="namaSekolah" value="SDN"></div><div class="rpp-card"><h2>Kurikulum</h2><select name="mataPelajaran" required><option value="">Pilih</option><option value="Matematika">Matematika</option></select><input name="topik" required></div><div class="rpp-card"><h2>Strategi</h2><select name="strategi"><option>Discovery</option></select></div><button id="btn-generate-rpp" type="submit">Buat RPP</button></form><div id="rpp-canvas"><p>Dokumen</p></div>', '#btn-generate-rpp'],
+      ['kisi', '<form id="asesmen-form"><div class="asesmen-grid"><div class="asesmen-card"><h3>Identitas</h3><input name="namaSekolah" value="SDN"></div><div class="asesmen-card"><h3>Kurikulum dan Materi</h3><select name="mataPelajaran" required><option value="">Pilih</option><option value="IPAS">IPAS</option></select><textarea name="topik" required></textarea></div><div class="asesmen-card"><h3>Karakteristik</h3><input name="jumlahPG" value="10"></div></div><button class="asesmen-generate-btn" type="submit">Buat Asesmen</button></form><div id="asesmen-canvas"><p>Dokumen</p></div>', '.asesmen-generate-btn'],
+      ['analisis-cp', '<form id="analisis-cp-form"><div><h3>Identitas Dokumen</h3><input id="input-nama-sekolah" name="namaSekolah" required></div><div><h3>Sumber Buku Ajar</h3><input name="sumberBuku" required></div><div><h3>Review Struktur Bab</h3><button id="btn-submit-generate" type="submit">Buat Sekarang</button></div></form><div id="analisis-canvas"><p>Dokumen</p></div>', '#btn-submit-generate'],
+    ] as const;
+    for (const [page, html, actionSelector] of fixtures) {
+      const root = mount(page, `${html}<div data-ai-job-ui role="status">AI sedang bekerja</div><div id="generation-history">Riwayat terakhir</div><div id="checkpoint-indicator">Checkpoint tersimpan</div>`);
+      const form = root.querySelector('form')!;
+      const action = root.querySelector<HTMLButtonElement>(actionSelector)!;
+      const submitted = vi.fn((event: Event) => event.preventDefault());
+      form.addEventListener('submit', submitted);
+      const clicked = vi.fn((event: Event) => event.preventDefault());
+      action.addEventListener('click', clicked);
+      const fields = [...form.querySelectorAll('input, select, textarea')];
+      const rules = fields.map(field => {
+        const control = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        return [control.getAttribute('name'), control.required, control.getAttribute('min'), control.getAttribute('max')];
+      });
+      const before = [...new FormData(form).entries()];
+      const output = root.querySelector('div[id$="-canvas"]')!.outerHTML;
+      arrangeFeatureForms(root, page, OUTPUT_SURFACES);
+      expect([...new FormData(form).entries()]).toEqual(before);
+      expect(root.querySelector('.fw-form-progress, .fw-cta-status, [role="progressbar"]')).toBeNull();
+      expect(root.querySelector('[data-ai-job-ui]')!.textContent).toBe('AI sedang bekerja');
+      expect(root.querySelector('#generation-history')!.textContent).toBe('Riwayat terakhir');
+      expect(root.querySelector('#checkpoint-indicator')!.textContent).toBe('Checkpoint tersimpan');
+      expect(fields.map(field => {
+        const control = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        return [control.getAttribute('name'), control.required, control.getAttribute('min'), control.getAttribute('max')];
+      })).toEqual(rules);
+      for (const field of form.querySelectorAll('input[required], select[required], textarea[required]')) {
+        const control = field as HTMLInputElement | HTMLSelectElement;
+        if (control.tagName === 'SELECT') control.value = [...(control as HTMLSelectElement).options].find(item => item.value)!.value;
+        else control.value = 'Pecahan';
+      }
+      expect(form.checkValidity()).toBe(true);
+      action.click();
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      expect(clicked).toHaveBeenCalledOnce();
+      expect(submitted).toHaveBeenCalledOnce();
+      const settled = root.innerHTML;
+      arrangeFeatureForms(root, page, OUTPUT_SURFACES);
+      expect(root.querySelector('.fw-form-progress')).toBeNull();
+      expect(root.innerHTML).toBe(settled);
+      expect(root.querySelector(actionSelector)).toBe(action);
+      expect(root.querySelector('div[id$="-canvas"]')!.outerHTML).toBe(output);
+      expect(action.textContent).toContain(page === 'rpp' ? 'Buat RPP' : page === 'kisi' ? 'Buat Asesmen' : 'Buat Sekarang');
+    }
+  });
+
   it('retains filter listeners and list identity when creating the library layout', () => {
     const root = mount('materi', '<div><div><div><input id="filter-search" value="Matematika"></div><select id="filter-jenis"><option selected>RPP</option></select></div><div id="materi-list"><div><h3>Materi</h3></div></div><div id="upload-materi-modal" class="hidden"></div></div>');
     const field = root.querySelector('#filter-search')!;
@@ -145,10 +196,10 @@ describe('Feature composition preserves existing contracts', () => {
     const sheet = postcss.parse(readFileSync('src/styles/feature-composition.css', 'utf8'));
     sheet.walkRules(rule => {
       expect(rule.selector).toContain('.feature-workspace[data-composition]');
-      let parent = rule.parent; let screen = false;
+      let parent: postcss.Node | undefined = rule.parent as postcss.Node | undefined; let screen = false;
       while (parent) {
-        if (parent.type === 'atrule' && parent.name === 'media' && parent.params === 'screen') screen = true;
-        parent = parent.parent;
+        if (parent.type === 'atrule' && (parent as postcss.AtRule).name === 'media' && (parent as postcss.AtRule).params === 'screen') screen = true;
+        parent = parent.parent as postcss.Node | undefined;
       }
       expect(screen).toBe(true);
     });

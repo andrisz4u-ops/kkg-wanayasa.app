@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { 
   distributeChaptersToSemesters, 
   buildStructurePrompt, 
@@ -19,6 +19,7 @@ import { generateAtpElemenDocxBuffer, groupAnalysisDataByElements } from '../src
 import { generateCapaianPembelajaranDocxBuffer } from '../src/lib/docx/capaian-pembelajaran';
 import { getOfficialCpDocumentData } from '../src/lib/cp-document-data';
 import { getOfficialCP, cpElementsData } from '../src/lib/cp-data';
+import { arrayField, booleanField, readApiRecord, recordField } from './helpers/typed-api-response';
 
 describe('Analisis CP - Standard Official Curriculum Presets', () => {
   it('retrieves complete 8 chapters for Bahasa Indonesia Kelas 5 (Bergerak Bersama)', () => {
@@ -258,7 +259,8 @@ describe('Analisis CP - Official CP Integration & Prompt Building', () => {
     expect(prompt).toContain('SDN 01 Meluai');
     expect(prompt).toContain('ANALISIS CP, TP, DAN ATP');
     expect(prompt).toContain('5.1');
-    expect(prompt).toContain('BSKAP No. 046 Tahun 2025');
+    expect(prompt).toContain('CAPAIAN PEMBELAJARAN (CP; sumber: katalog yang belum ditinjau)');
+    expect(prompt).not.toContain('CAPAIAN PEMBELAJARAN (CP) RESMI PEMERINTAH');
   });
 
   it('builds structure extraction prompt explicitly forbidding splitting when Semester 1 is targeted', () => {
@@ -749,12 +751,14 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       const res = await analisisCpRoutes.fetch(req, {} as any);
       expect(res.status).toBe(200);
 
-      const body = await res.json();
-      expect(body.success).toBe(true);
-      expect(Array.isArray(body.data.profiles)).toBe(true);
-      expect(body.data.default_profile).toBeDefined();
-      expect(body.data.default_profile.is_default).toBe(true);
-      expect(body.data.default_profile.chapters.length).toBe(8);
+      const body = await readApiRecord(res);
+      expect(booleanField(body, 'success')).toBe(true);
+      const data = recordField(body, 'data');
+      expect(Array.isArray(arrayField(data, 'profiles'))).toBe(true);
+      expect(data.default_profile).toBeDefined();
+      const defaultProfile = recordField(data, 'default_profile');
+      expect(booleanField(defaultProfile, 'is_default')).toBe(true);
+      expect(arrayField(defaultProfile, 'chapters')).toHaveLength(8);
     });
   });
 
@@ -1101,7 +1105,7 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
                 bab: 'Bab 1: Bilangan Cacah sampai 100.000',
                 cp: '[Bilangan] Pemahaman bilangan cacah',
                 items: [
-                  { kode_tp: '5.1', tp: 'Membaca dan menulis lambang bilangan.', alokasi_waktu: '12 JP', materi_pokok: 'Membaca & menulis bilangan' }
+                  { kode_tp: '5.1', tp: 'Membaca dan menulis lambang bilangan.', atp: 'Murid mampu membaca dan menulis bilangan cacah sampai 100.000 dengan tepat.', alokasi_waktu: '12 JP', materi_pokok: 'Membaca & menulis bilangan' }
                 ]
               },
               {
@@ -1109,7 +1113,7 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
                 bab: 'Bab 4: Keliling Bangun Datar',
                 cp: '[Pengukuran] Keliling bangun datar',
                 items: [
-                  { kode_tp: '5.10', tp: 'Menghitung keliling segitiga.', alokasi_waktu: '6 JP', materi_pokok: 'Keliling segitiga' }
+                  { kode_tp: '5.10', tp: 'Menghitung keliling segitiga.', atp: 'Murid mampu menentukan keliling segitiga dengan menjumlahkan panjang seluruh sisinya.', alokasi_waktu: '6 JP', materi_pokok: 'Keliling segitiga' }
                 ]
               }
             ]
@@ -1123,7 +1127,7 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
                 bab: 'Bab 7: Membandingkan Ciri-Ciri Bangun Datar',
                 cp: '[Geometri] Bangun datar dan simetri',
                 items: [
-                  { kode_tp: '5.20', tp: 'Menentukan simetri lipat dan putar.', alokasi_waktu: '8 JP', materi_pokok: 'Simetri lipat & simetri putar' }
+                  { kode_tp: '5.20', tp: 'Menentukan simetri lipat dan putar.', atp: 'Murid mampu mengidentifikasi banyaknya simetri lipat dan simetri putar pada bangun datar.', alokasi_waktu: '8 JP', materi_pokok: 'Simetri lipat & simetri putar' }
                 ]
               },
               {
@@ -1131,9 +1135,9 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
                 bab: 'Bab 8: Data dan Diagram',
                 cp: '[Analisis Data dan Peluang] Mengurutkan dan menyajikan data',
                 items: [
-                  { kode_tp: '5.21', tp: 'Murid mampu merencanakan dan mengumpulkan data sederhana terkait dirinya.', alokasi_waktu: '6 JP', materi_pokok: 'Pengumpulan data' },
-                  { kode_tp: '5.22', tp: 'Murid mampu menyajikan data yang telah dikumpulkan ke dalam tabel frekuensi.', alokasi_waktu: '6 JP', materi_pokok: 'Tabel frekuensi' },
-                  { kode_tp: '5.23', tp: 'Murid mampu membuat diagram batang dari suatu data.', alokasi_waktu: '6 JP', materi_pokok: 'Diagram batang' }
+                  { kode_tp: '5.21', tp: 'Murid mampu merencanakan dan mengumpulkan data sederhana terkait dirinya.', atp: 'Murid mampu menyusun pertanyaan sederhana dan mengumpulkan data tentang minat teman sekelas.', alokasi_waktu: '6 JP', materi_pokok: 'Pengumpulan data' },
+                  { kode_tp: '5.22', tp: 'Murid mampu menyajikan data yang telah dikumpulkan ke dalam tabel frekuensi.', atp: 'Murid mampu mengelompokkan hasil pengumpulan data dan menyajikannya dalam tabel frekuensi.', alokasi_waktu: '6 JP', materi_pokok: 'Tabel frekuensi' },
+                  { kode_tp: '5.23', tp: 'Murid mampu membuat diagram batang dari suatu data.', atp: 'Murid mampu menyajikan data dalam diagram batang dengan skala dan label yang sesuai.', alokasi_waktu: '6 JP', materi_pokok: 'Diagram batang' }
                 ]
               }
             ]
@@ -1346,6 +1350,35 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(audit.items).toHaveLength(2);
       expect(audit.items[0].status).toBe('repaired');
       expect(audit.items[1].status).toBe('repaired'); // repaired because of terminology sanitization
+    });
+
+    it('revalidates CP verifier repairs and never awards an automatic high score', async () => {
+      const input = {
+        metadata: { mata_pelajaran: 'IPAS', kelas: '5', fase: 'Fase C' },
+        semesters: [{ semester: 1, babs: [{
+          no: 1, bab: 'Ekosistem', cp: 'ekosistem dan lingkungan',
+          items: [{ kode_tp: '5.1', tp: 'memahami ekosistem', materi_pokok: 'ekosistem', alokasi_waktu: '4 JP' }]
+        }] }]
+      };
+      const baseOptions = { ai: { generateJSON: vi.fn() } as any, preferredSlug: 'test' };
+
+      const stillInvalidAi = { generateJSON: vi.fn().mockResolvedValue({ verifications: [{
+        kode_tp: '5.1', refined_tp: 'Murid mampu memahami ekosistem.'
+      }] }) } as any;
+      const stillInvalid = await runCpQualityGate(input, [], {}, { ...baseOptions, ai: stillInvalidAi });
+      expect(stillInvalid.audit.items[0].status).toBe('flagged');
+      expect(stillInvalid.audit.items[0].quality_score).toBeLessThan(90);
+      expect(stillInvalid.audit.summary.flagged_count).toBe(1);
+      expect(stillInvalid.audit.summary.passed_count).toBe(0);
+
+      const validAi = { generateJSON: vi.fn().mockResolvedValue({ verifications: [{
+        kode_tp: '5.1', refined_tp: 'Murid mampu menyelidiki ekosistem.'
+      }] }) } as any;
+      const valid = await runCpQualityGate(input, [], {}, { ...baseOptions, ai: validAi });
+      expect(valid.audit.items[0].status).toBe('repaired');
+      expect(valid.audit.items[0].quality_score).toBeLessThan(90);
+      expect(valid.audit.summary.repaired_count).toBe(1);
+      expect(valid.audit.summary.flagged_count).toBe(0);
     });
   });
 });

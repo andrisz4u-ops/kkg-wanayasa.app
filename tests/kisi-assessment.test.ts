@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeItemKisiMetadata } from '../src/routes/kisi';
+import { arrayField, recordField, readApiRecord, stringField } from './helpers/typed-api-response';
 
 describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
     describe('normalizeItemKisiMetadata', () => {
@@ -378,9 +379,9 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
 
             const resCatalog = await kisi.request('/visual-catalog');
             expect(resCatalog.status).toBe(200);
-            const bodyCat = await resCatalog.json();
+            const bodyCat = await readApiRecord(resCatalog);
             expect(bodyCat.success).toBe(true);
-            expect(bodyCat.data.length).toBe(200);
+            expect(arrayField(bodyCat, 'data').length).toBe(200);
 
             const resRender = await kisi.request('/visual-render', {
                 method: 'POST',
@@ -388,10 +389,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 body: JSON.stringify({ type: 'persegi_panjang', params: { p: 12, l: 8 } })
             });
             expect(resRender.status).toBe(200);
-            const bodyRender = await resRender.json();
+            const bodyRender = await readApiRecord(resRender);
             expect(bodyRender.success).toBe(true);
-            expect(bodyRender.data.svg).toContain('Persegi Panjang ABCD');
-            expect(bodyRender.data.dataUri).toContain('data:image/svg+xml');
+            const renderData = recordField(bodyRender, 'data');
+            expect(stringField(renderData, 'svg')).toContain('Persegi Panjang ABCD');
+            expect(stringField(renderData, 'dataUri')).toContain('data:image/svg+xml');
 
             const resRenderPeta = await kisi.request('/visual-render', {
                 method: 'POST',
@@ -399,10 +401,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 body: JSON.stringify({ type: 'peta_indonesia', params: { pointer: 'jawa', label: 'X' } })
             });
             expect(resRenderPeta.status).toBe(200);
-            const bodyRenderPeta = await resRenderPeta.json();
+            const bodyRenderPeta = await readApiRecord(resRenderPeta);
             expect(bodyRenderPeta.success).toBe(true);
-            expect(bodyRenderPeta.data.svg).toContain('Peta Kepulauan Indonesia');
-            expect(bodyRenderPeta.data.svg).toContain('huruf "X"');
+            const petaData = recordField(bodyRenderPeta, 'data');
+            expect(stringField(petaData, 'svg')).toContain('Peta Kepulauan Indonesia');
+            expect(stringField(petaData, 'svg')).toContain('huruf "X"');
 
             // Test 5 template SVG sebelumnya:
             // 1. Rangkaian Listrik
@@ -411,10 +414,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'rangkaian_listrik', params: { model: 'campuran', s1: true, s2: false, pointer: 'L1', label: 'X' } })
             });
-            const bodyListrik = await resListrik.json();
+            const bodyListrik = await readApiRecord(resListrik);
             expect(bodyListrik.success).toBe(true);
-            expect(bodyListrik.data.svg).toContain('Rangkaian Listrik');
-            expect(bodyListrik.data.svg).toContain('Baterai');
+            const listrikData = recordField(bodyListrik, 'data');
+            expect(stringField(listrikData, 'svg')).toContain('Rangkaian Listrik');
+            expect(stringField(listrikData, 'svg')).toContain('Baterai');
 
             // 2. Perubahan Wujud
             const resWujud = await kisi.request('/visual-render', {
@@ -422,12 +426,13 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'perubahan_wujud', params: { pointer: '1', label: 'X' } })
             });
-            const bodyWujud = await resWujud.json();
+            const bodyWujud = await readApiRecord(resWujud);
             expect(bodyWujud.success).toBe(true);
-            expect(bodyWujud.data.svg).toContain('Perubahan Wujud Zat');
-            expect(bodyWujud.data.svg).toContain('PADAT');
-            expect(bodyWujud.data.svg).toContain('CAIR');
-            expect(bodyWujud.data.svg).toContain('GAS');
+            const wujudData = recordField(bodyWujud, 'data');
+            expect(stringField(wujudData, 'svg')).toContain('Perubahan Wujud Zat');
+            expect(stringField(wujudData, 'svg')).toContain('PADAT');
+            expect(stringField(wujudData, 'svg')).toContain('CAIR');
+            expect(stringField(wujudData, 'svg')).toContain('GAS');
 
             // 3. Mistar
             const resMistar = await kisi.request('/visual-render', {
@@ -435,10 +440,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'mistar', params: { start: 2.5, end: 8.5, objectType: 'pensil', label: 'Panjang = ... cm' } })
             });
-            const bodyMistar = await resMistar.json();
+            const bodyMistar = await readApiRecord(resMistar);
             expect(bodyMistar.success).toBe(true);
-            expect(bodyMistar.data.svg).toContain('Pengukuran Panjang dengan Mistar');
-            expect(bodyMistar.data.svg).toContain('cm');
+            const mistarData = recordField(bodyMistar, 'data');
+            expect(stringField(mistarData, 'svg')).toContain('Pengukuran Panjang dengan Mistar');
+            expect(stringField(mistarData, 'svg')).toContain('cm');
 
             // 4. Tata Surya
             const resSurya = await kisi.request('/visual-render', {
@@ -446,10 +452,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'tata_surya', params: { pointer: 'bumi', label: 'X' } })
             });
-            const bodySurya = await resSurya.json();
+            const bodySurya = await readApiRecord(resSurya);
             expect(bodySurya.success).toBe(true);
-            expect(bodySurya.data.svg).toContain('Sistem Tata Surya');
-            expect(bodySurya.data.svg).toContain('Matahari');
+            const suryaData = recordField(bodySurya, 'data');
+            expect(stringField(suryaData, 'svg')).toContain('Sistem Tata Surya');
+            expect(stringField(suryaData, 'svg')).toContain('Matahari');
 
             // 5. Perisai Pancasila
             const resPerisai = await kisi.request('/visual-render', {
@@ -457,9 +464,9 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'perisai_pancasila', params: { sila: 1, label: 'X' } })
             });
-            const bodyPerisai = await resPerisai.json();
+            const bodyPerisai = await readApiRecord(resPerisai);
             expect(bodyPerisai.success).toBe(true);
-            expect(bodyPerisai.data.svg).toContain('Perisai Garuda Pancasila');
+            expect(stringField(recordField(bodyPerisai, 'data'), 'svg')).toContain('Perisai Garuda Pancasila');
 
             // Test 3 template SVG baru:
             // 6. Busur Derajat
@@ -468,11 +475,12 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'busur_derajat', params: { derajat: 60, label: 'X' } })
             });
-            const bodyBusur = (await resBusur.json()) as any;
+            const bodyBusur = await readApiRecord(resBusur);
             expect(bodyBusur.success).toBe(true);
-            expect(bodyBusur.data.svg).toContain('Pengukuran Sudut Busur Derajat');
-            expect(bodyBusur.data.svg).toContain('0°');
-            expect(bodyBusur.data.svg).toContain('180°');
+            const busurData = recordField(bodyBusur, 'data');
+            expect(stringField(busurData, 'svg')).toContain('Pengukuran Sudut Busur Derajat');
+            expect(stringField(busurData, 'svg')).toContain('0°');
+            expect(stringField(busurData, 'svg')).toContain('180°');
 
             // 7. Magnet
             const resMagnet = await kisi.request('/visual-render', {
@@ -480,10 +488,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'magnet', params: { interaksi: 'tarik', pointer: 'kanan2', label: 'X' } })
             });
-            const bodyMagnet = (await resMagnet.json()) as any;
+            const bodyMagnet = await readApiRecord(resMagnet);
             expect(bodyMagnet.success).toBe(true);
-            expect(bodyMagnet.data.svg).toContain('Interaksi Gaya Magnet');
-            expect(bodyMagnet.data.svg).toContain('[X]');
+            const magnetData = recordField(bodyMagnet, 'data');
+            expect(stringField(magnetData, 'svg')).toContain('Interaksi Gaya Magnet');
+            expect(stringField(magnetData, 'svg')).toContain('[X]');
 
             // 8. Sifat Cahaya
             const resCahaya = await kisi.request('/visual-render', {
@@ -491,10 +500,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'sifat_cahaya', params: { peristiwa: 'pembiasan', pointer: 'X', label: 'X' } })
             });
-            const bodyCahaya = (await resCahaya.json()) as any;
+            const bodyCahaya = await readApiRecord(resCahaya);
             expect(bodyCahaya.success).toBe(true);
-            expect(bodyCahaya.data.svg).toContain('Diagram Sifat Cahaya (Pembiasan)');
-            expect(bodyCahaya.data.svg).toContain('Garis Normal');
+            const cahayaData = recordField(bodyCahaya, 'data');
+            expect(stringField(cahayaData, 'svg')).toContain('Diagram Sifat Cahaya (Pembiasan)');
+            expect(stringField(cahayaData, 'svg')).toContain('Garis Normal');
         });
     });
 
@@ -693,9 +703,9 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             });
 
             expect(res.status).toBe(401);
-            const data = await res.json();
+            const data = await readApiRecord(res);
             expect(data.success).toBe(false);
-            expect(data.error?.message).toContain('belum login');
+            expect(stringField(recordField(data, 'error'), 'message')).toContain('login');
         });
     });
 
@@ -704,16 +714,16 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
             const kisiRoute = (await import('../src/routes/kisi')).default;
             const res = await kisiRoute.request('/proxy-image');
             expect(res.status).toBe(400);
-            const data = await res.json();
-            expect(data.error?.message).toContain('url wajib disertakan');
+            const data = await readApiRecord(res);
+            expect(stringField(recordField(data, 'error'), 'message')).toContain('url wajib disertakan');
         });
 
         it('should reject non-http/https protocol with 400', async () => {
             const kisiRoute = (await import('../src/routes/kisi')).default;
             const res = await kisiRoute.request('/proxy-image?url=ftp://example.com/image.png');
             expect(res.status).toBe(400);
-            const data = await res.json();
-            expect(data.error?.message).toContain('tidak didukung');
+            const data = await readApiRecord(res);
+            expect(stringField(recordField(data, 'error'), 'message')).toContain('tidak didukung');
         });
 
         it('should reject SSRF attempts to localhost or internal IP with 403', async () => {

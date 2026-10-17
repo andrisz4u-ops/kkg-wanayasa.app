@@ -1,192 +1,59 @@
-# Portal Digital KKG Gugus 3 Wanayasa
+# RuangKKG Wanayasa
 
-Portal Digital untuk Kelompok Kerja Guru (KKG) Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta.
+Ruang kerja digital KKG Gugus 3 Wanayasa untuk mengelola kegiatan komunitas dan menyusun perangkat ajar. Guru dapat menggunakan Analisis CP, RPP, asesmen, slide, dan game edukasi. Pengelola memiliki fitur program sekolah, presensi, sertifikat, surat, materi, forum, dan laporan.
 
-## Fitur Utama
+## Teknologi
 
-### 1. Generator Surat Undangan KKG
-- Form input lengkap: jenis kegiatan, tanggal, waktu, tempat, agenda, peserta
-- Generate otomatis menggunakan **Mistral Large 3 AI**
-- Preview surat + download PDF
-- Riwayat surat yang pernah dibuat
+- Hono dan TypeScript pada Cloudflare Pages Functions
+- Antarmuka JavaScript dengan Tailwind CSS
+- Cloudflare D1 untuk data dan R2 untuk berkas
+- Penyedia AI dikonfigurasi melalui panel administrator
 
-### 2. Generator Program Kerja KKG
-- Input visi, misi, daftar kegiatan (dinamis)
-- Generate dokumen program kerja lengkap dengan AI
-- Format sesuai pedoman Kemendikbud
-- Preview + download PDF
+## Menjalankan secara lokal
 
-### 3. Absensi Digital
-- Daftar kegiatan dengan check-in kehadiran
-- Rekap kehadiran per guru
-- Admin bisa menambahkan kegiatan baru
+Gunakan Node.js 24. Simpan secret lokal di `.dev.vars`, bukan di Git.
 
-### 4. Repository Materi
-- Upload & download materi pembelajaran
-- Kategori: RPP, Modul, Silabus, Media Ajar, Soal
-- Filter berdasarkan jenjang dan jenis
-
-### 5. Direktori Guru
-- Data anggota KKG (nama, NIP, sekolah, mata pelajaran, kontak)
-- Pencarian guru
-
-### 6. Forum Diskusi
-- Thread diskusi per topik
-- Balasan/reply
-- Kategori: Best Practice, Kurikulum, Teknologi, dll.
-
-### 7. Pengumuman & Jadwal
-- Admin bisa memposting pengumuman
-- Fitur sematkan (pin) pengumuman penting
-
-### 8. Panel Admin
-- Dashboard statistik
-- Kelola pengguna (role, reset password)
-- Pengaturan API Key Mistral
-- Konfigurasi data KKG
-
-## Tech Stack
-- **Backend**: Hono (TypeScript) pada Cloudflare Workers
-- **Frontend**: Vanilla JS SPA + Tailwind CSS + Font Awesome
-- **Database**: Cloudflare D1 (SQLite)
-- **AI**: Mistral Large 3 API
-- **Deployment**: Cloudflare Pages
-
-## Akun Demo
-| Email | Password | Role |
-|-------|----------|------|
-| admin@kkg-wanayasa.id | admin123 | Admin |
-| siti@kkg-wanayasa.id | admin123 | User |
-| budi@kkg-wanayasa.id | admin123 | User |
-| dewi@kkg-wanayasa.id | admin123 | User |
-| ahmad@kkg-wanayasa.id | admin123 | User |
-
-## Struktur Proyek
-```
-webapp/
-├── src/
-│   ├── index.tsx            # Main Hono app + routes
-│   ├── lib/
-│   │   ├── auth.ts          # Authentication utilities
-│   │   └── mistral.ts       # Mistral AI integration
-│   ├── routes/
-│   │   ├── auth.ts          # Login/Register/Logout
-│   │   ├── surat.ts         # Generator Surat Undangan
-│   │   ├── proker.ts        # Generator Program Kerja
-│   │   ├── absensi.ts       # Absensi Digital
-│   │   ├── guru.ts          # Direktori Guru
-│   │   ├── pengumuman.ts    # Pengumuman
-│   │   ├── forum.ts         # Forum Diskusi
-│   │   ├── materi.ts        # Repository Materi
-│   │   └── admin.ts         # Panel Admin
-│   └── templates/
-│       └── layout.ts        # HTML template
-├── public/static/
-│   └── app.js               # Frontend SPA
-├── migrations/
-│   └── 0001_initial_schema.sql
-├── seed.sql                 # Data demo
-├── wrangler.jsonc           # Cloudflare config
-├── vite.config.ts           # Build config
-├── ecosystem.config.cjs     # PM2 config
-└── package.json
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/login` - Login
-- `POST /api/auth/register` - Register
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/me` - Get current user
-
-### Surat Undangan
-- `POST /api/surat/generate` - Generate surat (requires login)
-- `GET /api/surat/history` - Riwayat surat
-- `GET /api/surat/:id` - Detail surat
-- `DELETE /api/surat/:id` - Hapus surat
-
-### Program Kerja
-- `POST /api/proker/generate` - Generate proker (requires login)
-- `GET /api/proker/history` - Riwayat proker
-- `GET /api/proker/:id` - Detail proker
-- `DELETE /api/proker/:id` - Hapus proker
-
-### Absensi
-- `GET /api/absensi/kegiatan` - List kegiatan
-- `POST /api/absensi/kegiatan` - Tambah kegiatan (admin)
-- `POST /api/absensi/checkin` - Check-in kehadiran
-- `GET /api/absensi/kegiatan/:id/absensi` - Daftar hadir per kegiatan
-- `GET /api/absensi/rekap` - Rekap kehadiran
-
-### Guru
-- `GET /api/guru` - Daftar guru (public)
-- `GET /api/guru/sekolah` - Daftar sekolah
-- `PUT /api/guru/:id` - Update profil
-- `PUT /api/guru/:id/role` - Update role (admin)
-
-### Forum
-- `GET /api/forum/threads` - List thread
-- `GET /api/forum/threads/:id` - Detail thread + replies
-- `POST /api/forum/threads` - Buat thread baru
-- `POST /api/forum/threads/:id/reply` - Balas thread
-
-### Pengumuman
-- `GET /api/pengumuman` - List pengumuman (public)
-- `POST /api/pengumuman` - Buat pengumuman (admin)
-- `PUT /api/pengumuman/:id` - Edit (admin)
-- `DELETE /api/pengumuman/:id` - Hapus (admin)
-
-### Materi
-- `GET /api/materi` - List materi (public)
-- `POST /api/materi` - Upload materi
-- `POST /api/materi/:id/download` - Track download
-- `DELETE /api/materi/:id` - Hapus materi
-
-### Admin
-- `GET /api/admin/dashboard` - Dashboard stats
-- `GET /api/admin/settings` - Get settings
-- `PUT /api/admin/settings` - Update settings
-- `GET /api/admin/users` - List users
-- `POST /api/admin/users/:id/reset-password` - Reset password
-
-### Database
-- `GET /api/init-db` - Initialize database (first time only)
-
-## Deployment ke Cloudflare Pages
-
-### 1. Setup
 ```bash
-npm install
+npm ci
+npm run db:migrate:local
+npm run dev
 ```
 
-### 2. Buat D1 Database
-```bash
-npx wrangler d1 create kkg-production
-# Copy database_id ke wrangler.jsonc
-```
+`npm run db:seed` mengisi data contoh untuk pengembangan. Data itu mencakup akun demo dan tidak boleh digunakan di produksi. Arsip dokumen pada `public/static/js/storage-archive.js` saat ini disimpan di browser pengguna; riwayat tersebut belum tersinkron antarperangkat.
 
-### 3. Deploy
+## Pemeriksaan sebelum rilis
+
 ```bash
+npm run check:secrets
+npm test
 npm run build
-npx wrangler pages project create kkg-gugus3-wanayasa --production-branch main
-npx wrangler pages deploy dist --project-name kkg-gugus3-wanayasa
 ```
 
-### 4. Set API Key Mistral
-Setelah deploy, login sebagai admin dan masukkan API Key Mistral di halaman Admin > Pengaturan.
+Ketiga pemeriksaan ini berjalan pada setiap pull request melalui `.github/workflows/verify.yml`. Pemeriksaan TypeScript penuh belum masuk CI karena masih ada galat tipe pada generator DOCX, impor modul JavaScript, dan fixture tes. Build yang berhasil tidak berarti pemeriksaan tipe telah bersih.
 
-Dapatkan API Key dari: https://console.mistral.ai/
+## Database dan deploy
 
-### 5. Inisialisasi Database
-Buka URL: `https://kkg-gugus3-wanayasa.pages.dev/api/init-db`
+Migrasi berurutan berada di `migrations/`. Untuk database produksi yang terdaftar di `wrangler.jsonc`, tinjau migrasi dan siapkan cadangan sebelum menjalankan:
 
-## Catatan Penting
-- Semua fitur **read-only** bisa diakses tanpa login
-- Fitur generate surat/proker, upload, dan posting memerlukan login
-- Admin bisa mengelola semua user, pengumuman, dan data master
-- API Key Mistral harus dikonfigurasi admin untuk fitur AI
-- Bahasa Indonesia digunakan di seluruh antarmuka
+```bash
+npx wrangler d1 migrations apply kkg-wanayasa-db --remote
+npm run deploy:prod
+```
 
-## Status: Aktif
-Terakhir diperbarui: 16 Februari 2026 - Migrasi Repository kkg-wanayasa.app
+Migrasi `0031_ai_generation_feature_accuracy.sql` memperluas kategori analitik AI. Catatan lama dipertahankan dan diberi status `legacy_uncertain`; catatan baru memakai kategori fitur sebenarnya. Jangan menafsirkan angka lama sebagai pengukuran yang sepenuhnya akurat.
+
+Endpoint `POST /api/init-db` dan `POST /api/db-patch/fix-notifications` hanya tersedia ketika `ENVIRONMENT=development` dan meminta sesi administrator. Keduanya tidak tersedia di produksi. Inisialisasi produksi dilakukan melalui migrasi, bukan lewat URL aplikasi.
+
+Sistem saat ini hanya menerima tenant utama `kkg-gugus-3-wanayasa`. Akun dan header tenant lain ditolak sampai semua kueri data dibatasi berdasarkan organisasi. Jangan membuka tenant tambahan hanya dengan membuat baris pada tabel `tenants`.
+
+## Struktur utama
+
+- `src/index.tsx`: aplikasi Hono dan pendaftaran rute
+- `src/routes/`: API tiap fitur
+- `src/lib/`: autentikasi, AI, penyimpanan, dan generator dokumen
+- `public/static/js/`: antarmuka pengguna
+- `migrations/`: perubahan skema D1
+- `tests/`: pengujian Vitest
+- `DESIGN.md`: arah desain produk
+
+Prompt dan format keluaran RPP serta Analisis CP merupakan perilaku produk yang perlu dijaga saat memperbaiki antarmuka.

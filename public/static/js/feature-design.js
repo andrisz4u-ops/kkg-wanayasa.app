@@ -193,6 +193,11 @@ export function mountFeatureDesign(page, app) {
   root.classList.add('feature-workspace');
   root.dataset.featurePage = page;
   decorate(root);
+  root.classList.remove('os-page-enter');
+  void root.offsetWidth;
+  root.classList.add('os-page-enter');
+  root.addEventListener('animationend', () => root.classList.remove('os-page-enter'), { once: true });
+  setTimeout(() => root.classList.remove('os-page-enter'), 500);
 
   const refresh = () => {
     decorate(root);

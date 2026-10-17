@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import banksoal from '../src/routes/banksoal';
+import { booleanField, readApiRecord, recordField } from './helpers/typed-api-response';
 
 const mockUser = {
     id: 1,
@@ -51,7 +52,7 @@ const createMockDb = (authenticated = true, userOverride = {}) => {
                     if (query.includes('COUNT(*) as total FROM bank_soal')) {
                         return { total: 1 };
                     }
-                    if (query.includes('bank_soal WHERE id = ?') || query.includes('bank_soal bs WHERE id = ?')) {
+                    if (query.includes('bank_soal') && query.includes('WHERE') && query.includes('id = ?')) {
                         return {
                             id: 1,
                             user_id: 2, // Question belongs to user 2
@@ -71,7 +72,7 @@ const createMockDb = (authenticated = true, userOverride = {}) => {
                     }
                     return null;
                 }),
-                run: vi.fn(async () => ({ success: true, meta: { last_row_id: 1 } }))
+                run: vi.fn(async () => ({ success: true, meta: { last_row_id: 1, changes: 1 } }))
             };
 
             return {
@@ -79,7 +80,7 @@ const createMockDb = (authenticated = true, userOverride = {}) => {
                 bind: vi.fn((..._args: any[]) => runner)
             };
         }),
-        batch: vi.fn(async () => [])
+        batch: vi.fn(async () => [{ meta: { changes: 1 } }])
     };
 };
 
@@ -101,11 +102,12 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: createMockDb(true) } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.items).toBeDefined();
-        expect(Array.isArray(data.data.items)).toBe(true);
-        expect(data.data.pagination).toBeDefined();
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        const payload = recordField(data, 'data');
+        expect(payload.items).toBeDefined();
+        expect(Array.isArray(payload.items)).toBe(true);
+        expect(payload.pagination).toBeDefined();
     });
 
     it('should return stats for bank soal', async () => {
@@ -117,9 +119,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: createMockDb(true) } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.total_soal).toBeDefined();
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        expect(recordField(data, 'data').total_soal).toBeDefined();
     });
 
     it('should reject review with invalid rating score', async () => {
@@ -136,9 +138,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: createMockDb(true) } as any);
 
         expect(res.status).toBe(400);
-        const data = await res.json();
-        expect(data.success).toBe(false);
-        expect(data.error?.message).toContain('Rating harus antara 1 dan 5');
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(false);
+        expect(recordField(data, 'error').message).toContain('Rating harus antara 1 dan 5');
     });
 
     it('should track usage when a question is used', async () => {
@@ -150,9 +152,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: createMockDb(true) } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.tracked).toBe(true);
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        expect(booleanField(recordField(data, 'data'), 'tracked')).toBe(true);
     });
 
     it('should allow submitting a valid review', async () => {
@@ -169,9 +171,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: createMockDb(true) } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.reviewed).toBe(true);
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        expect(booleanField(recordField(data, 'data'), 'reviewed')).toBe(true);
     });
 
     it('should allow owner (user_id 2) to delete their own question', async () => {
@@ -184,9 +186,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: mockDb } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.deleted).toBe(true);
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        expect(booleanField(recordField(data, 'data'), 'deleted')).toBe(true);
     });
 
     it('should allow admin to delete any question', async () => {
@@ -199,9 +201,9 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: mockDb } as any);
 
         expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(data.data.deleted).toBe(true);
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(true);
+        expect(booleanField(recordField(data, 'data'), 'deleted')).toBe(true);
     });
 
     it('should forbid non-owner non-admin user from deleting question', async () => {
@@ -214,8 +216,8 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: mockDb } as any);
 
         expect(res.status).toBe(403);
-        const data = await res.json();
-        expect(data.success).toBe(false);
+        const data = await readApiRecord(res);
+        expect(booleanField(data, 'success')).toBe(false);
     });
 
     it('should support flexible filtering by mapel and kelas (e.g. kelas=5 or kelas=Kelas 5)', async () => {
@@ -226,8 +228,8 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: mockDb } as any);
 
         expect(resNum.status).toBe(200);
-        const dataNum = await resNum.json();
-        expect(dataNum.success).toBe(true);
+        const dataNum = await readApiRecord(resNum);
+        expect(booleanField(dataNum, 'success')).toBe(true);
 
         const resNamed = await banksoal.request('/?kelas=Kelas%205&mapel=IPAS', {
             method: 'GET',
@@ -235,7 +237,7 @@ describe('Bank Soal Kolaboratif Route Tests', () => {
         }, { DB: mockDb } as any);
 
         expect(resNamed.status).toBe(200);
-        const dataNamed = await resNamed.json();
-        expect(dataNamed.success).toBe(true);
+        const dataNamed = await readApiRecord(resNamed);
+        expect(booleanField(dataNamed, 'success')).toBe(true);
     });
 });

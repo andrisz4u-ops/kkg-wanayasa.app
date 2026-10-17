@@ -73,7 +73,7 @@ export function enhanceFeatureStudio(root, outputSelector) {
   const entranceSelector = '.fs-heading, .fw-panel, .fs-search-toolbar';
   const entrance = [...root.querySelectorAll(entranceSelector)]
     .filter(element => safe(element) && !element.parentElement?.closest(entranceSelector))
-    .slice(0, 5);
+    .slice(0, 8);
   entrance.forEach((element, index) => {
     mark(element, 'os-reveal');
     mark(element, `os-step-${index}`);

@@ -7,6 +7,10 @@ import { generateLaporanBuffer } from '../lib/docx-generator';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, ErrorCodes } from '../lib/response';
 import type { LaporanData } from '../types';
+import { requireSession } from '../lib/session-middleware';
+import { requireAIAdmission } from '../lib/ai-admission';
+import { canAccessLaporan, canListAllLaporan, isLaporanStatus } from '../lib/laporan-policy';
+import { copyBytesToArrayBuffer } from '../lib/binary';
 
 type Bindings = {
     DB: D1Database;
@@ -28,21 +32,17 @@ async function checkLaporanAccess(c: any, id: string) {
 
     if (!user) return { user: null, allowed: false };
 
-    if (user.role === 'admin' || user.role === 'operator') {
-        return { user, allowed: true };
-    }
-
     const result = await c.env.DB.prepare(
-        "SELECT user_id FROM laporan_kegiatan WHERE id = ?"
+        "SELECT user_id, status FROM laporan_kegiatan WHERE id = ?"
     ).bind(id).first();
 
     if (!result) return { user, allowed: false, notFound: true };
 
-    return { user, allowed: result.user_id === user.id };
+    return { user, allowed: canAccessLaporan(user, result.user_id), status: result.status };
 }
 
 // POST /api/laporan/generate-content - Generate AI Content for Laporan
-laporan.post('/generate-content', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+laporan.post('/generate-content', requireSession, requireAIAdmission, rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
     const sessionId = getCookie(c.req.header('Cookie'), 'session');
     const user: any = await getCurrentUser(c.env.DB, sessionId);
 
@@ -157,7 +157,7 @@ laporan.get('/', async (c) => {
         let params: any[] = [];
 
         // If not admin/operator, only show own reports
-        if (user.role !== 'admin' && user.role !== 'operator') {
+        if (!canListAllLaporan(user)) {
             query += ` WHERE l.user_id = ?`;
             params.push(user.id);
         }
@@ -210,6 +210,8 @@ laporan.post('/', async (c) => {
 
     try {
         const body = await c.req.json<LaporanData>();
+        const status = body.status ?? 'draft';
+        if (!isLaporanStatus(status)) return Errors.validation(c, 'Status laporan tidak valid');
 
         const result = await c.env.DB.prepare(`
             INSERT INTO laporan_kegiatan (
@@ -226,7 +228,7 @@ laporan.post('/', async (c) => {
             body.pelaksanaan_waktu_tempat, body.pelaksanaan_materi, body.pelaksanaan_peserta,
             body.hasil_uraian, body.hasil_tindak_lanjut, body.hasil_dampak,
             body.penutup_simpulan, body.penutup_saran,
-            JSON.stringify(body.lampiran_foto || []), body.status || 'draft'
+            JSON.stringify(body.lampiran_foto || []), status
         ).run();
 
         return successResponse(c, { id: result.meta.last_row_id }, 'Laporan berhasil dibuat', 201);
@@ -239,7 +241,7 @@ laporan.post('/', async (c) => {
 // PUT /api/laporan/:id - Update laporan
 laporan.put('/:id', async (c) => {
     const id = c.req.param('id');
-    const { user, allowed, notFound } = await checkLaporanAccess(c, id);
+    const { user, allowed, notFound, status: previousStatus } = await checkLaporanAccess(c, id);
 
     if (!user) return Errors.unauthorized(c);
     if (notFound) return Errors.notFound(c, 'Laporan');
@@ -247,8 +249,13 @@ laporan.put('/:id', async (c) => {
 
     try {
         const body = await c.req.json<LaporanData>();
+        if (body.status !== undefined && !isLaporanStatus(body.status)) {
+            return Errors.validation(c, 'Status laporan tidak valid');
+        }
+        if (!isLaporanStatus(previousStatus)) return Errors.validation(c, 'Status laporan tidak valid');
+        const nextStatus = body.status ?? previousStatus;
 
-        await c.env.DB.prepare(`
+        const result = await c.env.DB.prepare(`
             UPDATE laporan_kegiatan SET
                 judul_laporan = ?, periode = ?,
                 pendahuluan_latar_belakang = ?, pendahuluan_tujuan = ?, pendahuluan_manfaat = ?,
@@ -257,16 +264,18 @@ laporan.put('/:id', async (c) => {
                 penutup_simpulan = ?, penutup_saran = ?,
                 lampiran_foto = ?, status = ?,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = ? AND status = ?
         `).bind(
             body.judul_laporan, body.periode,
             body.pendahuluan_latar_belakang, body.pendahuluan_tujuan, body.pendahuluan_manfaat,
             body.pelaksanaan_waktu_tempat, body.pelaksanaan_materi, body.pelaksanaan_peserta,
             body.hasil_uraian, body.hasil_tindak_lanjut, body.hasil_dampak,
             body.penutup_simpulan, body.penutup_saran,
-            JSON.stringify(body.lampiran_foto || []), body.status,
-            id
+            JSON.stringify(body.lampiran_foto || []), nextStatus,
+            id, previousStatus
         ).run();
+
+        if (result.meta.changes === 0) return c.json({ success: false, error: { code: 'CONFLICT', message: 'Laporan telah berubah. Muat ulang sebelum menyimpan.' } }, 409);
 
         return successResponse(c, null, 'Laporan berhasil diperbarui');
     } catch (e: any) {
@@ -319,7 +328,7 @@ laporan.get('/:id/docx', async (c) => {
 
         const buffer = await generateLaporanBuffer(data, settings);
 
-        return new Response(buffer, {
+        return new Response(copyBytesToArrayBuffer(buffer), {
             headers: {
                 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'Content-Disposition': `attachment; filename="Laporan_KKG_${data.judul_laporan.replace(/[^a-zA-Z0-9]/g, '_')}.docx"`,

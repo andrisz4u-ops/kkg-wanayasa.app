@@ -26,6 +26,7 @@ export interface ProgramSekolahData {
     tahun_ajaran: string;
     jenjang?: string;
     fase_kelas?: string;
+    fase_jenjang: string;
     penyusun: string;
     nip_penyusun?: string;
     jabatan_penyusun?: string;
@@ -59,6 +60,7 @@ export interface ProgramSekolahData {
       sasaran?: string;
       pic?: string;
       anggaran?: string;
+      tahapan?: string[];
     }>;
     tim_pelaksana: Array<{
       no?: number;
@@ -81,6 +83,7 @@ export interface ProgramSekolahData {
       total: string;
       sumber: string;
     }>;
+    total_anggaran: string;
   };
   bab_4_monitoring_evaluasi: {
     mekanisme: string | string[];
@@ -301,7 +304,7 @@ interface TableCellOptions {
   color?: string;
   align?: (typeof AlignmentType)[keyof typeof AlignmentType];
   shading?: string;
-  vAlign?: (typeof VerticalAlign)[keyof typeof VerticalAlign];
+  vAlign?: 'top' | 'center' | 'bottom';
   margins?: { top: number; bottom: number; left: number; right: number };
   colSpan?: number;
   children?: Paragraph[];
@@ -595,7 +598,7 @@ function buildTemplateSpecificLampiran(templateId: string, meta: any, tahun: str
         children: [
           new TextRun({
             text: 'Petunjuk: Berikan tanda centang (✓) pada hari anak mempraktikkan kebiasaan secara mandiri. Paraf orang tua dibubuhkan setiap akhir pekan.',
-            italic: true,
+            italics: true,
             font: FONT_NAME,
             size: 16,
             color: '64748B',

@@ -96,8 +96,8 @@ export function renderEducatorDashboard() {
     <aside class="wk-studio-tools" aria-labelledby="workspace-tools-title">
       <div class="wk-tool-heading"><div><p class="wk-section-kicker">MULAI PEKERJAAN</p><h2 id="workspace-tools-title">Perangkat ajar</h2></div><p>Pilih yang ingin Anda kerjakan.</p></div>
       <nav aria-label="Pintasan perangkat ajar" class="wk-studio-tool-navigation">
-        ${tools.filter(tool => tool.variant).map(tool => `<button type="button" class="wk-studio-launch wk-studio-launch-${tool.variant}" onclick="navigate('${tool.page}')"><span class="wk-studio-launch-icon">${icon(tool.icon)}</span><span><strong>${tool.title}</strong><small>${tool.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}
-        <div class="wk-studio-support-tools">${tools.filter(tool => !tool.variant).map(tool => `<button type="button" class="wk-support-tool" onclick="navigate('${tool.page}')"><span class="wk-support-tool-icon">${icon(tool.icon)}</span><span><strong>${tool.title}</strong><small>${tool.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}</div>
+        ${tools.filter(tool => tool.variant).map(tool => `<button type="button" data-tool="${tool.page}" class="wk-studio-launch wk-studio-launch-${tool.variant}" onclick="navigate('${tool.page}')"><span class="wk-studio-launch-icon">${icon(tool.icon)}</span><span><strong>${tool.title}</strong><small>${tool.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}
+        <div class="wk-studio-support-tools">${tools.filter(tool => !tool.variant).map(tool => `<button type="button" data-tool="${tool.page}" class="wk-support-tool" onclick="navigate('${tool.page}')"><span class="wk-support-tool-icon">${icon(tool.icon)}</span><span><strong>${tool.title}</strong><small>${tool.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}</div>
       </nav>
     </aside>
 
@@ -117,7 +117,7 @@ export function renderEducatorDashboard() {
           { page: 'materi', title: 'Bank materi', description: 'Materi dari rekan pendidik', icon: 'fa-folder-open' },
           { page: 'forum', title: 'Forum diskusi', description: 'Diskusi dan praktik baik', icon: 'fa-comments' },
           { page: 'games', title: 'Game edukasi', description: 'Aktivitas untuk pembelajaran', icon: 'fa-gamepad' },
-        ].map(item => `<button type="button" onclick="navigate('${item.page}')">${icon(item.icon)}<span><strong>${item.title}</strong><small>${item.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}</div>
+        ].map(item => `<button type="button" data-tool="${item.page}" onclick="navigate('${item.page}')">${icon(item.icon)}<span><strong>${item.title}</strong><small>${item.description}</small></span>${icon('fa-chevron-right')}</button>`).join('')}</div>
         <p id="workspace-materials" class="wk-materials-context" aria-live="polite">Telusuri materi yang dibagikan rekan pendidik.</p>
       </nav>
     </div>

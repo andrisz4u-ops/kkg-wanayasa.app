@@ -436,7 +436,7 @@ export async function generatePromesDocxBuffer(data: AnalisisCpDocxInput, target
 
         for (let w = 1; w <= 30; w++) {
           const allocJp = rowAlloc[w];
-          const weekStatus = rpeData.weekStatusMap[w];
+          const weekStatus = rpeData.weekStatusMap[w as keyof typeof rpeData.weekStatusMap];
           const isNonKbm = weekStatus && !weekStatus.isKbm;
 
           rowCells.push(

@@ -45,7 +45,7 @@ describe('Educator workspace', () => {
   });
 
   it('restores a requested document through its existing module callback', () => {
-    const doc = saveDocArchive({ module: 'rpp', title: 'RPP saya', content: { topik: 'Pecahan' }, inputData: {} });
+    const doc = saveDocArchive({ module: 'rpp', title: 'RPP saya', content: { topik: 'Pecahan' }, inputData: {} })!;
     state.pageParams = { archiveId: doc.id };
     const onSelect = vi.fn();
     openArchiveDrawer({ module: 'rpp', onSelect });
@@ -55,7 +55,7 @@ describe('Educator workspace', () => {
   });
 
   it('shows stored creation dates and sends Buka to the original module archive', () => {
-    const doc = saveDocArchive({ module: 'kisi', title: 'Asesmen Pecahan', subtitle: 'Matematika kelas 5', content: {}, inputData: {} });
+    const doc = saveDocArchive({ module: 'kisi', title: 'Asesmen Pecahan', subtitle: 'Matematika kelas 5', content: {}, inputData: {} })!;
     document.body.innerHTML = renderEducatorDashboard();
     const button = document.querySelector('#workspace-documents button');
     expect(button?.textContent).toContain('Buka');
@@ -66,7 +66,7 @@ describe('Educator workspace', () => {
   });
 
   it('does not restore a document belonging to a different user', () => {
-    const doc = saveDocArchive({ module: 'rpp', title: 'Pribadi', content: {}, inputData: {} });
+    const doc = saveDocArchive({ module: 'rpp', title: 'Pribadi', content: {}, inputData: {} })!;
     state.user = { id: 99, role: 'user', nama: 'Guru lain' };
     state.pageParams = { archiveId: doc.id };
     const onSelect = vi.fn();
@@ -76,7 +76,7 @@ describe('Educator workspace', () => {
   });
 
   it.each(['user', 'operator'])('does not request approval data for %s', async role => {
-    state.user.role = role;
+    state.user!.role = role;
     document.body.innerHTML = renderEducatorDashboard();
     await initEducatorDashboard();
     expect(vi.mocked(api).mock.calls.some(([path]) => path === '/admin/users/pending')).toBe(false);
@@ -85,7 +85,7 @@ describe('Educator workspace', () => {
   });
 
   it.each(['admin', 'super_admin'])('shows approval data for %s', async role => {
-    state.user.role = role;
+    state.user!.role = role;
     vi.mocked(api).mockImplementation(async path => ({ success: true, data: path === '/admin/users/pending' ? [{ id: 12 }] : [] }));
     document.body.innerHTML = renderEducatorDashboard();
     await initEducatorDashboard();
@@ -106,7 +106,7 @@ describe('Educator workspace', () => {
   });
 
   it('escapes names and document titles before rendering', () => {
-    state.user.nama = '<img src=x onerror=alert(1)>';
+    state.user!.nama = '<img src=x onerror=alert(1)>';
     saveDocArchive({ module: 'rpp', title: '<script>alert(1)</script>', content: {}, inputData: {} });
     document.body.innerHTML = renderEducatorDashboard();
     expect(document.querySelector('#educator-workspace img')).toBeNull();

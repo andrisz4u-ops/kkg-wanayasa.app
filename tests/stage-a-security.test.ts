@@ -10,6 +10,7 @@ import { allowedCorsOrigin } from '../src/lib/cors-origin';
 import { attendanceSummary } from '../src/lib/attendance-summary';
 import { reserveSuratNumbers, SuratNumberConflict } from '../src/lib/surat-numbering';
 import { SqliteD1 } from './helpers/sqlite-d1';
+import { arrayField, recordField, readApiRecord } from './helpers/typed-api-response';
 
 vi.mock('../src/lib/auth', async importOriginal => ({ ...await importOriginal<typeof import('../src/lib/auth')>(), getCurrentUser: vi.fn() }));
 
@@ -26,6 +27,7 @@ beforeEach(() => {
     CREATE TABLE absensi(user_id INTEGER, kegiatan_id INTEGER, status TEXT);
     INSERT INTO absensi VALUES(1, 1, 'hadir'), (1, 2, 'hadir');
     CREATE TABLE surat_undangan(id INTEGER PRIMARY KEY, user_id INTEGER, nomor_surat TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, metadata TEXT);`);
+  db.sqlite.exec(readFileSync('migrations/0032_ai_admission.sql', 'utf8'));
   app = new Hono().route('/presentation', presentation).route('/tts', tts).route('/guru', guru).route('/absensi', absensi);
 });
 afterEach(() => { db.close(); vi.clearAllMocks(); });
@@ -40,26 +42,26 @@ describe('Session gates and contact privacy', () => {
   });
   it('redacts anonymous teacher detail while retaining authenticated contact fields', async () => {
     db.sqlite.exec("UPDATE users SET role_label = 'Guru Kelas' WHERE id = 1");
-    const anonymous = (await (await request('/guru/1')).json()).data;
+    const anonymous = recordField(await readApiRecord(await request('/guru/1')), 'data');
     expect(anonymous.nama).toBe('Guru, "A"');
     expect(anonymous.role).toBe('Guru Kelas');
     for (const field of ['email', 'nip', 'no_hp']) expect(anonymous).not.toHaveProperty(field);
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 1, role: 'user' } as any);
-    expect((await (await request('/guru/1')).json()).data).toMatchObject({ nip: '123', no_hp: '08123', email: 'contoh@example.test' });
+    expect(recordField(await readApiRecord(await request('/guru/1')), 'data')).toMatchObject({ nip: '123', no_hp: '08123', email: 'contoh@example.test' });
   });
   it('permits an authenticated caller to reach normal payload validation', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 1, role: 'user' } as any);
-    expect((await request('/presentation/outline', { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } })).status).toBe(400);
+    expect((await request('/presentation/outline', { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' } })).status).toBe(400);
   });
 });
 
 describe('Attendance period consistency', () => {
   it('counts numerator and denominator in the same interval and keeps teachers with no attendance', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 1, role: 'admin' } as any);
-    const data = (await (await request('/absensi/rekap?start_date=2026-10-05&end_date=2026-10-05')).json()).data;
+    const data = arrayField(await readApiRecord(await request('/absensi/rekap?start_date=2026-10-05&end_date=2026-10-05', { headers: { 'X-Session-Id': 'test-session' } })), 'data');
     expect(data[0]).toMatchObject({ total_hadir: 1, total_tercatat: 1, total_kegiatan: 1, total_alpha: 0 });
     expect(data[1]).toMatchObject({ total_hadir: 0, total_tercatat: 0, total_kegiatan: 1, total_alpha: 1 });
-    const csv = await (await request('/absensi/rekap/export?start_date=2026-10-05&end_date=2026-10-05')).text();
+    const csv = await (await request('/absensi/rekap/export?start_date=2026-10-05&end_date=2026-10-05', { headers: { 'X-Session-Id': 'test-session' } })).text();
     expect(csv).toContain('"Guru, ""A""",123,SD Uji,1,0,0,0,1,100.0%');
     expect(csv).not.toContain('200.0%');
   });

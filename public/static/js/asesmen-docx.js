@@ -12,6 +12,13 @@
  */
 
 import { getActiveTahunAjaran } from './utils.js';
+import {
+  ASSESSMENT_IMAGE_LIMITS,
+  AssessmentImagePreflightError,
+  collectExpectedAssessmentImages,
+  preflightAssessmentImages,
+  validatePreparedAssessmentImages,
+} from './assessment-image-preflight.js';
 
 const FONT_LATIN  = 'Times New Roman';
 const FONT_SUNDA  = 'Noto Sans Sundanese';
@@ -30,7 +37,9 @@ function splitBySundanese(text) {
   let last = 0;
   const re = /[\u1B80-\u1BBF\u1CC0-\u1CCF]+/g;
   let m;
-  while ((m = re.exec(text)) !== null) {
+  while (true) {
+    m = re.exec(text);
+    if (m === null) break;
     if (m.index > last) {
       segments.push({ text: text.slice(last, m.index), isSunda: false });
     }
@@ -94,6 +103,18 @@ function makeParaRaw(children, opts = {}) {
   };
   if (tabStops) paraOpts.tabStops = tabStops;
   return new window.docx.Paragraph(paraOpts);
+}
+
+function makeAssessmentImageParagraph(image) {
+  return new window.docx.Paragraph({
+    alignment: window.docx.AlignmentType.LEFT,
+    spacing: { before: PT(3), after: PT(4) },
+    children: [new window.docx.ImageRun({
+      data: image.buffer,
+      transformation: { width: 220, height: 145 },
+      type: image.type,
+    })],
+  });
 }
 
 // ============================================================
@@ -535,219 +556,342 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
   return items;
 }
 
-// Helper: Konversi SVG string / SVG data URI menjadi PNG Data URL melalui Canvas untuk Word DOCX
-async function svgToPngDataUrl(svgUrlOrString, width = 480, height = 340) {
-  return new Promise((resolve, reject) => {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_ELEMENTS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop']);
+const SVG_ATTRIBUTES = new Set([
+  'xmlns', 'xmlns:xlink', 'viewbox', 'preserveaspectratio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+  'd', 'points', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
+  'stroke-dashoffset', 'stroke-opacity', 'opacity', 'transform', 'id', 'offset', 'stop-color', 'stop-opacity', 'gradientunits',
+  'gradienttransform', 'spreadmethod', 'font-family', 'font-size', 'font-weight', 'text-anchor', 'dominant-baseline', 'href', 'xlink:href',
+]);
 
-      let src = svgUrlOrString;
-      let blobUrl = null;
+function decodeSvgDataUri(value, maxBytes) {
+  const comma = value.indexOf(',');
+  if (comma < 0 || !/^data:image\/svg\+xml(?:;|,)/i.test(value)) throw new Error('Invalid SVG data URL');
+  const header = value.slice(0, comma).toLowerCase();
+  const payload = value.slice(comma + 1);
+  if (payload.length > maxBytes * 4) throw new Error('SVG input exceeds size limit');
+  let decoded;
+  if (header.includes(';base64')) {
+    const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+    const decodedLength = payload.length % 4 === 0 ? (payload.length / 4) * 3 - padding : Number.POSITIVE_INFINITY;
+    if (decodedLength < 0 || decodedLength > maxBytes || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload)) throw new Error('SVG input exceeds size limit');
+    const binary = window.atob(payload);
+    if (binary.length > maxBytes) throw new Error('SVG input exceeds size limit');
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } else {
+    decoded = decodeURIComponent(payload);
+    if (new TextEncoder().encode(decoded).byteLength > maxBytes) throw new Error('SVG input exceeds size limit');
+  }
+  return decoded;
+}
 
-      // Detect Safari (iOS & macOS) — needs base64 fallback for SVG Blob URLs
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
-                        /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (svgUrlOrString.trim().startsWith('<svg')) {
-        if (isSafari) {
-          // Safari fallback: use base64 data URI instead of Blob URL
-          const base64 = btoa(unescape(encodeURIComponent(svgUrlOrString)));
-          src = `data:image/svg+xml;base64,${base64}`;
-        } else {
-          const blob = new Blob([svgUrlOrString], { type: 'image/svg+xml;charset=utf-8' });
-          blobUrl = URL.createObjectURL(blob);
-          src = blobUrl;
-        }
-      } else if (svgUrlOrString.startsWith('data:image/svg+xml;utf8,')) {
-        const rawSvg = decodeURIComponent(svgUrlOrString.replace('data:image/svg+xml;utf8,', ''));
-        if (isSafari) {
-          const base64 = btoa(unescape(encodeURIComponent(rawSvg)));
-          src = `data:image/svg+xml;base64,${base64}`;
-        } else {
-          const blob = new Blob([rawSvg], { type: 'image/svg+xml;charset=utf-8' });
-          blobUrl = URL.createObjectURL(blob);
-          src = blobUrl;
-        }
+function sanitizeAssessmentSvg(source, maxBytes) {
+  if (typeof source !== 'string' || source.length > maxBytes
+    || /<!\s*(?:doctype|entity)\b/i.test(source)) throw new Error('SVG rejected');
+  const parser = new DOMParser();
+  const document = parser.parseFromString(source, 'image/svg+xml');
+  if (document.doctype || document.querySelector('parsererror')) throw new Error('SVG rejected');
+  const root = document.documentElement;
+  if (!root || root.localName.toLowerCase() !== 'svg' || root.namespaceURI !== SVG_NS) throw new Error('SVG rejected');
+  const elements = [...root.querySelectorAll('*'), root];
+  const ids = new Map();
+  for (const element of elements) {
+    const tag = element.localName.toLowerCase();
+    if (!SVG_ELEMENTS.has(tag) || element.namespaceURI !== SVG_NS) throw new Error('SVG rejected');
+    for (const attr of [...element.attributes]) {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim();
+      if (!SVG_ATTRIBUTES.has(name) || name.startsWith('on')) throw new Error('SVG rejected');
+      if (name === 'xmlns' && value !== SVG_NS) throw new Error('SVG rejected');
+      if (name === 'xmlns:xlink' && value !== 'http://www.w3.org/1999/xlink') throw new Error('SVG rejected');
+      if (name === 'id') {
+        if (!/^[A-Za-z_][\w.-]{0,127}$/.test(value) || ids.has(value)) throw new Error('SVG rejected');
+        ids.set(value, tag);
       }
-
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error('Canvas 2D context not available');
-
-          // Background putih bersih untuk lembar soal
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, width, height);
-
-          // Gambar SVG ke canvas
-          ctx.drawImage(img, 0, 0, width, height);
-
-          if (blobUrl) URL.revokeObjectURL(blobUrl);
-          resolve({ dataUrl: canvas.toDataURL('image/png'), type: 'png' });
-        } catch (err) {
-          if (blobUrl) URL.revokeObjectURL(blobUrl);
-          reject(err);
-        }
-      };
-
-      img.onerror = (e) => {
-        if (blobUrl) URL.revokeObjectURL(blobUrl);
-
-        // Retry with base64 fallback if Blob URL failed (cross-browser safety)
-        if (blobUrl && !isSafari && svgUrlOrString.trim().startsWith('<svg')) {
-          try {
-            const base64 = btoa(unescape(encodeURIComponent(svgUrlOrString)));
-            const retryImg = new Image();
-            retryImg.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              if (!ctx) { reject(new Error('Canvas 2D retry failed')); return; }
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(retryImg, 0, 0, width, height);
-              resolve({ dataUrl: canvas.toDataURL('image/png'), type: 'png' });
-            };
-            retryImg.onerror = () => reject(new Error('Failed to rasterize SVG (retry)'));
-            retryImg.src = `data:image/svg+xml;base64,${base64}`;
-            return;
-          } catch (retryErr) {
-            // fall through to reject
-          }
-        }
-        reject(new Error('Failed to rasterize SVG into Canvas'));
-      };
-
-      img.src = src;
-    } catch (e) {
-      reject(e);
+      if (name === 'href' || name === 'xlink:href') {
+        if (tag !== 'lineargradient' && tag !== 'radialgradient') throw new Error('SVG rejected');
+        if (!/^#[A-Za-z_][\w.-]{0,127}$/.test(value)) throw new Error('SVG rejected');
+      }
+      if (/url\s*\(/i.test(value) && !/^(?:url\(#[A-Za-z_][\w.-]{0,127}\))$/i.test(value)) throw new Error('SVG rejected');
+      if (name !== 'xmlns' && name !== 'xmlns:xlink'
+        && /(?:javascript:|https?:|data:|file:|expression\s*\(|@import)/i.test(value)) throw new Error('SVG rejected');
     }
+  }
+  for (const element of elements) {
+    for (const attr of [...element.attributes]) {
+      const value = attr.value.trim();
+      const localRef = value.match(/^url\(#([A-Za-z_][\w.-]{0,127})\)$/i);
+      if (localRef && !['lineargradient', 'radialgradient'].includes(ids.get(localRef[1]))) throw new Error('SVG rejected');
+      if ((attr.name.toLowerCase() === 'href' || attr.name.toLowerCase() === 'xlink:href')
+        && !['lineargradient', 'radialgradient'].includes(ids.get(value.slice(1)))) throw new Error('SVG rejected');
+    }
+  }
+  const gradientReferences = new Map();
+  for (const gradient of elements.filter(element => ['lineargradient', 'radialgradient'].includes(element.localName.toLowerCase()))) {
+    const id = gradient.getAttribute('id');
+    const href = gradient.getAttribute('href') || gradient.getAttribute('xlink:href');
+    if (id && href) gradientReferences.set(id, href.slice(1));
+  }
+  for (const start of gradientReferences.keys()) {
+    const visited = new Set();
+    let current = start;
+    while (gradientReferences.has(current)) {
+      if (visited.has(current)) throw new Error('SVG rejected');
+      visited.add(current);
+      current = gradientReferences.get(current);
+    }
+  }
+  const sanitized = new XMLSerializer().serializeToString(root);
+  if (new TextEncoder().encode(sanitized).byteLength > maxBytes) throw new Error('SVG output exceeds size limit');
+  return sanitized;
+}
+
+function imageToPngDataUrl(source, sourceType, signal, maxBytes) {
+  if (signal.aborted) return Promise.reject(new Error('image-operation-aborted'));
+  const blob = new Blob([source], { type: sourceType });
+  const objectUrl = URL.createObjectURL(blob);
+  const image = new Image();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      image.onload = null;
+      image.onerror = null;
+      signal.removeEventListener('abort', onAbort);
+      URL.revokeObjectURL(objectUrl);
+    };
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (error) reject(error);
+      else resolve(value);
+    };
+    const onAbort = () => finish(new Error('image-operation-aborted'));
+    image.onload = () => {
+      try {
+        if (!image.naturalWidth || !image.naturalHeight
+          || image.naturalWidth * image.naturalHeight > ASSESSMENT_IMAGE_LIMITS.maxPixels) {
+          throw new Error('svg-dimensions-invalid');
+        }
+        const width = 480;
+        const height = 340;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('canvas-unavailable');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/png');
+        const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+        if (!dataUrl.startsWith('data:image/png;base64,') || Math.ceil(base64.length / 4) * 3 > maxBytes + 3) {
+          throw new Error('raster-output-too-large');
+        }
+        finish(null, dataUrl);
+      } catch (error) { finish(error); }
+    };
+    image.onerror = () => finish(new Error('image-decode-failed'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    image.src = objectUrl;
   });
+}
+
+async function svgToPngBuffer(svg, signal, maxBytes) {
+  const sanitized = sanitizeAssessmentSvg(svg, maxBytes);
+  const dataUrl = await imageToPngDataUrl(sanitized, 'image/svg+xml;charset=utf-8', signal, maxBytes);
+  return dataUrlToImageBuffer(dataUrl, maxBytes);
+}
+
+function dataUrlToImageBuffer(dataUrl, maxBytes) {
+  const comma = dataUrl.indexOf(',');
+  if (comma < 0 || dataUrl.length > Math.ceil(maxBytes * 4 / 3) + 64) throw new Error('raster-output-too-large');
+  const binary = window.atob(dataUrl.slice(comma + 1));
+  if (binary.length === 0 || binary.length > maxBytes) throw new Error('raster-output-too-large');
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  return bytes.buffer;
 }
 
 // ============================================================
 // HELPER: Convert URL / SVG to Base64/Buffer (dengan Memory Cache)
 // ============================================================
-const imageBufferCache = new Map();
-
 /**
  * Pre-fetch seluruh buffer gambar asesmen di latar belakang begitu soal selesai dibuat/ditampilkan.
  * Saat tombol 'Unduh .docx' ditekan, seluruh buffer sudah siap di RAM sehingga pembuatan berkas sangat instan (< 300ms).
  */
 export function preloadAsesmenImages(data) {
-  if (!data) return;
-  const allItems = [
-    ...(data.pg || []),
-    ...(data.isian?.data || []),
-    ...(data.uraian || [])
-  ].filter(q => q && q.gambar && (q.gambar.url || q.gambar.svg));
-
-  allItems.forEach(q => {
-    fetchSafeImageBuffer(q.gambar.url, q.gambar.svg).catch(err => {
-      console.debug('Background preload image skipped:', err);
-    });
-  });
+  void preflightAssessmentImages(data, { loadImage: loadAssessmentImage }).then(result => {
+    if (!result.ready) console.debug('Background assessment image preload skipped (image unavailable)');
+  }).catch(() => console.debug('Background assessment image preload skipped (image unavailable)'));
 }
 
-async function fetchSafeImageBuffer(url, svgFallback) {
-  const cacheKey = url || svgFallback;
-  if (cacheKey && imageBufferCache.has(cacheKey)) {
-    return imageBufferCache.get(cacheKey);
-  }
+async function withRasterDeadline(work, parentSignal) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (parentSignal.aborted) controller.abort();
+  else parentSignal.addEventListener('abort', abort, { once: true });
+  let timer;
+  const pending = Promise.resolve().then(() => work(controller.signal));
+  pending.catch(() => {});
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => { controller.abort(); reject(new Error('raster-timeout')); }, ASSESSMENT_IMAGE_LIMITS.decodeTimeoutMs);
+  });
+  try { return await Promise.race([pending, timeout]); }
+  finally { clearTimeout(timer); parentSignal.removeEventListener('abort', abort); }
+}
 
+async function readBoundedResponse(response, signal, maxBytes) {
+  if (!response.body) throw new Error('empty-response');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  const cancelReader = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancelReader, { once: true });
   try {
-    if (!url && !svgFallback) throw new Error('Image URL is empty');
-
-    // 1. Jika berupa SVG (string atau SVG Data URI), rasterisasi ke PNG melalui Canvas
-    const isSvg = (url && (url.includes('image/svg+xml') || url.endsWith('.svg'))) || (svgFallback && svgFallback.includes('<svg'));
-    if (isSvg) {
-      try {
-        const { dataUrl } = await svgToPngDataUrl(svgFallback || url);
-        const base64Data = dataUrl.split(',')[1];
-        const binaryString = window.atob(base64Data);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const res = { buffer: bytes.buffer, type: 'png' };
-        if (cacheKey) imageBufferCache.set(cacheKey, res);
-        return res;
-      } catch (svgErr) {
-        console.warn('Rasterize SVG failed, trying fallback:', svgErr);
+    while (true) {
+      if (signal.aborted) throw new Error('request-aborted');
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error('image-too-large');
       }
+      chunks.push(value);
     }
-
-    // 2. Handle Data URI (Base64 JPEG / PNG)
-    if (url && url.startsWith('data:')) {
-      const mime = url.substring(5, url.indexOf(';'));
-      const imgType = mime.includes('png') ? 'png' : 'jpeg';
-      const base64Data = url.split(',')[1];
-      const binaryString = window.atob(base64Data);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const res = { buffer: bytes.buffer, type: imgType };
-      if (cacheKey) imageBufferCache.set(cacheKey, res);
-      return res;
-    }
-
-    // 3. Handle HTTP / HTTPS URLs (Unsplash / Wikimedia / Vultr Serverless Inference / dsb)
-    let fetchUrl = url;
-    try {
-      const parsed = new URL(url);
-      if (parsed.hostname.includes('unsplash.com')) {
-        parsed.searchParams.set('w', '400');
-        parsed.searchParams.set('h', '300');
-        parsed.searchParams.set('fit', 'crop');
-        parsed.searchParams.set('fm', 'jpg');
-        parsed.searchParams.set('cs', 'tinysrgb');
-        fetchUrl = parsed.toString();
-      }
-    } catch (_) {}
-
-    // Helper fetcher
-    async function doFetchBuffer(target) {
-      const resp = await fetch(target);
-      if (!resp.ok) throw new Error('Fetch status: ' + resp.status);
-      return await resp.arrayBuffer();
-    }
-
-    let buf;
-    // Jika URL berasal dari Vultr Object Storage yang memblokir CORS browser, langsung route lewat proxy
-    const isVultrOrCdn = fetchUrl.includes('vultrobjects.com') || fetchUrl.includes('vultrinference.com');
-    if (isVultrOrCdn) {
-      buf = await doFetchBuffer(`/api/kisi/proxy-image?url=${encodeURIComponent(fetchUrl)}`);
-    } else {
-      try {
-        buf = await doFetchBuffer(fetchUrl);
-      } catch (directErr) {
-        console.warn('Direct image fetch terblokir CORS / gagal, mencoba via /api/kisi/proxy-image:', directErr);
-        buf = await doFetchBuffer(`/api/kisi/proxy-image?url=${encodeURIComponent(fetchUrl)}`);
-      }
-    }
-
-    const isPng = url.toLowerCase().includes('.png');
-    const res = { buffer: buf, type: isPng ? 'png' : 'jpeg' };
-    if (cacheKey) imageBufferCache.set(cacheKey, res);
-    return res;
-  } catch (e) {
-    throw e;
+  } finally {
+    signal.removeEventListener('abort', cancelReader);
+    reader.releaseLock();
   }
+  if (total === 0) throw new Error('empty-response');
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes.buffer;
+}
+
+function decodeImageDataUrl(value, maxBytes) {
+  const comma = value.indexOf(',');
+  if (comma < 0) throw new Error('invalid-data-url');
+  const header = value.slice(0, comma).toLowerCase();
+  const payload = value.slice(comma + 1);
+  const mime = header.match(/^data:(image\/(?:png|jpeg|jpg|webp|svg\+xml))(?:;|$)/)?.[1];
+  if (!mime) throw new Error('unsupported-data-url');
+  if (payload.length > maxBytes * 4) throw new Error('image-too-large');
+  if (mime === 'image/svg+xml') return { mime, svg: decodeSvgDataUri(value, maxBytes) };
+  const binary = header.includes(';base64')
+    ? (() => {
+        const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+        const decodedLength = payload.length % 4 === 0 ? (payload.length / 4) * 3 - padding : Number.POSITIVE_INFINITY;
+        if (decodedLength < 0 || decodedLength > maxBytes || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload)) throw new Error('image-too-large');
+        return window.atob(payload);
+      })()
+    : decodeURIComponent(payload);
+  if (binary.length === 0 || binary.length > maxBytes) throw new Error('image-too-large');
+  return { mime, buffer: Uint8Array.from(binary, char => char.charCodeAt(0)).buffer };
+}
+
+async function rasterizeWebpToPng(buffer, signal, maxBytes) {
+  return withRasterDeadline(async innerSignal => {
+    if (typeof createImageBitmap !== 'function') throw new Error('webp-decoder-unavailable');
+    const bitmap = await createImageBitmap(new Blob([buffer], { type: 'image/webp' }));
+    try {
+      if (innerSignal.aborted || bitmap.width <= 0 || bitmap.height <= 0
+        || bitmap.width * bitmap.height > ASSESSMENT_IMAGE_LIMITS.maxPixels) throw new Error('webp-dimensions-invalid');
+      const canvas = document.createElement('canvas');
+      canvas.width = 480;
+      canvas.height = 340;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas-unavailable');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return dataUrlToImageBuffer(canvas.toDataURL('image/png'), maxBytes);
+    } finally { bitmap.close(); }
+  }, signal);
+}
+
+function hasWebpSignature(buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length < 16 || bytes[0] !== 0x52 || bytes[1] !== 0x49 || bytes[2] !== 0x46 || bytes[3] !== 0x46
+    || bytes[8] !== 0x57 || bytes[9] !== 0x45 || bytes[10] !== 0x42 || bytes[11] !== 0x50) return false;
+  const declaredLength = new DataView(buffer).getUint32(4, true) + 8;
+  const chunk = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+  return declaredLength <= bytes.length && declaredLength >= 16 && ['VP8 ', 'VP8L', 'VP8X'].includes(chunk);
+}
+
+async function loadAssessmentImage(image, _expectation, { signal, maxImageBytes }) {
+  const url = image.url;
+  let inlineSvg = typeof image.svg === 'string' && image.svg.trim().startsWith('<svg')
+    ? image.svg
+    : (typeof image.svg === 'string' && image.svg.startsWith('data:image/svg+xml') ? decodeSvgDataUri(image.svg, maxImageBytes) : undefined);
+  let buffer;
+  let mime = '';
+  if (!url && !inlineSvg) throw new Error('missing-image-source');
+  if (inlineSvg === undefined && url?.startsWith('data:')) {
+    const decoded = decodeImageDataUrl(url, maxImageBytes);
+    inlineSvg = decoded.svg;
+    buffer = decoded.buffer;
+    mime = decoded.mime;
+  } else if (inlineSvg === undefined && url) {
+    const parsed = new URL(url, window.location.href);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('unsupported-image-protocol');
+    const response = await fetch(parsed.href, { credentials: 'same-origin', signal });
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      throw new Error('image-request-failed');
+    }
+    mime = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (mime === 'image/svg+xml' || parsed.pathname.toLowerCase().endsWith('.svg')) {
+      const svgBytes = await readBoundedResponse(response, signal, maxImageBytes);
+      inlineSvg = new TextDecoder('utf-8', { fatal: true }).decode(svgBytes);
+    } else {
+      buffer = await readBoundedResponse(response, signal, maxImageBytes);
+    }
+  }
+  if (inlineSvg !== undefined) {
+    const png = await withRasterDeadline(innerSignal => svgToPngBuffer(inlineSvg, innerSignal, maxImageBytes), signal);
+    return { buffer: png, type: 'png' };
+  }
+  if (!buffer || buffer.byteLength === 0 || buffer.byteLength > maxImageBytes) throw new Error('invalid-image-size');
+  if (mime === 'image/webp' || url?.toLowerCase().includes('image/webp')) {
+    if (!hasWebpSignature(buffer)) throw new Error('invalid-webp-signature');
+    return { buffer: await rasterizeWebpToPng(buffer, signal, maxImageBytes), type: 'png' };
+  }
+  if (mime === 'image/png' || (!mime && url?.toLowerCase().split(/[?#]/)[0].endsWith('.png'))) return { buffer, type: 'png' };
+  if (mime === 'image/jpeg' || mime === 'image/jpg' || (!mime && /\.(?:jpe?g)(?:[?#]|$)/i.test(url || ''))) return { buffer, type: 'jpeg' };
+  throw new Error('unsupported-image-format');
+}
+
+/**
+ * Preflight all required assessment images using the same fetch and SVG rasterizer as DOCX generation.
+ * @param {import('./assessment-image-preflight.js').AssessmentData | null | undefined} data
+ * @returns {Promise<import('./assessment-image-preflight.js').AssessmentImagePreflightResult>}
+ */
+export function prepareAssessmentExportImages(data) {
+  return preflightAssessmentImages(data, {
+    loadImage: loadAssessmentImage,
+  });
 }
 
 // ============================================================
 // FUNGSI UTAMA: generateAsesmenDocx
 // ============================================================
-export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
+export async function generateAsesmenDocx(data, formData, kopSuratUrl, options = {}) {
   if (!window.docx) throw new Error('Library docx belum dimuat. Silakan refresh halaman.');
+  const preparedImages = options.preparedImages || await prepareAssessmentExportImages(data);
+  if (!preparedImages.ready) throw new AssessmentImagePreflightError(preparedImages.failures);
+  if (!(preparedImages.images instanceof Map)) {
+    throw new AssessmentImagePreflightError([{ section: 'pg', number: 0, category: 'invalid-image' }]);
+  }
+  const preparedFailures = await validatePreparedAssessmentImages(data, preparedImages);
+  if (preparedFailures.length) throw new AssessmentImagePreflightError(preparedFailures);
+  const assessmentImages = new Map([...preparedImages.images].map(([question, loaded]) => [
+    question,
+    { ...loaded, buffer: loaded.buffer.slice(0) },
+  ]));
 
   const {
     Document, Paragraph, TextRun, Table, TableRow, TableCell,
@@ -814,23 +958,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       { italics: true, size: 19, spaceAfter: 6 }));
 
     // Pre-fetch dan rasterisasi seluruh gambar PG secara paralel agar ekspor Word sangat cepat (< 500ms)
-    const pgImageBuffers = new Map();
-    const imageTasks = data.pg
-      .filter(q => q.gambar && (q.gambar.url || q.gambar.svg))
-      .map(async (q) => {
-        try {
-          const imgData = await fetchSafeImageBuffer(q.gambar.url, q.gambar.svg);
-          if (imgData && imgData.buffer) {
-            pgImageBuffers.set(q, imgData);
-          }
-        } catch (imgErr) {
-          console.warn(`Gagal memuat gambar soal No. ${q.no} untuk Word:`, imgErr);
-        }
-      });
-
-    if (imageTasks.length > 0) {
-      await Promise.all(imageTasks);
-    }
+    const pgImageBuffers = assessmentImages;
 
     for (const q of data.pg) {
       const opts = q.opsi || {};
@@ -847,7 +975,6 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       const HANGING        = CM(0.6);
 
       if (imgData) {
-        try {
           const cell1 = new window.docx.TableCell({
              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
              borders: NO_BORDERS,
@@ -858,11 +985,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
 
           const cell2Children = [];
           cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
-          cell2Children.push(new Paragraph({
-             alignment: AlignmentType.LEFT,
-             spacing: { before: PT(3), after: PT(4) },
-             children: [new ImageRun({ data: imgData.buffer, transformation: { width: 220, height: 145 }, type: imgData.type || 'jpeg' })]
-          }));
+          cell2Children.push(makeAssessmentImageParagraph(imgData));
           cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
 
           const cell2 = new window.docx.TableCell({
@@ -879,13 +1002,6 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
              rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
           }));
           children.push(makePara('', { spaceAfter: 8 }));
-          
-        } catch (e) {
-          console.error("Gagal menata tabel gambar PG docx", e);
-          const INDENT_LEFT = CM(0.6);
-          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
-          children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
-        }
       } else {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
         children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
@@ -913,7 +1029,10 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           width: { size: 100, type: WidthType.PERCENTAGE },
           borders: NO_BORDERS,
           rows: [new TableRow({ children: [
-            makeCell(makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(q.soal, { size: 22 })]), { width: { size: 42, type: WidthType.PERCENTAGE } }),
+            makeCell([
+              makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(q.soal, { size: 22 })]),
+              ...(assessmentImages.has(q) ? [makeAssessmentImageParagraph(assessmentImages.get(q))] : []),
+            ], { width: { size: 42, type: WidthType.PERCENTAGE } }),
             makeCell(makePara('..................', { size: 22, align: AlignmentType.CENTER }), { width: { size: 16, type: WidthType.PERCENTAGE } }),
             makeCell(makeParaRaw([new TextRun({ text: `${String.fromCharCode(65+i)}. `, bold: true, size: 22, font: FONT_LATIN }), ...makeRuns(rightCol[i] || '', { size: 22 })]), { width: { size: 42, type: WidthType.PERCENTAGE } }),
           ]})],
@@ -1002,8 +1121,9 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
         const qData = data.isian.data[p.originalIndex];
         if (qData) {
           const clueText = qData.soal.replace(/^(Mendatar:|Menurun:)\s*/i, '').trim();
-          if (p.direction === 'H') mendatar.push({ num: p.number, text: clueText });
-          else menurun.push({ num: p.number, text: clueText });
+          const clue = { num: p.number, text: clueText, image: assessmentImages.get(qData) };
+          if (p.direction === 'H') mendatar.push(clue);
+          else menurun.push(clue);
         }
       });
       mendatar.sort((a, b) => a.num - b.num);
@@ -1012,19 +1132,25 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
       // Build clue paragraphs for left (Mendatar) column
       const mendatarParas = [
         makePara('MENDATAR', { bold: true, size: 22, underline: { type: window.docx.UnderlineType.SINGLE }, spaceAfter: 4 }),
-        ...mendatar.map(t => makeParaRaw([
-          new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
-          ...makeRuns(t.text, { size: 20 }),
-        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 })),
+        ...mendatar.flatMap(t => [
+          makeParaRaw([
+            new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
+            ...makeRuns(t.text, { size: 20 }),
+          ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 }),
+          ...(t.image ? [makeAssessmentImageParagraph(t.image)] : []),
+        ]),
       ];
 
       // Build clue paragraphs for right (Menurun) column
       const menurunParas = [
         makePara('MENURUN', { bold: true, size: 22, underline: { type: window.docx.UnderlineType.SINGLE }, spaceAfter: 4 }),
-        ...menurun.map(t => makeParaRaw([
-          new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
-          ...makeRuns(t.text, { size: 20 }),
-        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 })),
+        ...menurun.flatMap(t => [
+          makeParaRaw([
+            new TextRun({ text: `${t.num}. `, bold: true, size: 20, font: FONT_LATIN }),
+            ...makeRuns(t.text, { size: 20 }),
+          ], { align: AlignmentType.JUSTIFIED, spaceAfter: 3 }),
+          ...(t.image ? [makeAssessmentImageParagraph(t.image)] : []),
+        ]),
       ];
 
       children.push(new Table({
@@ -1035,9 +1161,18 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
           makeCell(menurunParas, { width: { size: 50, type: WidthType.PERCENTAGE } }),
         ]})],
       }));
+      const crosswordQuestions = new Set(cw.placements
+        .map(placement => data.isian.data[placement.originalIndex])
+        .filter(Boolean));
+      for (const question of data.isian.data) {
+        const image = assessmentImages.get(question);
+        if (image && !crosswordQuestions.has(question)) children.push(makeAssessmentImageParagraph(image));
+      }
     } else {
       for (const q of data.isian.data) {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+        const image = assessmentImages.get(q);
+        if (image) children.push(makeAssessmentImageParagraph(image));
       }
     }
   }
@@ -1048,6 +1183,8 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
     for (const q of data.uraian) {
       children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+      const image = assessmentImages.get(q);
+      if (image) children.push(makeAssessmentImageParagraph(image));
     }
   }
 
@@ -1360,5 +1497,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl) {
     }],
   });
 
+  const finalImageFailures = await validatePreparedAssessmentImages(data, preparedImages, { decodeImage: false });
+  if (finalImageFailures.length) throw new AssessmentImagePreflightError(finalImageFailures);
   return Packer.toBlob(doc);
 }

@@ -1,0 +1,158 @@
+/* ===================================================
+   Aksen Warna per Fitur (disetujui 2026)
+   Setiap halaman generator memakai aksennya sendiri
+   (RPP hijau, Asesmen amber, Analisis CP teal, Slide ungu,
+   Game nila) pada kepala halaman, CTA, progres, dan badge.
+   Kerangka hijau Organic Studio tetap dipertahankan.
+   Semua di dalam @media screen: tidak menyentuh cetak/
+   unduhan maupun kanvas dokumen.
+   Alasan (R-31): aksen membantu guru mengenali halaman
+   sekilas dan memberi focal point yang konsisten dari
+   sidebar sampai tombol utama.
+   =================================================== */
+@media screen {
+  /* ---- Token aksen per halaman ---- */
+  .feature-workspace[data-feature-page="rpp"] {
+    --page-accent: #176b4b;
+    --page-accent-2: #0b3529;
+    --page-soft: #dff0e4;
+    --page-ink: #104a35;
+  }
+  .feature-workspace[data-feature-page="kisi"] {
+    --page-accent: #92400e;
+    --page-accent-2: #b45309;
+    --page-soft: #fdeecd;
+    --page-ink: #5f3805;
+  }
+  .feature-workspace[data-feature-page="analisis-cp"] {
+    --page-accent: #0f766e;
+    --page-accent-2: #115e59;
+    --page-soft: #d3f0ec;
+    --page-ink: #123d44;
+  }
+  .feature-workspace[data-feature-page="slide"] {
+    --page-accent: #7e22ce;
+    --page-accent-2: #6d28d9;
+    --page-soft: #ead9fb;
+    --page-ink: #4b2766;
+  }
+  .feature-workspace[data-feature-page="games"] {
+    --page-accent: #4338ca;
+    --page-accent-2: #3730a3;
+    --page-soft: #ddd7ff;
+    --page-ink: #393061;
+  }
+  .dark .feature-workspace[data-feature-page="rpp"] { --page-accent: #86d9ab; }
+  .dark .feature-workspace[data-feature-page="kisi"] { --page-accent: #f5c86e; }
+  .dark .feature-workspace[data-feature-page="analisis-cp"] { --page-accent: #7fd8cf; }
+  .dark .feature-workspace[data-feature-page="slide"] { --page-accent: #d3b5fa; }
+  .dark .feature-workspace[data-feature-page="games"] { --page-accent: #c9c0ff; }
+
+  /* ---- Kepala halaman: label warna fitur + bilah aksen ---- */
+  .feature-workspace[data-feature-page] .fs-heading .fs-eyebrow {
+    color: var(--page-accent);
+  }
+  .feature-workspace[data-feature-page] .fs-heading::after {
+    content: "";
+    display: block;
+    width: 52px;
+    height: 4px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--page-accent), var(--page-accent-2));
+  }
+
+  /* ---- Tombol utama mengikuti warna fitur ---- */
+  .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn,
+  .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action,
+  .feature-workspace[data-feature-page="analisis-cp"][data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate,
+  .feature-workspace[data-feature-page="slide"] .slide-classroom-studio button.ss-primary {
+    background: linear-gradient(120deg, var(--page-accent-2), var(--page-accent));
+    border-color: transparent;
+    color: #fff;
+  }
+  @media (hover: hover) {
+    .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action:hover:not(:disabled) {
+      background: linear-gradient(120deg, #6b300a, #a84e0b);
+    }
+  }
+
+  /* ---- Mode gelap: CTA tetap gelap agar teks putih kontras ---- */
+  .dark .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn {
+    background: linear-gradient(120deg, #0b3529, #176b4b);
+  }
+  .dark .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action {
+    background: linear-gradient(120deg, #6b300a, #92400e);
+  }
+  .dark .feature-workspace[data-feature-page="analisis-cp"][data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate {
+    background: linear-gradient(120deg, #115e59, #0f766e);
+  }
+  .dark .feature-workspace[data-feature-page="slide"] .slide-classroom-studio button.ss-primary {
+    background: linear-gradient(120deg, #5b21b6, #7e22ce);
+  }
+  .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn {
+    box-shadow: 0 8px 32px rgba(23, 107, 75, 0.3);
+  }
+  .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn:hover {
+    box-shadow: 0 12px 40px rgba(23, 107, 75, 0.45);
+  }
+
+  /* ---- Bar progres mengikuti warna fitur ---- */
+  .feature-workspace[data-feature-page] .fw-form-progress .fw-progress-fill {
+    background: linear-gradient(90deg, var(--page-accent-2), var(--page-accent));
+  }
+  .feature-workspace[data-feature-page] .fw-form-progress .fw-progress-steps > li.done .fw-step-count {
+    background: var(--page-soft);
+    color: var(--page-ink);
+    border-color: var(--page-accent);
+  }
+
+  /* ---- Badge/lencana mengikuti warna halaman ---- */
+  .feature-workspace[data-feature-page] .fw-badge {
+    background-color: var(--page-soft);
+    color: var(--page-ink);
+    border: 1px solid var(--page-accent);
+  }
+
+  /* ---- 8 tag Profil Lulusan: satu warna hijau lembut ---- */
+  .feature-workspace[data-feature-page="rpp"] #profil-tags .rpp-tag {
+    border-width: 1px;
+    border-style: solid;
+    background: #dff0e4;
+    border-color: #166534;
+    color: #14532d;
+  }
+  .feature-workspace[data-feature-page="rpp"] #profil-tags .rpp-tag.active { background: #166534; border-color: #166534; color: #fff; }
+
+  /* ---- Ikon pintasan Beranda: cip warna per fitur ---- */
+  .wk-dashboard [data-tool] .wk-studio-launch-icon,
+  .wk-dashboard [data-tool] .wk-support-tool-icon {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 17px;
+  }
+  .wk-dashboard [data-tool="rpp"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #dff0e4; color: #176b4b; }
+  .wk-dashboard [data-tool="analisis-cp"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #d3f0ec; color: #0f766e; }
+  .wk-dashboard [data-tool="kisi"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #fdeecd; color: #92400e; }
+  .wk-dashboard [data-tool="slide"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #ead9fb; color: #7e22ce; }
+  .wk-dashboard [data-tool="absensi"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #e0e7ff; color: #3730a3; }
+  .wk-dashboard [data-tool="materi"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #e0f2fe; color: #0369a1; }
+  .wk-dashboard [data-tool="forum"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #fce7f3; color: #be185d; }
+  .wk-dashboard [data-tool="games"] :is(.wk-studio-launch-icon, .wk-support-tool-icon) { background: #ddd7ff; color: #4338ca; }
+  .wk-dashboard .wk-studio-community-links [data-tool] > i:first-child {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 17px;
+  }
+  .wk-dashboard .wk-studio-community-links [data-tool="materi"] > i:first-child { background: #e0f2fe; color: #0369a1; }
+  .wk-dashboard .wk-studio-community-links [data-tool="forum"] > i:first-child { background: #fce7f3; color: #be185d; }
+  .wk-dashboard .wk-studio-community-links [data-tool="games"] > i:first-child { background: #ddd7ff; color: #4338ca; }
+}

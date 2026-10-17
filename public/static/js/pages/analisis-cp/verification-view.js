@@ -14,25 +14,64 @@ export function renderVerificationView(container, analysisData, inputData, callb
 
   // Pastikan data memiliki audit trail
   let localData = analysisData;
-  if (!localData._audit) {
+  if (!localData._audit || !localData._audit.summary || !Array.isArray(localData._audit.items)) {
     const qg = runCpQualityGate(localData, inputData?.chapters || [], inputData || {});
     localData._audit = qg.audit;
   }
 
   const audit = localData._audit || {};
-  const summary = audit.summary || {
+  const summary = {
     total_tp: 0,
     total_babs: 0,
     passed_count: 0,
     repaired_count: 0,
     flagged_count: 0,
-    overall_quality_score: 95,
-    grade: 'A',
-    grade_label: 'Sangat Baik',
-    kko_compliance_pct: 100,
-    cp_alignment_pct: 100,
-    jp_compliance_pct: 100
+    overall_quality_score: null,
+    grade: null,
+    grade_label: 'Belum dinilai',
+    kko_compliance_pct: null,
+    cp_alignment_pct: null,
+    jp_compliance_pct: null,
+    ...(audit.summary || {})
   };
+  // Cached audits from the older heuristic gate described items as verified.
+  // They cannot establish pedagogical alignment or teacher review, so render
+  // those records conservatively while retaining structural warnings/repairs.
+  const hasCurrentContract = summary.review_status === 'needs_teacher_review';
+  if (!hasCurrentContract && audit.items) {
+    audit.items = audit.items.map(item => ({
+      ...item,
+      status: item.status === 'flagged' ? 'flagged' : item.status === 'repaired' ? 'repaired' : 'needs_review',
+      cp_aligned: item.cp_aligned === false ? false : null,
+      alignment_status: item.cp_aligned === false ? 'suspected_mismatch' : 'not_assessed',
+      notes: item.notes || 'Data audit lama; perlu ditinjau guru.',
+    }));
+    summary.flagged_count = audit.items.filter(item => item.status === 'flagged').length;
+    summary.repaired_count = audit.items.filter(item => item.status === 'repaired').length;
+    summary.passed_count = 0;
+    summary.structure_passed_count = 0;
+    summary.needs_review_count = summary.total_tp || audit.items.length;
+    summary.cp_alignment_pct = null;
+    summary.review_status = 'needs_teacher_review';
+    summary.verification_scope = 'deterministic';
+    summary.verified_at = null;
+    summary.grade_label = 'Struktur telah diperiksa; perlu ditinjau guru';
+    summary.overall_quality_score = null;
+    summary.grade = null;
+    summary.kko_compliance_pct = null;
+    summary.jp_compliance_pct = null;
+    summary.terminology_clean = null;
+  }
+  const cpAlignment = Number.isFinite(summary.cp_alignment_pct) ? `${summary.cp_alignment_pct}%` : 'Belum dinilai';
+  const kkoPct = Number.isFinite(summary.kko_compliance_pct) ? `${summary.kko_compliance_pct}%` : 'Belum dinilai';
+  const jpPct = Number.isFinite(summary.jp_compliance_pct) ? `${summary.jp_compliance_pct}%` : 'Belum dinilai';
+  const hasStructuralScore = Number.isFinite(summary.overall_quality_score);
+  const score = hasStructuralScore ? summary.overall_quality_score : 'Belum dinilai';
+  const grade = hasStructuralScore ? (summary.grade || '—') : '—';
+  const gradeLabel = hasStructuralScore ? (summary.grade_label || 'Skor struktur') : 'Belum dinilai';
+  const terminology = summary.terminology_clean === true ? 'Sudah diperiksa' : summary.terminology_clean === false ? 'Perlu ditinjau' : 'Belum dinilai';
+  const structurePassed = Number(summary.structure_passed_count) || 0;
+  const needsReview = Number(summary.needs_review_count ?? summary.total_tp) || 0;
 
   // Default: expand bab pertama jika belum ada
   if (_expandedBabs.size === 0 && Array.isArray(localData.semesters)) {
@@ -44,11 +83,11 @@ export function renderVerificationView(container, analysisData, inputData, callb
     }
   }
 
-  const gradeBadgeColor = summary.grade === 'A'
+  const gradeBadgeColor = grade === 'A'
     ? 'from-emerald-500 to-teal-600 text-white shadow-emerald-500/25'
-    : summary.grade === 'B'
+    : grade === 'B'
       ? 'from-blue-500 to-indigo-600 text-white shadow-blue-500/25'
-      : 'from-amber-500 to-orange-600 text-white shadow-amber-500/25';
+      : grade !== '—' ? 'from-amber-500 to-orange-600 text-white shadow-amber-500/25' : 'from-slate-500 to-slate-600 text-white shadow-slate-500/25';
 
   const mapelTitle = inputData?.mataPelajaran || localData.metadata?.mata_pelajaran || 'Mata Pelajaran';
   const kelasTitle = inputData?.jenjangKelas || `Kelas ${localData.metadata?.kelas || '5'}`;
@@ -73,26 +112,27 @@ export function renderVerificationView(container, analysisData, inputData, callb
               VERIFIKASI & VALIDASI <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-300 bg-clip-text text-transparent">ANALISIS CP, TP & ATP</span>
             </h1>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Tinjau keselarasan Kata Kerja Operasional (KKO), elemen kurikulum resmi, dan beban jam pelajaran sebelum dokumen dirilis ke Canvas Cetak.
+              Periksa rumusan KKO dan beban jam pelajaran. Keselarasan dengan CP sebagai rujukan perlu ditinjau oleh guru.
             </p>
           </div>
 
           <!-- QUALITY SCORE CARD -->
           <div class="flex items-center gap-4 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 shrink-0">
             <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${gradeBadgeColor} flex flex-col items-center justify-center shadow-lg font-black">
-              <span class="text-2xl leading-none">${summary.overall_quality_score}</span>
-              <span class="text-[9px] uppercase tracking-wider opacity-90 mt-0.5">Skor Mutu</span>
+              <span class="text-sm leading-tight text-center">${score}</span>
+              <span class="text-[9px] uppercase tracking-wider opacity-90 mt-0.5">Skor struktur</span>
             </div>
             <div>
               <div class="flex items-center gap-1.5 mb-0.5">
                 <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-white/15 text-emerald-300 border border-emerald-400/30">
-                  Grade ${summary.grade}
+                  Grade ${grade}
                 </span>
-                <span class="text-xs font-bold text-white">${escapeHtml(summary.grade_label)}</span>
+                <span class="text-xs font-bold text-white">${escapeHtml(gradeLabel)}</span>
               </div>
               <p class="text-[11px] text-slate-300">${escapeHtml(mapelTitle)} • ${escapeHtml(kelasTitle)} (${escapeHtml(faseTitle)})</p>
               <p class="text-[10px] text-slate-400 mt-1">
-                <i class="fas fa-check-circle text-emerald-400 mr-1"></i> ${summary.passed_count} Lolos
+                <i class="fas fa-check-circle text-emerald-400 mr-1"></i> ${structurePassed} Struktur lolos
+                • <span class="text-amber-300">${needsReview} Perlu ditinjau guru</span>
                 ${summary.repaired_count > 0 ? ` • <span class="text-sky-300"><i class="fas fa-wrench mr-1"></i>${summary.repaired_count} Diperbaiki</span>` : ''}
                 ${summary.flagged_count > 0 ? ` • <span class="text-amber-300"><i class="fas fa-triangle-exclamation mr-1"></i>${summary.flagged_count} Catatan</span>` : ''}
               </p>
@@ -107,10 +147,10 @@ export function renderVerificationView(container, analysisData, inputData, callb
         <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
             <span class="font-bold flex items-center gap-1.5"><i class="fas fa-graduation-cap text-indigo-500"></i> KKO Terukur</span>
-            <span class="font-extrabold text-indigo-600 dark:text-indigo-400">${summary.kko_compliance_pct}%</span>
+            <span class="font-extrabold text-indigo-600 dark:text-indigo-400">${kkoPct}</span>
           </div>
           <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-indigo-500 to-sky-500 h-full rounded-full" style="width: ${summary.kko_compliance_pct}%"></div>
+            <div class="bg-gradient-to-r from-indigo-500 to-sky-500 h-full rounded-full" style="width: ${Number.isFinite(summary.kko_compliance_pct) ? summary.kko_compliance_pct : 0}%"></div>
           </div>
           <p class="text-[10.5px] text-slate-500 dark:text-slate-400">Kata kerja terukur sesuai Taksonomi Bloom</p>
         </div>
@@ -119,22 +159,22 @@ export function renderVerificationView(container, analysisData, inputData, callb
         <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
             <span class="font-bold flex items-center gap-1.5"><i class="fas fa-file-shield text-emerald-500"></i> Keselarasan CP</span>
-            <span class="font-extrabold text-emerald-600 dark:text-emerald-400">${summary.cp_alignment_pct}%</span>
+            <span class="font-extrabold text-slate-600 dark:text-slate-300">${cpAlignment}</span>
           </div>
           <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full" style="width: ${summary.cp_alignment_pct}%"></div>
+            <div class="bg-slate-400 h-full rounded-full" style="width: ${Number.isFinite(summary.cp_alignment_pct) ? summary.cp_alignment_pct : 0}%"></div>
           </div>
-          <p class="text-[10.5px] text-slate-500 dark:text-slate-400">Selaras dengan Elemen BSKAP 046/2025</p>
+            <p class="text-[10.5px] text-slate-500 dark:text-slate-400">Keselarasan CP belum dinilai; tinjau bersama guru</p>
         </div>
 
         <!-- Metric 3: JP Balance -->
         <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
             <span class="font-bold flex items-center gap-1.5"><i class="fas fa-clock text-sky-500"></i> Beban JP</span>
-            <span class="font-extrabold text-sky-600 dark:text-sky-400">${summary.jp_compliance_pct}%</span>
+            <span class="font-extrabold text-sky-600 dark:text-sky-400">${jpPct}</span>
           </div>
           <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-sky-500 to-blue-500 h-full rounded-full" style="width: ${summary.jp_compliance_pct}%"></div>
+            <div class="bg-gradient-to-r from-sky-500 to-blue-500 h-full rounded-full" style="width: ${Number.isFinite(summary.jp_compliance_pct) ? summary.jp_compliance_pct : 0}%"></div>
           </div>
           <p class="text-[10.5px] text-slate-500 dark:text-slate-400">Standar Permendikdasmen No. 13 Tahun 2025</p>
         </div>
@@ -143,10 +183,10 @@ export function renderVerificationView(container, analysisData, inputData, callb
         <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
             <span class="font-bold flex items-center gap-1.5"><i class="fas fa-spell-check text-purple-500"></i> Terminologi</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">100% Murid</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">${terminology}</span>
           </div>
           <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full" style="width: 100%"></div>
+            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full" style="width: ${summary.terminology_clean === true ? 100 : 0}%"></div>
           </div>
           <p class="text-[10.5px] text-slate-500 dark:text-slate-400">Penyebutan 'Peserta Didik' dibersihkan</p>
         </div>
@@ -159,8 +199,8 @@ export function renderVerificationView(container, analysisData, inputData, callb
           <button type="button" class="btn-filter-status px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${_activeFilter === 'all' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}" data-filter="all">
             Semua TP (${summary.total_tp})
           </button>
-          <button type="button" class="btn-filter-status px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${_activeFilter === 'verified' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}" data-filter="verified">
-            Lolos (${summary.passed_count})
+          <button type="button" class="btn-filter-status px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${_activeFilter === 'needs_review' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}" data-filter="needs_review">
+            Perlu Ditinjau (${needsReview})
           </button>
           <button type="button" class="btn-filter-status px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${_activeFilter === 'repaired' ? 'bg-sky-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}" data-filter="repaired">
             Diperbaiki (${summary.repaired_count})
@@ -203,6 +243,7 @@ export function renderVerificationView(container, analysisData, inputData, callb
       const matchingItems = items.filter(it => {
         if (_activeFilter === 'all') return true;
         const auditItem = audit.items?.find(ai => ai.kode_tp === it.kode_tp);
+        if (_activeFilter === 'needs_review') return Boolean(auditItem);
         return auditItem?.status === _activeFilter;
       });
 
@@ -267,18 +308,20 @@ export function renderVerificationView(container, analysisData, inputData, callb
       for (const item of items) {
         itemIndex++;
         const auditItem = audit.items?.find(ai => ai.kode_tp === item.kode_tp) || {
-          status: 'verified',
-          quality_score: 95,
+          status: 'needs_review',
+          structural_status: 'passed',
+          quality_score: 0,
           kko: 'menjelaskan',
           bloom_level: 'C2 (Memahami)',
           kko_operasional: true,
-          cp_aligned: true,
+          cp_aligned: null,
+          alignment_status: 'not_assessed',
           jp_valid: true,
-          notes: 'Kaidah kurikulum terpenuhi.'
+          notes: 'Pemeriksaan struktur saja; keselarasan CP belum dinilai. Perlu ditinjau guru.'
         };
 
-        const statusBadge = auditItem.status === 'verified'
-          ? '<span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-400/30"><i class="fas fa-check-circle mr-1"></i>Verified</span>'
+        const statusBadge = auditItem.status === 'needs_review'
+          ? '<span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-400/30"><i class="fas fa-triangle-exclamation mr-1"></i>Perlu Tinjau Guru</span>'
           : auditItem.status === 'repaired'
             ? '<span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-400/30"><i class="fas fa-wrench mr-1"></i>Auto-Repaired</span>'
             : '<span class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-400/30"><i class="fas fa-triangle-exclamation mr-1"></i>Perlu Tinjau</span>';

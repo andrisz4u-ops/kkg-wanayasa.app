@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { state } from '../state.js';
 import { showToast, escapeHtml } from '../utils.js';
 import { fetchUnreadCount } from '../notifications.js';
+import { renderLoadingLines } from '../ui-load-state.js';
 
 export async function renderNotifications() {
     // Mark all as read when visiting the page? Or better let user do it / click individual?
@@ -21,10 +22,7 @@ export async function renderNotifications() {
 
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div id="notifications-page-list" class="divide-y divide-gray-100">
-                <div class="p-8 text-center text-gray-500">
-                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                    <p>Memuat notifikasi...</p>
-                </div>
+                ${renderLoadingLines('Memuat notifikasi')}
             </div>
             
             <div id="notifications-page-footer" class="notification-footer hidden bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-center">

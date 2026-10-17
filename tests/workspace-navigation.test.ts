@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { state } from '../public/static/js/state.js';
-import { renderWorkspaceLayout, renderWorkspaceNavigation, renderWorkspaceTopNavigation, renderWorkspaceSidebarNavigation } from '../public/static/js/layouts/workspace.js';
+import { renderWorkspaceLayout, renderWorkspaceNavigation, renderWorkspaceTopNavigation, renderWorkspaceSidebarNavigation, type WorkspaceSection } from '../public/static/js/layouts/workspace.js';
 
-const sections = [
+const sections: WorkspaceSection[] = [
   { id: 'ruang-kerja', title: 'Ruang Kerja', items: [
     { page: 'home', label: 'Beranda', public: true },
     { page: 'kalender', label: 'Kalender & Agenda', public: true },
@@ -45,7 +45,7 @@ describe('Workspace navigation', () => {
     expect(document.getElementById('sidebar-collapse-toggle')?.getAttribute('aria-label')).toBe('Perluas menu samping');
     document.body.innerHTML = renderSidebarLayout();
     expect(document.querySelector('.workspace-shell')?.classList.contains('wk-sidebar-compact')).toBe(true);
-    state.user.id = 99;
+    state.user!.id = 99;
     document.body.innerHTML = renderSidebarLayout();
     expect(document.querySelector('.workspace-shell')?.classList.contains('wk-sidebar-compact')).toBe(false);
   });
@@ -58,7 +58,7 @@ describe('Workspace navigation', () => {
   });
 
   it.each(['user', 'operator', 'admin', 'super_admin'])('shows the ordered role-specific shortcuts while retaining full header and drawer routes for %s', role => {
-    state.user.role = role;
+    state.user!.role = role;
     const desktop = document.createElement('nav');
     desktop.innerHTML = renderWorkspaceTopNavigation(sections, 'home');
     const drawer = document.createElement('nav');
@@ -88,7 +88,7 @@ describe('Workspace navigation', () => {
   });
 
   it('does not add an unavailable or unauthorized shortcut and does not mark a different page active', () => {
-    state.user.role = 'operator';
+    state.user!.role = 'operator';
     const sidebar = document.createElement('nav');
     sidebar.innerHTML = renderWorkspaceSidebarNavigation(sections.filter(section => !section.admin).map(section => ({
       ...section, items: section.items.filter(item => !item.admin && item.page !== 'slide'),

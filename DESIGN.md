@@ -1,5 +1,9 @@
 # RuangKKG: Ruang Kerja Hijau
 
+## Aksen Warna per Fitur, 7 Oktober 2026
+
+Pengguna meminta tampilan yang lebih berwarna. Setiap halaman generator memakai aksennya sendiri, diperluas dari warna ikon sidebar: RPP hijau forest, Asesmen amber, Analisis CP teal, Slide ungu, Game nila. Aksen muncul pada label kepala halaman, tombol utama, bar progres, dan badge; 8 tag Profil Lulusan memakai 8 warna lembut berbeda; pintasan Beranda memakai cip ikon berwarna per tujuan. Kerangka hijau dan semua fungsi tidak berubah; seluruh pasangan teks/latar memenuhi kontras 4.5:1. Spesifikasi: `docs/superpowers/specs/2026-10-07-feature-accent-colors-design.md`.
+
 ## Studio Kelas Hidup, 5 Oktober 2026
 
 Pengguna menyetujui perombakan seluruh fitur Slide, termasuk output dan ekspor. Empat keluarga Kelas Ceria, Jelajah IPAS, Matematika Visual dan Cerita & Budaya menggunakan komposisi serta tipografi yang berbeda, contoh nyata dalam galeri, teks skala proyektor, diagram terkait materi dan catatan guru terpisah. Kanvas serta ekspor berasal dari scene yang sama. Arahan ini menggantikan perlindungan output lama khusus Slide. Spesifikasi: `docs/superpowers/specs/2026-10-05-classroom-slide-studio-design.md`.

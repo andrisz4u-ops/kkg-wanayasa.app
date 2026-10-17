@@ -64,7 +64,7 @@ export interface SudutLuarSegitigaParams { sudutA?: number; sudutB?: number; lab
 export interface JaringKerucutParams { r?: number; s?: number; label?: string; }
 export interface JaringTabungParams { r?: number; t?: number; label?: string; }
 export interface LuasPermukaanGabunganParams { p?: number; l?: number; t?: number; label?: string; }
-export interface PerisaiPancasilaParams { sila?: number | string; pointer?: string; label?: string; }
+export interface PerisaiPancasilaParams { sila?: number | string; pointer?: string; label?: string; showAll?: boolean; }
 
 // Geometri 2D
 export interface PersegiPanjangParams { p?: number; l?: number; unit?: string; label?: string; }

@@ -1,5 +1,6 @@
 // Rate limiting middleware for Cloudflare Workers
 // Uses in-memory store with automatic cleanup
+import { Errors } from './response';
 
 interface RateLimitEntry {
     count: number;
@@ -147,24 +148,18 @@ export function checkRateLimit(
  */
 export function rateLimitMiddleware(config: RateLimitConfig) {
     return async (c: any, next: () => Promise<void>) => {
-        // Skip rate limit for admin and operator users
+        // Batas berlaku seragam untuk semua peran (termasuk admin/operator):
+        // akun istimewa yang dikompromikan tetap harus dibatasi, dan pemeriksaan
+        // sesi di sini menambah 1 query DB di setiap request.
+        // Kunci per-user bila sesi sudah terisi, fallback ke IP.
+        let key = `ip:${getClientIP(c.req.raw)}`;
         try {
-            const { getCurrentUser, getCookie } = await import('../lib/auth');
-            const sessionId = getCookie(c.req.header('Cookie'), 'session');
-            if (sessionId && c.env?.DB) {
-                const user: any = await getCurrentUser(c.env.DB, sessionId);
-                if (user && (user.role === 'admin' || user.role === 'operator')) {
-                    // Admin/operator bypass rate limit
-                    await next();
-                    return;
-                }
-            }
+            const user = c.get?.('user');
+            if (user?.id) key = `user:${user.id}`;
         } catch (_) {
-            // If auth check fails, proceed with rate limiting as normal
+            // Abaikan dan tetap gunakan kunci IP.
         }
-
-        const ip = getClientIP(c.req.raw);
-        const result = checkRateLimit(ip, config);
+        const result = checkRateLimit(key, config);
 
         // Set rate limit headers
         c.header('X-RateLimit-Limit', config.maxRequests.toString());
@@ -172,11 +167,7 @@ export function rateLimitMiddleware(config: RateLimitConfig) {
         c.header('X-RateLimit-Reset', Math.ceil(result.resetTime / 1000).toString());
 
         if (!result.allowed) {
-            c.header('Retry-After', result.retryAfter.toString());
-            return c.json({
-                error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.',
-                retryAfter: result.retryAfter
-            }, 429);
+            return Errors.rateLimited(c, result.retryAfter);
         }
 
         await next();

@@ -28,11 +28,12 @@ beforeEach(() => {
   db = new SqliteD1();
   db.sqlite.exec('CREATE TABLE users(id INTEGER PRIMARY KEY); INSERT INTO users VALUES(1);');
   db.sqlite.exec(readFileSync('migrations/0029_ai_generation_jobs.sql', 'utf8'));
+  db.sqlite.exec(readFileSync('migrations/0032_ai_admission.sql', 'utf8'));
   app = new Hono().route('/program', programSekolah);
 });
 afterEach(() => { db.close(); vi.unstubAllGlobals(); });
 const start = () => app.request('/program/generate-section-stream', {
-  method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AI-Job-Id': 'section-job-123-1' },
+  method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AI-Job-Id': 'section-job-123-1', 'X-Session-Id': 'test-session' },
   body: JSON.stringify({ template: 'literasi', section: 'bab1', currentData: { metadata: { judul_program: 'Program Literasi' } } }),
 }, { DB: db });
 

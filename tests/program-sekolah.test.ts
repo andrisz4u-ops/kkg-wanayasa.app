@@ -421,7 +421,7 @@ describe('Program Sekolah Universal (AI) Tests', () => {
     it('should build specific, focused prompts for each section', () => {
       const pBab1 = buildSectionPrompt('bab1', {
         template: 'kokurikuler-p5',
-        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang', tahunAjaran: '2025/2026', jenjang: 'Sekolah Dasar (SD)', penyusun: 'Tim Kurikulum' },
         spesifik: { tema: 'Bangunlah Jiwa dan Raganya' },
       });
       expect(pBab1).toContain('BAGIAN YANG HARUS DISUSUN: BAB I PENDAHULUAN');
@@ -430,7 +430,7 @@ describe('Program Sekolah Universal (AI) Tests', () => {
 
       const pBab2 = buildSectionPrompt('bab2', {
         template: 'kokurikuler-p5',
-        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang', tahunAjaran: '2025/2026', jenjang: 'Sekolah Dasar (SD)', penyusun: 'Tim Kurikulum' },
         spesifik: {},
       });
       expect(pBab2).toContain('BAGIAN YANG HARUS DISUSUN: BAB II KAJIAN KONSEPTUAL');
@@ -438,7 +438,7 @@ describe('Program Sekolah Universal (AI) Tests', () => {
 
       const pBab3 = buildSectionPrompt('bab3', {
         template: '7kaih',
-        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang', tahunAjaran: '2025/2026', jenjang: 'Sekolah Dasar (SD)', penyusun: 'Tim Kurikulum' },
         spesifik: {},
       });
       expect(pBab3).toContain('BAGIAN YANG HARUS DISUSUN: BAB III RENCANA PROGRAM');
@@ -446,7 +446,7 @@ describe('Program Sekolah Universal (AI) Tests', () => {
 
       const pBab4 = buildSectionPrompt('bab4_5', {
         template: 'literasi',
-        identitas: { namaSekolah: 'SDN 1 Cibogogirang' },
+        identitas: { namaSekolah: 'SDN 1 Cibogogirang', tahunAjaran: '2025/2026', jenjang: 'Sekolah Dasar (SD)', penyusun: 'Tim Kurikulum' },
         spesifik: {},
       });
       expect(pBab4).toContain('BAGIAN YANG HARUS DISUSUN: BAB IV (MONITORING');

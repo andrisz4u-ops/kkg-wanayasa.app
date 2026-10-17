@@ -177,7 +177,7 @@ function createKopSekolahTable(sekolahNama: string, alamatSekolah?: string, sett
                                 alignment: AlignmentType.CENTER,
                                 spacing: { after: 60 },
                                 children: [
-                                    new TextRun({ text: cleanAlamat, italic: true, size: 20, font: FONT_FAMILY }),
+                                    new TextRun({ text: cleanAlamat, italics: true, size: 20, font: FONT_FAMILY }),
                                 ],
                             }),
                         ],
@@ -591,7 +591,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 children: [
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `SPPD No : ${nomorSPPD}`, bold: true, font: FONT_FAMILY, size: 21 })] }),
                                     new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Berangkat dari : ${data.sekolah_asal_nama}`, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `(Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `(Tempat Kedudukan)`, italics: true, font: FONT_FAMILY, size: 19 })] }),
                                     new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Ke : ${data.tempat_kegiatan}`, font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 20 })] }),
@@ -656,7 +656,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 borders: tableBorderThin,
                                 children: [
                                     new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `II. Tiba di : ${data.sekolah_asal_nama}`, bold: true, font: FONT_FAMILY, size: 20 })] }),
-                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `    (Tempat Kedudukan)`, italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `    (Tempat Kedudukan)`, italics: true, font: FONT_FAMILY, size: 19 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `    Pada tanggal : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Kepala Sekolah Asal,`, font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
@@ -669,7 +669,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 margins: cellPaddingVisum,
                                 borders: tableBorderThin,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20, line: 240 }, children: [new TextRun({ text: 'Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.', italic: true, font: FONT_FAMILY, size: 19 })] }),
+                                    new Paragraph({ spacing: { after: 20, line: 240 }, children: [new TextRun({ text: 'Telah diperiksa dengan keterangan bahwa perjalanan tersebut di atas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.', italics: true, font: FONT_FAMILY, size: 19 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah Asal,', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 520 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: data.kepala_sekolah_asal, bold: true, underline: {}, font: FONT_FAMILY, size: 21 })] }),
@@ -686,7 +686,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 new TextRun({ text: 'III. CATATAN LAIN-LAIN / PERHATIAN:', bold: true, font: FONT_FAMILY, size: 20 })
             ]}),
             new Paragraph({ spacing: { after: 40, line: 240 }, children: [
-                new TextRun({ text: 'PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan, kelalaian, dan kealpaannya.', italic: true, font: FONT_FAMILY, size: 19 })
+                new TextRun({ text: 'PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan, kelalaian, dan kealpaannya.', italics: true, font: FONT_FAMILY, size: 19 })
             ]}),
         ],
     };

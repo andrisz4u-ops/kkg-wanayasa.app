@@ -11,6 +11,7 @@
 @import './audit-refinement.css';
 @import './ai-monitor.css';
 @import './classroom-slides.css';
+@import './feature-accents.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,6 +35,10 @@
     font-size: 14px;
     line-height: 1.5;
     letter-spacing: 0;
+}
+/* Workspace pages already scroll inside their main pane; keep long dashboard content from creating a second document scrollbar. */
+@media screen {
+    html:has(.workspace-shell) { overflow: hidden; }
 }
 .workspace-shell button { cursor: pointer; }
 .workspace-shell button:disabled { cursor: wait; }

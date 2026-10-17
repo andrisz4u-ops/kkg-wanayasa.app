@@ -69,8 +69,8 @@ export function checkETag(request: Request, etag: string): boolean {
  * Conditional response middleware
  * Returns 304 Not Modified if ETag matches
  */
-export function conditionalResponse(content: string, c: any): boolean {
-    const etag = generateETag(content);
+export async function conditionalResponse(content: string, c: any): Promise<boolean> {
+    const etag = await generateETag(content);
     
     if (checkETag(c.req.raw, etag)) {
         c.status(304);

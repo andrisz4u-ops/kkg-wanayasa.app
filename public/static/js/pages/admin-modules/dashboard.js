@@ -375,6 +375,13 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
     setMetricValue('school-stat-rpp', summary.total_rpp || 0);
     setMetricValue('school-stat-asesmen', summary.total_asesmen || 0);
     setMetricValue('school-stat-slide', summary.total_slide || 0);
+    const dataNote = document.getElementById('school-analytics-data-note');
+    if (dataNote) {
+      const otherCount = Number(summary.total_other) || 0;
+      const legacyCount = Number(summary.total_legacy_uncertain) || 0;
+      dataNote.textContent = `Fitur lain: ${otherCount} proses AI.${legacyCount ? ` ${legacyCount} catatan lama memiliki kategori atau pemilik yang belum dapat dipastikan.` : ''}`;
+      dataNote.classList.remove('hidden');
+    }
 
     const list = data.leaderboard || [];
 
@@ -388,7 +395,7 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
               <i class="fas fa-chart-line text-lg"></i>
             </div>
             <p class="text-sm font-semibold text-slate-700">Belum Ada Aktivitas AI di Periode Ini</p>
-            <p class="text-xs text-slate-500 mt-1">Data akan otomatis muncul saat guru men-generate RPP, Asesmen, atau Slide.</p>
+            <p class="text-xs text-slate-500 mt-1">Data akan muncul setelah guru memakai fitur AI.</p>
           </div>
         `;
       } else {
@@ -411,12 +418,13 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
               <h4 class="font-bold text-slate-900 text-base tracking-tight truncate" title="${escapeHtml(sch.nama)}">${escapeHtml(sch.nama)}</h4>
               <div class="flex items-baseline gap-2 mt-2 mb-3">
                 <span class="text-3xl font-extrabold text-indigo-600 font-display">${sch.total_all}</span>
-                <span class="text-xs text-slate-500 font-medium">total dokumen</span>
+                <span class="text-xs text-slate-500 font-medium">proses AI</span>
               </div>
-              <div class="grid grid-cols-3 gap-1 py-2 px-3 rounded-xl bg-white/80 border border-slate-200/60 text-center text-[11px] mb-3">
+              <div class="grid grid-cols-4 gap-1 py-2 px-3 rounded-xl bg-white/80 border border-slate-200/60 text-center text-[11px] mb-3">
                 <div><span class="text-slate-400 block text-[9px] uppercase">RPP</span><strong class="text-slate-800">${sch.total_rpp}</strong></div>
-                <div><span class="text-slate-400 block text-[9px] uppercase">Soal</span><strong class="text-slate-800">${sch.total_asesmen}</strong></div>
+                <div><span class="text-slate-400 block text-[9px] uppercase">Asesmen</span><strong class="text-slate-800">${sch.total_asesmen}</strong></div>
                 <div><span class="text-slate-400 block text-[9px] uppercase">Slide</span><strong class="text-slate-800">${sch.total_slide}</strong></div>
+                <div><span class="text-slate-400 block text-[9px] uppercase">Lainnya</span><strong class="text-slate-800">${sch.total_other || 0}</strong></div>
               </div>
               <p class="text-[11px] text-slate-600 truncate">${teacherInfo}</p>
             </div>
@@ -427,7 +435,7 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
 
     // Render Full Table
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Tidak ada data sekolah terdaftar.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400">Tidak ada data sekolah terdaftar.</td></tr>`;
       return;
     }
 
@@ -450,7 +458,7 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
       }
 
       const teacherText = s.top_teacher 
-        ? `<div class="font-medium text-slate-800">${escapeHtml(s.top_teacher.nama)}</div><div class="text-[10px] text-slate-400">${s.top_teacher.count} dokumen</div>`
+        ? `<div class="font-medium text-slate-800">${escapeHtml(s.top_teacher.nama)}</div><div class="text-[10px] text-slate-400">${s.top_teacher.count} proses</div>`
         : `<span class="text-slate-400 italic">-</span>`;
 
       return `
@@ -463,6 +471,7 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
           <td class="px-3 py-3 text-center font-semibold text-emerald-700">${s.total_rpp}</td>
           <td class="px-3 py-3 text-center font-semibold text-sky-700">${s.total_asesmen}</td>
           <td class="px-3 py-3 text-center font-semibold text-amber-700">${s.total_slide}</td>
+          <td class="px-3 py-3 text-center font-semibold text-slate-700">${s.total_other || 0}</td>
           <td class="px-4 py-3 text-center">
             <div class="font-bold text-slate-900 text-sm">${s.total_all}</div>
             <div class="w-full bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
@@ -479,7 +488,7 @@ window.loadSchoolAiAnalytics = async function loadSchoolAiAnalytics(month = '') 
 
   } catch (e) {
     console.error('Failed to load school AI analytics:', e);
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-rose-500">Gagal memuat analitik sekolah.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-rose-500">Gagal memuat analitik sekolah.</td></tr>`;
   }
 };
 
@@ -516,7 +525,7 @@ window.exportLeaderboardCsv = function() {
   csv += `"Periode: ${monthLabel}"\n`;
   csv += `"Dicetak Pada: ${new Date().toLocaleString('id-ID')}"\n\n`;
 
-  csv += `"Peringkat","Nama Sekolah","NPSN","Status Penggerak","Total RPP","Total Asesmen & TTS","Total Slide","Total Dokumen AI","Guru Paling Aktif","Jumlah Dokumen Guru","Tingkat Keaktifan"\n`;
+  csv += `"Peringkat","Nama Sekolah","NPSN","Status Penggerak","Total RPP","Total Asesmen","Total Slide","Fitur Lain","Total Proses AI","Guru Paling Aktif","Jumlah Proses Guru","Tingkat Keaktifan"\n`;
 
   list.forEach((s, i) => {
     let statusText = 'Sangat Aktif';
@@ -527,11 +536,12 @@ window.exportLeaderboardCsv = function() {
     const teacherName = s.top_teacher?.nama ? `"${s.top_teacher.nama.replace(/"/g, '""')}"` : `"-"`;
     const teacherCount = s.top_teacher?.count || 0;
 
-    csv += `"${i + 1}","${s.nama.replace(/"/g, '""')}","${s.npsn || '-'}","${s.is_sekolah_penggerak ? 'Ya' : 'Bukan'}","${s.total_rpp}","${s.total_asesmen}","${s.total_slide}","${s.total_all}",${teacherName},"${teacherCount}","${statusText}"\n`;
+    csv += `"${i + 1}","${s.nama.replace(/"/g, '""')}","${s.npsn || '-'}","${s.is_sekolah_penggerak ? 'Ya' : 'Bukan'}","${s.total_rpp}","${s.total_asesmen}","${s.total_slide}","${s.total_other || 0}","${s.total_all}",${teacherName},"${teacherCount}","${statusText}"\n`;
   });
 
   const summary = data.summary || {};
-  csv += `\n"TOTAL KESELURUHAN GUGUS","","","","${summary.total_rpp || 0}","${summary.total_asesmen || 0}","${summary.total_slide || 0}","${summary.total_generations || 0}","","",""\n`;
+  csv += `\n"TOTAL KESELURUHAN GUGUS","","","","${summary.total_rpp || 0}","${summary.total_asesmen || 0}","${summary.total_slide || 0}","${summary.total_other || 0}","${summary.total_generations || 0}","","",""\n`;
+  if (summary.total_legacy_uncertain) csv += `"Catatan: ${summary.total_legacy_uncertain} proses lama memiliki kategori atau pemilik yang belum dapat dipastikan."\n`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -618,10 +628,11 @@ window.printLeaderboardReport = function() {
         <!-- Ringkasan Gugus -->
         <div class="grid grid-cols-4 gap-2 mb-6 text-center font-sans text-xs border border-slate-300 rounded-xl p-3 bg-slate-50/50">
           <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total RPP</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_rpp || 0}</strong></div>
-          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Asesmen/TTS</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_asesmen || 0}</strong></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Asesmen</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_asesmen || 0}</strong></div>
           <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Slide</span><strong class="text-sm font-extrabold text-slate-900">${summary.total_slide || 0}</strong></div>
-          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Akumulasi Dokumen</span><strong class="text-sm font-extrabold text-indigo-700">${summary.total_generations || 0}</strong></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Total Proses AI</span><strong class="text-sm font-extrabold text-indigo-700">${summary.total_generations || 0}</strong></div>
         </div>
+        <p class="text-xs font-sans text-slate-600 mb-4">Fitur lain: ${summary.total_other || 0} proses.${summary.total_legacy_uncertain ? ` ${summary.total_legacy_uncertain} catatan lama belum dapat dipastikan kategori atau pemiliknya.` : ''}</p>
 
         <!-- Table -->
         <table class="w-full text-left text-xs border-collapse border border-slate-900 font-sans mb-8">
@@ -630,8 +641,9 @@ window.printLeaderboardReport = function() {
               <th class="border border-slate-900 p-2 w-10">No</th>
               <th class="border border-slate-900 p-2 text-left">Nama Satuan Pendidikan</th>
               <th class="border border-slate-900 p-2 w-16">RPP</th>
-              <th class="border border-slate-900 p-2 w-16">Soal</th>
+              <th class="border border-slate-900 p-2 w-16">Asesmen</th>
               <th class="border border-slate-900 p-2 w-16">Slide</th>
+              <th class="border border-slate-900 p-2 w-16">Lainnya</th>
               <th class="border border-slate-900 p-2 w-16 font-extrabold">Total</th>
               <th class="border border-slate-900 p-2 text-left">Pendidik Paling Aktif</th>
             </tr>
@@ -644,6 +656,7 @@ window.printLeaderboardReport = function() {
                 <td class="border border-slate-900 p-2 text-center">${s.total_rpp}</td>
                 <td class="border border-slate-900 p-2 text-center">${s.total_asesmen}</td>
                 <td class="border border-slate-900 p-2 text-center">${s.total_slide}</td>
+                <td class="border border-slate-900 p-2 text-center">${s.total_other || 0}</td>
                 <td class="border border-slate-900 p-2 text-center font-bold text-slate-900">${s.total_all}</td>
                 <td class="border border-slate-900 p-2 text-xs">${s.top_teacher?.nama ? `${escapeHtml(s.top_teacher.nama)} (${s.top_teacher.count}x)` : '-'}</td>
               </tr>

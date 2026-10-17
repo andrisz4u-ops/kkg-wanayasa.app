@@ -570,11 +570,10 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
 
   const auditItems = [];
   let totalTp = 0;
-  let passedCount = 0;
+  let structurePassedCount = 0;
   let repairedCount = 0;
   let flaggedCount = 0;
   let kkoCompliantCount = 0;
-  let cpAlignedCount = 0;
   let jpValidCount = 0;
   let totalScoreAccumulator = 0;
 
@@ -597,7 +596,8 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
         const repairedFields = [];
         const suggestions = [];
         let itemScore = 100;
-        let itemStatus = 'verified';
+        let itemStatus = 'needs_review';
+        let structuralFlagged = false;
 
         // A. Cek Kode TP
         const expectedCode = `${kelasNum}.${globalTpCounter++}`;
@@ -622,6 +622,7 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
           } else {
             itemScore -= 25;
             itemStatus = 'flagged';
+            structuralFlagged = true;
             suggestions.push(`Kata kerja '${kkoInfo.kko}' belum terukur. Ganti dengan KKO operasional.`);
           }
         }
@@ -636,20 +637,17 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
         }
 
         // C. Keselarasan Elemen
-        let cpAligned = true;
+        let cpAligned = null;
         const materiLower = (item.materi_pokok || '').toLowerCase();
         const babLower = babTitle.toLowerCase();
         const cpLower = (bab.cp || '').toLowerCase();
 
-        if (materiLower && cpLower && !cpLower.includes(materiLower.slice(0, 4)) && !babLower.includes(materiLower.slice(0, 4))) {
-          if (mapel.toLowerCase().includes('ipas') && (cpLower.includes('geografis') && materiLower.includes('ekosistem'))) {
-            cpAligned = false;
-            itemScore -= 20;
-            itemStatus = 'flagged';
-            suggestions.push('Indikasi materi tidak selaras dengan elemen CP.');
-          }
+        if (mapel.toLowerCase().includes('ipas') && cpLower.includes('geografis') && materiLower.includes('ekosistem')) {
+          cpAligned = false;
+          itemScore -= 20;
+          itemStatus = 'flagged';
+          suggestions.push('Indikasi materi tidak selaras dengan elemen CP.');
         }
-        if (cpAligned) cpAlignedCount++;
 
         // D. Alokasi JP
         let jpNum = 4;
@@ -667,15 +665,15 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
           jpValidCount++;
         } else {
           itemScore -= 10;
+          structuralFlagged = true;
           suggestions.push(`Alokasi waktu (${jpNum} JP) di luar rentang standar (2-8 JP).`);
         }
 
-        if (repairedFields.length > 0 && itemStatus !== 'flagged') {
-          itemStatus = 'repaired';
-        }
-        if (itemStatus === 'verified') passedCount++;
-        else if (itemStatus === 'repaired') repairedCount++;
-        else flaggedCount++;
+        if (repairedFields.length > 0 && itemStatus !== 'flagged') itemStatus = 'repaired';
+        const structuralStatus = structuralFlagged ? 'flagged' : repairedFields.length ? 'repaired' : 'passed';
+        if (structuralStatus === 'passed') structurePassedCount++;
+        if (itemStatus === 'repaired') repairedCount++;
+        if (itemStatus === 'flagged') flaggedCount++;
 
         itemScore = Math.max(40, Math.min(100, itemScore));
         totalScoreAccumulator += itemScore;
@@ -689,13 +687,15 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
           atp: item.atp || `Mempelajari konsep ${item.materi_pokok}, berlatih kompetensi, dan evaluasi formatif.`,
           alokasi_waktu: `${jpNum} JP`,
           status: itemStatus,
+          structural_status: structuralStatus,
           quality_score: itemScore,
           kko: kkoInfo.kko,
           bloom_level: kkoInfo.bloomLabel,
           kko_operasional: kkoOperasional,
           cp_aligned: cpAligned,
+          alignment_status: cpAligned === false ? 'suspected_mismatch' : 'not_assessed',
           jp_valid: jpValid,
-          notes: suggestions.join(' | ') || 'Kaidah kurikulum dan standar BSKAP 046/2025 terpenuhi.',
+          notes: suggestions.join(' | ') || 'Pemeriksaan struktur selesai; keselarasan CP belum dinilai dan perlu ditinjau guru.',
           repaired_fields: repairedFields,
           suggestions
         });
@@ -712,34 +712,40 @@ export function runCpQualityGate(analysisData, inputChapters = [], formMeta = {}
   const overallQualityScore = Math.round(totalScoreAccumulator / safeTotalTp);
 
   let grade = 'A';
-  let gradeLabel = 'Sangat Baik (Terstandarisasi Penuh)';
+  let gradeLabel = 'Struktur baik; perlu ditinjau guru';
   if (overallQualityScore < 70) {
     grade = 'D';
     gradeLabel = 'Perlu Penyesuaian Signifikan';
   } else if (overallQualityScore < 80) {
     grade = 'C';
-    gradeLabel = 'Cukup Baik (Ada Catatan)';
+    gradeLabel = 'Struktur cukup; perlu ditinjau guru';
   } else if (overallQualityScore < 90) {
     grade = 'B';
-    gradeLabel = 'Baik (Kaidah Terpenuhi)';
+    gradeLabel = 'Struktur baik; perlu ditinjau guru';
   }
 
   const summary = {
     total_tp: totalTp,
     total_babs: (inputChapters && inputChapters.length > 0) ? inputChapters.length : semesters.reduce((acc, s) => acc + (s.babs?.length || 0), 0),
-    passed_count: passedCount,
+    passed_count: 0,
+    structure_passed_count: structurePassedCount,
+    needs_review_count: totalTp,
     repaired_count: repairedCount,
     flagged_count: flaggedCount,
     overall_quality_score: overallQualityScore,
     grade,
     grade_label: gradeLabel,
     kko_compliance_pct: Math.round((kkoCompliantCount / safeTotalTp) * 100),
-    cp_alignment_pct: Math.round((cpAlignedCount / safeTotalTp) * 100),
+    cp_alignment_pct: null,
+    alignment_warning_count: auditItems.filter(item => item.cp_aligned === false).length,
     jp_compliance_pct: Math.round((jpValidCount / safeTotalTp) * 100),
     terminology_clean: true,
     target_jp_per_semester: quota.intrakurikulerPerSemester,
     actual_jp_per_semester: actualJpPerSemester,
-    verified_at: new Date().toISOString()
+    verification_scope: 'deterministic',
+    review_status: 'needs_teacher_review',
+    audited_at: new Date().toISOString(),
+    verified_at: null
   };
 
   const auditResult = {

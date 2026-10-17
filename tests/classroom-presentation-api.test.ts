@@ -20,11 +20,11 @@ const input = { topik: 'Pecahan di kelas', mataPelajaran: 'Matematika', jenjangK
 beforeEach(() => {
   vi.stubGlobal('crypto', webcrypto); ai.calls = []; ai.result = exampleDeck(); ai.run = undefined;
   vi.mocked(getCurrentUser).mockResolvedValue({ id: 1, role: 'user', nama: 'Guru uji' } as any);
-  db = new SqliteD1(); db.sqlite.exec('CREATE TABLE users(id INTEGER PRIMARY KEY); INSERT INTO users VALUES(1);'); db.sqlite.exec(readFileSync('migrations/0029_ai_generation_jobs.sql', 'utf8'));
+  db = new SqliteD1(); db.sqlite.exec('CREATE TABLE users(id INTEGER PRIMARY KEY); INSERT INTO users VALUES(1);'); db.sqlite.exec(readFileSync('migrations/0029_ai_generation_jobs.sql', 'utf8')); db.sqlite.exec(readFileSync('migrations/0032_ai_admission.sql', 'utf8'));
   app = new Hono().route('/presentation', presentation);
 });
 afterEach(() => { db.close(); vi.unstubAllGlobals(); });
-const request = (route = 'generate', body = input) => app.request(`/presentation/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AI-Job-Id': 'slide-studio-job-123' }, body: JSON.stringify(body) }, { DB: db });
+const request = (route = 'generate', body = input) => app.request(`/presentation/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AI-Job-Id': 'slide-studio-job-123', 'X-Session-Id': 'test-session' }, body: JSON.stringify(body) }, { DB: db });
 describe('Classroom presentation generation', () => {
   it('uses the displayed provider and complete teacher brief instead of forcing Gemini', async () => {
     const response = await request(); expect(response.status).toBe(200);

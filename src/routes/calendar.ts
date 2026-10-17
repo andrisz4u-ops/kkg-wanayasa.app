@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import { createAuditLog } from '../lib/audit';
+import { createReservedCalendarEvent, repairCalendarReservation, syncUpcomingCalendarActivities, updateCalendarEvent } from '../lib/calendar-reservations';
 
 type Bindings = { DB: D1Database };
 type Variables = { user: any };
@@ -125,44 +126,50 @@ calendar.post('/events', async (c) => {
             start_time, end_time, location, is_all_day, color, kegiatan_id
         } = body;
 
+        if (kegiatan_id !== undefined && kegiatan_id !== null) {
+            if (!Number.isInteger(kegiatan_id) || kegiatan_id <= 0) {
+                return Errors.validation(c, 'ID kegiatan tidak valid');
+            }
+            const activity = await c.env.DB.prepare('SELECT id FROM kegiatan WHERE id = ?').bind(kegiatan_id).first();
+            if (!activity) return Errors.validation(c, 'Kegiatan tidak ditemukan');
+        }
+
         // Validate event type
         const validTypes = ['meeting', 'holiday', 'training', 'deadline', 'other'];
         if (event_type && !validTypes.includes(event_type)) {
             return Errors.validation(c, 'Tipe event tidak valid');
         }
 
-        const result = await c.env.DB.prepare(`
+        const values = [
+            title.trim(), description?.trim() || null, event_type || 'meeting', start_date,
+            end_date || start_date, start_time || null, end_time || null, location?.trim() || null,
+            is_all_day ? 1 : 0, color || '#3B82F6', kegiatan_id ?? null, user.id,
+        ];
+        const insertedId = kegiatan_id != null
+            ? await createReservedCalendarEvent(c.env.DB, { kegiatanId: kegiatan_id, eventValues: values })
+            : Number((await c.env.DB.prepare(`
             INSERT INTO calendar_events 
             (title, description, event_type, start_date, end_date, start_time, end_time, location, is_all_day, color, kegiatan_id, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
-            title.trim(),
-            description?.trim() || null,
-            event_type || 'meeting',
-            start_date,
-            end_date || start_date,
-            start_time || null,
-            end_time || null,
-            location?.trim() || null,
-            is_all_day ? 1 : 0,
-            color || '#3B82F6',
-            kegiatan_id || null,
-            user.id
-        ).run();
+            ...values
+        ).run()).meta.last_row_id);
+
+        if (insertedId === null) return Errors.conflict(c, 'Kegiatan sudah memiliki event kalender');
 
         // Audit log
         await createAuditLog(c.env.DB, {
             user_id: user.id,
             action: 'KEGIATAN_CREATE',
             entity_type: 'calendar_event',
-            entity_id: result.meta.last_row_id as number,
+            entity_id: insertedId,
             details: { title, event_type, start_date },
             ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
             user_agent: c.req.header('User-Agent')
         });
 
         return successResponse(c, {
-            id: result.meta.last_row_id,
+            id: insertedId,
             title,
             start_date
         }, 'Event berhasil ditambahkan', 201);
@@ -190,7 +197,7 @@ calendar.put('/events/:id', async (c) => {
         }
 
         const existing: any = await c.env.DB.prepare(
-            'SELECT id, created_by FROM calendar_events WHERE id = ?'
+            'SELECT id, created_by, kegiatan_id FROM calendar_events WHERE id = ?'
         ).bind(id).first();
 
         if (!existing) {
@@ -207,36 +214,38 @@ calendar.put('/events/:id', async (c) => {
             title, description, event_type, start_date, end_date,
             start_time, end_time, location, is_all_day, color, kegiatan_id
         } = body;
+        const hasLinkField = Object.prototype.hasOwnProperty.call(body, 'kegiatan_id');
+        const requestedKegiatanId = hasLinkField ? (kegiatan_id ?? null) : existing.kegiatan_id;
+        const linkChanged = hasLinkField && requestedKegiatanId !== existing.kegiatan_id;
+        const nextKegiatanId = linkChanged ? requestedKegiatanId : existing.kegiatan_id;
+        if (linkChanged && nextKegiatanId !== null) {
+            if (!Number.isInteger(nextKegiatanId) || nextKegiatanId <= 0) {
+                return Errors.validation(c, 'ID kegiatan tidak valid');
+            }
+            const activity = await c.env.DB.prepare('SELECT id FROM kegiatan WHERE id = ?').bind(nextKegiatanId).first();
+            if (!activity) return Errors.validation(c, 'Kegiatan tidak ditemukan');
+        }
 
-        await c.env.DB.prepare(`
-            UPDATE calendar_events SET
-            title = COALESCE(?, title),
-            description = ?,
-            event_type = COALESCE(?, event_type),
-            start_date = COALESCE(?, start_date),
-            end_date = ?,
-            start_time = ?,
-            end_time = ?,
-            location = ?,
-            is_all_day = ?,
-            color = COALESCE(?, color),
-            kegiatan_id = ?,
-            updated_at = datetime('now')
-            WHERE id = ?
-        `).bind(
-            title?.trim() || null,
-            description?.trim() || null,
-            event_type || null,
-            start_date || null,
-            end_date || null,
-            start_time || null,
-            end_time || null,
-            location?.trim() || null,
-            is_all_day ? 1 : 0,
-            color || null,
-            kegiatan_id || null,
-            id
-        ).run();
+        const updated = await updateCalendarEvent(c.env.DB, {
+            eventId: Number(id), userId: user.id, isAdmin: user.role === 'admin',
+            linkChanged, kegiatanId: nextKegiatanId == null ? null : Number(nextKegiatanId),
+            oldKegiatanId: existing.kegiatan_id == null ? null : Number(existing.kegiatan_id),
+            updateValues: [
+                Object.prototype.hasOwnProperty.call(body, 'title') ? 1 : 0, title?.trim() || null,
+                Object.prototype.hasOwnProperty.call(body, 'description') ? 1 : 0,
+                description == null || !description.trim() ? null : description.trim(),
+                Object.prototype.hasOwnProperty.call(body, 'event_type') ? 1 : 0, event_type || null,
+                Object.prototype.hasOwnProperty.call(body, 'start_date') ? 1 : 0, start_date || null,
+                Object.prototype.hasOwnProperty.call(body, 'end_date') ? 1 : 0, end_date ?? null,
+                Object.prototype.hasOwnProperty.call(body, 'start_time') ? 1 : 0, start_time ?? null,
+                Object.prototype.hasOwnProperty.call(body, 'end_time') ? 1 : 0, end_time ?? null,
+                Object.prototype.hasOwnProperty.call(body, 'location') ? 1 : 0,
+                location == null || !location.trim() ? null : location.trim(),
+                Object.prototype.hasOwnProperty.call(body, 'is_all_day') ? 1 : 0, is_all_day ? 1 : 0,
+                Object.prototype.hasOwnProperty.call(body, 'color') ? 1 : 0, color || null,
+            ],
+        });
+        if (!updated) return Errors.conflict(c, 'Kegiatan sudah memiliki event kalender atau event berubah');
 
         return successResponse(c, null, 'Event berhasil diperbarui');
 
@@ -263,7 +272,7 @@ calendar.delete('/events/:id', async (c) => {
         }
 
         const existing: any = await c.env.DB.prepare(
-            'SELECT id, created_by, title FROM calendar_events WHERE id = ?'
+            'SELECT id, created_by, title, kegiatan_id FROM calendar_events WHERE id = ?'
         ).bind(id).first();
 
         if (!existing) {
@@ -275,7 +284,9 @@ calendar.delete('/events/:id', async (c) => {
             return Errors.forbidden(c, 'Anda tidak memiliki akses untuk menghapus event ini');
         }
 
+        const linkedKegiatanId = existing.kegiatan_id == null ? null : Number(existing.kegiatan_id);
         await c.env.DB.prepare('DELETE FROM calendar_events WHERE id = ?').bind(id).run();
+        if (linkedKegiatanId !== null) await repairCalendarReservation(c.env.DB, linkedKegiatanId);
 
         // Audit log
         await createAuditLog(c.env.DB, {
@@ -320,29 +331,10 @@ calendar.post('/sync-kegiatan', async (c) => {
     try {
         // Get kegiatan that are not yet synced
         const kegiatan = await c.env.DB.prepare(`
-            SELECT k.* FROM kegiatan k
-            LEFT JOIN calendar_events ce ON ce.kegiatan_id = k.id
-            WHERE ce.id IS NULL AND k.tanggal >= date('now')
+            SELECT id, nama_kegiatan, tanggal, waktu_mulai, waktu_selesai, tempat, deskripsi
+            FROM kegiatan WHERE tanggal >= date('now')
         `).all();
-
-        let synced = 0;
-        for (const k of (kegiatan.results || []) as any[]) {
-            await c.env.DB.prepare(`
-                INSERT INTO calendar_events 
-                (title, description, event_type, start_date, start_time, end_time, location, color, kegiatan_id, created_by)
-                VALUES (?, ?, 'meeting', ?, ?, ?, ?, '#3B82F6', ?, ?)
-            `).bind(
-                k.nama_kegiatan,
-                k.deskripsi || null,
-                k.tanggal,
-                k.waktu_mulai || null,
-                k.waktu_selesai || null,
-                k.tempat || null,
-                k.id,
-                user.id
-            ).run();
-            synced++;
-        }
+        const synced = await syncUpcomingCalendarActivities(c.env.DB, (kegiatan.results || []) as any[], user.id);
 
         return successResponse(c, { synced }, `${synced} kegiatan berhasil disinkronkan ke kalender`);
 

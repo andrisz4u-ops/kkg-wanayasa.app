@@ -4,6 +4,7 @@ import { successResponse, Errors, validateRequired } from '../lib/response';
 import type { User, UserPublic } from '../types';
 
 import { uploadFile, deleteFile, StorageBindings } from '../lib/storage';
+import { resolveProfileSchool } from '../lib/profile-school-resolver';
 
 type Bindings = {
   DB: D1Database;
@@ -129,7 +130,8 @@ guru.put('/profile', async (c) => {
       return Errors.validation(c, 'Nama minimal 2 karakter');
     }
 
-    let fotoUrl = user.foto_url;
+    let fotoUrl = user.foto_url ?? null;
+    const resolvedSchool = await resolveProfileSchool(c.env.DB, sekolah);
 
     // Handle photo upload
     if (foto && typeof foto === 'object' && foto.name) {
@@ -154,12 +156,13 @@ guru.put('/profile', async (c) => {
 
     await c.env.DB.prepare(`
       UPDATE users 
-      SET nama = ?, nip = ?, sekolah = ?, mata_pelajaran = ?, no_hp = ?, alamat = ?, foto_url = ?, updated_at = datetime('now')
+      SET nama = ?, nip = ?, sekolah = ?, sekolah_id = ?, mata_pelajaran = ?, no_hp = ?, alamat = ?, foto_url = ?, updated_at = datetime('now')
       WHERE id = ?
     `).bind(
       nama.trim(),
       nip?.trim() || null,
-      sekolah?.trim() || null,
+      resolvedSchool.sekolah,
+      resolvedSchool.sekolah_id,
       mata_pelajaran?.trim() || null,
       no_hp?.trim() || null,
       alamat?.trim() || null,

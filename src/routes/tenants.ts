@@ -78,6 +78,10 @@ tenants.put('/current', async (c) => {
     }
 
     const tenantId = resolveTenantId(c.req.raw);
+    const accountTenantId = user.tenant_id || DEFAULT_TENANT_ID;
+    if (tenantId !== DEFAULT_TENANT_ID || tenantId !== accountTenantId) {
+      return Errors.forbidden(c, 'Anda tidak dapat mengubah organisasi ini.');
+    }
     const body = await c.req.json();
     const { nama, kecamatan, kabupaten, alamat_sekretariat, email, no_kontak, logo_url } = body;
 
@@ -115,7 +119,8 @@ tenants.put('/current', async (c) => {
         user_agent: c.req.header('User-Agent') || 'unknown'
       });
     } catch (e: any) {
-      console.warn('Tenant update warning:', e);
+      console.error('Tenant update failed:', e);
+      return Errors.internal(c, 'Data organisasi gagal diperbarui.');
     }
 
     const updated = await getTenantConfig(c.env.DB, tenantId);

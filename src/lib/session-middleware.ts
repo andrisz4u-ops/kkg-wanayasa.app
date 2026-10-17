@@ -8,7 +8,9 @@ export const requireSession: MiddlewareHandler<{
 }> = async (c, next) => {
   const cookieHeader = c.req.header('Cookie') || c.req.header('cookie');
   const sessionId = getCookie(cookieHeader, 'session') || c.req.header('x-session-id') || c.req.header('authorization')?.replace('Bearer ', '');
-  const user = c.get('user') || await getCurrentUser(c.env.DB, sessionId);
+  const existingUser = c.get('user');
+  if (!existingUser && !sessionId) return Errors.unauthorized(c);
+  const user = existingUser || await getCurrentUser(c.env.DB, sessionId);
   if (!user) return Errors.unauthorized(c);
   c.set('user', user);
   await next();

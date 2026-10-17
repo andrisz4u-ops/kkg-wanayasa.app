@@ -13,13 +13,13 @@ describe('Classroom presentation output contracts', () => {
   it.each(Object.keys(slideTemplates).flatMap(template => ['16:9', '4:3'].map(aspectRatio => ({ template, aspectRatio }))))('fits meaningful $template examples on $aspectRatio with one shared scene', ({ template, aspectRatio }) => {
     const deck = normalizeDeck(exampleDeck(template));
     expect(deckIssues(deck, 8)).toEqual([]);
-    const scenes = exportScenes(deck, template, { aspectRatio });
+    const scenes = exportScenes(deck, template, { aspectRatio: aspectRatio as '16:9' | '4:3' });
     for (const scene of scenes) {
       expect(scene.warnings).toEqual([]);
       for (const node of scene.nodes) {
         expect(node.x).toBeGreaterThanOrEqual(0); expect(node.y).toBeGreaterThanOrEqual(0);
-        if (node.w) expect(node.x + node.w).toBeLessThanOrEqual(scene.width + .1);
-        if (node.h) expect(node.y + node.h).toBeLessThanOrEqual(scene.height + .1);
+        if ('w' in node && node.w) expect(node.x + node.w).toBeLessThanOrEqual(scene.width + .1);
+        if ('h' in node && node.h) expect(node.y + node.h).toBeLessThanOrEqual(scene.height + .1);
         if (node.kind === 'text') expect(node.y + node.lines.length * node.size * 1.23).toBeLessThanOrEqual(node.y + node.h + .1);
       }
     }
@@ -42,9 +42,10 @@ describe('Classroom presentation output contracts', () => {
     const before = JSON.stringify(slide);
     expect(slideIssues(slide)).toEqual([]);
     for (const template of Object.keys(slideTemplates)) for (const aspectRatio of ['16:9', '4:3']) {
-      const scene = buildScene(slide, template, { aspectRatio });
+      const scene = buildScene(slide, template, { aspectRatio: aspectRatio as '16:9' | '4:3' });
       expect(scene.warnings, `${template} / ${aspectRatio}`).toEqual([]);
-      for (const node of scene.nodes.filter((node: any) => node.kind === 'text')) {
+      for (const node of scene.nodes.filter((node) => node.kind === 'text')) {
+        if (node.kind !== 'text') continue;
         expect(node.y + node.lines.length * node.size * 1.23).toBeLessThanOrEqual(node.y + node.h + .1);
         if ([...slide.leftContent, ...slide.rightContent].includes(node.text)) expect(node.size).toBeGreaterThanOrEqual(26);
       }

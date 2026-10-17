@@ -211,6 +211,17 @@
   .feature-workspace .os-step-2 { animation-delay: 80ms; }
   .feature-workspace .os-step-3 { animation-delay: 120ms; }
   .feature-workspace .os-step-4 { animation-delay: 160ms; }
+  .feature-workspace .os-step-5 { animation-delay: 200ms; }
+  .feature-workspace .os-step-6 { animation-delay: 240ms; }
+  .feature-workspace .os-step-7 { animation-delay: 280ms; }
+  @keyframes os-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .feature-workspace.os-page-enter { animation: os-page-in 220ms ease-out; }
+  .feature-workspace .fw-loading-lines { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+  .feature-workspace .fw-loading-lines > span { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--fw-soft) 25%, var(--fw-line) 50%, var(--fw-soft) 75%); background-size: 200% 100%; animation: os-shimmer 1.4s ease-in-out infinite; }
+  .feature-workspace .fw-loading-lines > span:nth-child(1) { width: 85%; }
+  .feature-workspace .fw-loading-lines > span:nth-child(2) { width: 60%; }
+  .feature-workspace .fw-loading-lines > span:nth-child(3) { width: 72%; }
+  @keyframes os-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
   .wk-organic-studio.wk-paper-home .wk-green-dashboard .wk-welcome { background: linear-gradient(118deg, #0b3529, #185a3e); border-radius: 24px; box-shadow: var(--os-panel-shadow); animation: os-enter 380ms ease both; }
   .wk-organic-studio .wk-studio-worktable, .wk-organic-studio .wk-community-panel { border-radius: 20px; box-shadow: var(--os-panel-shadow); }
@@ -246,6 +257,8 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .feature-workspace .os-reveal,
+    .feature-workspace.os-page-enter,
+    .feature-workspace .fw-loading-lines > span,
     .wk-organic-studio.wk-paper-home .wk-green-dashboard .wk-welcome { animation: none; }
     .wk-organic-studio :is(.wk-persistent-sidebar, .wk-persistent-link, .wk-brand-medallion, .wk-top-link, .wk-bottom-nav button, .wk-studio-launch, .wk-support-tool, .wk-studio-community-links button, .wk-hero-primary, .wk-hero-secondary, .wk-open-document),
     .feature-workspace :is(.fw-panel, .fw-action, .fw-field, .fs-collection-item, .fw-disclosure > summary) { transition: none; }

@@ -168,13 +168,21 @@ export function renderHTML(initialTheme: string = 'teal'): string {
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RuangKKG Digital">
 
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" type="image/png" href="/static/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
   <link rel="manifest" href="/manifest.json">
   
   <link rel="stylesheet" href="/static/style.css?v=${APP_VERSION}">
-  
+
   <style id="dynamic-theme-style">${themeCss}</style>
+  <style id="boot-shell-style">
+    #boot-skeleton { display: none; }
+    html.kkg-boot-auth #landing-root { display: none !important; }
+    html.kkg-boot-auth #boot-skeleton {
+      display: flex; min-height: 60vh; align-items: center; justify-content: center;
+      color: var(--color-text-secondary); font-size: 0.95rem;
+    }
+  </style>
 
   <script>
     (function() {
@@ -202,6 +210,20 @@ export function renderHTML(initialTheme: string = 'teal'): string {
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] antialiased selection:bg-primary-500 selection:text-white">
+  <script>
+    // Hide the pre-rendered public landing shell before first paint when the
+    // UI-only login marker is present (logged-in browser, hard reload). Auth
+    // decisions still happen in JS after /auth/me resolves; this only avoids
+    // the landing flash. Crawlers/visitors without the marker are unaffected.
+    (function() {
+      try {
+        if (/(?:^|;\\s*)kkg_logged_in=1(?:;|$)/.test(document.cookie)) {
+          document.documentElement.classList.add('kkg-boot-auth');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <div id="boot-skeleton" aria-hidden="true"><span>Memuat RuangKKG…</span></div>
   <div id="app">
     <!-- Pre-rendered Semantic Landing Page from Redesign Web RuangKKG -->
     <div class="rk-landing" id="landing-root">

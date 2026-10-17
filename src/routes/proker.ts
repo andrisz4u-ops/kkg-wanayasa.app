@@ -5,6 +5,9 @@ import { buildProkerPrompt } from '../lib/prompts';
 import { rateLimitMiddleware, RATE_LIMITS } from '../lib/ratelimit';
 import { successResponse, Errors, validateRequired, ErrorCodes } from '../lib/response';
 import type { GenerateProkerRequest, KegiatanProker } from '../types';
+import { requireSession } from '../lib/session-middleware';
+import { requireAIAdmission } from '../lib/ai-admission';
+import { copyBytesToArrayBuffer } from '../lib/binary';
 
 type Bindings = {
   DB: D1Database;
@@ -20,7 +23,7 @@ type Bindings = {
 const proker = new Hono<{ Bindings: Bindings }>();
 
 // Generate program kerja (AI endpoint - strict rate limit)
-proker.post('/generate', rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
+proker.post('/generate', requireSession, requireAIAdmission, rateLimitMiddleware(RATE_LIMITS.ai), async (c) => {
   const sessionId = getCookie(c.req.header('Cookie'), 'session');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
 
@@ -298,7 +301,7 @@ proker.get('/:id/download', async (c) => {
     const filename = `Program_Kerja_KKG_${result.tahun_ajaran.replace(/\//g, '-')}.docx`;
 
     // Return as downloadable file
-    return new Response(buffer, {
+    return new Response(copyBytesToArrayBuffer(buffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename}"`,

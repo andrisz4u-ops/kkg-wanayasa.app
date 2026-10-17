@@ -4,6 +4,7 @@ import { generateProtaDocxBuffer } from '../src/lib/docx/prota';
 import { generatePromesDocxBuffer, extractSemesterCpItems } from '../src/lib/docx/promes';
 import { generateKktpDocxBuffer } from '../src/lib/docx/kktp';
 import { generateAnalisisCpDocxBuffer } from '../src/lib/docx/analisis-cp';
+import { generateAtpElemenDocxBuffer } from '../src/lib/docx/atp-elemen';
 import { generateRpeDocxBuffer } from '../src/lib/docx/rpe';
 import type { AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import analisisCp from '../src/routes/analisis-cp';
@@ -151,6 +152,14 @@ describe('4-in-1 Engine DOCX Generators (Prota, Promes, KKTP)', () => {
 
   it('should generate Analisis CP with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
     const buffer = await generateAnalisisCpDocxBuffer(sampleInput);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:w="16838"');
+    expect(xml).toContain('w:h="11906"');
+  });
+
+  it('should generate ATP Elemen with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
+    const buffer = await generateAtpElemenDocxBuffer(sampleInput);
     const xml = await getDocumentXml(buffer);
     expect(xml).toContain('w:orient="landscape"');
     expect(xml).toContain('w:w="16838"');

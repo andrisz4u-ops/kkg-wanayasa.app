@@ -15,9 +15,10 @@ import {
 } from '../lib/kaldik-calendar-engine';
 import { generateKaldikExcelBuffer } from '../lib/kaldik-excel-generator';
 import { replacePesertaDidik } from './analisis-cp';
-import { type AppBindings } from '../types/env';
+import { type AppBindings, type AppVariables } from '../types/env';
+import { requireAIAdmission } from '../lib/ai-admission';
 
-const programSekolah = new Hono<{ Bindings: AppBindings }>();
+const programSekolah = new Hono<{ Bindings: AppBindings; Variables: AppVariables & { sessionId: string | undefined } }>();
 
 const ADMIN_PANEL_ROLES = ['super_admin', 'admin', 'operator'] as const;
 
@@ -36,8 +37,8 @@ programSekolah.use('*', async (c, next) => {
     return Errors.forbidden(c, 'Fitur Program Sekolah saat ini hanya dapat diakses oleh administrator dan operator');
   }
 
-  c.set('user' as any, user);
-  c.set('sessionId' as any, sessionId);
+  c.set('user', user);
+  c.set('sessionId', sessionId);
   await next();
 });
 
@@ -1428,7 +1429,7 @@ export async function ensureProgramSekolahTables(db: D1Database): Promise<void> 
 // ============================================
 // Endpoint 1: SSE Live Streaming Generation
 // ============================================
-programSekolah.use('/generate-stream', requireSession);
+programSekolah.use('/generate-stream', requireSession, requireAIAdmission);
 programSekolah.post('/generate-stream', async (c) => {
   try {
     const body = await c.req.json();
@@ -1516,7 +1517,7 @@ programSekolah.post('/generate-stream', async (c) => {
           const sessionId = getCookie(c.req.header('Cookie'), 'session');
           const user = await getCurrentUser(c.env.DB, sessionId);
           await recordAIGeneration(c.env.DB, {
-            user_id: user?.id || 1,
+            user_id: user?.id,
             user_nama: user?.nama || (identitas?.penyusun || 'Guru'),
             sekolah: user?.sekolah || (identitas?.namaSekolah || 'SDN'),
             feature_type: 'PROGRAM_SEKOLAH',
@@ -1560,7 +1561,7 @@ programSekolah.post('/generate-stream', async (c) => {
 // ============================================
 // Endpoint 2: Fallback Direct JSON Generation
 // ============================================
-programSekolah.post('/generate', async (c) => {
+programSekolah.post('/generate', requireAIAdmission, async (c) => {
   try {
     const body = await c.req.json();
     const { template, identitas, spesifik, aiProvider } = body;
@@ -1599,7 +1600,7 @@ programSekolah.post('/generate', async (c) => {
       const sessionId = getCookie(c.req.header('Cookie'), 'session');
       const user = await getCurrentUser(c.env.DB, sessionId);
       await recordAIGeneration(c.env.DB, {
-        user_id: user?.id || 1,
+        user_id: user?.id,
         user_nama: user?.nama || (identitas?.penyusun || 'Guru'),
         sekolah: user?.sekolah || (identitas?.namaSekolah || 'SDN'),
         feature_type: 'PROGRAM_SEKOLAH',
@@ -1620,8 +1621,8 @@ programSekolah.post('/generate', async (c) => {
 // ============================================
 // Endpoint 2b: Generate Khusus Bab / Bagian Tertentu (Hemat Token & Lebih Mendalam)
 // ============================================
-programSekolah.use('/generate-section', requireSession);
-programSekolah.use('/generate-section-stream', requireSession);
+programSekolah.use('/generate-section', requireSession, requireAIAdmission);
+programSekolah.use('/generate-section-stream', requireSession, requireAIAdmission);
 const generateSection = async (c: Context<any>) => {
   try {
     const body = await c.req.json();

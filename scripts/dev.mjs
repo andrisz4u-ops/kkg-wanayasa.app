@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runIfLocalSchemaReady } from './dev-schema-check.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -47,28 +48,38 @@ function shutdown(exitCode = 0) {
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
-const cssCli = resolve(root, 'node_modules/tailwindcss/lib/cli.js');
-const slideVendor = spawnSync(process.execPath, [resolve(root, 'scripts/build-slide-vendor.mjs')], { cwd: root, stdio: 'inherit' });
-if (slideVendor.status !== 0) process.exit(slideVendor.status || 1);
+const ready = await runIfLocalSchemaReady({
+  configPath: resolve(root, 'wrangler.jsonc'),
+  getPlatformProxy: async options => {
+    const { getPlatformProxy } = await import('wrangler');
+    return getPlatformProxy(options);
+  },
+}, async () => {
+  const cssCli = resolve(root, 'node_modules/tailwindcss/lib/cli.js');
+  const slideVendor = spawnSync(process.execPath, [resolve(root, 'scripts/build-slide-vendor.mjs')], { cwd: root, stdio: 'inherit' });
+  if (slideVendor.status !== 0) process.exit(slideVendor.status || 1);
 
-const initialCss = spawnSync(process.execPath, [cssCli,
-  '-i',
-  './src/styles/input.css',
-  '-o',
-  './public/static/style.css',
-  '--minify',
-], { cwd: root, env: process.env, stdio: 'inherit' });
+  const initialCss = spawnSync(process.execPath, [cssCli,
+    '-i',
+    './src/styles/input.css',
+    '-o',
+    './public/static/style.css',
+    '--minify',
+  ], { cwd: root, env: process.env, stdio: 'inherit' });
 
-if (initialCss.status && initialCss.status !== 0) {
-  process.exit(initialCss.status);
-}
+  if (initialCss.status && initialCss.status !== 0) {
+    process.exit(initialCss.status);
+  }
 
-start('css', cssCli, [
-  '-i',
-  './src/styles/input.css',
-  '-o',
-  './public/static/style.css',
-  '--watch',
-], false);
+  start('css', cssCli, [
+    '-i',
+    './src/styles/input.css',
+    '-o',
+    './public/static/style.css',
+    '--watch',
+  ], false);
 
-start('vite', resolve(root, 'node_modules/vite/bin/vite.js'));
+  start('vite', resolve(root, 'node_modules/vite/bin/vite.js'));
+});
+
+if (!ready) process.exit(1);

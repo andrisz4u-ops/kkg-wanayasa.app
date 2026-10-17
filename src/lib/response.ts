@@ -146,8 +146,10 @@ export const Errors = {
     badRequest: (c: any, message = 'Permintaan tidak valid') =>
         errorResponse(c, ErrorCodes.INVALID_INPUT, message, 400),
 
-    rateLimited: (c: any, retryAfter: number) =>
-        errorResponse(c, ErrorCodes.RATE_LIMITED, 'Terlalu banyak permintaan', 429, { retryAfter }),
+    rateLimited: (c: any, retryAfter: number) => {
+        c.header('Retry-After', String(Math.max(0, retryAfter)));
+        return errorResponse(c, ErrorCodes.RATE_LIMITED, 'Terlalu banyak permintaan', 429, { retryAfter });
+    },
 
     internal: (c: any, message = 'Terjadi kesalahan internal') =>
         errorResponse(c, ErrorCodes.INTERNAL_ERROR, message, 500),

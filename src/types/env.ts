@@ -16,6 +16,7 @@ export type AppBindings = {
     // ─── Security & Encryption ───────────────────
     ENCRYPTION_KEY?: string;
     SECRET_KEY?: string;
+    QR_SIGNING_SECRET?: string;
 
     // ─── Monitoring & Environment ────────────────
     SENTRY_DSN?: string;

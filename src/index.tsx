@@ -29,14 +29,19 @@ import ttsRoutes from './routes/tts';
 import banksoalRoutes from './routes/banksoal';
 import tenantRoutes from './routes/tenants';
 import sertifikatRoutes from './routes/sertifikat';
+import documentDraftsRoutes from './routes/document-drafts';
+import pedagogyQualityRoutes from './routes/pedagogy-quality';
+import assessmentAssetsRoutes from './routes/assessment-assets';
 import { renderHTML } from './templates/layout';
 import { rateLimitMiddleware, RATE_LIMITS } from './lib/ratelimit';
 import { successResponse, Errors } from './lib/response';
 import { hashPassword, getCurrentUser, getCookie } from './lib/auth';
-import { initSentry, captureError } from './lib/sentry';
+import { requireAIAdmission } from './lib/ai-admission';
+import { getSentryOptions, withSentryRequest, captureError } from './lib/sentry';
 import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
 import { allowedCorsOrigin } from './lib/cors-origin';
+import { DEFAULT_TENANT_ID } from './lib/tenant';
 import type { AppBindings, AppVariables } from './types/env';
 
 const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
@@ -44,11 +49,18 @@ const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
 // Initialize Sentry error tracking & logger environment
 app.use('*', async (c, next) => {
   initLoggerEnv(c.env);
-  const sentry = initSentry(c.env);
-  if (sentry) {
-    c.set('sentry', sentry);
+  const options = getSentryOptions(c.env);
+  let executionContext: ExecutionContext | undefined;
+  try {
+    executionContext = c.executionCtx;
+  } catch {
+    // Some test/runtime adapters expose executionCtx through a throwing getter.
   }
-  await next();
+  const context = executionContext && typeof executionContext.waitUntil === 'function' ? executionContext : undefined;
+  return withSentryRequest(options, c.req.raw as Request<unknown, IncomingRequestCfProperties<unknown>>, context, async () => {
+    await next();
+    return c.res;
+  });
 });
 
 // Global error handler with Sentry
@@ -84,6 +96,24 @@ app.use('/api/*', cors({
   credentials: true,
   maxAge: 86400,
 }));
+
+// Requests for additional organizations must stay closed until every data
+// route enforces tenant ownership, not only the organization settings route.
+app.use('/api/*', async (c, next) => {
+  const requestedTenant = c.req.header('X-Tenant-ID')?.trim();
+  if (requestedTenant && requestedTenant !== DEFAULT_TENANT_ID) {
+    return Errors.forbidden(c, 'Akses organisasi ini belum tersedia.');
+  }
+  await next();
+});
+
+// Hide maintenance routes before CSRF and other request processing in production.
+const requireLocalMaintenance = async (c: any, next: () => Promise<void>) => {
+  if (c.env.ENVIRONMENT !== 'development') return c.notFound();
+  await next();
+};
+app.use('/api/init-db', requireLocalMaintenance);
+app.use('/api/db-patch/fix-notifications', requireLocalMaintenance);
 
 // General rate limiting for all API routes
 app.use('/api/*', rateLimitMiddleware(RATE_LIMITS.api));
@@ -135,6 +165,9 @@ app.route('/api/tts', ttsRoutes);
 app.route('/api/banksoal', banksoalRoutes);
 app.route('/api/tenants', tenantRoutes);
 app.route('/api/sertifikat', sertifikatRoutes);
+app.route('/api/document-drafts', documentDraftsRoutes);
+app.route('/api/pedagogy-quality', pedagogyQualityRoutes);
+app.route('/api/assessment-assets', assessmentAssetsRoutes);
 
 // Public endpoint for active AI providers (returns non-sensitive metadata for model selectors)
 app.get('/api/ai-providers/active', async (c) => {
@@ -151,13 +184,17 @@ app.get('/api/ai-providers/active', async (c) => {
 
 // Admin-only middleware helper
 const requireAdminOnly = async (c: any, next: () => Promise<void>) => {
-  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const sessionId = getCookie(c.req.header('Cookie') || c.req.header('cookie'), 'session')
+    || c.req.header('x-session-id')
+    || c.req.header('authorization')?.replace('Bearer ', '');
   const user: any = await getCurrentUser(c.env.DB, sessionId);
   if (!user || (user.role !== 'admin' && user.role !== 'operator' && user.role !== 'super_admin')) {
     return Errors.forbidden(c, 'Endpoint ini hanya untuk administrator');
   }
+  c.set('user', user);
   await next();
 };
+
 
 // Health check endpoint (for uptime monitoring)
 app.get('/api/health', async (c) => {
@@ -225,7 +262,7 @@ app.get('/api/health/detailed', requireAdminOnly, async (c) => {
 });
 
 // AI Diagnostic Endpoint (Admin Only) — reveals real Bedrock errors
-app.get('/api/ai-diagnostic', requireAdminOnly, async (c) => {
+app.get('/api/ai-diagnostic', requireAdminOnly, requireAIAdmission, async (c) => {
   const results: any = {};
 
   // 1. Check which env vars are present (without exposing values)
@@ -320,7 +357,7 @@ app.get('/api/ai-diagnostic', requireAdminOnly, async (c) => {
 });
 
 // Fix Notifications Table (Admin Only - Temporary)
-app.get('/api/db-patch/fix-notifications', requireAdminOnly, async (c) => {
+app.post('/api/db-patch/fix-notifications', requireLocalMaintenance, requireAdminOnly, async (c) => {
   try {
     await c.env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS notifications (
@@ -348,7 +385,7 @@ app.get('/api/db-patch/fix-notifications', requireAdminOnly, async (c) => {
 
 
 // DB init endpoint (Admin Only - for first setup)
-app.get('/api/init-db', requireAdminOnly, async (c) => {
+app.post('/api/init-db', requireLocalMaintenance, requireAdminOnly, async (c) => {
   try {
     // Read and execute migration
     const schema = `

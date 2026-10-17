@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import type { CreatePengumumanRequest, PengumumanWithAuthor } from '../types';
-import { createBulkNotifications } from '../lib/notification';
+import { createAnnouncementWithOutbox, drainAnnouncementOutbox } from '../lib/announcement-outbox';
 
 type Bindings = { DB: D1Database };
 
@@ -67,44 +67,53 @@ pengumuman.post('/', async (c) => {
     const validKategori = ['umum', 'jadwal', 'kegiatan', 'penting'];
     const finalKategori = kategori && validKategori.includes(kategori) ? kategori : 'umum';
 
-    const result = await c.env.DB.prepare(`
-      INSERT INTO pengumuman (judul, isi, kategori, is_pinned, created_by)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(
-      judul.trim(),
-      isi.trim(),
-      finalKategori,
-      is_pinned ? 1 : 0,
-      user.id
-    ).run();
+    const announcementId = await createAnnouncementWithOutbox(c.env.DB, {
+      title: judul,
+      body: isi,
+      category: finalKategori,
+      authorId: Number(user.id),
+      pinned: Boolean(is_pinned),
+    });
 
-    // 🔔 Broadcast Notification
+    // Delivery is best-effort for this response. Each committed chunk has a
+    // durable cursor; failures leave the event available to the admin retry API.
     try {
-      const { results } = await c.env.DB.prepare('SELECT id FROM users WHERE id != ?').bind(user.id).all();
-      const recipientIds = results.map((u: any) => u.id as number);
-
-      if (recipientIds.length > 0) {
-        await createBulkNotifications(
-          c.env.DB,
-          recipientIds,
-          'Pengumuman Baru 📢',
-          `"${judul}" telah diterbitkan oleh Admin.`,
-          is_pinned ? 'warning' : 'info',
-          '/pengumuman'
-        );
-      }
+      await drainAnnouncementOutbox(c.env.DB, announcementId);
     } catch (err) {
-      console.error('Failed to broadcast pengumuman:', err);
+      console.error('Pengumuman notification delivery deferred:', err);
     }
 
     return successResponse(c, {
-      id: result.meta.last_row_id,
+      id: announcementId,
       judul,
       kategori: finalKategori,
       is_pinned: Boolean(is_pinned)
     }, 'Pengumuman berhasil dibuat', 201);
   } catch (e: any) {
     console.error('Create pengumuman error:', e);
+    return Errors.internal(c);
+  }
+});
+
+// Request-driven retry only; matching announcement creation privileges (admin).
+pengumuman.post('/:id/notifications/retry', async (c) => {
+  const sessionId = getCookie(c.req.header('Cookie'), 'session');
+  const user: any = await getCurrentUser(c.env.DB, sessionId);
+  if (!user) return Errors.unauthorized(c);
+  if (user.role !== 'admin') return Errors.forbidden(c, 'Hanya admin yang dapat memproses notifikasi pengumuman');
+
+  const id = Number(c.req.param('id'));
+  if (!Number.isSafeInteger(id) || id <= 0) return Errors.validation(c, 'ID pengumuman tidak valid');
+  try {
+    const result = await drainAnnouncementOutbox(c.env.DB, id);
+    if (!result) return Errors.notFound(c, 'Outbox pengumuman');
+    return successResponse(c, {
+      announcement_id: id,
+      processed: result.processed,
+      complete: result.complete,
+    }, result.complete ? 'Notifikasi pengumuman selesai diproses' : 'Sebagian notifikasi masih menunggu pemrosesan');
+  } catch (e: any) {
+    console.error('Retry pengumuman notification delivery failed:', e);
     return Errors.internal(c);
   }
 });

@@ -5,6 +5,7 @@ import { successResponse, Errors } from '../lib/response';
 import { recordAIGeneration } from '../lib/telemetry';
 import { requireSession } from '../lib/session-middleware';
 import type { AppBindings, AppVariables } from '../types/env';
+import { requireAIAdmission } from '../lib/ai-admission';
 
 const ttsRoutes = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
 ttsRoutes.use('*', requireSession);
@@ -13,7 +14,7 @@ ttsRoutes.use('*', requireSession);
  * AI Crossword Generator
  * POST /api/tts/generate
  */
-ttsRoutes.post('/generate', async (c) => {
+ttsRoutes.post('/generate', requireAIAdmission, async (c) => {
     try {
         const body = await c.req.json();
         const {
@@ -86,7 +87,7 @@ ttsRoutes.post('/generate', async (c) => {
         }
 
         // Generate Crossword Grid
-        const wordStrings = cleanedWords.map(w => w.word);
+        const wordStrings = cleanedWords.map((w: { word: string; clue: string }) => w.word);
         const crossword = generateCrossword(wordStrings, 1);
 
         // Record telemetry (silent)

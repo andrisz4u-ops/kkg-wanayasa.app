@@ -186,7 +186,7 @@ export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSe
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { before: 40, after: 40 },
-              children: [new TextRun({ text: desc, italic: true, size: 16, font: 'Times New Roman' })]
+              children: [new TextRun({ text: desc, italics: true, size: 16, font: 'Times New Roman' })]
             })
           ]
         })

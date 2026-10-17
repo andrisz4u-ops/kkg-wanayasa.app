@@ -8,10 +8,12 @@ import { normalizeDeck, normalizeSlide, deckIssues, teacherNotes } from '../slid
 import { buildScene, sceneSvg, escapeXml as esc } from '../slides/scene.js';
 import { exampleDeck } from '../slides/examples.js';
 import { readDraft, writeDraft } from '../slides/draft.js';
+import { createDraftSync, createDraftDocumentId } from '../slides/draft-sync.js';
+import { fetchTeacherReview, fetchTeacherReviewHistory, submitTeacherReview } from '../slides/teacher-review.js';
 import { exportPptx, htmlPresentation, download, safeName } from '../slides/export.js';
 export { slideTemplates, slideLayouts };
 
-let S, timer;
+let S, timer, syncClient;
 const selected = (a, b) => a === b ? ' selected' : '';
 const owner = () => String(state.user?.id || '');
 function materialConfig(config) {
@@ -19,30 +21,179 @@ function materialConfig(config) {
   return material;
 }
 function initial() {
-  return { owner: owner(), view: 'brief', template: 'kelas-ceria', outline: [], deck: { title: '', slides: [] }, index: 0, reveal: false, busy: false, providers: [], ready: false, saveStatus: 'Draf belum disimpan', config: { topik: '', mataPelajaran: 'IPAS', jenjangKelas: `Kelas ${String(state.user?.kelas || '5').match(/[1-6]/)?.[0] || '5'}`, slideCount: 8, aspectRatio: '16:9', aiProvider: '', semester: '1', alokasiWaktu: '2 x 35 menit', extraInstructions: '', usePhotos: false } };
+  return { owner: owner(), view: 'brief', template: 'kelas-ceria', outline: [], deck: { title: '', slides: [] }, index: 0, reveal: false, busy: false, providers: [], ready: false, saveStatus: 'Draf belum disimpan', serverDocumentId: '', serverRevision: 0, reviewStatus: 'needs-review', reviewAction: null, reviewDirty: false, reviewBusy: false, reviewEditVersion: 0, reviewReadToken: 0, reviewLoadedKey: '', pendingReviewAction: null, config: { topik: '', mataPelajaran: 'IPAS', jenjangKelas: `Kelas ${String(state.user?.kelas || '5').match(/[1-6]/)?.[0] || '5'}`, slideCount: 8, aspectRatio: '16:9', aiProvider: '', semester: '1', alokasiWaktu: '2 x 35 menit', extraInstructions: '', usePhotos: false } };
 }
-const snapshot = () => ({ config: S.config, deck: S.deck, template: S.template, outline: S.outline, index: S.index });
+const snapshot = () => ({ config: S.config, deck: S.deck, template: S.template, outline: S.outline, index: S.index, serverDocumentId: syncClient?.documentId || S.serverDocumentId, serverRevision: syncClient?.revision ?? S.serverRevision, reviewEditVersion: S.reviewEditVersion, reviewDirty: S.reviewDirty, pendingReviewAction: S.pendingReviewAction });
 function save() {
-  const ok = writeDraft(snapshot(), S.owner); S.saveStatus = ok ? 'Draf tersimpan di perangkat ini' : 'Draf belum tersimpan; unduh atau simpan ke Riwayat';
-  const badge = document.querySelector('#sg-save-status'); if (badge) { badge.textContent = S.saveStatus; badge.dataset.error = String(!ok); }
+  invalidateTeacherReview();
+  const ok = writeDraft(snapshot(), S.owner); S.saveStatus = ok ? 'Draf tersimpan di perangkat ini; menyinkronkan…' : 'Draf belum tersimpan; unduh atau simpan ke Riwayat';
+  document.querySelectorAll('.ss-save-status').forEach(badge => { badge.textContent = S.saveStatus; badge.dataset.error = String(!ok); });
+  if (ok && syncClient && owner() === S.owner) syncServer();
   return ok;
 }
+function syncServer() {
+  if (!syncClient || owner() !== S.owner) return;
+  const client = syncClient;
+  const data = snapshot();
+  client.sync({ config: data.config, deck: data.deck, template: data.template, outline: data.outline, index: data.index }, data.deck.title || data.config.topik || 'Presentasi tanpa judul').then(ok => {
+    if (owner() !== S.owner || syncClient !== client || !ok) return;
+    S.serverDocumentId = client.documentId; S.serverRevision = client.revision;
+    writeDraft(snapshot(), S.owner);
+    if (S.reviewEditVersion === data.reviewEditVersion) {
+      S.reviewDirty = false;
+      S.reviewStatus = 'needs-review';
+      S.reviewAction = null;
+      S.reviewRevision = client.revision;
+      S.reviewLoadedKey = `${S.owner}:${client.documentId}:${client.revision}`;
+      updateTeacherReviewUi();
+    }
+  });
+}
+function initializeSyncClient() {
+  const client = createDraftSync(api, S.owner, owner, (message, error) => {
+    if (!S || S.owner !== owner() || syncClient !== client) return;
+    S.saveStatus = message;
+    document.querySelectorAll('.ss-save-status').forEach(badge => { badge.textContent = message; badge.dataset.error = String(error); });
+    if (syncClient?.conflict?.documentId === syncClient?.documentId) showConflictActions();
+  });
+  syncClient = client;
+  client.restoreIdentity(S.serverDocumentId, S.serverRevision);
+}
+function preserveCurrentDraft() {
+  if (!writeDraft(snapshot(), S.owner)) { showToast('Draf lokal belum tersimpan. Perubahan tidak akan diganti.', 'error'); return false; }
+  if (!S.deck.slides.length && !S.config.topik && !S.outline.length) return true;
+  const archived = saveDocArchive({ module: 'slide', title: S.deck.title || S.config.topik || 'Draf presentasi', subtitle: `${S.config.jenjangKelas} • ${S.deck.slides.length} slide`, inputData: S.config, content: { deck: S.deck, template: S.template, outline: S.outline, config: S.config } });
+  if (!archived) { showToast('Draf lokal belum dapat dicadangkan. Perubahan tidak akan diganti.', 'error'); return false; }
+  return true;
+}
 function changed() {
-  clearTimeout(timer); S.saveStatus = 'Menyimpan perubahan…';
-  const badge = document.querySelector('#sg-save-status'); if (badge) badge.textContent = S.saveStatus;
+  invalidateTeacherReview();
+  clearTimeout(timer); S.saveStatus = 'Menyimpan di perangkat ini…';
+  document.querySelectorAll('.ss-save-status').forEach(badge => { badge.textContent = S.saveStatus; });
   const id = S.owner; timer = setTimeout(() => { if (owner() === id && S.owner === id) save(); }, 450);
+}
+function teacherReviewLabel(status) {
+  return status === 'reviewed' ? 'Sudah ditinjau' : status === 'rejected' ? 'Ditandai perlu perbaikan' : 'Perlu ditinjau';
+}
+function invalidateTeacherReview() {
+  if (!S) return;
+  S.reviewEditVersion++;
+  S.reviewReadToken++;
+  S.reviewDirty = true;
+  S.reviewStatus = 'needs-review';
+  S.reviewAction = null;
+  S.reviewLoadedKey = '';
+  S.pendingReviewAction = null;
+  updateTeacherReviewUi();
+}
+function updateTeacherReviewUi() {
+  const status = document.querySelector('#sg-teacher-review-status');
+  const detail = document.querySelector('#sg-teacher-review-detail');
+  if (status) {
+    status.textContent = syncClient?.conflict
+      ? 'Konflik versi: pulihkan versi server atau simpan salinan lokal sebelum meninjau.'
+      : S.reviewDirty
+        ? 'Perubahan belum dinilai sebagai tinjauan. Simpan versi terbaru ke server terlebih dahulu.'
+        : S.reviewRevision
+          ? `${teacherReviewLabel(S.reviewStatus)} · revisi server ${S.reviewRevision}`
+          : 'Draf belum tersimpan di server; tinjauan belum dapat dicatat.';
+  }
+  if (detail) detail.textContent = S.reviewBusy
+    ? 'Mencatat tinjauan untuk versi tersimpan…'
+    : 'Ini catatan tinjauan Anda untuk versi tersebut, bukan pengesahan resmi atau jaminan kebenaran materi.';
+  const blocked = S.reviewBusy || !!syncClient?.conflict || owner() !== S.owner;
+  document.querySelectorAll('[data-teacher-review-action]').forEach(button => { button.disabled = blocked; });
+  const history = document.querySelector('#sg-review-history');
+  if (history) history.disabled = !syncClient?.revision || owner() !== S.owner;
+}
+function teacherReviewMarkup() {
+  return `<section class="ss-panel" id="sg-teacher-review" aria-labelledby="sg-teacher-review-title"><h2 id="sg-teacher-review-title">Tinjauan guru</h2><p id="sg-teacher-review-status" role="status">${esc(syncClient?.conflict ? 'Konflik versi: pulihkan versi server atau simpan salinan lokal sebelum meninjau.' : S.reviewDirty ? 'Perubahan belum dinilai sebagai tinjauan. Simpan versi terbaru ke server terlebih dahulu.' : S.reviewRevision ? `${teacherReviewLabel(S.reviewStatus)} · revisi server ${S.reviewRevision}` : 'Draf belum tersimpan di server; tinjauan belum dapat dicatat.')}</p><p id="sg-teacher-review-detail">Ini catatan tinjauan Anda untuk versi tersebut, bukan pengesahan resmi atau jaminan kebenaran materi.</p><div class="ss-actions"><button type="button" data-teacher-review-action="reviewed" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Saya sudah meninjau</button><button type="button" data-teacher-review-action="rejected" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Tandai perlu perbaikan</button><button type="button" id="sg-review-history" ${!syncClient?.revision ? 'disabled' : ''}>Riwayat tinjauan</button></div></section>`;
+}
+async function loadTeacherReview() {
+  const client = syncClient;
+  const revision = client?.revision || 0;
+  if (!client || !revision || client.conflict || S.reviewDirty) return;
+  const key = `${S.owner}:${client.documentId}:${revision}`;
+  if (S.reviewLoadedKey === key) return;
+  S.reviewLoadedKey = key;
+  const readToken = ++S.reviewReadToken;
+  const editVersion = S.reviewEditVersion;
+  try {
+    const result = await fetchTeacherReview(api, 'presentation', client.documentId);
+    if (S.owner !== owner() || client !== syncClient || client.revision !== revision || S.reviewEditVersion !== editVersion || S.reviewReadToken !== readToken || Number(result.revision) !== revision) return;
+    S.reviewStatus = result.status === 'reviewed' || result.status === 'rejected' ? result.status : 'needs-review';
+    S.reviewAction = result.action || null;
+    S.reviewRevision = revision;
+    updateTeacherReviewUi();
+  } catch (_) {
+    if (client === syncClient && S.owner === owner() && S.reviewEditVersion === editVersion && S.reviewReadToken === readToken) {
+      S.reviewLoadedKey = '';
+      const status = document.querySelector('#sg-teacher-review-status');
+      if (status) status.textContent = 'Status tinjauan belum dapat dimuat. Coba muat ulang halaman sebelum meninjau.';
+    }
+  }
+}
+async function performTeacherReview(status) {
+  const client = syncClient;
+  const reviewOwner = S.owner;
+  const documentId = client?.documentId;
+  const editVersion = S.reviewEditVersion;
+  if (!client || !documentId || owner() !== reviewOwner) return;
+  clearTimeout(timer);
+  const data = snapshot();
+  if (!writeDraft(data, reviewOwner)) { showToast('Draf lokal belum tersimpan. Tinjauan ditunda.', 'error'); return; }
+  const oldAction = S.pendingReviewAction;
+  const pending = oldAction && oldAction.owner === reviewOwner && oldAction.documentId === documentId && oldAction.status === status && oldAction.editVersion === editVersion
+    ? oldAction
+    : { owner: reviewOwner, documentId, status, editVersion, mutationId: createDraftDocumentId() };
+  S.pendingReviewAction = pending;
+  S.reviewReadToken++;
+  S.reviewBusy = true; updateTeacherReviewUi();
+  writeDraft(snapshot(), reviewOwner);
+  try {
+    const action = await submitTeacherReview(api, {
+      client, currentOwner: owner, ownerId: reviewOwner, module: 'presentation', documentId,
+      payload: { config: data.config, deck: data.deck, template: data.template, outline: data.outline, index: data.index },
+      title: data.deck.title || data.config.topik || 'Presentasi tanpa judul', status, mutationId: pending.mutationId,
+      isCurrent: () => S.owner === reviewOwner && owner() === reviewOwner && syncClient === client && S.reviewEditVersion === editVersion,
+    });
+    S.pendingReviewAction = null;
+    S.reviewAction = action; S.reviewStatus = action.status; S.reviewRevision = action.revision; S.reviewDirty = false;
+    writeDraft(snapshot(), reviewOwner);
+    showToast('Catatan tinjauan versi ini tersimpan. Ini bukan pengesahan resmi.', 'success');
+  } catch (error) {
+    if (error.code === 'REVISION_CONFLICT') { S.pendingReviewAction = null; S.reviewStatus = 'needs-review'; S.reviewDirty = true; writeDraft(snapshot(), reviewOwner); }
+    showToast(error.message || 'Tinjauan belum tersimpan.', 'warning');
+  } finally {
+    S.reviewBusy = false;
+    updateTeacherReviewUi();
+  }
+}
+async function openTeacherReviewHistory() {
+  const client = syncClient; const reviewOwner = S.owner;
+  if (!client || owner() !== reviewOwner || !client.revision) return;
+  const root = document.createElement('section'); root.className = 'ss-panel'; root.id = 'sg-review-history-dialog';
+  root.innerHTML = '<h2 id="sg-review-history-title">Riwayat tinjauan guru</h2><p role="status">Memuat riwayat…</p>';
+  document.body.append(root); openUiDialog(root, { labelledBy: 'sg-review-history-title', initialFocus: 'h2', onClose: () => root.remove() });
+  try {
+    const history = await fetchTeacherReviewHistory(api, 'presentation', client.documentId);
+    if (!root.isConnected || client !== syncClient || owner() !== reviewOwner) return;
+    root.innerHTML = `<h2 id="sg-review-history-title">Riwayat tinjauan guru</h2><p>Catatan ini berlaku per versi dan bukan pengesahan resmi.</p>${history.length ? `<ol>${history.map(item => `<li>Revisi ${Number(item.revision)} · ${esc(teacherReviewLabel(item.status))} · ${esc(item.created_at || '')}</li>`).join('')}</ol>` : '<p>Belum ada catatan tinjauan.</p>'}<button id="sg-review-history-close" type="button">Tutup</button>`;
+    root.querySelector('#sg-review-history-close')?.addEventListener('click', () => closeUiDialog(root));
+  } catch (error) { if (root.isConnected) root.querySelector('[role="status"]')?.replaceChildren(document.createTextNode(error.message || 'Riwayat tinjauan belum dapat dimuat.')); }
 }
 export function renderSlide() {
   if (!state.user) return '<div class="ss-panel"><h1>Media presentasi kelas SD</h1><p>Masuk untuk menyusun dan menyimpan slide pembelajaran.</p><button onclick="window.navigate(\'login\')">Masuk</button></div>';
   if (!S || S.owner !== owner()) {
     clearTimeout(timer); S = initial(); const draft = readDraft();
-    if (draft) { S.config = materialConfig({ ...S.config, ...draft.config }); S.deck = normalizeDeck(draft.deck); S.template = resolveTemplateId(draft.template); S.outline = draft.outline || []; S.index = Math.max(0, Math.min(draft.index || 0, S.deck.slides.length - 1)); S.view = S.deck.slides.length ? 'editor' : 'brief'; S.saveStatus = 'Draf terakhir dimuat dari perangkat ini'; }
+    if (draft) { S.config = materialConfig({ ...S.config, ...draft.config }); S.deck = normalizeDeck(draft.deck); S.template = resolveTemplateId(draft.template); S.outline = draft.outline || []; S.index = Math.max(0, Math.min(draft.index || 0, S.deck.slides.length - 1)); S.view = S.deck.slides.length ? 'editor' : 'brief'; S.saveStatus = 'Draf terakhir dimuat dari perangkat ini'; S.serverDocumentId = draft.serverDocumentId || ''; S.serverRevision = draft.serverRevision || 0; S.reviewEditVersion = draft.reviewEditVersion || 0; S.reviewDirty = !!draft.reviewDirty; S.pendingReviewAction = draft.pendingReviewAction || null; }
+    initializeSyncClient();
   }
   window.slideGenState = S;
   return markup();
 }
 function header(title, description) {
-  return `<header class="ss-header"><div><h1>${title}</h1><p>${description}</p></div><div class="ss-actions"><button id="sg-history">Riwayat Slide</button>${S.deck.slides.length ? '<button id="sg-new">Presentasi baru</button>' : ''}</div></header>`;
+  return `<header class="ss-header"><div><h1>${title}</h1><p>${description}</p><span class="ss-save-status" role="status">${esc(S.saveStatus)}</span></div><div class="ss-actions"><button id="sg-history">Riwayat Slide</button><button id="sg-server-drafts">Draf di server</button>${S.deck.slides.length ? '<button id="sg-save-checkpoint">Simpan checkpoint</button><button id="sg-new">Presentasi baru</button>' : ''}</div></header>`;
 }
 function modelSelect() {
   return `<label>Model AI<select id="sg-model-select" aria-describedby="sg-model-status">${S.providers.length ? S.providers.map(p => `<option value="${esc(p.slug)}"${selected(p.slug, S.config.aiProvider)}${Number(p.configured) === 0 ? ' disabled' : ''}>${esc(p.name)}${Number(p.configured) === 0 ? ' (belum dikonfigurasi)' : ''}</option>`).join('') : '<option value="">Memuat pilihan model…</option>'}</select></label><p id="sg-model-status" class="ss-model-status" role="status">${S.ready ? 'Model yang dipilih akan digunakan untuk permintaan ini.' : 'Memeriksa model yang tersedia…'}</p><button id="sg-reload-model" type="button">Muat ulang model</button>`;
@@ -83,7 +234,7 @@ function editorFields(slide) {
 function issuesMarkup() {
   const issues = [...new Set([...deckIssues(S.deck), ...S.deck.slides.flatMap((s, i) => [false, ...(['quiz', 'flipcard'].includes(s.layout) ? [true] : [])].flatMap(reveal => buildScene(s, S.template, { aspectRatio: S.config.aspectRatio, reveal }).warnings.map(w => `Slide ${i + 1}: ${w}`)))])];
   const countNote = S.deck.meta?.requestedSlideCount && S.deck.meta.requestedSlideCount !== S.deck.slides.length ? `<p>Hasil berisi ${S.deck.slides.length} slide, dari target ${S.deck.meta.requestedSlideCount}. Sesuaikan jumlahnya di editor bila diperlukan.</p>` : '';
-  return `<div class="ss-quality" id="sg-quality" role="status">${issues.length ? `<strong>Draf perlu dilengkapi: ${issues.length} hal perlu ditinjau sebelum ekspor</strong><ul>${issues.slice(0, 6).map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : 'Struktur dan bidang teks sudah diperiksa. Tinjau kebenaran materi dan kesesuaian kelas sebelum mengajar.'}${countNote}</div>`;
+  return `<div class="ss-quality" id="sg-quality" role="status">${issues.length ? `<strong>Draf perlu dilengkapi: ${issues.length} hal perlu ditinjau sebelum ekspor</strong><ul>${issues.slice(0, 6).map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : 'Struktur dan bidang teks sudah diperiksa. Tinjau kebenaran materi dan kesesuaian kelas sebelum mengajar.'}${countNote}</div>${teacherReviewMarkup()}`;
 }
 function editorView() {
   const slide = S.deck.slides[S.index]; if (!slide) { S.view = 'brief'; return briefView(); }
@@ -180,15 +331,73 @@ function presenter() {
   document.addEventListener('keydown', event => { if (event.key === 'ArrowRight' || (event.key === ' ' && !event.target.closest('button'))) { event.preventDefault(); next(1); } if (event.key === 'ArrowLeft') { event.preventDefault(); next(-1); } }, { signal: listeners.signal });
   openUiDialog(root, { labelledBy: 'ss-presenter-title', initialFocus: '#ss-close', onClose: () => { listeners.abort(); if (document.fullscreenElement === root) document.exitFullscreen?.(); root.remove(); } }); draw(); root.requestFullscreen?.().catch(() => {});
 }
+function showConflictActions() {
+  if (!syncClient?.conflict || syncClient.conflict.documentId !== syncClient.documentId || document.querySelector('#sg-conflict-actions')) return;
+  const status = document.querySelector('.ss-save-status');
+  if (!status) return;
+  const actions = document.createElement('div'); actions.id = 'sg-conflict-actions'; actions.className = 'ss-actions';
+  actions.innerHTML = '<button type="button" id="sg-use-server-copy">Gunakan versi server</button><button type="button" id="sg-save-local-copy">Simpan draf lokal sebagai salinan baru</button>';
+  status.after(actions);
+  actions.querySelector('#sg-use-server-copy').addEventListener('click', async () => {
+    try { const client = syncClient; const saved = await client.read(client.conflict.documentId); if (!confirm('Ganti draf di layar dengan versi server? Perubahan lokal tetap ada di perangkat ini.')) return; await restoreServerDraft(saved, client); }
+    catch (error) { showToast(error.message || 'Tidak dapat memuat versi server.', 'error'); }
+  });
+  actions.querySelector('#sg-save-local-copy').addEventListener('click', () => { actions.remove(); S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; initializeSyncClient(); save(); });
+}
+async function restoreServerDraft(saved, client = syncClient) {
+  const activeOwner = S?.owner;
+  await client.settled();
+  if (!S || S.owner !== activeOwner || owner() !== activeOwner || syncClient !== client) return false;
+  if (S && !preserveCurrentDraft()) return false;
+  const payload = saved.payload || {};
+  syncClient.adopt(saved); S.serverDocumentId = saved.document_id; S.serverRevision = saved.revision;
+  S.config = materialConfig({ ...S.config, ...(payload.config || {}) });
+  S.deck = normalizeDeck(payload.deck || { title: saved.title, slides: [] }, saved.title);
+  S.template = resolveTemplateId(payload.template); S.outline = payload.outline || []; S.index = Math.max(0, Math.min(payload.index || 0, S.deck.slides.length - 1));
+  S.view = S.deck.slides.length ? 'editor' : 'brief'; S.saveStatus = 'Draf server dipulihkan'; S.reviewDirty = false; S.reviewLoadedKey = ''; S.reviewStatus = 'needs-review'; S.reviewAction = null; S.reviewRevision = Number(saved.revision) || 0; S.pendingReviewAction = null; S.reviewReadToken++; writeDraft(snapshot(), S.owner); render(); return true;
+}
+async function flushAndCheckpoint() {
+  const client = syncClient;
+  const draftOwner = S.owner;
+  clearTimeout(timer);
+  const data = snapshot();
+  if (!client || owner() !== draftOwner || !writeDraft(data, draftOwner)) throw new Error('Draf lokal belum tersimpan; checkpoint belum dibuat.');
+  const saved = await client.sync({ config: data.config, deck: data.deck, template: data.template, outline: data.outline, index: data.index }, data.deck.title || data.config.topik || 'Presentasi tanpa judul');
+  if (!saved || owner() !== draftOwner || S.owner !== draftOwner || syncClient !== client) throw new Error('Draf terbaru belum tersimpan di server. Checkpoint belum dibuat.');
+  const checkpoint = await client.checkpoint();
+  if (owner() !== draftOwner || S.owner !== draftOwner || syncClient !== client) throw new Error('Akun berubah sebelum checkpoint selesai.');
+  return checkpoint;
+}
+async function openServerDrafts() {
+  const client = syncClient;
+  const root = document.createElement('section'); root.className = 'ss-panel'; root.id = 'sg-server-drafts-dialog';
+  root.innerHTML = '<h2 id="sg-server-drafts-title">Draf presentasi di server</h2><p role="status">Memuat draf akun ini…</p>';
+  document.body.append(root); openUiDialog(root, { labelledBy: 'sg-server-drafts-title', initialFocus: 'h2', onClose: () => root.remove() });
+  try {
+    const drafts = await client.list();
+    if (client !== syncClient) { closeUiDialog(root); return; }
+    if (!root.isConnected) return;
+    root.innerHTML = `<h2 id="sg-server-drafts-title">Draf presentasi di server</h2><p>Hanya draf milik akun ini. Memulihkan draf akan mengganti isi yang sedang dibuka; draf lokal tetap tersimpan.</p><div>${drafts.length ? drafts.map((draft, index) => `<button type="button" class="ss-server-draft" data-index="${index}">${esc(draft.title)} · Revisi ${Number(draft.revision)} · ${esc(draft.server_updated_at || '')}</button>`).join('') : '<p>Belum ada draf presentasi di server.</p>'}</div><button type="button" id="sg-close-server-drafts">Tutup</button>`;
+    root.querySelector('#sg-close-server-drafts').addEventListener('click', () => closeUiDialog(root));
+    root.querySelectorAll('.ss-server-draft').forEach(button => button.addEventListener('click', async () => {
+      if (!confirm('Buka draf server ini? Isi yang sedang terbuka akan diganti; draf lokal tetap tersimpan.')) return;
+      try { if (client === syncClient && await restoreServerDraft(await client.read(drafts[Number(button.dataset.index)].document_id), client)) closeUiDialog(root); }
+      catch (error) { showToast(error.message || 'Tidak dapat membuka draf server.', 'error'); }
+    }));
+  } catch (error) { if (root.isConnected) root.querySelector('[role="status"]')?.replaceChildren(document.createTextNode(`${error.message || 'Gagal memuat draf server.'} Draf lokal tidak berubah.`)); }
+}
 export function initSlide() {
   if (!S || !document.querySelector('#slidegen-container')) return;
   document.querySelector('.ss-slide-strip')?.setAttribute('role', 'group');
+  if (syncClient?.conflict) showConflictActions();
+  if (S.view === 'editor') loadTeacherReview();
   const on = (id, handler) => document.querySelector(`#${id}`)?.addEventListener('click', handler);
-  on('sg-history', () => openArchiveDrawer({ module: 'slide', moduleName: 'Slide', onSelect: item => { const content = item.content || {}; const deck = normalizeDeck(content.deck || content, item.title); if (!deck.slides.length) return showToast('Riwayat ini tidak mempunyai slide yang dapat dibuka.', 'error'); S.deck = deck; S.template = resolveTemplateId(content.template); S.config = materialConfig({ ...S.config, ...item.inputData, ...content.config }); S.outline = content.outline || []; S.index = 0; S.view = 'editor'; save(); render(); queueMicrotask(() => document.querySelector('#sg-open-presenter')?.focus()); } }));
-  on('sg-new', () => { if (confirm('Mulai presentasi baru dan mengganti draf lokal? Simpan ke Riwayat terlebih dahulu jika masih diperlukan.')) { clearTimeout(timer); S = initial(); save(); render(); } });
+  on('sg-server-drafts', openServerDrafts);
+  on('sg-history', () => openArchiveDrawer({ module: 'slide', moduleName: 'Slide', onSelect: item => { const content = item.content || {}; const deck = normalizeDeck(content.deck || content, item.title); if (!deck.slides.length) return showToast('Riwayat ini tidak mempunyai slide yang dapat dibuka.', 'error'); if (!preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; S.deck = deck; S.template = resolveTemplateId(content.template); S.config = materialConfig({ ...S.config, ...item.inputData, ...content.config }); S.outline = content.outline || []; S.index = 0; S.view = 'editor'; initializeSyncClient(); save(); render(); queueMicrotask(() => document.querySelector('#sg-open-presenter')?.focus()); } }));
+  on('sg-new', () => { if (confirm('Mulai presentasi baru? Draf saat ini tetap tersimpan sebagai draf terpisah.') && preserveCurrentDraft()) { clearTimeout(timer); S = initial(); S.serverDocumentId = createDraftDocumentId(); initializeSyncClient(); save(); render(); } });
   document.querySelector('#sg-brief-form')?.addEventListener('submit', event => { event.preventDefault(); if (readBrief()) { S.view = 'templates'; render(); } });
   document.querySelector('#sg-brief-form')?.addEventListener('input', readBriefChange);
-  on('sg-outline', outline); on('sg-back', () => { S.view = 'brief'; render(); }); on('sg-example', () => { S.deck = normalizeDeck(exampleDeck('matematika-visual')); S.template = 'matematika-visual'; S.config.topik = S.deck.title; S.config.mataPelajaran = 'Matematika'; S.view = 'editor'; S.index = 0; save(); render(); });
+  on('sg-outline', outline); on('sg-back', () => { S.view = 'brief'; render(); }); on('sg-example', () => { if (!preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; initializeSyncClient(); S.deck = normalizeDeck(exampleDeck('matematika-visual')); S.template = 'matematika-visual'; S.config.topik = S.deck.title; S.config.mataPelajaran = 'Matematika'; S.view = 'editor'; S.index = 0; save(); render(); });
   document.querySelector('#sg-outline-form')?.addEventListener('submit', event => { event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return; S.outline = [...form.querySelectorAll('[data-outline]')].map((row, i) => ({ index: i + 1, title: row.querySelector('[name=title]').value, layout: row.querySelector('[name=layout]').value, focus: row.querySelector('[name=focus]').value, visualConcept: row.querySelector('[name=visualConcept]').value })); S.view = 'templates'; render(); });
   document.querySelectorAll('[data-template]').forEach(button => button.addEventListener('click', () => { S.template = button.dataset.template; if (S.deck.slides.length) { S.view = 'editor'; save(); render(); } else { document.querySelectorAll('[data-template]').forEach(b => b.setAttribute('aria-pressed', String(b === button))); document.querySelector('#sg-design-summary').textContent = `${S.config.slideCount} slide • ${getTemplate(S.template).name}`; changed(); } }));
   document.querySelector('#sg-model-select')?.addEventListener('change', event => { S.config.aiProvider = event.target.value; S.ready = !!S.config.aiProvider; changed(); actionsReady(); });
@@ -203,6 +412,9 @@ export function initSlide() {
   on('sg-add-slide', () => { S.deck.slides.splice(S.index + 1, 0, normalizeSlide({ title: 'Gagasan baru', content: [], layout: 'content' })); S.index++; changed(); render(); });
   on('sg-delete-slide', () => { S.deck.slides.splice(S.index, 1); S.index = Math.min(S.index, S.deck.slides.length - 1); changed(); render(); });
   on('sg-save-archive', () => { save(); const saved = saveDocArchive({ module: 'slide', title: S.deck.title, subtitle: `${S.config.jenjangKelas} • ${S.deck.slides.length} slide`, inputData: S.config, content: { ...S.deck, template: S.template, outline: S.outline, config: S.config } }); showToast(saved ? 'Versi slide disimpan ke Riwayat perangkat ini.' : 'Riwayat belum tersimpan. Unduh hasil untuk menyimpan salinan.', saved ? 'success' : 'error'); });
+  on('sg-save-checkpoint', async () => { try { await flushAndCheckpoint(); showToast('Checkpoint server berhasil disimpan.', 'success'); } catch (error) { showToast(error.message || 'Checkpoint belum tersimpan.', 'error'); } });
+  document.querySelectorAll('[data-teacher-review-action]').forEach(button => button.addEventListener('click', () => performTeacherReview(button.dataset.teacherReviewAction)));
+  on('sg-review-history', openTeacherReviewHistory);
   on('sg-open-presenter', presenter);
   on('sg-export-pptx', async event => { const button = event.currentTarget; button.disabled = true; try { await exportPptx(S.deck, S.template, S.config); showToast('PPTX siap diunduh. Jawaban dan pembahasan tersedia dalam catatan guru.', 'success'); } catch (error) { showToast(error.message, 'error'); } finally { button.disabled = false; } });
   on('sg-export-html', async event => { const button = event.currentTarget; button.disabled = true; try { const html = await htmlPresentation(S.deck, S.template, S.config); download(html, `${safeName(S.deck.title)}.html`, 'text/html;charset=utf-8'); showToast('HTML offline siap diunduh.', 'success'); } catch (error) { showToast(error.message, 'error'); } finally { button.disabled = false; } });

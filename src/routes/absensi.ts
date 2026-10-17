@@ -4,10 +4,9 @@ import { successResponse, Errors, validateRequired } from '../lib/response';
 import type { CreateKegiatanRequest, Kegiatan, AbsensiWithUser } from '../types';
 import { requireSession } from '../lib/session-middleware';
 import { attendanceSummary, csvCell } from '../lib/attendance-summary';
+import type { AppBindings } from '../types/env';
 
-type Bindings = { DB: D1Database };
-
-const absensi = new Hono<{ Bindings: Bindings; Variables: { user: any } }>();
+const absensi = new Hono<{ Bindings: AppBindings; Variables: { user: any } }>();
 absensi.use('/kegiatan/:id/absensi', requireSession);
 absensi.use('/rekap', requireSession);
 absensi.use('/rekap/*', requireSession);
@@ -110,12 +109,13 @@ absensi.post('/checkin', async (c) => {
 
     // Check if kegiatan exists
     const kegiatan: any = await c.env.DB.prepare(
-      'SELECT id, nama_kegiatan FROM kegiatan WHERE id = ?'
+      'SELECT id, nama_kegiatan, is_locked FROM kegiatan WHERE id = ?'
     ).bind(kegiatan_id).first();
 
     if (!kegiatan) {
       return Errors.notFound(c, 'Kegiatan');
     }
+    if (kegiatan.is_locked === 1) return Errors.validation(c, 'Presensi kegiatan ini telah dikunci');
 
     // Check if already checked in
     const existing: any = await c.env.DB.prepare(
@@ -124,10 +124,12 @@ absensi.post('/checkin', async (c) => {
 
     if (existing) {
       // Update existing record if status changed
-      await c.env.DB.prepare(`
+      const updateResult = await c.env.DB.prepare(`
         UPDATE absensi SET status = ?, keterangan = ?, waktu_checkin = datetime('now')
-        WHERE id = ?
-      `).bind(status, keterangan?.trim() || null, existing.id).run();
+        WHERE id = ? AND EXISTS (SELECT 1 FROM kegiatan WHERE id = ? AND COALESCE(is_locked, 0) = 0)
+      `).bind(status, keterangan?.trim() || null, existing.id, kegiatan_id).run();
+
+      if (updateResult.meta.changes === 0) return Errors.validation(c, 'Presensi kegiatan ini telah dikunci');
 
       return successResponse(c, {
         id: existing.id,
@@ -139,15 +141,20 @@ absensi.post('/checkin', async (c) => {
     // Insert new check-in
     const result = await c.env.DB.prepare(`
       INSERT INTO absensi (kegiatan_id, user_id, keterangan, status, latitude, longitude)
-      VALUES (?, ?, ?, ?, ?, ?)
+      SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (
+        SELECT 1 FROM kegiatan WHERE id = ? AND COALESCE(is_locked, 0) = 0
+      )
     `).bind(
       kegiatan_id,
       user.id,
       keterangan?.trim() || null,
       status,
       latitude || null,
-      longitude || null
+      longitude || null,
+      kegiatan_id
     ).run();
+
+    if (result.meta.changes === 0) return Errors.validation(c, 'Presensi kegiatan ini telah dikunci');
 
     return successResponse(c, {
       id: result.meta.last_row_id,
@@ -351,7 +358,7 @@ absensi.get('/kegiatan/:id/qr', async (c) => {
     const { generateSecureToken, generateQRCodePNG } = await import('../lib/qrcode');
 
     // Generate QR data
-    const qrData = await generateSecureToken(Number(id), expiryMinutes);
+    const qrData = await generateSecureToken(Number(id), c.env.QR_SIGNING_SECRET!, expiryMinutes);
 
     // Generate QR code image
     const qrImage = await generateQRCodePNG(qrData, 300);
@@ -389,7 +396,7 @@ absensi.post('/checkin/qr', async (c) => {
 
     // Verify QR code
     const { verifySecureToken } = await import('../lib/qrcode');
-    const verification = await verifySecureToken(qr_data);
+    const verification = await verifySecureToken(qr_data, c.env.QR_SIGNING_SECRET);
 
     if (!verification.valid) {
       return Errors.validation(c, verification.error || 'QR code tidak valid');
@@ -399,12 +406,13 @@ absensi.post('/checkin/qr', async (c) => {
 
     // Check if kegiatan exists
     const kegiatan: any = await c.env.DB.prepare(
-      'SELECT id, nama_kegiatan FROM kegiatan WHERE id = ?'
+      'SELECT id, nama_kegiatan, is_locked FROM kegiatan WHERE id = ?'
     ).bind(kegiatanId).first();
 
     if (!kegiatan) {
       return Errors.notFound(c, 'Kegiatan');
     }
+    if (kegiatan.is_locked === 1) return Errors.validation(c, 'Presensi kegiatan ini telah dikunci');
 
     // Check if already checked in
     const existing: any = await c.env.DB.prepare(
@@ -418,8 +426,12 @@ absensi.post('/checkin/qr', async (c) => {
     // Perform check-in
     const result = await c.env.DB.prepare(`
       INSERT INTO absensi (kegiatan_id, user_id, keterangan)
-      VALUES (?, ?, ?)
-    `).bind(kegiatanId, user.id, keterangan?.trim() || 'Check-in via QR').run();
+      SELECT ?, ?, ? WHERE EXISTS (
+        SELECT 1 FROM kegiatan WHERE id = ? AND COALESCE(is_locked, 0) = 0
+      )
+    `).bind(kegiatanId, user.id, keterangan?.trim() || 'Check-in via QR', kegiatanId).run();
+
+    if (result.meta.changes === 0) return Errors.validation(c, 'Presensi kegiatan ini telah dikunci');
 
     return successResponse(c, {
       id: result.meta.last_row_id,
@@ -445,7 +457,7 @@ absensi.post('/verify-qr', async (c) => {
 
     // Verify QR code
     const { verifySecureToken } = await import('../lib/qrcode');
-    const verification = await verifySecureToken(qr_data);
+    const verification = await verifySecureToken(qr_data, c.env.QR_SIGNING_SECRET);
 
     if (!verification.valid) {
       return successResponse(c, {

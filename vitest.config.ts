@@ -19,10 +19,7 @@ export default defineConfig({
         testTimeout: 10000,
         // Run tests in sequence for D1 tests
         pool: 'forks',
-        poolOptions: {
-            forks: {
-                singleFork: true,
-            },
-        },
+        fileParallelism: false,
+        maxWorkers: 1,
     },
 });

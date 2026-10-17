@@ -406,7 +406,8 @@ Berikan output JSON murni tanpa markdown pembuka/penutup, dengan format struktur
  */
 export function applyVerificationRepairs(
     originalItems: any[],
-    verificationResults: any[]
+    verificationResults: any[],
+    jenjangKelas?: string
 ): {
     healedItems: any[];
     repairedCount: number;
@@ -457,29 +458,40 @@ export function applyVerificationRepairs(
             const isRepaired = repairedFields.length > 0 || v.verdict === 'REPAIR';
             if (isRepaired) repairedCount++;
 
+            const hasCompleteVerifierChecks = (v.verdict === 'PASS' || v.verdict === 'REPAIR') &&
+                v.key_verified === true && v.kaidah_puspendik === true &&
+                v.hots_valid === true && v.distraktor_homogen === true &&
+                typeof v.quality_score === 'number' && Number.isFinite(v.quality_score);
+            const postRepairValidation = validateQuestionHeuristics(copy, jenjangKelas);
+            const finalValidation = validateQuestionHeuristics(postRepairValidation.healedItem, jenjangKelas);
+            Object.assign(copy, finalValidation.healedItem);
+            const isVerified = hasCompleteVerifierChecks && finalValidation.issues.length === 0;
+
             // Suntikkan audit metadata
             const auditDetail: QuestionAuditDetail = {
-                status: isRepaired ? 'repaired' : 'verified',
-                quality_score: typeof v.quality_score === 'number' ? v.quality_score : (isRepaired ? 90 : 96),
-                key_verified: v.key_verified !== false,
-                kaidah_puspendik: v.kaidah_puspendik !== false,
-                hots_valid: v.hots_valid !== false,
-                distraktor_homogen: v.distraktor_homogen !== false,
-                notes: v.notes || (isRepaired ? 'Diselaraskan secara otomatis oleh Quality Gate' : 'Lolos uji mutu Puspendik'),
+                status: !isVerified ? 'flagged' : (isRepaired ? 'repaired' : 'verified'),
+                quality_score: isVerified ? Math.max(0, Math.min(100, v.quality_score)) : 0,
+                key_verified: isVerified && v.key_verified === true,
+                kaidah_puspendik: isVerified && v.kaidah_puspendik === true,
+                hots_valid: isVerified && v.hots_valid === true,
+                distraktor_homogen: isVerified && v.distraktor_homogen === true,
+                notes: isVerified
+                    ? (v.notes || (isRepaired ? 'Diselaraskan secara otomatis oleh Quality Gate' : 'Lolos uji mutu Puspendik'))
+                    : `${v.notes || 'Verifikasi tidak lengkap atau pemeriksaan deterministik gagal.'} Perlu tinjauan guru.`,
                 repaired_fields: repairedFields.length > 0 ? repairedFields : undefined
             };
 
             copy.audit = auditDetail;
         } else {
-            // Default verified status jika butir tidak terpetakan
+            // No verifier row means no AI checks have been confirmed.
             copy.audit = {
-                status: 'verified',
-                quality_score: 92,
-                key_verified: true,
-                kaidah_puspendik: true,
-                hots_valid: true,
-                distraktor_homogen: true,
-                notes: 'Lolos uji validasi heuristik standar'
+                status: 'flagged',
+                quality_score: 0,
+                key_verified: false,
+                kaidah_puspendik: false,
+                hots_valid: false,
+                distraktor_homogen: false,
+                notes: 'Butir tidak memiliki hasil verifier; perlu tinjauan guru.'
             };
         }
 
@@ -516,10 +528,10 @@ export async function runAssessmentQualityGate(
     // Default summary
     let auditSummary: AssessmentAuditSummary = {
         total_reviewed: totalItems,
-        passed_count: totalItems,
+        passed_count: 0,
         repaired_count: 0,
-        flagged_count: 0,
-        overall_quality_score: 95,
+        flagged_count: totalItems,
+        overall_quality_score: 0,
         verified_at: new Date().toISOString()
     };
 
@@ -631,7 +643,7 @@ export async function runAssessmentQualityGate(
         await options.onProgress('Menerapkan auto-healing dan menyematkan sertifikat audit mutu...', 93);
     }
 
-    const { healedItems, repairedCount } = applyVerificationRepairs(preHealedPG, verifications);
+    const { healedItems, repairedCount } = applyVerificationRepairs(preHealedPG, verifications, context.jenjangKelas);
 
     // Final Post-Repair Safety Sweep: Garansi 100% tidak ada duplikasi gambar di seluruh paket soal
     const finalSeenUrls = new Set<string>();
@@ -657,7 +669,11 @@ export async function runAssessmentQualityGate(
 
     // Update summary
     auditSummary.repaired_count = repairedCount + heuristicRepairs;
-    auditSummary.passed_count = totalItems - auditSummary.flagged_count;
+    auditSummary.passed_count = healedItems.filter((item: any) => item.audit?.status === 'verified').length;
+    auditSummary.flagged_count = healedItems.filter((item: any) => item.audit?.status === 'flagged').length;
+    auditSummary.overall_quality_score = totalItems
+        ? Math.round(healedItems.reduce((total: number, item: any) => total + (item.audit?.quality_score || 0), 0) / totalItems)
+        : 0;
     auditSummary.verifier_model = verifierModel;
     finalData._audit = auditSummary;
 

@@ -14,6 +14,10 @@ export class SqliteD1 {
       async all() { return { results: db.prepare(sql).all(...values), success: true, meta: {} }; },
       async run() { return statement.execute(); },
       execute() {
+        if (/^\s*(SELECT|WITH)\b/i.test(sql)) {
+          const results = db.prepare(sql).all(...values);
+          return { success: true, results, meta: { changes: 0 } };
+        }
         const result = db.prepare(sql).run(...values);
         return { success: true, results: [], meta: { last_row_id: Number(result.lastInsertRowid), changes: Number(result.changes) } };
       },

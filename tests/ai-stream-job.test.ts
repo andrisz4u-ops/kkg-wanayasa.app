@@ -18,7 +18,7 @@ afterEach(() => { db.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const attach = (job: any) => {
   const callbacks: (() => void)[] = [];
   const ai = { setAbortSignal: vi.fn() };
-  const raw = { onAbort: (callback: () => void) => callbacks.push(callback), writeSSE: vi.fn(async () => {}), write: vi.fn(async () => {}) };
+  const raw = { onAbort: (callback: () => void) => callbacks.push(callback), writeSSE: vi.fn(async (_message: { data: string }) => {}), write: vi.fn(async (_chunk: string) => {}) };
   return { raw, ai, callbacks, stream: job.attach(raw, ai) };
 };
 

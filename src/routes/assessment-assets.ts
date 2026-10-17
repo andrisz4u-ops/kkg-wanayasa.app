@@ -24,10 +24,11 @@ assets.post('/', async (c) => {
     while (true) {
       const { done, value } = await reader.read(); if (done) break;
       total += value.byteLength;
-      if (total > ASSESSMENT_ASSET_MAX_BYTES) { await reader.cancel(); return Errors.validation(c, 'Ukuran gambar melebihi 512 KiB.'); }
+      if (total > ASSESSMENT_ASSET_MAX_BYTES) { await reader.cancel(); return Errors.validation(c, 'Ukuran gambar melebihi 1,5 MiB.'); }
       chunks.push(value);
     }
-  } catch { return Errors.validation(c, 'Isi gambar tidak dapat dibaca.'); }
+  } catch { try { await reader.cancel(); } catch { /* best-effort upload reader cleanup */ } return Errors.validation(c, 'Isi gambar tidak dapat dibaca.'); }
+  finally { try { reader.releaseLock(); } catch { /* reader may already be released */ } }
   const bytes = new Uint8Array(total); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   try {

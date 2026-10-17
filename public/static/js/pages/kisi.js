@@ -3170,8 +3170,8 @@ function openSoalEditor(type, index, data, formData) {
   fileUpload?.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 512 * 1024) {
-        showToast('Ukuran gambar maksimal 512 KiB.', 'error');
+      if (file.size > 1_572_864) {
+        showToast('Ukuran gambar maksimal 1.5 MiB.', 'error');
         return;
       }
       const reader = new FileReader();
@@ -3674,8 +3674,8 @@ function openChangeImageModal(type, qIdx, data, formData) {
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 512 * 1024) {
-        showToast('Ukuran gambar maksimal 512 KiB.', 'error');
+      if (file.size > 1_572_864) {
+        showToast('Ukuran gambar maksimal 1.5 MiB.', 'error');
         return;
       }
       const reader = new FileReader();

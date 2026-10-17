@@ -4,6 +4,11 @@ import type { AssessmentData } from '../public/static/js/assessment-image-prefli
 
 const VALID_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j50QAAAAASUVORK5CYII=';
 const decodePng = () => Uint8Array.from(atob(VALID_PNG), char => char.charCodeAt(0)).buffer;
+const pngBufferOfSize = (size: number) => {
+  const buffer = new ArrayBuffer(size);
+  new Uint8Array(buffer).set(new Uint8Array(decodePng()));
+  return buffer;
+};
 const decoder = async (buffer: ArrayBuffer, type: 'png' | 'jpeg') => {
   const bytes = new Uint8Array(buffer);
   const validPng = type === 'png' && bytes.length >= 30
@@ -69,6 +74,32 @@ describe('assessment image preflight', () => {
     expect(result.failures[0].category).toBe('invalid-image');
   });
 
+  it('accepts valid bounded 1.5 MiB output and enforces the 4 MiB package aggregate', async () => {
+    const maxImageBytes = 1_572_864;
+    expect((await import('../public/static/js/assessment-image-preflight.js')).ASSESSMENT_IMAGE_LIMITS.maxImageBytes).toBe(maxImageBytes);
+    const largePng = pngBufferOfSize(maxImageBytes);
+    const singleQuestion = { no: 1, gambar: { url: '/asset/large.png' } };
+    const accepted = await preflightAssessmentImages({ pg: [singleQuestion] }, {
+      loadImage: async () => ({ buffer: largePng.slice(0), type: 'png' }), decodeImage: decoder,
+    });
+    expect(accepted.ready).toBe(true);
+    expect(accepted.images.get(singleQuestion)?.buffer.byteLength).toBe(maxImageBytes);
+
+    const oversized = await preflightAssessmentImages({ pg: [{ no: 2, gambar: { url: '/asset/oversized.png' } }] }, {
+      loadImage: async () => ({ buffer: pngBufferOfSize(maxImageBytes + 1), type: 'png' }), decodeImage: decoder,
+    });
+    expect(oversized.ready).toBe(false);
+    expect(oversized.failures[0].category).toBe('invalid-image');
+
+    const questions = Array.from({ length: 3 }, (_, index) => ({ no: index + 1, gambar: { url: `/asset/aggregate-${index}.png` } }));
+    const aggregate = await preflightAssessmentImages({ pg: questions }, {
+      loadImage: async () => ({ buffer: largePng.slice(0), type: 'png' }), decodeImage: decoder,
+    });
+    expect(aggregate.ready).toBe(false);
+    expect(aggregate.images.size).toBe(2);
+    expect(aggregate.failures).toEqual([{ section: 'pg', number: 3, category: 'budget-exceeded' }]);
+  });
+
   it('fails closed when a valid signature has bytes the decoder cannot decode', async () => {
     const result = await preflightAssessmentImages({ pg: [{ no: 2, gambar: { url: '/asset/truncated' } }] }, {
       loadImage: async () => ({ buffer: decodePng(), type: 'png' }),
@@ -117,7 +148,7 @@ describe('assessment image preflight', () => {
 
   it('enforces the inline data URL budget before invoking the loader', async () => {
     const loadImage = vi.fn(async () => ({ buffer: decodePng(), type: 'png' as const }));
-    const tooLarge = `data:image/png;base64,${'A'.repeat(700_000)}`;
+    const tooLarge = `data:image/png;base64,${'A'.repeat(2_097_156)}`;
     const result = await preflightAssessmentImages({ pg: [{ no: 1, gambar: { url: tooLarge } }] }, { loadImage, decodeImage: decoder });
     expect(result.ready).toBe(false);
     expect(result.failures[0].category).toBe('budget-exceeded');

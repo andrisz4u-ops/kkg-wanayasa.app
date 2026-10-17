@@ -7,6 +7,11 @@ const WEBP_BASE64 = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAA
 const validPng = () => Uint8Array.from(atob(PNG_BASE64), char => char.charCodeAt(0)).buffer;
 const validJpeg = () => Uint8Array.from(atob(JPEG_BASE64), char => char.charCodeAt(0)).buffer;
 const validWebp = () => Uint8Array.from(atob(WEBP_BASE64), char => char.charCodeAt(0)).buffer;
+const webpBufferOfSize = (size: number) => {
+  const buffer = new ArrayBuffer(size);
+  new Uint8Array(buffer).set(new Uint8Array(validWebp()));
+  return buffer;
+};
 const pngDataUrl = `data:image/png;base64,${PNG_BASE64}`;
 const enumValues = new Proxy({}, { get: (_target, key) => String(key) });
 const imageRunOptions: Array<{ data: ArrayBuffer; type: string }> = [];
@@ -233,7 +238,8 @@ describe('asesmen DOCX strict image preflight', () => {
   });
 
   it('converts WebP to validated PNG before embedding', async () => {
-    const fetchMock = vi.fn(async () => new Response(validWebp(), { headers: { 'content-type': 'image/webp' } }));
+    const largeWebp = webpBufferOfSize(600 * 1024);
+    const fetchMock = vi.fn(async () => new Response(largeWebp.slice(0), { headers: { 'content-type': 'image/webp' } }));
     vi.stubGlobal('fetch', fetchMock);
     const originalCreateElement = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
@@ -250,6 +256,28 @@ describe('asesmen DOCX strict image preflight', () => {
     expect(imageRunOptions).toHaveLength(1);
     expect(imageRunOptions[0].type).toBe('png');
     expect(new Uint8Array(imageRunOptions[0].data)).toEqual(new Uint8Array(validPng()));
+  });
+
+  it('rejects WebP conversion output above 1.5 MiB before DOCX packing', async () => {
+    const fetchMock = vi.fn(async () => new Response(webpBufferOfSize(600 * 1024), { headers: { 'content-type': 'image/webp' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const largePng = new Uint8Array(1_572_865);
+    largePng.set(new Uint8Array(validPng()));
+    const expandedPngDataUrl = `data:image/png;base64,${Buffer.from(largePng).toString('base64')}`;
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
+      if (tagName.toLowerCase() === 'canvas') return {
+        width: 0, height: 0,
+        getContext: () => ({ fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: '' }),
+        toDataURL: () => expandedPngDataUrl,
+      } as unknown as HTMLCanvasElement;
+      return originalCreateElement(tagName, options);
+    }) as typeof document.createElement);
+    const { generateAsesmenDocx } = await import('../public/static/js/asesmen-docx.js');
+    await expect(generateAsesmenDocx({ uraian: [{ no: 9, soal: 'Expanded WebP', gambar: { url: '/asset/large.webp' } }] }, {})).rejects.toMatchObject({
+      name: 'AssessmentImagePreflightError', failures: [{ section: 'uraian', number: 9, category: 'load-failed' }],
+    });
+    expect(toBlob).not.toHaveBeenCalled();
   });
 
   it('aborts stale URL, SVG, asset, hash, and in-flight mutations before Packer', async () => {

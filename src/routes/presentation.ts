@@ -29,6 +29,22 @@ export function presentationPrompt(input: any) {
     const outline = input.customOutline?.filter((slide: any) => !isLearningObjectivesSlide(slide));
     return `${rules}\nBrief guru: ${brief(input)}\nTema: ${getTemplate(input.template).name}.\n${input.usePhotos ? 'Jika foto benda/tempat membantu pembelajaran, tambahkan imageQuery berupa 2-4 kata kunci bahasa Inggris pada maksimal 3 slide content tanpa visual. Jangan membuat URL; pencarian foto dilakukan sistem. Isi tetap lengkap jika foto tidak tersedia.' : 'Utamakan diagram terstruktur; tidak perlu pencarian foto.'}\n${outline?.length ? `Ikuti kerangka yang disetujui guru: ${JSON.stringify(outline)}.` : ''}\nBuat tepat ${input.slideCount} slide. Respons {title,subtitle,slides:[...]} dengan semua slide terisi, bukan contoh/skema kosong.`;
 }
+const OUTLINE_TEXT_KEYS = ['text', 'title', 'content', 'value'] as const;
+/** Extract plain text only from recognized AI wrapper shapes; leave unknown values untouched for Zod to reject. */
+export function normalizeOutlineText(value: any, depth = 0): any {
+    if (typeof value === 'string' || value == null || typeof value !== 'object' || Array.isArray(value) || depth >= 3) return value;
+    for (const key of OUTLINE_TEXT_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) {
+            const nested = value[key];
+            if (typeof nested === 'string') return nested;
+            if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+                const extracted = normalizeOutlineText(nested, depth + 1);
+                if (typeof extracted === 'string') return extracted;
+            }
+        }
+    }
+    return value;
+}
 export function presentationQuality(deck: any, input: any) {
     return [...deckIssues(deck, input.slideCount), ...presentationLayoutIssues(deck, input)];
 }
@@ -85,12 +101,18 @@ presentation.post('/outline', requireAIAdmission, async c => {
         const parsed = validate(presentationOutlineSchema, await c.req.json());
         if (!parsed.success) return Errors.validation(c, 'Brief slide belum lengkap.', parsed.errors);
         const input = parsed.data, ai = await service(c);
-        const raw: any = await ai.generateJSON(`${rules}\nBrief: ${brief(input)}\nBuat kerangka tepat ${input.slideCount} slide, bukan isi lengkap. JSON {title,subtitle,outline:[{index,title,layout,focus,visualConcept}]}. Focus menyebut konsep/kegiatan yang benar-benar akan diajarkan.`, resolveProviderSlug(input.aiProvider));
+        const raw: any = await ai.generateJSON(`${rules}\nBrief: ${brief(input)}\nBuat kerangka tepat ${input.slideCount} slide, bukan isi lengkap. JSON {title,subtitle,outline:[{index,title,layout,focus,visualConcept}]}. title, layout, focus, dan visualConcept harus berupa plain string, bukan objek; jangan membungkus teks dalam objek. Focus menyebut konsep/kegiatan yang benar-benar akan diajarkan.`, resolveProviderSlug(input.aiProvider));
         const root = raw?.presentation || raw?.data || raw;
-        const outline = (Array.isArray(root) ? root : root?.outline || root?.slides || []).filter((item: any) => !isLearningObjectivesSlide(typeof item === 'string' ? { title: item } : item)).map((item: any, i: number) => ({ index: i + 1, title: typeof item === 'string' ? item : item.title || item.judul || '', layout: LAYOUTS.includes(item.layout) ? item.layout : 'content', focus: item.focus || item.description || (typeof item === 'string' ? item : item.title) || '', visualConcept: item.visualConcept }));
-        if (outline.length !== input.slideCount || outline.some((item: any) => !item.title || !item.focus)) return Errors.validation(c, 'Kerangka belum lengkap. Perjelas topik atau kurangi jumlah slide.');
-        const validated = validate(presentationOutlineResponseSchema, { title: root.title || input.topik, subtitle: root.subtitle, outline });
-        return validated.success ? successResponse(c, validated.data) : Errors.validation(c, 'Kerangka belum sesuai struktur.', validated.errors);
+        const outline = (Array.isArray(root) ? root : root?.outline || root?.slides || []).filter((item: any) => !isLearningObjectivesSlide(typeof item === 'string' ? { title: item } : item)).map((item: any, i: number) => {
+            const title = normalizeOutlineText(typeof item === 'string' ? item : item.title ?? item.judul ?? '');
+            const rawLayout = normalizeOutlineText(typeof item === 'string' ? undefined : item.layout);
+            const focus = normalizeOutlineText(typeof item === 'string' ? item : item.focus ?? item.description ?? item.title ?? '');
+            return { index: i + 1, title, layout: typeof rawLayout === 'object' && rawLayout !== null ? rawLayout : LAYOUTS.includes(rawLayout) ? rawLayout : 'content', focus, visualConcept: normalizeOutlineText(typeof item === 'string' ? undefined : item.visualConcept) };
+        });
+        const validated = validate(presentationOutlineResponseSchema, { title: normalizeOutlineText(root.title) ?? input.topik, subtitle: normalizeOutlineText(root.subtitle), outline });
+        if (!validated.success) return Errors.validation(c, 'Kerangka belum sesuai struktur.', validated.errors);
+        if (validated.data.outline.length !== input.slideCount || validated.data.outline.some((item: any) => !item.title || !item.focus)) return Errors.validation(c, 'Kerangka belum lengkap. Perjelas topik atau kurangi jumlah slide.');
+        return successResponse(c, validated.data);
     } catch (error: any) { return generationError(c, error); }
 });
 presentation.post('/generate', requireAIAdmission, async c => {

@@ -2,7 +2,7 @@
 
 export const ASSESSMENT_IMAGE_LIMITS = Object.freeze({
   maxConcurrency: 2,
-  maxImageBytes: 512 * 1024,
+  maxImageBytes: 1_572_864,
   maxTotalBytes: 4 * 1024 * 1024,
   loadTimeoutMs: 10_000,
   decodeTimeoutMs: 5_000,

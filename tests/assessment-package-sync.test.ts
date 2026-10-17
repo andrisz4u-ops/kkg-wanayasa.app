@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { AssessmentPackageSync, canonicalAssessmentContent } from '../public/static/js/assessment-package-sync.js';
 
@@ -112,7 +113,7 @@ describe('assessment package sync client', () => {
       headers: { 'Content-Type': 'image/png', 'X-Asset-Id': stableAssetId, 'X-CSRF-Token': 'csrf' },
     }));
     await expect(sync.uploadImage(new Blob(['x'], { type: 'image/gif' }))).rejects.toThrow('Unggah PNG, JPEG, atau WebP');
-    await expect(sync.uploadImage(new Blob([new Uint8Array(512 * 1024 + 1)], { type: 'image/png' }))).rejects.toThrow('512 KiB');
+    await expect(sync.uploadImage(new Blob([new Uint8Array(1_572_865)], { type: 'image/png' }))).rejects.toThrow('1.5 MiB');
   });
 
   it('fetches only reviewed HTTPS image hosts without credentials or redirects and streams under the byte limit', async () => {
@@ -145,16 +146,61 @@ describe('assessment package sync client', () => {
     expect(clearTimer).toHaveBeenCalledOnce();
   });
 
-  it('cancels an oversized source stream before any asset upload', async () => {
+  it('accepts over 512 KiB source bytes and uploads them as an asset without embedding them in package JSON', async () => {
+    const bytes = new Uint8Array(600 * 1024).fill(7);
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(bytes, { status: 200, headers: { 'Content-Type': 'image/png' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { assetId: 'durable-large', url: '/api/assessment-assets/durable-large' } }), { status: 201 }));
+    const sync = new AssessmentPackageSync({ fetcher });
+    const asset = await sync.uploadImageUrl('https://upload.wikimedia.org/large.png');
+    expect(asset.assetId).toBe('durable-large');
+    const uploaded = fetcher.mock.calls[1][1].body as Blob;
+    expect(uploaded.size).toBe(bytes.byteLength);
+    sync.setContext({ owner: 1 });
+    sync.edit({ pg: [{ gambar: asset }] });
+    expect(JSON.stringify(sync.snapshot!.content)).not.toMatch(/data:image|base64/i);
+    expect((sync.snapshot!.content as any).pg[0].gambar).toMatchObject({ assetId: 'durable-large', url: '/api/assessment-assets/durable-large' });
+  });
+
+  it('cancels a source stream that exceeds 1.5 MiB before any asset upload', async () => {
     const canceled = vi.fn();
     const body = new ReadableStream<Uint8Array>({
-      start(controller) { controller.enqueue(new Uint8Array(512 * 1024 + 1)); },
+      start(controller) { controller.enqueue(new Uint8Array(1_572_865)); },
       cancel: canceled,
     });
     const fetcher = vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'image/png' } }));
     const sync = new AssessmentPackageSync({ fetcher });
-    await expect(sync.uploadImageUrl('https://upload.wikimedia.org/image.png')).rejects.toThrow('512 KiB');
+    await expect(sync.uploadImageUrl('https://upload.wikimedia.org/image.png')).rejects.toThrow('1.5 MiB');
     expect(fetcher).toHaveBeenCalledOnce();
     expect(canceled).toHaveBeenCalledOnce();
+  });
+
+  // Regression: native timers stored as bare references and invoked as instance
+  // methods (this.setTimer/this.clearTimer) throw "TypeError: Illegal invocation"
+  // in real browsers because `this` is the instance, not the global object. That
+  // aborted every autosave of assessment edits ("Simpan ke Bank Soal" failed).
+  // happy-dom cannot reproduce the WebIDL `this` check, so the wiring is asserted
+  // on the source and the default (non-injected) timer path is exercised for real.
+  it('never stores bare native timer references as injectable defaults', () => {
+    const source = readFileSync('public/static/js/assessment-package-sync.js', 'utf8');
+    expect(source).not.toMatch(/setTimer\s*=\s*setTimeout\s*,/);
+    expect(source).not.toMatch(/clearTimer\s*=\s*clearTimeout\s*,/);
+    expect(source).toMatch(/setTimer\s*=\s*\(fn,\s*ms\)\s*=>\s*globalThis\.setTimeout\(/);
+    expect(source).toMatch(/clearTimer\s*=\s*\(id\)\s*=>\s*globalThis\.clearTimeout\(/);
+  });
+
+  it('debounces and saves with the real default timers instead of injected fakes', async () => {
+    const request = vi.fn(async () => ({ data: { packageId: 77, revision: 1, saveStatus: 'saved' } }));
+    const sync = new AssessmentPackageSync({ request, debounceMs: 5 });
+    sync.setContext({ owner: '3', token: 'real-timers', clientDocumentId: 'stable-real' });
+    expect(() => sync.edit({ pg: [{ soal: 'disimpan otomatis' }] })).not.toThrow();
+    // The real default timer must actually schedule a deferred save: nothing is
+    // sent synchronously, and the debounced write lands shortly afterwards.
+    expect(request).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce(), { timeout: 2000 });
+    expect(sync.status).toBe('saved');
+    expect(sync.context).toMatchObject({ packageId: 77, revision: 1 });
+    await sync.flush();
+    expect(request).toHaveBeenCalledOnce();
   });
 });

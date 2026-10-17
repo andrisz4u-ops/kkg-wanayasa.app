@@ -14,8 +14,9 @@ import { validate, createAssessmentSchema } from '../lib/validation';
 import { runAssessmentQualityGate, validateQuestionHeuristics } from '../lib/assessment-validator';
 import { type AppBindings } from '../types/env';
 import { attachCurriculumProvenance, recordCurriculumSnapshot } from '../lib/curriculum-provenance';
-import { createOwnedAssessmentPackage, normalizeAssetUrls, AssessmentPackageWriteError } from '../lib/assessment-packages';
+import { createOwnedAssessmentPackage, normalizeAssetUrls, AssessmentPackageWriteError, AssessmentPackageSettlementUnknownError } from '../lib/assessment-packages';
 import { normalizeAssessmentImages } from '../lib/assessment-image-durability';
+import { persistAssessmentAsset, ASSESSMENT_ASSET_OWNER_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_COUNT } from '../lib/assessment-assets';
 import { acquireAssessmentGenerationRequest, endAssessmentGenerationRequest, completeAssessmentGenerationRequest, loadAssessmentGenerationRequest, type AssessmentGenerationFence } from '../lib/assessment-generation-requests';
 import { readKisiAssessmentJson, hashKisiAssessmentSemanticInput } from '../lib/kisi-assessment-generation';
 import { requireAIAdmission } from '../lib/ai-admission';
@@ -1477,10 +1478,12 @@ export async function saveAssessmentTelemetryAndBankSoal(
     // Image durability and package persistence are authoritative and independent
     // from best-effort analytics.
     let normalizedContent: any;
+    let stagedAssets: import('../lib/assessment-assets').AssessmentAssetStage = new Map();
     try {
         if (!user?.id) throw new Error('authenticated_owner_required');
         const normalized = await normalizeAssessmentImages(db, user.id, finalData);
         normalizedContent = normalized.content;
+        stagedAssets = normalized.stagedAssets;
         // The normalizer mutates the supplied object in place; retain that safe
         // normalized value for any fenced failed-save recovery result.
         warnings.push(...normalized.warnings);
@@ -1489,6 +1492,7 @@ export async function saveAssessmentTelemetryAndBankSoal(
             ownerId: Number(user.id),
             clientDocumentId: validated.clientDocumentId || null,
             content: normalized.content,
+            stagedAssets: normalized.stagedAssets,
             ...(generationFence ? { generationFence } : {}),
             metadata: {
                 user_nama: user.nama || validated.namaGuru || 'Guru',
@@ -1514,9 +1518,19 @@ export async function saveAssessmentTelemetryAndBankSoal(
         persistence = { packageId: created.packageId, revision: created.revision, saveStatus: created.saveStatus, imageWarnings: warnings };
         finalData._persistence = persistence;
     } catch (error) {
+        if (generationFence && error instanceof AssessmentPackageSettlementUnknownError) throw error;
         if (generationFence && error instanceof AssessmentPackageWriteError && error.code === 'generation_fenced_conflict') throw error;
         console.warn('[BankSoal] Package save failed:', error instanceof Error ? error.message : 'unknown');
         if (generationFence && !normalizedContent) throw error;
+        if (normalizedContent) {
+            const uncommitted = new Set(stagedAssets.keys());
+            for (const question of [...(normalizedContent.pg || []), ...(normalizedContent.isian?.data || []), ...(normalizedContent.uraian || [])]) {
+                const image = question?.gambar;
+                if (!image || typeof image !== 'object' || !uncommitted.has(image.assetId)) continue;
+                delete image.assetId; delete image.url; delete image.mime; delete image.byteLength;
+                image.imageUnavailable = true; image.imageUnavailableReason = 'image_unavailable';
+            }
+        }
         persistence = { packageId: null, revision: null, saveStatus: 'failed', imageWarnings: warnings };
         finalData._persistence = persistence;
         if (generationFence) {
@@ -2413,6 +2427,16 @@ kisi.post('/regenerate-batch', requireSession, requireAIAdmission, async (c) => 
         }
 
         const normalized = await normalizeAssessmentImages(c.env.DB, user.id, { pg: healedReplacements });
+        // Replacement-item regeneration intentionally remains standalone (not package-atomic).
+        // Persist only its locally staged assets through the established quota API before returning IDs.
+        const staged = [...normalized.stagedAssets.values()];
+        if (staged.length) {
+            const quota: any = await c.env.DB.prepare('SELECT COUNT(*) AS count,COALESCE(SUM(byte_length),0) AS bytes FROM assessment_image_assets WHERE owner_id=?').bind(user.id).first();
+            if (Number(quota?.count) + staged.length > ASSESSMENT_ASSET_OWNER_MAX_COUNT || Number(quota?.bytes) + staged.reduce((sum, asset) => sum + asset.byteLength, 0) > ASSESSMENT_ASSET_OWNER_MAX_BYTES) {
+                throw new Error('assessment_asset_owner_quota_exceeded');
+            }
+            for (const asset of staged) await persistAssessmentAsset(c.env.DB, user.id, new Uint8Array(asset.bytes), asset.mime, { assetId: asset.id });
+        }
         return successResponse(c, {
             items: normalized.content.pg,
             imageWarnings: normalized.warnings,

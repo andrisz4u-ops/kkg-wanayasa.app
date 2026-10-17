@@ -1,4 +1,5 @@
 export type AssessmentPackageSaveStatus = 'unsaved' | 'saving' | 'saved' | 'failed' | 'conflict';
+export declare const ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES: 1572864;
 export interface AssessmentPackageContext {
   packageId: number | string | null;
   revision: number | null;

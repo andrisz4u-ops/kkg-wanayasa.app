@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { AssessmentPackageWriteError, canonicalContent, createOwnedAssessmentPackage, findAssetIds, normalizeAssetUrls, preparePackageContent } from '../src/lib/assessment-packages';
+import { AssessmentPackageWriteError, canonicalContent, createOwnedAssessmentPackage, findAssetIds, normalizeAssetUrls, preparePackageContent, saveOwnedAssessmentPackage } from '../src/lib/assessment-packages';
+import { prepareAssessmentAsset } from '../src/lib/assessment-assets';
 import { acquireAssessmentGenerationRequest, completeAssessmentGenerationRequest, endAssessmentGenerationRequest, type AssessmentGenerationFence } from '../src/lib/assessment-generation-requests';
 import { SqliteD1 } from './helpers/sqlite-d1';
 import banksoal from '../src/routes/banksoal';
@@ -9,6 +10,7 @@ import { ensureBankSoalTables } from '../src/routes/banksoal';
 import { assertLocalSchemaReady, REQUIRED_LOCAL_SCHEMA, runIfLocalSchemaReady, type LocalSchemaStatement } from '../scripts/dev-schema-check.mjs';
 
 const imageIds = ['123e4567-e89b-42d3-a456-426614174001', '123e4567-e89b-42d3-a456-426614174002'];
+afterEach(() => vi.restoreAllMocks());
 const png = new Uint8Array(readFileSync('public/static/screenshots/home-mobile.png'));
 function routeDb() {
   const db = new SqliteD1();
@@ -24,7 +26,7 @@ function routeDb() {
     CREATE TABLE sessions (id TEXT PRIMARY KEY,user_id INTEGER,expires_at TEXT);
     INSERT INTO users(id,nama,email,role) VALUES (1,'Owner','owner@test','user'),(2,'Foreign','foreign@test','user'),(3,'Admin','admin@test','admin');
     INSERT INTO sessions VALUES ('owner',1,datetime('now','+1 day')),('foreign',2,datetime('now','+1 day')),('admin',3,datetime('now','+1 day'));`);
-  for (const migration of ['0018_bank_soal.sql', '0040_bank_soal_moderation.sql', '0041_assessment_image_assets.sql', '0042_assessment_package_revisions.sql', '0043_assessment_generation_requests.sql']) {
+  for (const migration of ['0018_bank_soal.sql', '0040_bank_soal_moderation.sql', '0041_assessment_image_assets.sql', '0042_assessment_package_revisions.sql', '0043_assessment_generation_requests.sql', '0044_assessment_image_capacity.sql']) {
     db.sqlite.exec(readFileSync(resolve(process.cwd(), `migrations/${migration}`), 'utf8'));
   }
   db.sqlite.exec('CREATE TABLE ai_generation_jobs (user_id INTEGER NOT NULL, job_id TEXT NOT NULL, state TEXT NOT NULL, lease_until INTEGER NOT NULL, PRIMARY KEY(user_id,job_id));');
@@ -39,6 +41,17 @@ function insertAsset(db: SqliteD1, id: string, owner = 1) {
 function insertPngAsset(db: SqliteD1, id: string, owner = 1) {
   db.sqlite.prepare(`INSERT INTO assessment_image_assets(id,owner_id,mime,byte_length,sha256,bytes) VALUES(?,?,'image/png',?,'valid-fixture',?)`).run(id, owner, png.length, png);
 }
+function paddedPng(targetLength: number) {
+  const source = png; const chunkLength = targetLength - source.byteLength;
+  const payloadLength = chunkLength - 12; const chunk = new Uint8Array(chunkLength); const view = new DataView(chunk.buffer);
+  view.setUint32(0, payloadLength); chunk.set([116, 69, 88, 116], 4);
+  let crc = 0xffffffff;
+  for (let i = 4; i < 8 + payloadLength; i++) { crc ^= chunk[i]; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0); }
+  view.setUint32(8 + payloadLength, (crc ^ 0xffffffff) >>> 0);
+  const iend = source.byteLength - 12; const result = new Uint8Array(targetLength);
+  result.set(source.subarray(0, iend)); result.set(chunk, iend); result.set(source.subarray(iend), iend + chunkLength);
+  return result;
+}
 async function createPackage(db: SqliteD1, content: any, clientDocumentId?: string) {
   const result = await req(db, '/', 'POST', { mata_pelajaran: 'IPAS', topik: 'Air', jenjang_kelas: '5', content, clientDocumentId });
   return { response: result, payload: await result.json() as any };
@@ -49,8 +62,8 @@ async function acquireFence(db: SqliteD1, clientDocumentId: string, jobId?: stri
   if (acquired.kind !== 'acquired') throw new Error('Expected fresh assessment generation fence');
   return { ...acquired.fence, ...(jobId ? { jobId } : {}) };
 }
-function fencedWrite(db: SqliteD1, fence: AssessmentGenerationFence, content: any, clientDocumentId = fence.clientDocumentId) {
-  return createOwnedAssessmentPackage(db as any, { ownerId: 1, clientDocumentId, content, metadata: generationMetadata, generationFence: fence });
+function fencedWrite(db: SqliteD1, fence: AssessmentGenerationFence, content: any, clientDocumentId = fence.clientDocumentId, stagedAssets?: ReadonlyMap<string, any>) {
+  return createOwnedAssessmentPackage(db as any, { ownerId: 1, clientDocumentId, content, metadata: generationMetadata, generationFence: fence, stagedAssets });
 }
 
 describe('assessment package persistence contracts', () => {
@@ -132,6 +145,72 @@ describe('assessment package persistence contracts', () => {
     const response = await req(db, '/', 'POST', { mata_pelajaran: 'IPAS', topik: 'Air', jenjang_kelas: '5', content: { pg: [{ soal: 'x'.repeat(1024 * 1024) }] } });
     expect(response.status).toBe(413);
     expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get()).toMatchObject({ n: 0 });
+    db.close();
+  });
+
+  it('atomically creates and saves >512 KiB staged assets with exact bytes and owner associations', async () => {
+    const db = routeDb();
+    const large = paddedPng(700 * 1024);
+    const staged = await prepareAssessmentAsset(1, large, 'image/png');
+    const created = await createOwnedAssessmentPackage(db as any, {
+      ownerId: 1, clientDocumentId: '223e4567-e89b-42d3-a456-426614174222',
+      content: { pg: [{ no: 1, soal: 'staged create', gambar: { assetId: staged.id } }] }, metadata: generationMetadata, stagedAssets: new Map([[staged.id, staged]]),
+    });
+    let row: any = db.sqlite.prepare('SELECT owner_id,byte_length,bytes FROM assessment_image_assets WHERE id=?').get(staged.id);
+    expect(row.owner_id).toBe(1); expect(row.byte_length).toBe(large.length); expect(Buffer.from(row.bytes)).toEqual(Buffer.from(large));
+    const replacement = await prepareAssessmentAsset(1, paddedPng(710 * 1024), 'image/png');
+    const before = await saveOwnedAssessmentPackage(db as any, { ownerId: 1, packageId: created.packageId, baseRevision: 1,
+      content: { pg: [{ no: 1, soal: 'staged save', gambar: { assetId: replacement.id } }] }, stagedAssets: new Map([[replacement.id, replacement]]) });
+    row = db.sqlite.prepare('SELECT owner_id,byte_length,bytes FROM assessment_image_assets WHERE id=?').get(replacement.id);
+    expect(before.revision).toBe(2); expect(row.owner_id).toBe(1); expect(row.byte_length).toBe(710 * 1024); expect(Buffer.from(row.bytes)).toEqual(Buffer.from(new Uint8Array(replacement.bytes)));
+    expect(db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=?').get(created.packageId)).toEqual({ asset_id: replacement.id });
+    const winnerBefore: any = db.sqlite.prepare('SELECT content,revision FROM bank_soal WHERE id=?').get(created.packageId);
+    const associationsBefore: any[] = db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=? ORDER BY asset_id').all(created.packageId) as any[];
+    const failing = await prepareAssessmentAsset(1, paddedPng(720 * 1024), 'image/png');
+    db.sqlite.exec(`CREATE TRIGGER abort_staged_save_association BEFORE INSERT ON bank_soal_assets BEGIN SELECT RAISE(ABORT,'staged save association failure'); END;`);
+    await expect(saveOwnedAssessmentPackage(db as any, { ownerId: 1, packageId: created.packageId, baseRevision: 2,
+      content: { pg: [{ no: 1, soal: 'failed staged save', gambar: { assetId: failing.id } }] }, stagedAssets: new Map([[failing.id, failing]]) })).rejects.toThrow();
+    expect(db.sqlite.prepare('SELECT content,revision FROM bank_soal WHERE id=?').get(created.packageId)).toEqual(winnerBefore);
+    expect(db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=? ORDER BY asset_id').all(created.packageId)).toEqual(associationsBefore);
+    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE id=?').get(failing.id)).toEqual({ n: 0 });
+    db.close();
+  });
+
+  it('rolls back earlier conditional staged inserts when a later sequential quota insert is denied', async () => {
+    const db = routeDb();
+    for (let i = 0; i < 99; i++) db.sqlite.prepare(`INSERT INTO assessment_image_assets(id,owner_id,mime,byte_length,sha256,bytes) VALUES(?,1,'image/png',1,'quota-fixture',X'00')`).run(`owned-${i}`);
+    const first = await prepareAssessmentAsset(1, png, 'image/png');
+    const second = await prepareAssessmentAsset(1, paddedPng(700 * 1024), 'image/png');
+    await expect(createOwnedAssessmentPackage(db as any, { ownerId: 1, clientDocumentId: '223e4567-e89b-42d3-a456-426614174224',
+      content: { pg: [{ no: 1, gambar: { assetId: first.id } }, { no: 2, gambar: { assetId: second.id } }] }, metadata: generationMetadata,
+      stagedAssets: new Map([[first.id, first], [second.id, second]]) })).rejects.toMatchObject({ code: 'quota_count' });
+    expect((db.sqlite.prepare(`SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1 AND id IN (?,?)`).get(first.id, second.id) as any).n).toBe(0);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1').get() as any).n).toBe(99);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get() as any).n).toBe(0);
+    db.close();
+  });
+
+  it('rolls staged assets back when package association settlement fails', async () => {
+    const db = routeDb();
+    const large = paddedPng(700 * 1024);
+    const staged = await prepareAssessmentAsset(1, large, 'image/png');
+    db.sqlite.exec(`CREATE TRIGGER abort_after_staged_insert BEFORE INSERT ON bank_soal_assets BEGIN SELECT RAISE(ABORT,'staged association failure'); END;`);
+    await expect(createOwnedAssessmentPackage(db as any, { ownerId: 1, clientDocumentId: '223e4567-e89b-42d3-a456-426614174223',
+      content: { pg: [{ no: 1, soal: 'rollback staged', gambar: { assetId: staged.id } }] }, metadata: generationMetadata, stagedAssets: new Map([[staged.id, staged]]) })).rejects.toThrow();
+    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1').get()).toEqual({ n: 0 });
+    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get()).toEqual({ n: 0 });
+    db.close();
+  });
+
+  it('treats a staged UUID collision with different authoritative metadata as failure, not a successful asset reuse', async () => {
+    const db = routeDb();
+    const id = imageIds[0];
+    insertPngAsset(db, id, 1);
+    const staged = await prepareAssessmentAsset(1, png, 'image/png', { id });
+    await expect(createOwnedAssessmentPackage(db as any, { ownerId: 1, clientDocumentId: '223e4567-e89b-42d3-a456-426614174225',
+      content: { pg: [{ no: 1, gambar: { assetId: id } }] }, metadata: generationMetadata, stagedAssets: new Map([[id, staged]]) })).rejects.toMatchObject({ code: 'identity_conflict' });
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get() as any).n).toBe(0);
+    expect((db.sqlite.prepare('SELECT byte_length,sha256 FROM assessment_image_assets WHERE id=?').get(id) as any)).toEqual({ byte_length: png.length, sha256: 'valid-fixture' });
     db.close();
   });
 
@@ -229,6 +308,73 @@ describe('assessment package persistence contracts', () => {
     db.close();
   });
 
+  it('copies a >512 KiB raster through staged core preparation with byte-exact atomic settlement', async () => {
+    const db = routeDb();
+    const large = paddedPng(700 * 1024);
+    const largeId = imageIds[0];
+    db.sqlite.prepare(`INSERT INTO assessment_image_assets(id,owner_id,mime,byte_length,sha256,bytes) VALUES(?,1,'image/png',?,'large-fixture',?)`).run(largeId, large.length, large);
+    const source = await createPackage(db, { pg: [{ no: 1, soal: 'large image', gambar: { assetId: largeId } }] });
+    const sourceId = source.payload.data.id;
+    db.sqlite.prepare(`UPDATE bank_soal SET is_public=1,moderation_status='approved' WHERE id=?`).run(sourceId);
+    const copied = await req(db, `/${sourceId}/copy`, 'POST', { clientDocumentId: '223e4567-e89b-42d3-a456-426614174111' }, 'foreign');
+    expect(copied.status).toBe(200);
+    const data: any = await copied.json();
+    const cloneId = data.data.content.pg[0].gambar.assetId;
+    const clone: any = db.sqlite.prepare('SELECT owner_id,mime,byte_length,bytes FROM assessment_image_assets WHERE id=?').get(cloneId);
+    expect(clone).toMatchObject({ owner_id: 2, mime: 'image/png', byte_length: large.length });
+    expect(Buffer.from(clone.bytes)).toEqual(Buffer.from(large));
+    expect(db.sqlite.prepare('SELECT bank_soal_id,revision FROM bank_soal_write_tokens WHERE bank_soal_id=?').get(data.data.packageId)).toEqual({ bank_soal_id: data.data.packageId, revision: 1 });
+    db.close();
+  });
+
+  it('rejects a copy over the 4 MiB metadata budget before issuing any source BLOB query', async () => {
+    const db = routeDb();
+    const ids = Array.from({ length: 8 }, (_, i) => `523e4567-e89b-42d3-a456-${String(i + 1).padStart(12, '0')}`);
+    for (const id of ids) db.sqlite.prepare(`INSERT INTO assessment_image_assets(id,owner_id,mime,byte_length,sha256,bytes) VALUES(?,1,'image/png',614400,'metadata-only',X'00')`).run(id);
+    const content = { pg: ids.map((assetId, i) => ({ no: i + 1, soal: `large ${i}`, gambar: { assetId } })) };
+    db.sqlite.prepare(`INSERT INTO bank_soal(id,user_id,user_nama,mata_pelajaran,topik,jenjang_kelas,content,is_public,moderation_status,legacy_compat,is_hidden)
+      VALUES(80,1,'Owner','IPAS','Oversize copy','5',?,1,'approved',0,0)`).run(JSON.stringify(content));
+    for (const id of ids) db.sqlite.prepare('INSERT INTO bank_soal_assets(bank_soal_id,asset_id) VALUES(80,?)').run(id);
+    let blobQueries = 0;
+    const basePrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => { if (/SELECT[\s\S]*a\.bytes[\s\S]*FROM bank_soal_assets/i.test(sql)) blobQueries++; return basePrepare(sql); }) as any;
+    const response = await req(db, '/80/copy', 'POST', {}, 'foreign');
+    expect(response.status).toBe(400);
+    expect(blobQueries).toBe(0);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=2').get() as any).n).toBe(0);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal WHERE user_id=2').get() as any).n).toBe(0);
+    db.close();
+  });
+
+  it('captures the complete association snapshot before source BLOB reads and aborts if it changes between queries', async () => {
+    const db = routeDb(); insertPngAsset(db, imageIds[0]); insertPngAsset(db, imageIds[1]);
+    const source = await createPackage(db, { pg: [
+      { no: 1, soal: 'A', gambar: { assetId: imageIds[0] } }, { no: 2, soal: 'B', gambar: { assetId: imageIds[1] } },
+    ] });
+    const sourceId = source.payload.data.id;
+    db.sqlite.prepare(`UPDATE bank_soal SET is_public=1,moderation_status='approved' WHERE id=?`).run(sourceId);
+    const basePrepare = db.prepare.bind(db);
+    let removed = false;
+    db.prepare = ((sql: string) => {
+      const statement: any = basePrepare(sql);
+      const all = statement.all.bind(statement);
+      if (/SELECT a\.id,a\.owner_id,a\.mime,a\.byte_length,a\.sha256 FROM bank_soal_assets/i.test(sql)) {
+        statement.all = async () => {
+          const result = await all();
+          if (!removed) { removed = true; db.sqlite.prepare('DELETE FROM bank_soal_assets WHERE bank_soal_id=? AND asset_id=?').run(sourceId, imageIds[1]); }
+          return result;
+        };
+      }
+      return statement;
+    }) as any;
+    const response = await req(db, `/${sourceId}/copy`, 'POST', {}, 'foreign');
+    expect(removed).toBe(true);
+    expect(response.status).toBe(404);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=2').get() as any).n).toBe(0);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal WHERE user_id=2').get() as any).n).toBe(0);
+    db.close();
+  });
+
   it('denies private foreign/admin copies and rechecks withdrawal at the atomic copy boundary', async () => {
     const db = routeDb(); insertPngAsset(db, imageIds[0]);
     const source = await createPackage(db, { pg: [{ no: 1, soal: 'private', gambar: { assetId: imageIds[0] } }] });
@@ -240,7 +386,7 @@ describe('assessment package persistence contracts', () => {
     let batchNumber = 0;
     db.batch = async (statements: any[]) => {
       batchNumber++;
-      if (batchNumber === 2) {
+      if (batchNumber === 1) {
         db.sqlite.prepare(`UPDATE bank_soal SET is_public=0,moderation_status='private' WHERE id=?`).run(sourceId);
       }
       return originalBatch(statements);
@@ -322,7 +468,7 @@ describe('assessment package persistence contracts', () => {
       { no: 2, soal: 'bad old SVG', gambar: { type: 'svg', dataUri: 'data:image/svg+xml;utf8,%3Csvg%20onload%3D%22evil()%22/%3E' } },
     ] };
     db.sqlite.prepare(`INSERT INTO bank_soal(id,user_id,user_nama,mata_pelajaran,topik,jenjang_kelas,content) VALUES(63,1,'Owner','IPAS','SVG','5',?)`).run(JSON.stringify(content));
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(png, { status: 200, headers: { 'Content-Type': 'image/png' } }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(png, { status: 200, headers: { 'Content-Type': 'image/png' } }));
     const response = await req(db, '/63/recover-images', 'POST', { baseRevision: 1 });
     expect(response.status).toBe(400);
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -349,6 +495,23 @@ describe('assessment package persistence contracts', () => {
     expect(db.sqlite.prepare('SELECT owner_id FROM assessment_image_assets WHERE id=?').get(assetId)).toEqual({ owner_id: 1 });
     expect(db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=40').get()).toEqual({ asset_id: assetId });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    fetchSpy.mockRestore(); db.close();
+  });
+
+  it('recovers three small unique sources using their actual aggregate bytes and settles them together', async () => {
+    const db = routeDb();
+    const content = { pg: Array.from({ length: 3 }, (_, i) => ({ no: i + 1, soal: `small ${i + 1}`, gambar: { url: `https://upload.wikimedia.org/small-${i + 1}.png` } })) };
+    db.sqlite.prepare(`INSERT INTO bank_soal(id,user_id,user_nama,mata_pelajaran,topik,jenjang_kelas,content) VALUES(70,1,'Owner','IPAS','Small','5',?)`).run(JSON.stringify(content));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(png, { status: 200, headers: { 'Content-Type': 'image/png' } }));
+    const response = await req(db, '/70/recover-images', 'POST', { baseRevision: 1 });
+    const result: any = await response.json();
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    const ids = result.data.content.pg.map((item: any) => item.gambar.assetId);
+    expect(new Set(ids).size).toBe(3);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_assets WHERE bank_soal_id=70').get() as any).n).toBe(3);
+    expect((db.sqlite.prepare(`SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1 AND id IN (${ids.map(() => '?').join(',')})`).get(...ids) as any).n).toBe(3);
+    expect((db.sqlite.prepare('SELECT SUM(byte_length) AS n FROM assessment_image_assets WHERE owner_id=1 AND id IN (?,?,?)').get(...ids) as any).n).toBe(png.length * 3);
     fetchSpy.mockRestore(); db.close();
   });
 
@@ -406,7 +569,7 @@ describe('assessment package persistence contracts', () => {
     expect(response.status).toBe(409);
     expect(JSON.parse((db.sqlite.prepare('SELECT content FROM bank_soal WHERE id=40').get() as any).content).pg[0].soal).toBe('concurrent winner');
     expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_assets WHERE bank_soal_id=40').get() as any).n).toBe(0);
-    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1').get() as any).n).toBe(1);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1').get() as any).n).toBe(0);
     fetchSpy.mockRestore(); db.close();
   });
 
@@ -426,6 +589,35 @@ describe('assessment package persistence contracts', () => {
     expect(db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=?').get(saved.packageId)).toEqual({ asset_id: imageIds[0] });
     expect(db.sqlite.prepare('SELECT bank_soal_id,revision FROM bank_soal_write_tokens WHERE token=(SELECT content_write_token FROM bank_soal WHERE id=?)').get(saved.packageId)).toEqual({ bank_soal_id: saved.packageId, revision: 1 });
     db.close();
+  });
+
+  it('reconciles same-stage retries for fenced and ordinary creates without treating matching bytes as an ID conflict', async () => {
+    const fencedDb = routeDb();
+    const fence = await acquireFence(fencedDb, '523e4567-e89b-42d3-a456-426614174226');
+    const staged = await prepareAssessmentAsset(1, png, 'image/png');
+    const content = { pg: [{ no: 1, soal: 'same stage retry', gambar: { assetId: staged.id } }] };
+    const stage = new Map([[staged.id, staged]]);
+    const first = await fencedWrite(fencedDb, fence, content, fence.clientDocumentId, stage);
+    const retry = await fencedWrite(fencedDb, fence, content, fence.clientDocumentId, stage);
+    expect(retry.packageId).toBe(first.packageId);
+    expect(fencedDb.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal WHERE user_id=1 AND client_document_id=?').get(fence.clientDocumentId)).toEqual({ n: 1 });
+    expect(fencedDb.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE id=? AND owner_id=1').get(staged.id)).toEqual({ n: 1 });
+    expect(fencedDb.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_assets WHERE bank_soal_id=? AND asset_id=?').get(first.packageId, staged.id)).toEqual({ n: 1 });
+    expect(fencedDb.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_write_tokens WHERE bank_soal_id=?').get(first.packageId)).toEqual({ n: 1 });
+    fencedDb.close();
+
+    const ordinaryDb = routeDb();
+    const ordinaryStage = await prepareAssessmentAsset(1, png, 'image/png');
+    const documentId = '523e4567-e89b-42d3-a456-426614174227';
+    const ordinaryContent = { pg: [{ no: 1, soal: 'ordinary same stage retry', gambar: { assetId: ordinaryStage.id } }] };
+    const ordinaryInput = { ownerId: 1, clientDocumentId: documentId, content: ordinaryContent, metadata: generationMetadata, stagedAssets: new Map([[ordinaryStage.id, ordinaryStage]]) };
+    const ordinaryFirst = await createOwnedAssessmentPackage(ordinaryDb as any, ordinaryInput);
+    const ordinaryRetry = await createOwnedAssessmentPackage(ordinaryDb as any, ordinaryInput);
+    expect(ordinaryRetry.packageId).toBe(ordinaryFirst.packageId);
+    expect((ordinaryDb.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE id=? AND owner_id=1').get(ordinaryStage.id) as any).n).toBe(1);
+    expect((ordinaryDb.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal WHERE user_id=1 AND client_document_id=?').get(documentId) as any).n).toBe(1);
+    expect((ordinaryDb.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_write_tokens WHERE bank_soal_id=?').get(ordinaryFirst.packageId) as any).n).toBe(1);
+    ordinaryDb.close();
   });
 
   it('rejects wrong owner/document and cancelled, missing-job, or expired-job fences without package writes', async () => {
@@ -451,9 +643,11 @@ describe('assessment package persistence contracts', () => {
     const expiredJobId = 'a23e4567-e89b-42d3-a456-426614174000';
     const expiredJobFence = { ...(await acquireFence(db, expiredJobId)), jobId: 'sse-job-expired' };
     db.sqlite.prepare(`INSERT INTO ai_generation_jobs(user_id,job_id,state,lease_until) VALUES(1,?,'running',0)`).run(expiredJobFence.jobId);
-    await expect(fencedWrite(db, expiredJobFence, { pg: [{ soal: 'expired lease' }] })).rejects.toMatchObject({ code: 'generation_fenced_conflict' });
+    const expiredAsset = await prepareAssessmentAsset(1, png, 'image/png');
+    await expect(fencedWrite(db, expiredJobFence, { pg: [{ soal: 'expired lease', gambar: { assetId: expiredAsset.id } }] }, expiredJobFence.clientDocumentId, new Map([[expiredAsset.id, expiredAsset]]))).rejects.toMatchObject({ code: 'generation_fenced_conflict' });
     expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get() as any).n).toBe(0);
     expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_assets').get() as any).n).toBe(0);
+    expect((db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=1').get() as any).n).toBe(0);
     db.close();
   });
 
@@ -464,10 +658,12 @@ describe('assessment package persistence contracts', () => {
     db.sqlite.prepare(`INSERT INTO ai_generation_jobs(user_id,job_id,state,lease_until) VALUES(1,?,'running',?)`).run(fence.jobId, Math.floor(Date.now() / 1000) + 3600);
     db.sqlite.exec(`CREATE TRIGGER expire_lease_after_package_insert AFTER INSERT ON bank_soal BEGIN
       UPDATE ai_generation_jobs SET lease_until=0 WHERE user_id=1 AND job_id='sse-job-live'; END;`);
-    const saved = await fencedWrite(db, fence, { pg: [{ soal: 'latched before expiry' }] });
+    const staged = await prepareAssessmentAsset(1, png, 'image/png');
+    const saved = await fencedWrite(db, fence, { pg: [{ soal: 'latched before expiry', gambar: { assetId: staged.id } }] }, fence.clientDocumentId, new Map([[staged.id, staged]]));
     expect(saved.packageId).toBeGreaterThan(0);
     expect((db.sqlite.prepare('SELECT state,package_id FROM assessment_generation_requests WHERE client_document_id=?').get(clientDocumentId) as any)).toEqual({ state: 'completed', package_id: saved.packageId });
     expect((db.sqlite.prepare('SELECT lease_until FROM ai_generation_jobs WHERE job_id=?').get(fence.jobId) as any).lease_until).toBe(0);
+    expect((db.sqlite.prepare('SELECT owner_id FROM assessment_image_assets WHERE id=?').get(staged.id) as any)).toEqual({ owner_id: 1 });
     db.close();
   });
 

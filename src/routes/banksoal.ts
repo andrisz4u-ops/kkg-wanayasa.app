@@ -9,7 +9,7 @@ import { successResponse, Errors } from '../lib/response';
 import { BANK_SOAL_ACCESS_PREDICATE, BANK_SOAL_PUBLIC_PREDICATE, ensureBankSoalModerationSchema } from '../lib/bank-soal-policy';
 import { AssessmentPackageWriteError, canonicalContent, copyAccessibleAssessmentPackage, createOwnedAssessmentPackage, findAssetIds, legacyImageSource, normalizeAssetUrls, preparePackageContent, saveOwnedAssessmentPackage, type LegacyImageSource } from '../lib/assessment-packages';
 import { readBoundedJson } from '../lib/document-drafts';
-import { ASSESSMENT_ASSET_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_COUNT, ingestTrustedAssessmentImage, TrustedImageIngestError } from '../lib/assessment-assets';
+import { ASSESSMENT_ASSET_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_COUNT, fetchTrustedAssessmentImage, TrustedImageIngestError } from '../lib/assessment-assets';
 import { assessmentSvgDataUri } from '../lib/assessment-package-svg';
 
 type Bindings = { DB: D1Database };
@@ -25,6 +25,7 @@ function blobBytes(blob: unknown): Uint8Array {
 function packageInputError(c: any, error: any) {
     const reason = error?.message;
     if (error instanceof AssessmentPackageWriteError && reason === 'document_id_conflict') return Errors.conflict(c, 'clientDocumentId sudah digunakan untuk konten berbeda');
+    if (error instanceof AssessmentPackageWriteError && reason === 'identity_conflict') return Errors.conflict(c, 'ID aset telah digunakan dengan konten berbeda');
     if (error instanceof AssessmentPackageWriteError && reason === 'generation_fenced_conflict') return Errors.conflict(c, 'Permintaan generator sudah berakhir atau tidak cocok dengan identitas paket; hasil belum disimpan');
     if (error instanceof AssessmentPackageWriteError && reason === 'stale_revision') return Errors.conflict(c, 'Paket berubah sejak terakhir dimuat; perubahan lokal dipertahankan');
     if (error instanceof AssessmentPackageWriteError && reason === 'package_missing') return Errors.notFound(c, 'Paket tidak ditemukan');
@@ -402,24 +403,33 @@ banksoal.post('/:id/recover-images', async (c) => {
     const uniqueSources = new Set(pending.map(item => item.url));
     if (rasterReferenceCount > 8) return Errors.validation(c, 'Pemulihan dibatalkan: paket melebihi delapan referensi gambar');
     const currentBytes = [...owned.values()].reduce((sum, value) => sum + value, 0);
-    if (currentBytes + uniqueSources.size * ASSESSMENT_ASSET_MAX_BYTES > 4 * 1024 * 1024) return Errors.validation(c, 'Pemulihan dibatalkan: batas 4 MiB gambar paket akan terlampaui');
+    if (currentBytes > 4 * 1024 * 1024) return Errors.validation(c, 'Pemulihan dibatalkan: batas 4 MiB gambar paket akan terlampaui');
     if (uniqueSources.size) {
         const ownerQuota: any = await c.env.DB.prepare('SELECT COUNT(*) AS count,COALESCE(SUM(byte_length),0) AS bytes FROM assessment_image_assets WHERE owner_id=?').bind(user.id).first();
-        if (Number(ownerQuota?.count) + uniqueSources.size > ASSESSMENT_ASSET_OWNER_MAX_COUNT || Number(ownerQuota?.bytes) + uniqueSources.size * ASSESSMENT_ASSET_MAX_BYTES > ASSESSMENT_ASSET_OWNER_MAX_BYTES) {
+        if (Number(ownerQuota?.count) + uniqueSources.size > ASSESSMENT_ASSET_OWNER_MAX_COUNT) {
             return Errors.validation(c, 'Pemulihan dibatalkan sebelum unduh karena kuota aset pemilik tidak mencukupi');
         }
     }
     const fetched = new Map<string, { asset?: any; reason?: string }>();
+    const stagedAssets = new Map<string, import('../lib/assessment-assets').StagedAssessmentAsset>();
+    let actualNewBytes = 0;
     for (const plan of pending) {
         let result = fetched.get(plan.url);
         if (!result) {
-            try { result = { asset: await ingestTrustedAssessmentImage(c.env.DB, user.id, plan.url) }; }
+            try {
+                const remaining = 4 * 1024 * 1024 - currentBytes - actualNewBytes;
+                if (remaining <= 0) throw new TrustedImageIngestError('package_image_byte_limit');
+                const asset = await fetchTrustedAssessmentImage(Number(user.id), plan.url, { maxBytes: Math.min(ASSESSMENT_ASSET_MAX_BYTES, remaining) });
+                actualNewBytes += asset.byteLength;
+                stagedAssets.set(asset.id, asset);
+                result = { asset };
+            }
             catch (error: any) { result = { reason: error instanceof TrustedImageIngestError ? error.reason : 'fetch_failed' }; }
             fetched.set(plan.url, result);
         }
         const metadata = plan.item.gambar && typeof plan.item.gambar === 'object' ? plan.item.gambar : {};
         if (result.asset) {
-            plan.item.gambar = { ...metadata, assetId: result.asset.assetId, url: result.asset.url };
+            plan.item.gambar = { ...metadata, assetId: result.asset.id, url: `/api/assessment-assets/${result.asset.id}`, mime: result.asset.mime, byteLength: result.asset.byteLength };
             delete plan.item.gambar.imageUnavailable;
             delete plan.item.gambar.imageUnavailableReason;
             delete plan.item.gambar.imageWarningReason;
@@ -442,7 +452,7 @@ banksoal.post('/:id/recover-images', async (c) => {
             imageWarnings: [...warnings, ...prepared.warnings, ...normalized.warnings] });
     }
     try {
-        const saved = await saveOwnedAssessmentPackage(c.env.DB, { ownerId: user.id, packageId, baseRevision: body.baseRevision, content: prepared.content });
+        const saved = await saveOwnedAssessmentPackage(c.env.DB, { ownerId: user.id, packageId, baseRevision: body.baseRevision, content: prepared.content, stagedAssets });
         return successResponse(c, { packageId: saved.packageId, revision: saved.revision, saveStatus: saved.saveStatus, content: saved.content,
             imageWarnings: [...warnings, ...prepared.warnings, ...saved.imageWarnings] });
     } catch (error: any) { return packageInputError(c, error); }

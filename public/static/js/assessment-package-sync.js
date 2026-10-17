@@ -7,6 +7,7 @@ export const ASSESSMENT_SAVE_LABELS = Object.freeze({
   failed: 'Gagal disimpan',
   conflict: 'Konflik revisi',
 });
+export const ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES = 1_572_864;
 
 const clone = value => JSON.parse(JSON.stringify(value ?? {}));
 const uuid = () => globalThis.crypto?.randomUUID?.() || 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -30,8 +31,11 @@ export class AssessmentPackageSync {
     csrfToken = getCsrfToken,
     ownerProvider = null,
     debounceMs = 450,
-    setTimer = setTimeout,
-    clearTimer = clearTimeout,
+    // Native timer functions must be wrapped: calling them as instance methods
+    // (this.setTimer/this.clearTimer) makes `this` a plain object instead of the
+    // global, which browsers reject with "TypeError: Illegal invocation".
+    setTimer = (fn, ms) => globalThis.setTimeout(fn, ms),
+    clearTimer = (id) => globalThis.clearTimeout(id),
     onStatus = () => {},
     onSaved = () => {},
     onConflict = () => {},
@@ -173,7 +177,7 @@ export class AssessmentPackageSync {
     if (!(blob instanceof Blob)) throw new TypeError('Data gambar tidak valid.');
     const mime = String(type || blob.type || '').toLowerCase();
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(mime)) throw new Error('Unggah PNG, JPEG, atau WebP.');
-    if (blob.size > 512 * 1024) throw new Error('Ukuran gambar maksimal 512 KiB.');
+    if (blob.size > ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES) throw new Error('Ukuran gambar maksimal 1.5 MiB.');
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assetId)) throw new Error('ID gambar tidak valid. Coba pilih file lagi.');
     const headers = { 'Content-Type': mime, 'X-Asset-Id': assetId };
     const token = this.csrfToken?.();
@@ -217,7 +221,7 @@ export class AssessmentPackageSync {
         const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
-        if (total > 512 * 1024) throw new Error('Ukuran gambar maksimal 512 KiB.');
+        if (total > ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES) throw new Error('Ukuran gambar maksimal 1.5 MiB.');
         chunks.push(value);
       }
       const bytes = new Uint8Array(total);
@@ -226,7 +230,7 @@ export class AssessmentPackageSync {
       return await this.uploadImage(new Blob([bytes], { type: mime }), { assetId, name, type: mime });
     } catch (error) {
       await reader?.cancel().catch(() => {});
-      if (error instanceof Error && /512 KiB|PNG, JPEG|Unggah file asli|Gambar sumber/.test(error.message)) throw error;
+      if (error instanceof Error && /1\.5 MiB|PNG, JPEG|Unggah file asli|Gambar sumber/.test(error.message)) throw error;
       throw new Error('Gambar sumber tidak dapat diakses. Unggah file asli atau pilih gambar lain.');
     } finally {
       try { reader?.releaseLock(); } catch {}

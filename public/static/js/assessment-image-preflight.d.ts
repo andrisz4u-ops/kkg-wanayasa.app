@@ -54,7 +54,7 @@ export interface AssessmentImagePreflightResult {
 
 export interface AssessmentImageLimits {
   readonly maxConcurrency: 2;
-  readonly maxImageBytes: 524288;
+  readonly maxImageBytes: 1572864;
   readonly maxTotalBytes: 4194304;
   readonly loadTimeoutMs: 10000;
   readonly decodeTimeoutMs: 5000;

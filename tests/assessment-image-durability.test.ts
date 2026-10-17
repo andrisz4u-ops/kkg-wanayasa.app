@@ -56,7 +56,7 @@ describe('assessment image durability normalization boundaries', () => {
     let ownerReads = 0;
     const prepare = db.prepare.bind(db);
     db.prepare = ((sql: string) => {
-      if (/SELECT id, mime, byte_length, sha256, bytes FROM assessment_image_assets/i.test(sql)) ownerReads++;
+      if (/SELECT id, mime, byte_length, sha256 FROM assessment_image_assets/i.test(sql)) ownerReads++;
       return prepare(sql);
     }) as any;
     const content: any = { pg: [
@@ -116,5 +116,33 @@ describe('assessment image durability normalization boundaries', () => {
     expect(first.warnings).toEqual([]);
     expect(second.warnings).toEqual([]);
     expect(JSON.stringify(second.content)).not.toMatch(/evil|evil\.invalid|<svg onload|injected/);
+  });
+
+  it('counts duplicate owned IDs as nine raster references without reading or staging another asset', async () => {
+    const db = ownedAssetDb();
+    const content: any = { pg: Array.from({ length: 9 }, (_, no) => ({ no: no + 1, soal: 'same asset', gambar: { assetId: DUPLICATE_ID } })) };
+    const result = await normalizeAssessmentImages(db as any, 7, content);
+    expect(result.content.pg.slice(0, 8).every((item: any) => item.gambar.assetId === DUPLICATE_ID)).toBe(true);
+    expect(result.content.pg[8].gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'package_image_count_limit' });
+    expect(result.stagedAssets.size).toBe(0);
+    expect(result.warnings.at(-1)?.reason).toBe('package_image_count_limit');
+    db.close();
+  });
+
+  it('counts duplicate URLs toward the eight-reference ceiling while fetching/staging that source once', async () => {
+    const db: any = {};
+    const imageBytes = new Uint8Array(readFileSync('public/static/screenshots/home-mobile.png'));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(imageBytes, { status: 200, headers: { 'Content-Type': 'image/png' } }));
+    try {
+      const url = 'https://upload.wikimedia.org/repeated-image.png';
+      const content: any = { pg: Array.from({ length: 9 }, (_, no) => ({ no: no + 1, soal: 'same source', gambar: { url } })) };
+      const result = await normalizeAssessmentImages(db, 7, content);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(result.stagedAssets.size).toBe(1);
+      expect(result.content.pg.slice(0, 8).every((item: any) => item.gambar.assetId)).toBe(true);
+      expect(result.content.pg[8].gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'package_image_count_limit' });
+      expect(result.warnings.at(-1)?.reason).toBe('package_image_count_limit');
+      expect(JSON.stringify(result.content)).not.toContain(url);
+    } finally { fetchSpy.mockRestore(); }
   });
 });

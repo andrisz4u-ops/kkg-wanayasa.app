@@ -26,6 +26,25 @@ beforeEach(() => {
 afterEach(() => { db.close(); vi.unstubAllGlobals(); });
 const request = (route = 'generate', body = input) => app.request(`/presentation/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-AI-Job-Id': 'slide-studio-job-123', 'X-Session-Id': 'test-session' }, body: JSON.stringify(body) }, { DB: db });
 describe('Classroom presentation generation', () => {
+  it('returns a valid plain-string outline without changing its public shape', async () => {
+    ai.result = { title: 'Pecahan', subtitle: 'Belajar bersama', outline: Array.from({ length: 8 }, (_, index) => ({ title: `Slide ${index + 1}`, layout: 'content', focus: 'Mengenal pecahan', visualConcept: 'Kertas lipat' })) };
+    const response = await request('outline'); const body = await response.json() as any;
+    expect(response.status).toBe(200); expect(body.data).toMatchObject({ title: 'Pecahan', subtitle: 'Belajar bersama' });
+    expect(body.data.outline).toHaveLength(8); expect(body.data.outline[0]).toMatchObject({ index: 1, title: 'Slide 1', layout: 'content', focus: 'Mengenal pecahan', visualConcept: 'Kertas lipat' }); expect(ai.calls).toHaveLength(1);
+    expect(ai.calls[0].prompt).toContain('title, layout, focus, dan visualConcept harus berupa plain string');
+  });
+  it('normalizes known text wrapper objects in outline fields', async () => {
+    ai.result = { outline: Array.from({ length: 8 }, (_, index) => ({ title: { text: `Slide ${index + 1}` }, layout: { value: 'content' }, focus: { content: { text: 'Mengenal pecahan' } }, visualConcept: { text: 'Kertas lipat' } })) };
+    const response = await request('outline'); const body = await response.json() as any;
+    expect(response.status).toBe(200); expect(body.data.outline[0]).toMatchObject({ title: 'Slide 1', layout: 'content', focus: 'Mengenal pecahan', visualConcept: 'Kertas lipat' });
+    expect(ai.calls).toHaveLength(1);
+  });
+  it('rejects unknown object-shaped outline fields with safe field paths', async () => {
+    ai.result = { outline: Array.from({ length: 8 }, (_, index) => ({ title: `Slide ${index + 1}`, layout: 'content', focus: 'Mengenal pecahan', visualConcept: index === 0 ? { secret: 'must not leak' } : 'Kertas lipat' })) };
+    const response = await request('outline'); const body = await response.json() as any;
+    expect(response.status).toBe(400); expect(body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'outline.0.visualConcept' })]));
+    expect(JSON.stringify(body)).not.toContain('must not leak'); expect(JSON.stringify(body)).not.toContain('[object Object]'); expect(ai.calls).toHaveLength(1);
+  });
   it('uses the displayed provider and complete teacher brief instead of forcing Gemini', async () => {
     const response = await request(); expect(response.status).toBe(200);
     expect(ai.calls[0].provider).toBe('api'); expect(ai.calls[0].prompt).toContain('Kelas 3'); expect(ai.calls[0].prompt).not.toContain('Membaca tiga perempat'); expect(ai.calls[0].prompt).toContain('Gunakan kertas lipat');

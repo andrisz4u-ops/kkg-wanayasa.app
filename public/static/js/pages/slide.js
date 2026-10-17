@@ -15,6 +15,18 @@ export { slideTemplates, slideLayouts };
 
 let S, timer, syncClient;
 const selected = (a, b) => a === b ? ' selected' : '';
+const slideSubjects = [
+  'Pendidikan Agama dan Budi Pekerti', 'Pendidikan Pancasila', 'Bahasa Indonesia', 'Matematika',
+  'Ilmu Pengetahuan Alam dan Sosial (IPAS)', 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)',
+  'Bahasa Inggris', 'Seni Rupa', 'Koding dan Kecerdasan Artifisial', 'B.Sunda', 'Tatanen di Bale Atikan', 'AKPK',
+];
+const slideSubjectAliases = {
+  'Pendidikan Agama': 'Pendidikan Agama dan Budi Pekerti',
+  IPAS: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)',
+  'Seni Budaya': 'Seni Rupa',
+  PJOK: 'Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)',
+};
+const canonicalSlideSubject = value => slideSubjectAliases[value] || value;
 const owner = () => String(state.user?.id || '');
 function materialConfig(config) {
   const { tujuanPembelajaran, tujuan_pembelajaran, tujuanBelajar, ...material } = config || {};
@@ -201,22 +213,22 @@ function modelSelect() {
 function briefView() {
   return `${header('Studio Kelas Hidup', 'Mulai dari topik atau materi. Susun konsep, contoh konkret dan aktivitas dalam slide yang dapat dibaca di kelas.')}
     <div class="ss-brief"><form id="sg-brief-form" class="ss-panel"><h2>Pelajaran yang akan diajarkan</h2>
-      <div class="ss-fields"><label>Kelas<select name="jenjangKelas">${[1, 2, 3, 4, 5, 6].map(i => `<option${selected(`Kelas ${i}`, S.config.jenjangKelas)}>Kelas ${i}</option>`).join('')}</select></label><label>Mata pelajaran<select name="mataPelajaran">${['IPAS', 'Matematika', 'Bahasa Indonesia', 'Pendidikan Pancasila', 'Bahasa Inggris', 'Seni Budaya', 'PJOK', 'Pendidikan Agama'].map(v => `<option${selected(v, S.config.mataPelajaran)}>${v}</option>`).join('')}</select></label></div>
-      <label>Topik / materi<textarea id="sg-main-prompt" name="topik" required maxlength="2000" placeholder="Contoh: pecahan sederhana dengan membagi kertas menjadi bagian sama besar">${esc(S.config.topik)}</textarea></label>
+      <div class="ss-fields"><label>Kelas<select name="jenjangKelas">${[1, 2, 3, 4, 5, 6].map(i => `<option${selected(`Kelas ${i}`, S.config.jenjangKelas)}>Kelas ${i}</option>`).join('')}</select></label><label>Mata pelajaran<select name="mataPelajaran">${slideSubjects.map(v => `<option${selected(v, canonicalSlideSubject(S.config.mataPelajaran))}>${v}</option>`).join('')}</select></label></div>
+      <label>Topik / materi<textarea id="sg-main-prompt" name="topik" rows="4" required maxlength="2000" placeholder="Contoh: pecahan sederhana dengan membagi kertas menjadi bagian sama besar">${esc(S.config.topik)}</textarea></label>
       <div class="ss-fields"><label>Jumlah slide<select name="slideCount">${[4, 6, 8, 10, 12, 15, 20].map(n => `<option value="${n}"${selected(n, Number(S.config.slideCount))}>${n} slide</option>`).join('')}</select></label><label>Format layar<select name="aspectRatio"><option value="16:9"${selected('16:9', S.config.aspectRatio)}>Lebar 16:9</option><option value="4:3"${selected('4:3', S.config.aspectRatio)}>Klasik 4:3</option></select></label></div>
       ${modelSelect()}<details><summary>Instruksi dan konteks tambahan</summary><div class="ss-fields"><label>Semester<select name="semester"><option${selected('1', S.config.semester)}>1</option><option${selected('2', S.config.semester)}>2</option></select></label><label>Alokasi waktu<input name="alokasiWaktu" value="${esc(S.config.alokasiWaktu)}" maxlength="100"></label></div><label>Instruksi tambahan<textarea name="extraInstructions" maxlength="2000" placeholder="Misalnya: alat hanya kertas; siswa belum memahami istilah pembilang">${esc(S.config.extraInstructions)}</textarea></label><label><input type="checkbox" name="usePhotos"${S.config.usePhotos ? ' checked' : ''}> Sertakan foto Unsplash jika tersedia dan relevan</label></details>
-      <div class="ss-actions" style="margin-top:18px"><button type="submit" class="ss-primary">Pilih desain slide</button><button type="button" id="sg-outline" data-requires-ai>Tinjau kerangka dahulu</button></div>
-    </form><aside class="ss-panel"><h2>Lihat contoh hasil</h2><p style="margin:12px 0">Contoh materi dapat dibuka, disunting dan diekspor sebelum Anda memakai AI.</p><div class="ss-example">${preview(exampleDeck('matematika-visual').slides[1], 'matematika-visual')}<p>Contoh Matematika: model pecahan dengan bagian yang sama besar.</p><button id="sg-example">Buka contoh 8 slide</button></div><h2 style="margin-top:24px">Urutan belajar</h2><p style="margin-top:12px;line-height:1.7">Pemantik → konsep → contoh → aktivitas → cek pemahaman → refleksi.</p><p style="margin-top:12px;line-height:1.7">Kunci jawaban dan pembahasan berada dalam catatan guru. Buka jawaban setelah siswa berpikir.</p></aside></div>`;
+      <div class="ss-actions" style="margin-top:18px"><button type="submit" class="ss-primary" data-requires-ai>Buat slide</button></div>
+    </form></div>`;
 }
 function preview(slide, template, index = 0, total = 8) { return sceneSvg(buildScene(slide, template, { index, total }), `Contoh ${getTemplate(template).name}: ${slide.title}`); }
 function templatesView() {
-  return `${header('Pilih desain untuk pelajaran', `${S.config.jenjangKelas} • ${S.config.mataPelajaran} • ${S.config.topik}`)}<button id="sg-back" style="margin-bottom:18px">Kembali ke brief</button><div class="ss-gallery">${Object.entries(slideTemplates).map(([id, t]) => {
+  return `${header('Pilih desain untuk pelajaran', `${S.config.jenjangKelas} • ${S.config.mataPelajaran} • ${S.config.topik}`)}<div class="ss-actions" style="margin-bottom:18px"><button id="sg-back">Kembali ke brief</button>${S.outline.length ? '<button id="sg-edit-outline" type="button">Ubah kerangka</button>' : ''}</div><div class="ss-gallery">${Object.entries(slideTemplates).map(([id, t]) => {
     const demo = exampleDeck(id);
     return `<button class="ss-template" data-template="${id}" aria-pressed="${S.template === id}"><div class="ss-template-previews"><div class="ss-template-preview">${preview(demo.slides[0], id)}</div><div class="ss-template-preview">${preview(demo.slides[1], id, 1)}</div><div class="ss-template-preview">${preview(demo.slides[4], id, 4)}</div></div><strong>${t.name}</strong><p>${t.description}</p><p style="margin-top:8px">Contoh pembuka, konsep dan latihan</p></button>`;
   }).join('')}</div><div class="ss-panel ss-generation-bar"><div>${modelSelect()}</div><div><p id="sg-design-summary" style="margin-bottom:10px">${S.config.slideCount} slide • ${getTemplate(S.template).name}</p><button id="sg-generate" class="ss-primary" data-requires-ai>Buat slide pembelajaran</button></div></div>`;
 }
 function outlineView() {
-  return `${header('Tinjau urutan pembelajaran', 'Perbaiki judul, materi setiap slide dan rencana visual sebelum memilih desain.')}<button id="sg-back">Kembali ke brief</button><form id="sg-outline-form" class="ss-panel" style="margin-top:18px">${S.outline.map((row, i) => `<div class="ss-outline-row" data-outline="${i}"><div class="ss-fields"><label>Judul slide ${i + 1}<input name="title" value="${esc(row.title)}" maxlength="85" required></label><label>Jenis slide<select name="layout">${slideLayouts.map(l => `<option value="${l.id}"${selected(l.id, row.layout)}>${l.name}</option>`).join('')}</select></label></div><label>Konsep atau kegiatan<input name="focus" value="${esc(row.focus)}" maxlength="500" required></label><label>Rencana visual<input name="visualConcept" value="${esc(row.visualConcept || '')}" maxlength="200"></label></div>`).join('')}<button type="submit" class="ss-primary" style="margin-top:18px">Lanjut pilih desain</button></form>`;
+  return `${header('Tinjau urutan pembelajaran', 'Perbaiki judul, materi setiap slide dan rencana visual sebelum memilih desain.')}<button id="sg-back-to-design">Kembali ke desain</button><form id="sg-outline-form" class="ss-panel" style="margin-top:18px">${S.outline.map((row, i) => `<div class="ss-outline-row" data-outline="${i}"><div class="ss-fields"><label>Judul slide ${i + 1}<input name="title" value="${esc(row.title)}" maxlength="85" required></label><label>Jenis slide<select name="layout">${slideLayouts.map(l => `<option value="${l.id}"${selected(l.id, row.layout)}>${l.name}</option>`).join('')}</select></label></div><label>Konsep atau kegiatan<input name="focus" value="${esc(row.focus)}" maxlength="500" required></label><label>Rencana visual<input name="visualConcept" value="${esc(row.visualConcept || '')}" maxlength="200"></label></div>`).join('')}<button type="submit" class="ss-primary" style="margin-top:18px">Simpan kerangka dan kembali ke desain</button></form>`;
 }
 const field = (name, label, value, area = false) => `<label>${label}${area ? `<textarea data-field="${name}">${esc(value)}</textarea>` : `<input data-field="${name}" value="${esc(value)}">`}</label>`;
 function editorFields(slide) {
@@ -297,7 +309,9 @@ async function outline() {
   await aiAction('Menyusun kerangka slide', async monitor => {
     monitor.updateStep(2, '', 'Menyusun urutan konsep dan kegiatan.');
     const res = await api('/presentation/outline', { method: 'POST', body: JSON.stringify(S.config), signal: monitor.signal, timeout: 180000 });
-    monitor.complete(() => { S.outline = res.data.outline; S.view = 'outline'; save(); render(); }, { autoReview: true });
+    const rows = res?.data?.outline;
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error('Kerangka slide belum tersedia. brief tetap tersimpan; periksa topik lalu coba lagi.');
+    monitor.complete(() => { S.outline = rows; S.view = 'templates'; save(); render(); }, { autoReview: true });
   });
 }
 async function revise() {
@@ -388,6 +402,11 @@ async function openServerDrafts() {
 }
 export function initSlide() {
   if (!S || !document.querySelector('#slidegen-container')) return;
+  const subjectSelect = document.querySelector('#sg-brief-form [name="mataPelajaran"]');
+  if (subjectSelect) {
+    const subject = canonicalSlideSubject(S.config.mataPelajaran);
+    subjectSelect.value = slideSubjects.includes(subject) ? subject : slideSubjects[4];
+  }
   document.querySelector('.ss-slide-strip')?.setAttribute('role', 'group');
   if (syncClient?.conflict) showConflictActions();
   if (S.view === 'editor') loadTeacherReview();
@@ -395,10 +414,12 @@ export function initSlide() {
   on('sg-server-drafts', openServerDrafts);
   on('sg-history', () => openArchiveDrawer({ module: 'slide', moduleName: 'Slide', onSelect: item => { const content = item.content || {}; const deck = normalizeDeck(content.deck || content, item.title); if (!deck.slides.length) return showToast('Riwayat ini tidak mempunyai slide yang dapat dibuka.', 'error'); if (!preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; S.deck = deck; S.template = resolveTemplateId(content.template); S.config = materialConfig({ ...S.config, ...item.inputData, ...content.config }); S.outline = content.outline || []; S.index = 0; S.view = 'editor'; initializeSyncClient(); save(); render(); queueMicrotask(() => document.querySelector('#sg-open-presenter')?.focus()); } }));
   on('sg-new', () => { if (confirm('Mulai presentasi baru? Draf saat ini tetap tersimpan sebagai draf terpisah.') && preserveCurrentDraft()) { clearTimeout(timer); S = initial(); S.serverDocumentId = createDraftDocumentId(); initializeSyncClient(); save(); render(); } });
-  document.querySelector('#sg-brief-form')?.addEventListener('submit', event => { event.preventDefault(); if (readBrief()) { S.view = 'templates'; render(); } });
+    document.querySelector('#sg-brief-form')?.addEventListener('submit', event => { event.preventDefault(); outline(); });
   document.querySelector('#sg-brief-form')?.addEventListener('input', readBriefChange);
-  on('sg-outline', outline); on('sg-back', () => { S.view = 'brief'; render(); }); on('sg-example', () => { if (!preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; initializeSyncClient(); S.deck = normalizeDeck(exampleDeck('matematika-visual')); S.template = 'matematika-visual'; S.config.topik = S.deck.title; S.config.mataPelajaran = 'Matematika'; S.view = 'editor'; S.index = 0; save(); render(); });
-  document.querySelector('#sg-outline-form')?.addEventListener('submit', event => { event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return; S.outline = [...form.querySelectorAll('[data-outline]')].map((row, i) => ({ index: i + 1, title: row.querySelector('[name=title]').value, layout: row.querySelector('[name=layout]').value, focus: row.querySelector('[name=focus]').value, visualConcept: row.querySelector('[name=visualConcept]').value })); S.view = 'templates'; render(); });
+   on('sg-back', () => { S.view = 'brief'; render(); });
+   on('sg-edit-outline', () => { S.view = 'outline'; render(); });
+   on('sg-back-to-design', () => { S.view = 'templates'; render(); });
+   document.querySelector('#sg-outline-form')?.addEventListener('submit', event => { event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return; S.outline = [...form.querySelectorAll('[data-outline]')].map((row, i) => ({ index: i + 1, title: row.querySelector('[name=title]').value, layout: row.querySelector('[name=layout]').value, focus: row.querySelector('[name=focus]').value, visualConcept: row.querySelector('[name=visualConcept]').value })); S.view = 'templates'; changed(); render(); });
   document.querySelectorAll('[data-template]').forEach(button => button.addEventListener('click', () => { S.template = button.dataset.template; if (S.deck.slides.length) { S.view = 'editor'; save(); render(); } else { document.querySelectorAll('[data-template]').forEach(b => b.setAttribute('aria-pressed', String(b === button))); document.querySelector('#sg-design-summary').textContent = `${S.config.slideCount} slide • ${getTemplate(S.template).name}`; changed(); } }));
   document.querySelector('#sg-model-select')?.addEventListener('change', event => { S.config.aiProvider = event.target.value; S.ready = !!S.config.aiProvider; changed(); actionsReady(); });
   on('sg-reload-model', models); if (document.querySelector('#sg-model-select')) models(); actionsReady();

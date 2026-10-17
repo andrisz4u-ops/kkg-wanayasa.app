@@ -1,5 +1,5 @@
-import { TrustedImageIngestError, ingestTrustedAssessmentImage, readOwnedAssessmentAsset } from './assessment-assets';
-import type { AssessmentAssetMetadata, OwnedAssessmentAsset } from './assessment-assets';
+import { TrustedImageIngestError, fetchTrustedAssessmentImage, readOwnedAssessmentAssetMetadata } from './assessment-assets';
+import type { AssessmentAssetMetadata, AssessmentAssetStage, StagedAssessmentAsset } from './assessment-assets';
 import { questionItems } from './assessment-packages';
 import { generateVisualStimulus } from './visual-engine';
 import { getVisualCatalog } from './visuals/catalog';
@@ -11,7 +11,7 @@ export type AssessmentImageWarning = { questionNo: number | string; reason: stri
 
 const IMAGE_METADATA_FIELDS = ['alt', 'credit', 'title', 'description', 'caption'] as const;
 const KNOWN_IMAGE_FAILURES = new Set([
-  'invalid_url', 'untrusted_host', 'fetch_failed', 'expired_or_missing', 'invalid_image', 'too_large',
+  'invalid_url', 'untrusted_host', 'fetch_failed', 'fetch_timeout', 'fetch_redirect', 'fetch_status', 'body_read_failed', 'persistence_failed', 'storage_hash_failed', 'storage_read_failed', 'storage_write_failed', 'expired_or_missing', 'invalid_image', 'too_large',
   'identity_conflict', 'quota_count', 'quota_bytes', 'invalid_storage', 'asset_not_owned_or_missing',
   'package_image_count_limit', 'package_image_byte_limit', 'untrusted_svg', 'required_image_missing',
   'image_unavailable', 'image_search_unavailable', 'duplicate_image_rejected', 'duplicate_visual_rejected',
@@ -134,12 +134,15 @@ export async function normalizeAssessmentImages(
   db: D1Database,
   ownerId: number | string,
   content: any,
-): Promise<{ content: any; warnings: AssessmentImageWarning[] }> {
+): Promise<{ content: any; warnings: AssessmentImageWarning[]; stagedAssets: AssessmentAssetStage }> {
   const warnings: AssessmentImageWarning[] = [];
   const items = questionItems(content);
-  const ownedAssets = new Map<string, OwnedAssessmentAsset>();
+  const ownedAssets = new Map<string, AssessmentAssetMetadata>();
+  const stagedAssets = new Map<string, StagedAssessmentAsset>();
+  const sourceAssets = new Map<string, StagedAssessmentAsset | null>();
   const rejectedAssets = new Map<string, string>();
   let totalBytes = 0;
+  let rasterReferenceCount = 0;
 
   // Normalize legacy string forms before the one lookup per unique stable asset ID.
   for (const item of items) {
@@ -152,12 +155,12 @@ export async function normalizeAssessmentImages(
     if (!record(item.gambar) || typeof item.gambar.assetId !== 'string') continue;
     const id = item.gambar.assetId;
     if (ownedAssets.has(id) || rejectedAssets.has(id)) continue;
-    if (ownedAssets.size >= ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
+    if (ownedAssets.size + stagedAssets.size >= ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
       rejectedAssets.set(id, 'package_image_count_limit');
       continue;
     }
-    let owned: OwnedAssessmentAsset | null;
-    try { owned = await readOwnedAssessmentAsset(db, ownerId, id); }
+    let owned: AssessmentAssetMetadata | null;
+    try { owned = await readOwnedAssessmentAssetMetadata(db, ownerId, id); }
     catch { owned = null; }
     if (!owned) {
       rejectedAssets.set(id, 'asset_not_owned_or_missing');
@@ -177,6 +180,13 @@ export async function normalizeAssessmentImages(
     const requestedAssetId = typeof image.assetId === 'string' ? image.assetId : null;
 
     if (requestedAssetId) {
+      rasterReferenceCount++;
+      if (rasterReferenceCount > ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
+        unavailable(item, 'package_image_count_limit');
+        warnings.push({ questionNo: questionLabel(item, index), reason: 'package_image_count_limit' });
+        delete item.visual_stimulus;
+        continue;
+      }
       const owned = ownedAssets.get(requestedAssetId);
       if (owned) {
         item.gambar = canonicalAssetImage(image, owned);
@@ -222,36 +232,50 @@ export async function normalizeAssessmentImages(
       continue;
     }
 
-    if (ownedAssets.size >= ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
+    rasterReferenceCount++;
+    if (rasterReferenceCount > ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
+      unavailable(item, 'package_image_count_limit');
+      warnings.push({ questionNo: questionLabel(item, index), reason: 'package_image_count_limit' });
+      continue;
+    }
+    if (sourceAssets.has(rawUrl)) {
+      const prior = sourceAssets.get(rawUrl);
+      if (!prior) {
+        unavailable(item, 'image_unavailable');
+        warnings.push({ questionNo: questionLabel(item, index), reason: 'image_unavailable' });
+      } else {
+        item.gambar = canonicalAssetImage(image, { id: prior.id, assetId: prior.id, mime: prior.mime, byteLength: prior.byteLength, sha256: prior.sha256, url: `/api/assessment-assets/${prior.id}` });
+        delete item.visual_stimulus;
+      }
+      continue;
+    }
+    if (ownedAssets.size + stagedAssets.size >= ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES) {
       unavailable(item, 'package_image_count_limit');
       warnings.push({ questionNo: questionLabel(item, index), reason: 'package_image_count_limit' });
       continue;
     }
     try {
-      const asset = await ingestTrustedAssessmentImage(db, ownerId, rawUrl);
-      const prior = ownedAssets.get(asset.assetId);
-      const nextBytes = totalBytes + (prior ? 0 : asset.byteLength);
-      if (!prior && nextBytes > ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES) {
+      const remaining = ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES - totalBytes;
+      if (remaining <= 0) throw new TrustedImageIngestError('package_image_byte_limit');
+      const asset = await fetchTrustedAssessmentImage(Number(ownerId), rawUrl, { maxBytes: Math.min(1_572_864, remaining) });
+      const nextBytes = totalBytes + asset.byteLength;
+      if (nextBytes > ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES) {
         unavailable(item, 'package_image_byte_limit');
         warnings.push({ questionNo: questionLabel(item, index), reason: 'package_image_byte_limit' });
         continue;
       }
-      if (!prior) {
-        // Preserve the same validation guarantee for ids returned by ingest. Read the
-        // owner record back; the helper metadata is not treated as an authority shortcut.
-        const validated = await readOwnedAssessmentAsset(db, ownerId, asset.assetId);
-        if (!validated) throw new TrustedImageIngestError('invalid_storage');
-        ownedAssets.set(asset.assetId, validated);
-        totalBytes = nextBytes;
-      }
-      item.gambar = canonicalAssetImage(image, prior || ownedAssets.get(asset.assetId)!);
+      stagedAssets.set(asset.id, asset);
+      sourceAssets.set(rawUrl, asset);
+      totalBytes = nextBytes;
+      item.gambar = canonicalAssetImage(image, { id: asset.id, assetId: asset.id, mime: asset.mime, byteLength: asset.byteLength, sha256: asset.sha256, url: `/api/assessment-assets/${asset.id}` });
       delete item.visual_stimulus;
     } catch (error) {
       const reason = error instanceof TrustedImageIngestError && KNOWN_IMAGE_FAILURES.has(error.reason) ? error.reason : 'image_unavailable';
+      sourceAssets.set(rawUrl, null);
       unavailable(item, reason);
       warnings.push({ questionNo: questionLabel(item, index), reason });
     }
   }
 
-  return { content, warnings };
+  return { content, warnings, stagedAssets };
 }

@@ -8,7 +8,7 @@ import { SqliteD1 } from './helpers/sqlite-d1';
 const harness = vi.hoisted(() => ({
   aiCalls: [] as string[],
   fakeImageCalls: [] as string[],
-  ingestCalls: [] as string[],
+  fetchCalls: [] as string[],
   png: [] as number[],
   pg: [] as any[],
   batchItems: [] as any[],
@@ -34,14 +34,10 @@ vi.mock('../src/lib/assessment-assets', async original => {
   const actual = await original<any>();
   return {
     ...actual,
-    ingestTrustedAssessmentImage: async (db: any, ownerId: number, sourceUrl: string) => {
-      harness.ingestCalls.push(sourceUrl);
+    fetchTrustedAssessmentImage: async (ownerId: number, sourceUrl: string) => {
+      harness.fetchCalls.push(sourceUrl);
       if (sourceUrl.includes('/expired-case')) throw new actual.TrustedImageIngestError('expired_or_missing');
-      const bytes = Buffer.from(harness.png);
-      const id = crypto.randomUUID();
-      await db.prepare(`INSERT INTO assessment_image_assets(id,owner_id,mime,byte_length,sha256,bytes)
-        VALUES(?,?,'image/png',?,'fixture-sha256',?)`).bind(id, ownerId, bytes.length, bytes).run();
-      return { id, assetId: id, mime: 'image/png', byteLength: bytes.length, sha256: 'fixture-sha256', url: `/api/assessment-assets/${id}` };
+      return actual.prepareAssessmentAsset(ownerId, Uint8Array.from(harness.png), 'image/png');
     },
   };
 });
@@ -95,6 +91,14 @@ function migration(name: string) {
 function setupDatabase() {
   const value = new SqliteD1();
   db = value;
+  // The local SQLite adapter needs D1's ArrayBuffer BLOB bindings mapped to Buffer.
+  const basePrepare = value.prepare.bind(value);
+  value.prepare = ((sql: string) => {
+    const statement: any = basePrepare(sql);
+    const bind = statement.bind.bind(statement);
+    statement.bind = (...args: any[]) => bind(...args.map(arg => arg instanceof ArrayBuffer ? Buffer.from(arg) : arg));
+    return statement;
+  }) as any;
   value.sqlite.exec(`CREATE TABLE users(id INTEGER PRIMARY KEY, nama TEXT, sekolah TEXT, role TEXT, email TEXT);
     INSERT INTO users(id,nama,sekolah,role,email) VALUES (${OWNER_ID},'API Fixture Teacher','Fixture School','guru','teacher@example.test');
     CREATE TABLE sessions(id TEXT PRIMARY KEY,user_id INTEGER,expires_at TEXT);
@@ -102,7 +106,7 @@ function setupDatabase() {
   for (const name of [
     '0016_ai_generation_logs.sql', '0018_bank_soal.sql', '0029_ai_generation_jobs.sql',
     '0032_ai_admission.sql', '0038_curriculum_source_provenance.sql',
-    '0040_bank_soal_moderation.sql', '0041_assessment_image_assets.sql', '0042_assessment_package_revisions.sql', '0043_assessment_generation_requests.sql',
+    '0040_bank_soal_moderation.sql', '0041_assessment_image_assets.sql', '0042_assessment_package_revisions.sql', '0043_assessment_generation_requests.sql', '0044_assessment_image_capacity.sql',
   ]) migration(name);
   value.sqlite.exec(`CREATE TABLE capaian_pembelajaran (
     id INTEGER PRIMARY KEY, mata_pelajaran TEXT NOT NULL, fase TEXT NOT NULL, teks_cp TEXT NOT NULL,
@@ -154,32 +158,33 @@ function parseDone(text: string) {
 function expectPersisted(payload: any) {
   const data = payload.data;
   expect(data._persistence).toMatchObject({ packageId: expect.any(Number), revision: 1, saveStatus: 'saved' });
-  expect(data._persistence.imageWarnings, JSON.stringify({ calls: harness.aiCalls, fakeImages: harness.fakeImageCalls, ingestCalls: harness.ingestCalls, payload })).toEqual(expect.arrayContaining([
+    expect(data._persistence.imageWarnings, JSON.stringify({ calls: harness.aiCalls, fakeImages: harness.fakeImageCalls, fetchCalls: harness.fetchCalls, payload })).toEqual(expect.arrayContaining([
     expect.objectContaining({ questionNo: 2, reason: 'expired_or_missing' }),
   ]));
   const persisted: any = db.sqlite.prepare('SELECT content FROM bank_soal WHERE id=? AND user_id=?').get(data._persistence.packageId, OWNER_ID);
   expect(persisted).toBeTruthy();
   const content = JSON.parse(persisted.content);
   const returnedAsset = data.pg[0].gambar.assetId;
-  expect(returnedAsset, JSON.stringify({ calls: harness.fakeImageCalls, ingestCalls: harness.ingestCalls, image: data.pg[0].gambar, content: content.pg.slice(0, 2) })).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(returnedAsset, JSON.stringify({ calls: harness.fakeImageCalls, fetchCalls: harness.fetchCalls, image: data.pg[0].gambar, content: content.pg.slice(0, 2) })).toMatch(/^[0-9a-f-]{36}$/i);
   expect(content.pg[0].gambar.assetId).toBe(returnedAsset);
   expect(data.pg[0].gambar.url).toBe(`/api/banksoal/${data._persistence.packageId}/assets/${returnedAsset}`);
   expect(db.sqlite.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=?').all(data._persistence.packageId)).toEqual([{ asset_id: returnedAsset }]);
   expect(db.sqlite.prepare('SELECT owner_id,mime,byte_length FROM assessment_image_assets WHERE id=?').get(returnedAsset)).toMatchObject({ owner_id: OWNER_ID, mime: 'image/png', byte_length: validPng().length });
+  expect(Buffer.from(db.sqlite.prepare('SELECT bytes FROM assessment_image_assets WHERE id=?').get(returnedAsset)?.bytes as Uint8Array)).toEqual(Buffer.from(validPng()));
   expect(JSON.stringify(payload)).not.toContain('secret-valid-token');
   expect(JSON.stringify(payload)).not.toContain('secret-expired-token');
   expect(persisted.content).not.toContain('secret-valid-token');
   expect(persisted.content).not.toContain('secret-expired-token');
   expect(content.pg[1].soal).toContain('Perhatikan gambar buah jeruk');
   expect(content.pg[1].gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'expired_or_missing' });
-  expect(harness.ingestCalls).toHaveLength(2);
+  expect(harness.fetchCalls).toHaveLength(2);
 }
 
 beforeEach(() => {
   vi.stubGlobal('crypto', webcrypto);
   harness.aiCalls = [];
   harness.fakeImageCalls = [];
-  harness.ingestCalls = [];
+  harness.fetchCalls = [];
   harness.png = [...validPng()];
   harness.pg = assessmentQuestions();
   harness.batchItems = [];
@@ -240,7 +245,7 @@ describe('kisi image durability HTTP and SSE contracts', () => {
     expect(payload.data._persistence).toMatchObject({ packageId: null, revision: null, saveStatus: 'failed' });
     expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get()).toMatchObject({ n: 0 });
     expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal_assets').get()).toMatchObject({ n: 0 });
-    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=?').get(OWNER_ID)).toMatchObject({ n: 1 });
+    expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM assessment_image_assets WHERE owner_id=?').get(OWNER_ID)).toMatchObject({ n: 0 });
   });
 
   it('normalizes batch-regeneration replacement images for the owner without creating a package', async () => {
@@ -261,6 +266,6 @@ describe('kisi image durability HTTP and SSE contracts', () => {
     expect(db.sqlite.prepare('SELECT owner_id,mime FROM assessment_image_assets WHERE id=?').get(image.assetId)).toMatchObject({ owner_id: OWNER_ID, mime: 'image/png' });
     expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM bank_soal').get()).toMatchObject({ n: 0 });
     expect(JSON.stringify(payload)).not.toContain('secret-valid-token');
-    expect(harness.ingestCalls).toHaveLength(1);
+    expect(harness.fetchCalls).toHaveLength(1);
   });
 });

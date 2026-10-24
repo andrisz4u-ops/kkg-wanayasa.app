@@ -1193,7 +1193,10 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
     id: 'segi_enam_beraturan',
     match: (text, stemText, mapel) => text.includes('segi enam beraturan') || text.includes('heksagon'),
     extract: (text, stemText, mapel) => {
-      return { type: 'segi_enam_beraturan', params: { s: 8 } };
+      const sideMatch = stemText.match(/sisi(?:nya)?\s*(?:adalah|ialah|:|=)?\s*(\d+(?:[.,]\d+)?)/i) || stemText.match(/s\s*=\s*(\d+(?:[.,]\d+)?)/i);
+      const nums = stemText.match(/\b(\d+(?:[.,]\d+)?)\s*(?:cm|m)\b/g);
+      const parsed = Number(String(sideMatch ? sideMatch[1] : (nums && nums.length ? nums[0] : '')).replace(',', '.').replace(/[^\d.]/g, ''));
+      return { type: 'segi_enam_beraturan', params: { sisi: Number.isFinite(parsed) && parsed > 0 ? parsed : 8, unit: 'cm' } };
     }
   },
 
@@ -2765,7 +2768,10 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
     id: 'segi_enam_beraturan',
     match: (text, stemText, mapel) => text.includes('segi enam beraturan') || text.includes('heksagon'),
     extract: (text, stemText, mapel) => {
-      return { type: 'segi_enam_beraturan', params: { s: 8 } };
+      const sideMatch = stemText.match(/sisi(?:nya)?\s*(?:adalah|ialah|:|=)?\s*(\d+(?:[.,]\d+)?)/i) || stemText.match(/s\s*=\s*(\d+(?:[.,]\d+)?)/i);
+      const nums = stemText.match(/\b(\d+(?:[.,]\d+)?)\s*(?:cm|m)\b/g);
+      const parsed = Number(String(sideMatch ? sideMatch[1] : (nums && nums.length ? nums[0] : '')).replace(',', '.').replace(/[^\d.]/g, ''));
+      return { type: 'segi_enam_beraturan', params: { sisi: Number.isFinite(parsed) && parsed > 0 ? parsed : 8, unit: 'cm' } };
     }
   },
 
@@ -2984,10 +2990,45 @@ export const DETECTION_RULES: StimulusDetectionRule[] = [
 ];
 
 /**
+ * Samakan parameter ukuran dari spesifikasi visual dengan angka yang benar-benar
+ * tertulis di soal. AI kadang menyertakan nilai contoh (mis. s = 15) untuk soal
+ * yang menyebut angka lain (mis. 10 cm), sehingga gambar bertentangan dengan teks.
+ * Hanya nilai yang ditemukan pada teks soal yang dipakai sebagai koreksi.
+ */
+export function reconcileStimulusWithSoalText(
+  spec: VisualStimulusConfig | null,
+  soalText: string,
+  mapel: string,
+): VisualStimulusConfig | null {
+  if (!spec || !spec.type) return spec;
+  const detected = detectStimulusFromSoalText(soalText, mapel);
+  if (!detected || detected.type !== spec.type) return spec;
+
+  const stemNumbers = new Set(
+    (String(soalText || '').match(/\d+(?:[.,]\d+)?/g) || []).map(value => Number(value.replace(',', '.'))),
+  );
+  const params: Record<string, any> = { ...(spec.params || {}) };
+  let changed = false;
+
+  for (const [key, value] of Object.entries(detected.params || {})) {
+    if (typeof value !== 'number' || !stemNumbers.has(value)) continue;
+    const current = params[key];
+    if (typeof current === 'number' && stemNumbers.has(current)) continue;
+    params[key] = value;
+    changed = true;
+  }
+
+  return changed ? { ...spec, params } : spec;
+}
+
+/**
  * Deteksi otomatis stimulus visual dari teks soal jika AI lupa menyertakan format visual_stimulus
  */
 export function detectStimulusFromSoalText(soalText: string, mapel: string): VisualStimulusConfig | null {
-  const text = (soalText || '').toLowerCase();
+  const text = (soalText || '').toLowerCase()
+    // AI sering menulis nama poligon tanpa spasi ("segienam"). Satukan agar aturan
+    // yang sudah ada tetap cocok. "segitiga"/"segiempat" sengaja tidak diubah.
+    .replace(/\bsegi[\s-]*(enam|lima|tujuh|delapan|sembilan|sepuluh|sebelas|dua\s*belas)\b/g, 'segi $1');
   // Pisahkan teks pertanyaan inti dari opsi pilihan ganda agar angka opsi (A. 26 cm, B. 28 cm) tidak disalahartikan sebagai ukuran bangun (kecuali simbol °C)
   const stemText = text.split(/(?<![°\w])\b[a-d]\s*[\.\)]/i)[0] || text;
 

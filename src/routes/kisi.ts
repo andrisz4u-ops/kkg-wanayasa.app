@@ -8,7 +8,7 @@ import { generateCrossword } from '../lib/crossword';
 import { getCookie, getCurrentUser } from '../lib/auth';
 import { recordAIGeneration } from '../lib/telemetry';
 import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getDynamicCPWithSource, getDynamicCPElementsWithSource, getFaseFromKelas } from '../lib/cp-data';
-import { generateVisualStimulus, detectStimulusFromSoalText, getVisualCatalog } from '../lib/visual-engine';
+import { generateVisualStimulus, detectStimulusFromSoalText, reconcileStimulusWithSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
 import { validate, createAssessmentSchema } from '../lib/validation';
 import { runAssessmentQualityGate, validateQuestionHeuristics } from '../lib/assessment-validator';
@@ -710,6 +710,11 @@ export const resolveQuestionVisualStimulus = async (
         } else {
             visualCfg = detectStimulusFromSoalText(fullContext, mataPelajaran);
         }
+    }
+
+    // 2b. REKONSILIASI ANGKA: parameter visual dari AI tidak boleh bertentangan dengan teks soal.
+    if (!forcePhotoOnly && visualCfg && visualCfg.type) {
+        visualCfg = reconcileStimulusWithSoalText(visualCfg, String(q.soal || ''), mataPelajaran) || visualCfg;
     }
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya

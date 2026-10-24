@@ -743,6 +743,14 @@ export function normalizeAssetUrls(content: any, packageId: number | string) {
   const warnings: string[] = [];
   for (const [index, item] of questionItems(clone).entries()) {
     let warning: string | null = null;
+    // URL presigned (mis. Vultr/Z-Image) kedaluwarsa dalam hitungan jam dan tidak dapat
+    // dipulihkan. Tandai jelas agar UI tidak menampilkan gambar rusak atau tombol pulihkan.
+    const presignedUrl = typeof item.gambar?.assetId !== 'string' && typeof item.gambar?.url === 'string'
+      && /[?&]x-amz-(?:expires|signature|credential)=/i.test(item.gambar.url);
+    if (presignedUrl) {
+      item.gambar = { ...(safeImageMetadata(imageRecord(item.gambar) || {})), imageUnavailable: true, imageUnavailableReason: 'expired_or_missing' };
+      delete item.visual_stimulus;
+    }
     try { warning = prepareQuestionImage(item); }
     catch {
       const image = imageRecord(item.gambar);

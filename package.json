@@ -24,6 +24,7 @@
     "typecheck": "tsc --noEmit",
     "check:build-budget": "node ./scripts/check-build-budget.mjs",
     "check:migrations": "node ./scripts/check-migrations.mjs",
+    "inspect:assessment": "node ./scripts/inspect-assessment.mjs",
     "test:integration": "node ./scripts/test-integration.mjs"
   },
   "dependencies": {

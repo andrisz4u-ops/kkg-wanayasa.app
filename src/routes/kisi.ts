@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+﻿import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
@@ -433,13 +433,13 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
     if (m.includes('pancasila') || m.includes('pkn') || m.includes('sejarah') || m.includes('ips')) {
         return `PANDUAN VISUAL MAPEL ${mapel.toUpperCase()}:
           * ATURAN KRITIS MAPEL PENDIDIKAN PANCASILA / PKn:
-            - MAYORITAS materi Pancasila bersifat KONSEPTUAL-NORMATIF (nilai, sikap, aturan, hak & kewajiban, musyawarah, gotong royong, toleransi). Soal-soal bertema ini TIDAK MEMERLUKAN stimulus gambar visual — cukup gunakan stimulus TEKS/WACANA/KASUS.
+            - MAYORITAS materi Pancasila bersifat KONSEPTUAL-NORMATIF (nilai, sikap, aturan, hak & kewajiban, musyawarah, gotong royong, toleransi). Soal-soal bertema ini TIDAK MEMERLUKAN stimulus gambar visual â€” cukup gunakan stimulus TEKS/WACANA/KASUS.
             - HANYA gunakan stimulus visual SVG ("visual_stimulus") jika soal SECARA EKSPLISIT menanyakan:
-              1. Identifikasi SIMBOL/LAMBANG fisik Garuda Pancasila → { "type": "perisai_pancasila", "params": { "sila": 1-5, "label": "X" } }
-              2. Struktur PEMERINTAHAN DAERAH (hirarki Gubernur-Bupati-Camat-Lurah-RW-RT) → { "type": "struktur_pemda", "params": { "targetLevel": "kecamatan", "label": "X" } }
-              3. Lembaga TRIAS POLITIKA (DPR-Presiden-MA) → { "type": "trias_politika", "params": { "cabang": "legislatif", "label": "X" } }
-              4. PETA Indonesia & wilayah NKRI → { "type": "peta_indonesia", "params": { "pointer": "sumatra", "label": "X" } }
-              5. Jenis NORMA masyarakat → { "type": "norma_masyarakat", "params": { "jenisNorma": "kesopanan", "label": "X" } }
+              1. Identifikasi SIMBOL/LAMBANG fisik Garuda Pancasila â†’ { "type": "perisai_pancasila", "params": { "sila": 1-5, "label": "X" } }
+              2. Struktur PEMERINTAHAN DAERAH (hirarki Gubernur-Bupati-Camat-Lurah-RW-RT) â†’ { "type": "struktur_pemda", "params": { "targetLevel": "kecamatan", "label": "X" } }
+              3. Lembaga TRIAS POLITIKA (DPR-Presiden-MA) â†’ { "type": "trias_politika", "params": { "cabang": "legislatif", "label": "X" } }
+              4. PETA Indonesia & wilayah NKRI â†’ { "type": "peta_indonesia", "params": { "pointer": "sumatra", "label": "X" } }
+              5. Jenis NORMA masyarakat â†’ { "type": "norma_masyarakat", "params": { "jenisNorma": "kesopanan", "label": "X" } }
             - Untuk soal tentang NILAI Pancasila, SIKAP, PERILAKU, HAK & KEWAJIBAN, ATURAN, MUSYAWARAH, GOTONG ROYONG, TOLERANSI, KEBERAGAMAN: DILARANG KERAS menggunakan visual_stimulus! Kosongkan (null).
           * Untuk stimulus Peta Kepulauan Indonesia, VARIASIKAN pulau sasaran (jangan hanya Pulau Jawa!):
             1. Letak geografis / nama pulau: "Pulau yang ditunjuk huruf X adalah ..."
@@ -489,7 +489,7 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
             - Jaring-jaring Balok: { "type": "jaring_balok", "params": { "p": 6, "l": 4, "t": 3, "unit": "cm" } }
             - Koordinat Kartesius: { "type": "koordinat", "params": { "titik": [{"x": 3, "y": 4, "label": "P"}, {"x": -2, "y": 3, "label": "Q"}] } }
             - Diagram Venn: { "type": "diagram_venn", "params": { "judul": "Hobi Siswa", "labelA": "Sepak Bola", "labelB": "Basket", "aSaja": 12, "irisan": 5, "bSaja": 8 } }
-            - Pictogram / Diagram Gambar: { "type": "pictogram", "params": { "judul": "Data Penjualan Buah", "labels": ["Apel", "Jeruk", "Mangga"], "data": [4, 3, 5], "ikon": "●", "nilaiIkon": 2 } }
+            - Pictogram / Diagram Gambar: { "type": "pictogram", "params": { "judul": "Data Penjualan Buah", "labels": ["Apel", "Jeruk", "Mangga"], "data": [4, 3, 5], "ikon": "â—", "nilaiIkon": 2 } }
             - Simetri Lipat: { "type": "simetri_lipat", "params": { "bangun": "persegi" } }
             - Bangun Gabungan: { "type": "bangun_gabungan", "params": { "bentuk": "L", "segmen": [{"p": 10, "l": 4}, {"p": 6, "l": 4}], "unit": "cm" } }
             - Diagram Batang: { "type": "diagram_batang", "params": { "judul": "Data Penjualan", "labels": ["Senin","Selasa","Rabu"], "data": [20, 35, 30] } }
@@ -651,7 +651,7 @@ export const resolveQuestionVisualStimulus = async (
     let visualCfg = forcePhotoOnly ? null : q.visual_stimulus;
 
     // 1b. Jika visualCfg belum ada atau tidak punya type, coba ekstrak dari visual_stimulus {...} yang tertulis di teks soal
-    // SKIP jika forcePhotoOnly — langsung ke pencarian foto
+    // SKIP jika forcePhotoOnly â€” langsung ke pencarian foto
     if (!forcePhotoOnly && (!visualCfg || !visualCfg.type)) {
         const vsMatch = String(q.soal || '').match(/visual_stimulus\s*:?\s*\{/i);
         if (vsMatch && vsMatch.index !== undefined) {
@@ -681,7 +681,7 @@ export const resolveQuestionVisualStimulus = async (
     }
 
     // 2. Jika tidak ada visual_stimulus atau kosong, jalankan deteksi cerdas dari teks soal, opsi, & kunci jawaban
-    // SKIP jika forcePhotoOnly — tidak perlu auto-detect SVG
+    // SKIP jika forcePhotoOnly â€” tidak perlu auto-detect SVG
     if (!forcePhotoOnly && (!visualCfg || !visualCfg.type)) {
         let fullContext = String(q.soal || '');
         if (q.opsi && typeof q.opsi === 'object') {
@@ -705,7 +705,7 @@ export const resolveQuestionVisualStimulus = async (
         const hasPancasilaVisualKeyword = /perisai|lambang negara|garuda pancasila|lambang pancasila|simbol sila|struktur pemerintah|hirarki pemerintah|trias politika|legislatif|eksekutif|yudikatif|peta indonesia|peta nusantara|peta kepulauan|norma masyarakat|norma kesopanan|norma kesusilaan|norma hukum/i.test(soalLower);
 
         if (isPancasilaMapel && !hasPancasilaVisualKeyword) {
-            // Mapel Pancasila/PKn tanpa kata kunci visual → JANGAN auto-detect, biarkan tanpa gambar
+            // Mapel Pancasila/PKn tanpa kata kunci visual â†’ JANGAN auto-detect, biarkan tanpa gambar
             visualCfg = null;
         } else {
             visualCfg = detectStimulusFromSoalText(fullContext, mataPelajaran);
@@ -719,6 +719,8 @@ export const resolveQuestionVisualStimulus = async (
 
     // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
     // SKIP jika forcePhotoOnly
+    let providerImageFallback = false;
+    const isProviderFallbackSubject = /matematika|ipas|\bipa\b/i.test(String(mataPelajaran || ''));
     if (!forcePhotoOnly && visualCfg && visualCfg.type && usedStimulusSignatures) {
         const signature = buildStimulusSignature(visualCfg);
 
@@ -973,7 +975,14 @@ export const resolveQuestionVisualStimulus = async (
             // Audit trail: log diversifikasi stimulus
             const newType = visualCfg?.type || 'photo-fallback';
             const newPointer = visualCfg?.params?.pointer || '';
-            console.log(`[DiversityGuard] Soal ${q.no || '?'}: Collision "${originalSig}" → diverted to "${newType}${newPointer ? ':' + newPointer : ''}"`);
+            console.log(`[DiversityGuard] Soal ${q.no || '?'}: Collision "${originalSig}" â†’ diverted to "${newType}${newPointer ? ':' + newPointer : ''}"`);
+
+            // Matematika/IPAS: diagram kembar diganti gambar dari provider (foto/AI),
+            // bukan diulang atau dikosongkan. Mapel lain tetap memakai perilaku lama.
+            if (!visualCfg && isProviderFallbackSubject) {
+                providerImageFallback = true;
+                console.log(`[DiversityGuard] Soal ${q.no || '?'}: duplicate "${originalSig}" â†’ provider image fallback`);
+            }
         }
     }
 
@@ -1002,8 +1011,8 @@ export const resolveQuestionVisualStimulus = async (
     if (unsplash) {
         const soalTextLower = String(q.soal || '').toLowerCase();
         // Guard: Soal yang membutuhkan stimulus diagram/skema presisi berlabel (tanda panah, huruf X, pola urutan, alur)
-        // Ketika forcePhotoOnly, skip guard ini — cari foto topik umum sebagai pelengkap visual
-        const requiresDiagram = !forcePhotoOnly && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
+        // Ketika forcePhotoOnly, skip guard ini â€” cari foto topik umum sebagai pelengkap visual
+        const requiresDiagram = !forcePhotoOnly && !providerImageFallback && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
 
         if (requiresDiagram) {
             markQuestionImageUnavailable(q, 'required_diagram_missing');
@@ -1039,6 +1048,10 @@ export const resolveQuestionVisualStimulus = async (
             if (!searchKeyword) {
                 searchKeyword = topik || '';
             }
+        } else if (providerImageFallback) {
+            // Diagram kembar pada Matematika/IPAS: cari gambar pengganti dari provider
+            // memakai kata kunci visual soal, bukan kunci jawaban numerik.
+            searchKeyword = String(q.gambar_keyword || topik || '').trim();
         } else {
             searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
             if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
@@ -1091,6 +1104,7 @@ export const resolveQuestionVisualStimulus = async (
                     credit: img.creditName,
                     type: (img.source as string) === 'vultr-ai' ? 'ai' : 'photo'
                 };
+                delete q.visual_stimulus;
             } else {
                 markQuestionImageUnavailable(q, 'image_search_unavailable');
                 delete q.visual_stimulus;
@@ -1100,6 +1114,9 @@ export const resolveQuestionVisualStimulus = async (
             markQuestionImageUnavailable(q, 'image_search_unavailable');
             delete q.visual_stimulus;
         }
+    } else if (providerImageFallback || questionNeedsDiagram(q.soal)) {
+        markQuestionImageUnavailable(q, 'required_diagram_missing');
+        delete q.visual_stimulus;
     }
 };
 
@@ -1335,7 +1352,7 @@ export const buildAssessmentPrompt = (params: {
             const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, count, jenjangKelas);
             const exactImages = adaptiveQuota.exactImages;
             gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${Math.round(adaptiveQuota.ratio * 100)}%): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa diagram SVG presisi / foto objek konkret yang jelas.
-            - PERENCANAAN VARIASI VISUAL (SANGAT PENTING — BACA SEBELUM MULAI MENYUSUN SOAL):
+            - PERENCANAAN VARIASI VISUAL (SANGAT PENTING â€” BACA SEBELUM MULAI MENYUSUN SOAL):
               * SEBELUM mulai menulis soal, RENCANAKAN terlebih dahulu ${exactImages} jenis stimulus visual yang BERBEDA-BEDA untuk ${exactImages} butir soal bergambar.
               * Setiap butir soal bergambar WAJIB menggunakan tipe visual_stimulus atau gambar_keyword yang UNIK dan BERBEDA dari butir soal bergambar lainnya.
               * DILARANG KERAS menggunakan tipe visual_stimulus yang sama (misal tipe + pointer identik) pada lebih dari 1 butir soal dalam satu paket ujian!
@@ -1343,9 +1360,9 @@ export const buildAssessmentPrompt = (params: {
                 - Soal 2 (atribut JSON "visual_stimulus"): { "type": "organ_pencernaan", "params": { "pointer": "lambung", "label": "X" } }
                 - Soal 5 (atribut JSON "visual_stimulus"): { "type": "vili_usus", "params": { "pointer": "kapiler", "label": "X" } }
                 - Soal 8 (atribut JSON "gambar_keyword"): "Kelinci"
-              * Contoh SALAH (duplikasi — DILARANG):
+              * Contoh SALAH (duplikasi â€” DILARANG):
                 - Soal 2: tipe "organ_pencernaan" dengan pointer "lambung"
-                - Soal 7: tipe "organ_pencernaan" dengan pointer "lambung" ← DUPLIKAT!
+                - Soal 7: tipe "organ_pencernaan" dengan pointer "lambung" â† DUPLIKAT!
             - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
               * ${getSubjectImagePromptGuideline(mataPelajaran)}
             - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
@@ -1364,16 +1381,16 @@ export const buildAssessmentPrompt = (params: {
 
         I. STANDAR RESMI LEVEL KOGNITIF (PUSPENDIK / BSKAP KEMENDIKBUDRISTEK):
         Setiap butir soal HARUS diberi label level kognitif resmi:
-        ┌─ L1 (Level 1 - Pengetahuan dan Pemahaman) ──────────────────────────────
-        │  C1 Mengingat   : sebutkan, tuliskan, definisikan, identifikasi, jodohkan
-        │  C2 Memahami    : jelaskan, uraikan, klasifikasikan, ringkas, bedakan
-        ├─ L2 (Level 2 - Aplikasi / Penerapan) ────────────────────────────────────
-        │  C3 Menerapkan  : hitung, gunakan, tentukan, selesaikan, demonstrasikan
-        ├─ L3 (Level 3 - Penalaran / Higher Order Thinking Skills - HOTS) ─────────
-        │  C4 Menganalisis: analisis, bandingkan, simpulkan, periksa hubungan sebab-akibat
-        │  C5 Mengevaluasi: nilai, justifikasi, kritisi, putuskan, rekomendasikan
-        │  C6 Mencipta    : rancang, buat, susun, formulasikan solusi atas masalah kontekstual
-        └──────────────────────────────────────────────────────────────────────────
+        â”Œâ”€ L1 (Level 1 - Pengetahuan dan Pemahaman) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        â”‚  C1 Mengingat   : sebutkan, tuliskan, definisikan, identifikasi, jodohkan
+        â”‚  C2 Memahami    : jelaskan, uraikan, klasifikasikan, ringkas, bedakan
+        â”œâ”€ L2 (Level 2 - Aplikasi / Penerapan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        â”‚  C3 Menerapkan  : hitung, gunakan, tentukan, selesaikan, demonstrasikan
+        â”œâ”€ L3 (Level 3 - Penalaran / Higher Order Thinking Skills - HOTS) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        â”‚  C4 Menganalisis: analisis, bandingkan, simpulkan, periksa hubungan sebab-akibat
+        â”‚  C5 Mengevaluasi: nilai, justifikasi, kritisi, putuskan, rekomendasikan
+        â”‚  C6 Mencipta    : rancang, buat, susun, formulasikan solusi atas masalah kontekstual
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         II. ATURAN WAJIB KISI-KISI & PENYUSUNAN SOAL:
         1. CP (Capaian Pembelajaran): ${resolvedCP ? `Gunakan teks dari ${curriculumAttribution || 'sumber belum ditentukan'} sebagai konteks, tanpa menganggapnya telah diverifikasi: "${resolvedCP}". Formulasikan rumusan CP yang spesifik dan relevan untuk butir-butir soal bertopik "${topik}".` : 'Tidak ada teks CP sumber yang tersedia; jangan mengklaim rumusan CP sebagai kutipan atau verifikasi resmi.'}
@@ -1385,7 +1402,7 @@ export const buildAssessmentPrompt = (params: {
            "Disajikan [stimulus/konteks], murid dapat [kata kerja operasional] [materi]".
            DILARANG MENGGUNAKAN KATA 'Peserta Didik' / 'peserta didik'. Selalu gunakan kata 'Murid' / 'murid'.
         6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
-        7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS — berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata — yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
+        7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS â€” berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata â€” yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
         8. ATURAN KONSISTENSI FORMAT TABEL (SANGAT PENTING):
            - Jika butir soal (baik PG, Isian, maupun Uraian) menyajikan stimulus atau data dalam bentuk TABEL, WAJIB menggunakan format Tabel Markdown Standar yang LENGKAP:
              * Setiap baris tabel WAJIB diawali dan diakhiri dengan karakter pipa (|).
@@ -1452,6 +1469,12 @@ function normalizeAssessmentItems(finalData: any, resolvedCP: string, topik: str
             normalizeItemKisiMetadata(q, 'Uraian', (q.no || defaultUraianNo), resolvedCP, topik);
         });
     }
+}
+
+const DIAGRAM_REFERENCE_PATTERN = /\b(?:perhatikan|amatilah|lihatlah|cermati|berdasarkan)\b[\s\S]{0,80}?\b(?:gambar|diagram|grafik|bagan|ilustrasi)\b|\b(?:gambar|diagram|grafik|bagan|ilustrasi)\s+(?:berikut|di\s+bawah|di\s+samping)\b/i;
+
+export function questionNeedsDiagram(soal: unknown): boolean {
+    return DIAGRAM_REFERENCE_PATTERN.test(String(soal || ''));
 }
 
 function markQuestionImageUnavailable(question: any, reason = 'image_unavailable') {
@@ -1591,7 +1614,7 @@ export async function enrichAndNormalizePG(
 
     // Enforce exact image count jika visual stimulus aktif
     // SPLIT STRATEGY: Bagi kuota 50/50 antara SVG Dinamik dan Foto AI (Vultr/Wiki)
-    // Contoh: 10 PG → 2 visual = 1 SVG + 1 Foto, 15 PG → 3 visual = 2 SVG + 1 Foto
+    // Contoh: 10 PG â†’ 2 visual = 1 SVG + 1 Foto, 15 PG â†’ 3 visual = 2 SVG + 1 Foto
     if (isGambarEnabled && unsplash && exactImageCount > 0 && deduped.length > 0) {
         const svgSlots = Math.ceil(exactImageCount / 2);   // SVG mendapat 50% (dibulatkan ke atas)
         const photoSlots = exactImageCount - svgSlots;     // Foto mendapat sisanya
@@ -1661,7 +1684,7 @@ export async function enrichAndNormalizePG(
         const photoSet = new Set(photoList);
         const targetSelected = new Set([...svgSet, ...photoSet]);
 
-        console.log(`[VisualSplitter] Kuota: ${exactImageCount} total → ${svgSet.size} SVG + ${photoSet.size} Foto`);
+        console.log(`[VisualSplitter] Kuota: ${exactImageCount} total â†’ ${svgSet.size} SVG + ${photoSet.size} Foto`);
 
         const usedStimulusSignatures = new Set<string>();
         const usedImageUrls = new Set<string>();
@@ -1676,7 +1699,7 @@ export async function enrichAndNormalizePG(
             }
 
             if (svgSet.has(q)) {
-                // Slot SVG: Proses visual_stimulus → SVG parametrik. Jika gagal, fallback otomatis ke foto.
+                // Slot SVG: Proses visual_stimulus â†’ SVG parametrik. Jika gagal, fallback otomatis ke foto.
                 await resolveQuestionVisualStimulus(q, mataPelajaran, topik, unsplash, usedStimulusSignatures, usedImageUrls, usedImageIds, false);
             } else {
                 // Slot Foto: Butir non-diagram konkret langsung cari foto AI (Vultr) / Wikimedia
@@ -1726,6 +1749,14 @@ export async function enrichAndNormalizePG(
             delete q.gambar_keyword;
             delete q.gambar_prompt_en;
             if (q.gambar || q.visual_stimulus) markQuestionImageUnavailable(q, 'image_generation_disabled');
+        }
+    }
+
+    // Butir yang menuntut gambar tetapi tidak mendapatkannya harus terlihat oleh guru
+    // sebagai kegagalan eksplisit, bukan soal tanpa gambar yang membingungkan siswa.
+    for (const q of deduped) {
+        if (questionNeedsDiagram(q?.soal) && !q?.gambar && !q?.visual_stimulus) {
+            markQuestionImageUnavailable(q, 'required_diagram_missing');
         }
     }
 
@@ -2117,7 +2148,7 @@ kisi.post('/generate-stream', async (c) => {
                         console.warn(`[Kisi-Stream] Step 3 (Isian/Uraian) failed but continuing with partial data:`, step3Err.message);
                         await stream.writeSSE({
                             event: 'token',
-                            data: JSON.stringify({ text: `\n⚠️ Soal Isian/Uraian gagal diproses (${step3Err.message?.substring(0, 80)}). Soal PG tetap ditampilkan.\n` })
+                            data: JSON.stringify({ text: `\nâš ï¸ Soal Isian/Uraian gagal diproses (${step3Err.message?.substring(0, 80)}). Soal PG tetap ditampilkan.\n` })
                         });
                         finalData.isian = null;
                         finalData.uraian = [];
@@ -2157,7 +2188,7 @@ kisi.post('/generate-stream', async (c) => {
                             });
                             await stream.writeSSE({
                                 event: 'token',
-                                data: JSON.stringify({ text: `\n🛡️ [QualityGate] ${msg}\n` })
+                                data: JSON.stringify({ text: `\nðŸ›¡ï¸ [QualityGate] ${msg}\n` })
                             });
                         } catch (_) {}
                     }

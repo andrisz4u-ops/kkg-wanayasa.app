@@ -7,6 +7,7 @@ import { renderLockedFeature } from '../components.js';
 import { generateAsesmenDocx, prepareAssessmentExportImages, preloadAsesmenImages } from '../asesmen-docx.js';
 import { saveDocArchive, openArchiveDrawer } from '../storage-archive.js';
 import { createAssessmentPackageSync, createAssessmentAssetId, ASSESSMENT_SAVE_LABELS } from '../assessment-package-sync.js';
+import { describeImageFailure } from '../image-failure.js';
 
 function getPendingAssessmentBackupKey(owner = state.user?.id) {
   return owner == null ? null : `kkg_kisi_pending_${String(owner)}`;
@@ -76,6 +77,8 @@ export function resolveRenderableImageSrc(image) {
   }
   return '';
 }
+
+export { describeImageFailure } from '../image-failure.js';
 
 export async function renderKisi() {
   if (!state.user) {
@@ -2372,7 +2375,7 @@ function renderResult(data, formData, packageOptions = {}) {
         <button type="button" class="btn-remove-soal-image rounded bg-rose-600 px-2 py-1 text-[10px] font-bold text-white" data-type="${type}" data-qindex="${index}">Hapus</button>
       </div>
       <div class="image-failed-alert ${failed ? '' : 'hidden'} items-center gap-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-950">
-        <span>Gambar soal #${escapeHtml(question.no)} tidak tersedia. Unggah file asli atau pilih pengganti.</span>
+        <span>Gambar soal #${escapeHtml(question.no)} tidak tersedia.${describeImageFailure(image)} Unggah file asli atau pilih pengganti.</span>
         <button type="button" class="btn-change-soal-image print:hidden rounded bg-blue-600 px-2 py-1 font-bold text-white" data-type="${type}" data-qindex="${index}">Perbaiki</button>
       </div>
     </div>`;
@@ -2506,7 +2509,7 @@ function renderResult(data, formData, packageOptions = {}) {
                         </button>
                       </div>
                       <div class="image-failed-alert ${(!pgSource) || q.imageUnavailable ? '' : 'hidden'} items-center justify-between gap-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-xs mt-1">
-                        <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar soal #${q.no} tidak dapat dimuat. Unggah ulang file asli atau pilih pengganti.</span>
+                        <span class="flex items-center gap-1.5 font-medium"><i class="fas fa-exclamation-triangle text-amber-600"></i> Gambar soal #${q.no} tidak dapat dimuat.${describeImageFailure(pgImage)} Unggah ulang file asli atau pilih pengganti.</span>
                         <div class="flex items-center gap-1.5">
                           <button type="button" class="btn-change-soal-image px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-camera mr-1"></i>Ganti</button>
                           <button type="button" class="btn-remove-soal-image px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold shadow cursor-pointer" data-type="pg" data-qindex="${pgIdx}"><i class="fas fa-trash-alt mr-1"></i>Hapus</button>

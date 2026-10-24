@@ -1,4 +1,4 @@
-/**
+﻿/**
  * asesmen-docx.js
  * Generator file .docx ASLI untuk Asesmen Soal
  * Menggunakan docx@7.x (window.docx) yang di-load via CDN
@@ -6,8 +6,8 @@
  * SOLUSI AKSARA SUNDA:
  *  - Fungsi splitBySundanese() memisahkan teks Latin vs Aksara Sunda
  *  - Setiap segmen mendapat TextRun dengan font berbeda:
- *      Latin      → Times New Roman
- *      Aksara Sunda → Noto Sans Sundanese
+ *      Latin      â†’ Times New Roman
+ *      Aksara Sunda â†’ Noto Sans Sundanese
  *  - Ini adalah satu-satunya cara yang pasti bekerja di Word
  */
 
@@ -27,6 +27,14 @@ const FONT_SUNDA  = 'Noto Sans Sundanese';
 const PT = (n) => n * 20;
 /** Konversi cm ke twip (1cm = 567.0 twip) */
 const CM = (n) => Math.round(n * 567);
+
+// A4 21cm dikurangi margin kiri/kanan 1,27cm
+const PAGE_TEXT_WIDTH = CM(18.4);
+const QUESTION_INDENT = CM(0.6);
+const IMAGE_CELL_TEXT_WIDTH = PAGE_TEXT_WIDTH - QUESTION_INDENT;
+const IMAGE_MAX_WIDTH_CM = 7;
+const IMAGE_MAX_HEIGHT_CM = 5;
+const CM_TO_PX = 96 / 2.54;
 
 // ============================================================
 // HELPER: split teks menjadi segmen {text, isSunda}
@@ -105,13 +113,31 @@ function makeParaRaw(children, opts = {}) {
   return new window.docx.Paragraph(paraOpts);
 }
 
+export function selectOptionColumns(opsi) {
+  const longest = Object.values(opsi || {})
+    .reduce((max, value) => Math.max(max, String(value || '').length), 0);
+  return longest <= 12 ? 4 : longest <= 30 ? 2 : 1;
+}
+
+export function assessmentImageDisplaySize(image) {
+  const width = Number(image && image.width);
+  const height = Number(image && image.height);
+  if (!(width > 0) || !(height > 0)) return { width: 220, height: 145 };
+  const maxWidthPx = IMAGE_MAX_WIDTH_CM * CM_TO_PX;
+  const maxHeightPx = IMAGE_MAX_HEIGHT_CM * CM_TO_PX;
+  const scale = Math.min(maxWidthPx / width, maxHeightPx / height, 2);
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
+
 function makeAssessmentImageParagraph(image) {
+  const size = assessmentImageDisplaySize(image);
   return new window.docx.Paragraph({
-    alignment: window.docx.AlignmentType.LEFT,
+    alignment: window.docx.AlignmentType.CENTER,
+    keepNext: true,
     spacing: { before: PT(3), after: PT(4) },
     children: [new window.docx.ImageRun({
       data: image.buffer,
-      transformation: { width: 220, height: 145 },
+      transformation: size,
       type: image.type,
     })],
   });
@@ -145,19 +171,22 @@ function makeCell(content, opts = {}) {
 
 // ============================================================
 // HELPER: layout opsi PG menggunakan Paragraph + TabStops
-// (BUKAN tabel — menghindari semua masalah nested table di Word)
+// (BUKAN tabel â€” menghindari semua masalah nested table di Word)
 // ============================================================
-function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
+function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0, availableWidth = PAGE_TEXT_WIDTH, spaceAfterLast = 2) {
   const o = opsi || {};
   const s = 22;
   const indentLeft = indentTwip || 0;
   const TabStopType = window.docx.TabStopType;
+  const usable = Math.max(CM(3), (availableWidth || PAGE_TEXT_WIDTH) - indentLeft);
+  const columnWidth = Math.floor(usable / (colLayout || 1));
+  const tabs = (count) => Array.from({ length: count }, (_, index) => ({
+    type: TabStopType.LEFT,
+    position: indentLeft + columnWidth * (index + 1),
+  }));
 
   if (colLayout === 4) {
     // Semua opsi 1 baris: A. xxx   B. xxx   C. xxx   D. xxx
-    const tab1 = indentLeft + 2400;
-    const tab2 = indentLeft + 4800;
-    const tab3 = indentLeft + 7200;
     return [makeParaRaw([
       new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o.A || '-', { size: s }),
@@ -168,17 +197,12 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
       new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o.D || '-', { size: s }),
     ], {
-      spaceAfter: 2,
+      spaceAfter: spaceAfterLast,
       indent: { left: indentLeft },
-      tabStops: [
-        { type: TabStopType.LEFT, position: tab1 },
-        { type: TabStopType.LEFT, position: tab2 },
-        { type: TabStopType.LEFT, position: tab3 },
-      ],
+      tabStops: tabs(3),
     })];
   } else if (colLayout === 2) {
     // 2 baris: A + C, lalu B + D
-    const tabMid = indentLeft + 4800;
     return [
       makeParaRaw([
         new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
@@ -188,7 +212,7 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
       ], {
         spaceAfter: 0,
         indent: { left: indentLeft },
-        tabStops: [{ type: TabStopType.LEFT, position: tabMid }],
+        tabStops: tabs(1),
       }),
       makeParaRaw([
         new window.docx.TextRun({ text: `B. `, size: s, font: FONT_LATIN }),
@@ -196,9 +220,9 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
         new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
         ...makeRuns(o.D || '-', { size: s }),
       ], {
-        spaceAfter: 2,
+        spaceAfter: spaceAfterLast,
         indent: { left: indentLeft },
-        tabStops: [{ type: TabStopType.LEFT, position: tabMid }],
+        tabStops: tabs(1),
       }),
     ];
   } else {
@@ -207,7 +231,7 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0) {
       new window.docx.TextRun({ text: `${k}. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o[k] || '-', { size: s }),
     ], {
-      spaceAfter: i === 3 ? 2 : 0,
+      spaceAfter: i === 3 ? spaceAfterLast : 0,
       indent: { left: indentLeft + CM(0.4) },
     }));
   }
@@ -514,7 +538,7 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
           }),
           ...dataRows.map(r => new TableRow({
             children: r.map((c, colIdx) => {
-              const isNum = /^\d+([.,]\d+)?\s*(°C|%|cm|m|kg|g|km|menit|detik|jam|Rp)?$/i.test(c) || (colIdx === 0 && /^\d+$/.test(c));
+              const isNum = /^\d+([.,]\d+)?\s*(Â°C|%|cm|m|kg|g|km|menit|detik|jam|Rp)?$/i.test(c) || (colIdx === 0 && /^\d+$/.test(c));
               return new TableCell({
                 width: { size: widths[colIdx] || widths[widths.length - 1], type: WidthType.DXA },
                 margins: { top: PT(4), bottom: PT(4), left: cellPad, right: cellPad },
@@ -658,6 +682,14 @@ export function sanitizeAssessmentSvg(source, maxBytes) {
   return sanitized;
 }
 
+function fitRasterSize(sourceWidth, sourceHeight, maxWidth = 480, maxHeight = 340) {
+  const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
 function imageToPngDataUrl(source, sourceType, signal, maxBytes) {
   if (signal.aborted) return Promise.reject(new Error('image-operation-aborted'));
   const blob = new Blob([source], { type: sourceType });
@@ -685,8 +717,7 @@ function imageToPngDataUrl(source, sourceType, signal, maxBytes) {
           || image.naturalWidth * image.naturalHeight > ASSESSMENT_IMAGE_LIMITS.maxPixels) {
           throw new Error('svg-dimensions-invalid');
         }
-        const width = 480;
-        const height = 340;
+        const { width, height } = fitRasterSize(image.naturalWidth, image.naturalHeight);
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -810,9 +841,10 @@ async function rasterizeWebpToPng(buffer, signal, maxBytes) {
     try {
       if (innerSignal.aborted || bitmap.width <= 0 || bitmap.height <= 0
         || bitmap.width * bitmap.height > ASSESSMENT_IMAGE_LIMITS.maxPixels) throw new Error('webp-dimensions-invalid');
+      const { width, height } = fitRasterSize(bitmap.width, bitmap.height);
       const canvas = document.createElement('canvas');
-      canvas.width = 480;
-      canvas.height = 340;
+      canvas.width = width;
+      canvas.height = height;
       const context = canvas.getContext('2d');
       if (!context) throw new Error('canvas-unavailable');
       context.fillStyle = '#ffffff';
@@ -911,7 +943,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
 
   const children = [];
 
-  // ── KOP SURAT ──────────────────────────────────────────────
+  // â”€â”€ KOP SURAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let kopSuratBuf = null;
   let kopSuratType = 'png';
   if (kopSuratUrl) {
@@ -933,14 +965,14 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     }
   }
 
-  // ── JUDUL ──────────────────────────────────────────────────
+  // â”€â”€ JUDUL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const judulMap = { STS: 'SUMATIF TENGAH SEMESTER', SAS: 'SUMATIF AKHIR SEMESTER', ASAT: 'ASESMEN SUMATIF AKHIR TAHUN' };
   const judul = judulMap[formData.jenisUjian] || (formData.jenisUjian || 'PENILAIAN').toUpperCase();
   children.push(makePara(judul, { bold: true, size: 24, align: AlignmentType.CENTER, spaceBefore: 4, spaceAfter: 2 }));
   const activeTapel = (typeof getActiveTahunAjaran === 'function') ? getActiveTahunAjaran() : (window.state?.settings?.tahun_ajaran || '2026/2027');
   children.push(makePara(`TAHUN PELAJARAN ${activeTapel}`, { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 8 }));
 
-  // ── TABEL IDENTITAS ────────────────────────────────────────
+  // â”€â”€ TABEL IDENTITAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: LINE_BORDERS,
@@ -961,7 +993,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
   }));
   children.push(makePara('', { spaceAfter: 8 }));
 
-  // ── I. PILIHAN GANDA ───────────────────────────────────────
+  // â”€â”€ I. PILIHAN GANDA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (data.pg && data.pg.length > 0) {
     children.push(makePara('I. PILIHAN GANDA', { bold: true, size: 22, spaceBefore: 6, spaceAfter: 4 }));
     children.push(makePara('Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!',
@@ -972,23 +1004,18 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
 
     for (const q of data.pg) {
       const opts = q.opsi || {};
-      const vals = Object.values(opts);
-      const allShort = vals.every(v => (v || '').length < 18);
-      const anyLong  = vals.some(v  => (v || '').length > 35);
-      let colLayout = allShort ? 4 : anyLong ? 1 : 2;
-      // Jika ada gambar, paksa 1 kolom karena space terbatas
+      const colLayout = selectOptionColumns(opts);
       const imgData = pgImageBuffers.get(q);
-      if (imgData) colLayout = 1;
 
       // Nomor soal + teks (hanging indent)
-      const INDENT_LEFT    = CM(0.6);
-      const HANGING        = CM(0.6);
+      const INDENT_LEFT    = QUESTION_INDENT;
+      const HANGING        = QUESTION_INDENT;
 
       if (imgData) {
           const cell1 = new window.docx.TableCell({
              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
              borders: NO_BORDERS,
-             width: { size: 5, type: window.docx.WidthType.PERCENTAGE },
+             width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
              margins: { top: 0, bottom: 0, left: 0, right: 0 },
              verticalAlign: window.docx.VerticalAlign.TOP
           });
@@ -996,30 +1023,29 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
           const cell2Children = [];
           cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
           cell2Children.push(makeAssessmentImageParagraph(imgData));
-          cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0));
+          cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0, IMAGE_CELL_TEXT_WIDTH, 12));
 
           const cell2 = new window.docx.TableCell({
              children: cell2Children,
              borders: NO_BORDERS,
-             width: { size: 95, type: window.docx.WidthType.PERCENTAGE },
-             margins: { top: 0, bottom: 0, left: CM(0.2), right: 0 },
+             width: { size: IMAGE_CELL_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+             margins: { top: 0, bottom: 0, left: 0, right: 0 },
              verticalAlign: window.docx.VerticalAlign.TOP
           });
 
           children.push(new window.docx.Table({
-             width: { size: 100, type: window.docx.WidthType.PERCENTAGE },
+             width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
              borders: NO_BORDERS,
              rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
           }));
-          children.push(makePara('', { spaceAfter: 8 }));
       } else {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
-        children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT));
+        children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT, PAGE_TEXT_WIDTH, 12));
       }
     }
   }
 
-  // ── II. ISIAN ──────────────────────────────────────────────
+  // â”€â”€ II. ISIAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (data.isian && data.isian.data && data.isian.data.length > 0) {
     const isianType = data.isian.type || 'Standard';
     const isianTitles = {
@@ -1050,7 +1076,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
         children.push(makePara('', { spaceAfter: 2 }));
       });
     } else if (isianType === 'Crossword' && data.isian.crossword && data.isian.crossword.success && data.isian.crossword.grid) {
-      // ── CROSSWORD GRID ──────────────────────────────────────
+      // â”€â”€ CROSSWORD GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const cw = data.isian.crossword;
       const CELL_SIZE = CM(0.75); // ~0.75cm per cell
       const CW_BORDER = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
@@ -1124,7 +1150,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
 
       children.push(makePara('', { spaceAfter: 10 }));
 
-      // ── CLUE LISTS: MENDATAR & MENURUN ────────────────────────
+      // â”€â”€ CLUE LISTS: MENDATAR & MENURUN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const mendatar = [];
       const menurun = [];
       cw.placements.forEach(p => {
@@ -1187,7 +1213,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     }
   }
 
-  // ── III. URAIAN ────────────────────────────────────────────
+  // â”€â”€ III. URAIAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (data.uraian && data.uraian.length > 0) {
     children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
@@ -1198,7 +1224,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     }
   }
 
-  // ── LEMBAR PENGESAHAN ──────────────────────────────────────
+  // â”€â”€ LEMBAR PENGESAHAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(makePara('', { spaceBefore: 30 }));
   children.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1221,10 +1247,10 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     ]})],
   }));
 
-  // ── PAGE BREAK ─────────────────────────────────────────────
+  // â”€â”€ PAGE BREAK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
-  // ── KUNCI JAWABAN ──────────────────────────────────────────
+  // â”€â”€ KUNCI JAWABAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(makePara('KUNCI JAWABAN & PEDOMAN PENSKORAN', { bold: true, size: 24, align: AlignmentType.CENTER, spaceAfter: 2 }));
   children.push(makePara(`${formData.mataPelajaran || ''} \u2014 ${formData.jenjangKelas || ''} / ${formData.semester || ''}`,
     { bold: true, size: 22, align: AlignmentType.CENTER, spaceAfter: 10 }));
@@ -1298,7 +1324,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     }));
   }
 
-  // ── LEMBAR PENGESAHAN KUNCI JAWABAN ───────────────────────
+  // â”€â”€ LEMBAR PENGESAHAN KUNCI JAWABAN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(makePara('', { spaceBefore: 20 }));
   children.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1321,7 +1347,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     ]})],
   }));
 
-  // ── PAGE BREAK: KISI-KISI PENULISAN SOAL ──────────────────
+  // â”€â”€ PAGE BREAK: KISI-KISI PENULISAN SOAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
   // Kop Surat Kisi-Kisi
@@ -1440,7 +1466,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     ]})],
   }));
 
-  // ── BUILD DOCUMENT ─────────────────────────────────────────
+  // â”€â”€ BUILD DOCUMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { Header, Footer, PageNumber, TabStopPosition, TabStopType } = window.docx;
 
   // Jenis ujian untuk header
@@ -1448,7 +1474,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
   const jenisUjianText = jenisUjianMap[formData.jenisUjian] || (formData.jenisUjian || 'Ulangan Harian');
   const headerText = `${jenisUjianText} - ${formData.mataPelajaran || ''} - ${formData.jenjangKelas || ''}`;
 
-  // LINE SPACING 1.15 (1.15 × 240 twip = 276 twip)
+  // LINE SPACING 1.15 (1.15 Ã— 240 twip = 276 twip)
   const LINE_SPACING_115 = 276;
 
   const doc = new Document({

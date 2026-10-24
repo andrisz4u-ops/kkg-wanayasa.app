@@ -18,6 +18,12 @@ export class EncryptionError extends Error {
 let cachedSecret: string | null = null;
 let cachedCryptoKey: CryptoKey | null = null;
 
+/** Configuration presence only; no derivation or credential decryption. */
+export function hasEncryptionKey(env: { ENCRYPTION_KEY?: unknown; SECRET_KEY?: unknown }): boolean {
+    const secret = env.ENCRYPTION_KEY || env.SECRET_KEY;
+    return typeof secret === 'string' && secret.trim().length >= 16;
+}
+
 /**
  * Get or derive encryption key from environment
  * In production, use a secure key from environment variables

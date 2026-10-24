@@ -17,10 +17,6 @@ const envSchema = z.object({
     CF_PAGES_COMMIT_SHA: optionalText,
     QR_SIGNING_SECRET: optionalText,
     R2_PUBLIC_URL: optionalUrl,
-}).superRefine((env, context) => {
-    if (env.ENVIRONMENT !== 'development' && !env.ENCRYPTION_KEY && !env.SECRET_KEY) {
-        context.addIssue({ code: 'custom', path: ['ENCRYPTION_KEY'], message: 'Kunci enkripsi wajib di production/staging' });
-    }
 });
 
 export type ValidatedEnv = z.infer<typeof envSchema>;
@@ -35,6 +31,10 @@ export function validateEnv(raw: Record<string, unknown>): EnvValidationResult {
         return { ok: false, errors: [...new Set(result.error.issues.map(issue => String(issue.path[0] || 'environment')))], warnings: [] };
     }
     const warnings: string[] = [];
+    // Credential encryption is feature-scoped. Public pages, authentication and
+    // storage must not fail merely because provider management is not configured.
+    // encrypt()/decrypt() still fail closed at their actual operation boundary.
+    if (!result.data.ENCRYPTION_KEY && !result.data.SECRET_KEY) warnings.push('Kunci enkripsi kredensial provider belum tersedia; operasi enkripsi dibatasi.');
     if (result.data.ENVIRONMENT !== 'development' && !result.data.SENTRY_DSN) warnings.push('SENTRY_DSN belum dikonfigurasi.');
     return { ok: true, env: result.data, warnings };
 }

@@ -22,6 +22,7 @@ Setiap unit diverifikasi sebelum regresi penuh. Data produksi tidak diperlukan u
 - Kontrak JSON tetap kompatibel; ekspor menerima Response asli, bukan envelope JSON.
 - CSRF retry dibatasi dan tidak menggandakan operasi yang sudah diterima handler.
 - Binding non-string tidak hilang saat environment dinormalisasi.
+- Koreksi ketersediaan setelah insiden produksi: key enkripsi diperiksa pada operasi kredensial, bukan dijadikan syarat global untuk homepage/login/storage; health mengekspos readiness fitur tanpa nilai secret.
 - Error dekripsi tidak boleh direkonsiliasi sebagai key kosong.
 - CAS login dan batch audit diperiksa melalui kegagalan/konkurensi, bukan hanya happy path.
 - Keberhasilan lokal dan pekerjaan operator produksi diberi status terpisah.

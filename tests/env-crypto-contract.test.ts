@@ -12,10 +12,10 @@ const key = 'fixture-encryption-material-for-unit-tests';
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe('environment validation', () => {
-  it('requires a key outside explicit development and normalizes empty optional values', () => {
-    expect(validateEnv({}).ok).toBe(false);
-    expect(validateEnv({ ENVIRONMENT: 'production' }).ok).toBe(false);
-    expect(validateEnv({ ENVIRONMENT: 'staging' }).ok).toBe(false);
+  it('allows core services without optional provider encryption and normalizes empty values', () => {
+    expect(validateEnv({})).toMatchObject({ ok: true, env: { ENVIRONMENT: 'production' } });
+    expect(validateEnv({ ENVIRONMENT: 'production' }).ok).toBe(true);
+    expect(validateEnv({ ENVIRONMENT: 'staging' }).ok).toBe(true);
     expect(validateEnv({ ENCRYPTION_KEY: key, SECRET_KEY: '', SENTRY_DSN: '' })).toMatchObject({ ok: true, env: { ENVIRONMENT: 'production', SECRET_KEY: undefined } });
     expect(validateEnv({ ENVIRONMENT: 'development', SECRET_KEY: '' }).ok).toBe(true);
     expect(validateEnv({ ENCRYPTION_KEY: ' '.repeat(32) }).ok).toBe(false);
@@ -36,6 +36,43 @@ describe('environment validation', () => {
     expect(response.status).toBe(200);
     expect(first).toHaveBeenCalledOnce();
     expect(await response.json()).toMatchObject({ data: { environment: 'production' } });
+  });
+
+  it('serves the actual production landing page and reports feature readiness without an encryption key', async () => {
+    const db = migratedDatabase();
+    try {
+      const env = { DB: db as any, ENVIRONMENT: 'production', R2_PUBLIC_URL: 'https://cdn.fixture.invalid', SUPABASE_URL: 'https://project.fixture.invalid', SUPABASE_KEY: 'fixture-storage-key' };
+      const home = await app.request('/', {}, env);
+      expect(home.status).toBe(200);
+      expect(home.headers.get('content-type')).toContain('text/html');
+      const health = await app.request('/api/health', {}, env);
+      expect(health.status).toBe(200);
+      expect(await health.json()).toMatchObject({ data: { status: 'degraded', database: true, features: { credential_encryption: false } } });
+      await expect(encrypt('fixture-provider-credential', env)).rejects.toMatchObject({ code: 'ENCRYPTION_KEY_REQUIRED' });
+    } finally { db.close(); }
+  });
+
+  it('keeps production login and R2 uploads working while credential writes fail closed', async () => {
+    const db = migratedDatabase();
+    try {
+      const { hashPassword } = await import('../src/lib/auth');
+      const hash = await hashPassword('FixturePassword123');
+      db.sqlite.prepare("INSERT INTO users(id,nama,email,password_hash,role,role_label,is_approved) VALUES(900,'Admin','core@fixture.invalid',?,'admin','admin',1)").run(hash);
+      const put = vi.fn(async () => ({}));
+      const env = { DB: db as any, ENVIRONMENT: 'production', STORAGE: { put } as any, R2_PUBLIC_URL: 'https://cdn.fixture.invalid' };
+      const login = await app.request('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'core@fixture.invalid', password: 'FixturePassword123' }) }, env);
+      expect(login.status).toBe(200);
+      const cookies = login.headers.getSetCookie().flatMap(value => value.split(/,\s*(?=[^;,\s]+=[^;]*)/)).map(value => value.split(';')[0]).join('; ');
+      const token = cookies.match(/csrf_token=([^;]+)/)![1];
+      const form = new FormData();
+      form.set('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], 'fixture.png', { type: 'image/png' }));
+      const upload = await app.request('/api/files/upload', { method: 'POST', headers: { Cookie: cookies, 'X-CSRF-Token': token }, body: form }, env);
+      expect(upload.status).toBe(201); expect(put).toHaveBeenCalledOnce();
+      const provider = await app.request('/api/admin/ai-providers', { method: 'POST', headers: { Cookie: cookies, 'X-CSRF-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Fixture', slug: 'core-fixture', api_type: 'openai_compat', base_url: 'https://provider.fixture.invalid', model: 'fixture', api_key: 'fixture-provider-credential' }) }, env);
+      expect(provider.status).toBe(503);
+      expect(await provider.json()).toMatchObject({ error: { code: 'ENCRYPTION_KEY_REQUIRED' } });
+      expect(db.sqlite.prepare("SELECT id FROM ai_providers WHERE slug='core-fixture'").get()).toBeUndefined();
+    } finally { db.close(); }
   });
 });
 

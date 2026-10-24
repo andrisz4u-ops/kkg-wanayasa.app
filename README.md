@@ -11,7 +11,7 @@ Ruang kerja digital KKG Gugus 3 Wanayasa untuk mengelola kegiatan komunitas dan 
 
 ## Menjalankan secara lokal
 
-Gunakan Node.js 24. Salin `.env.example` ke `.dev.vars` dan pilih `ENVIRONMENT=development`. Simpan secret lokal di `.dev.vars`, bukan di Git. Produksi/staging memerlukan key enkripsi eksplisit; jangan mengganti key yang sudah dipakai tanpa migrasi ciphertext.
+Gunakan Node.js 24. Salin `.env.example` ke `.dev.vars` dan pilih `ENVIRONMENT=development`. Simpan secret lokal di `.dev.vars`, bukan di Git. Operasi enkripsi kredensial provider memerlukan key eksplisit; jangan mengganti key yang sudah dipakai tanpa migrasi ciphertext. Halaman umum, autentikasi dan storage tetap berjalan tanpa key provider tersebut; health menandai fitur enkripsi belum siap.
 
 ```bash
 npm ci

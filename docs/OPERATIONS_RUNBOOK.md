@@ -27,7 +27,7 @@ Build meminifikasi CSS langsung ke `dist` sehingga file CSS tracked tidak dituli
 ## 2. Konfigurasi dan staging
 
 - Lokal: salin `.env.example` ke `.dev.vars`, pilih `ENVIRONMENT=development`, jalankan migrasi lokal. Enkripsi provider tetap memerlukan key eksplisit di development.
-- Runtime menganggap environment yang tidak diset sebagai production. Production/staging memerlukan ENCRYPTION_KEY atau SECRET_KEY minimal 16 karakter non-spasi. Untuk key baru gunakan material acak 32 byte atau lebih dari secret manager.
+- Runtime menganggap environment yang tidak diset sebagai production. Operasi enkripsi kredensial provider memerlukan ENCRYPTION_KEY atau SECRET_KEY minimal 16 karakter non-spasi. Tanpanya, halaman umum, login dan storage tetap berjalan, tetapi fitur enkripsi dinyatakan belum siap pada health. Untuk key baru gunakan material acak 32 byte atau lebih dari secret manager setelah inventaris/migrasi data diperiksa.
 - Untuk deployment yang sudah memiliki ciphertext, gunakan key yang sesuai; ikuti bagian migrasi key sebelum menggantinya.
 - Pilih project/environment Pages yang dimaksud saat menyimpan secret. Jalur CLI Pages: `npx wrangler pages secret put ENCRYPTION_KEY --project-name kkg-wanayasa`. Untuk preview/project staging, gunakan pengaturan secret pada environment/project yang bersangkutan; jangan mengasumsikan secret production diwariskan dengan benar.
 - Preview harus memiliki database D1, bucket R2/Supabase dan key provider pengujian tersendiri. Periksa ID binding aktual di dashboard/config sebelum menjalankan perubahan data. Verifikasi itu belum dibuktikan oleh keberadaan `wrangler.jsonc`.
@@ -61,7 +61,8 @@ Drill dinyatakan lulus hanya setelah operator merekam release, tanggal, resource
 
 ## 5. Monitoring dan respons insiden
 
-- Pantau `/api/health` dari monitor eksternal. 503 CONFIGURATION_ERROR menunjukkan konfigurasi runtime belum siap; 503 ADMISSION_UNAVAILABLE menolak panggilan AI ketika kuota D1 tidak dapat diperiksa.
+- Pantau `/api/health` dari monitor eksternal. HTTP 200 dengan `status=degraded` dan `features.credential_encryption=false` berarti layanan utama aktif sementara operasi enkripsi provider belum siap. 503 CONFIGURATION_ERROR menunjukkan konfigurasi yang diisi tidak valid; 503 ADMISSION_UNAVAILABLE menolak panggilan AI ketika kuota D1 tidak dapat diperiksa.
+- Readiness `credential_encryption=true` menyatakan key sudah dikonfigurasi, bukan bukti ciphertext lama cocok dengan key tersebut. Verifikasi pembacaan kredensial melalui prosedur migrasi/pemulihan sebelum menyatakan fitur provider siap.
 - Konfigurasikan Sentry dan tujuan log Cloudflare pada environment yang tepat. Error sampling 100% dan trace sampling 10% adalah baseline kode; verifikasi event benar-benar diterima dengan kejadian sintetis dan request ID.
 - Ukur API baca biasa, login/ekspor, waktu token pertama AI, waktu selesai, tingkat keberhasilan generasi, error provider dan penggunaan biaya sebagai kelas operasi terpisah. Tetapkan target setelah baseline beban representatif tersedia.
 - Tetapkan penerima alert dan prosedur pemulihan. Uji bahwa kegagalan konfigurasi, admission dan provider menghasilkan alert yang diterima, bukan hanya log.

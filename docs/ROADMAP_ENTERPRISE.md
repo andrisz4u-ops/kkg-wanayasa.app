@@ -16,7 +16,7 @@ Dokumen ini menggantikan urutan Fase 0–3 pada audit percakapan sebelumnya. Des
 | --- | --- | --- |
 | 0.1-A | Transport bersama untuk JSON, multipart, ekspor binary; CSRF tanpa bypass tes; kontrak visual slide dan pengaturan | Request klien melewati middleware sebenarnya; token hilang/tidak cocok ditolak; dokumen binary tetap dapat dibaca; diagram dan `gugus` dipertahankan |
 | 0.1-B | TypeScript lokal terkunci, tes backend Node/tes DOM terpisah, scanner dengan cakupan jelas, budget Worker dan browser terpisah | `npm ci`, typecheck, tes/coverage, scanner dan pemeriksaan build lulus; tes tidak mengubah aturan keamanan produksi |
-| 0.1-C | Environment fail-safe, key wajib untuk produksi, kegagalan dekripsi bertipe, panduan migrasi key | Salah konfigurasi menghasilkan respons aman; binding DB/R2/AI tetap ada; key lama tidak ditimpa saat gagal dibaca |
+| 0.1-C | Environment fail-safe, key wajib pada operasi enkripsi provider, kegagalan dekripsi bertipe, panduan migrasi key | Layanan inti tidak diblokir oleh key fitur opsional; operasi enkripsi tetap fail-closed; binding DB/R2/AI tetap ada; key lama tidak ditimpa saat gagal dibaca |
 | 1-A | Admission AI fail-closed; sesi dibaca segar; upgrade hash legacy saat login; audit atomik untuk mutasi administratif sensitif | Tes autentikasi, revokasi, rollback audit, CAS upgrade password, dan kegagalan skema admission lulus |
 | 1-B | Uji migrasi dari kosong dan upgrade; panduan staging terisolasi, backup/restore dan alert | Uji migrasi lokal lulus; operator mencatat hasil drill staging/restore/alert sebelum rilis produksi |
 | 2 | Refactor modul berdasarkan profiling, dokumentasi kontrak API, optimasi aset/query | Perubahan terukur dengan kontrak fitur tetap lulus; bukan migrasi framework wajib |
@@ -32,7 +32,7 @@ Pengecualian CSRF hanya exact path pre-auth (login/register/forgot/reset). Logou
 
 ### Konfigurasi dan enkripsi
 
-Environment yang tidak diisi dianggap production. Lokal memakai `.dev.vars` dengan `ENVIRONMENT=development`. Produksi/staging memerlukan ENCRYPTION_KEY atau SECRET_KEY yang valid. Nilai kosong opsional dinormalisasi; field hasil parsing digabungkan ke binding asli, bukan menggantikannya dengan skema string saja. Salah konfigurasi API menghasilkan 503 generik; log hanya nama field yang salah, tanpa nilainya. Maintenance tetap tersembunyi di luar development.
+Environment yang tidak diisi dianggap production. Lokal memakai `.dev.vars` dengan `ENVIRONMENT=development`. ENCRYPTION_KEY atau SECRET_KEY yang valid diperlukan ketika membaca/menulis kredensial provider terenkripsi, bukan untuk seluruh situs. Kekurangannya menghasilkan readiness fitur `credential_encryption=false` pada health; halaman umum, login dan storage tetap tersedia. Nilai kosong opsional dinormalisasi; field hasil parsing digabungkan ke binding asli, bukan menggantikannya dengan skema string saja. Konfigurasi yang diisi tetapi tidak valid menghasilkan 503 generik; log hanya nama field yang salah, tanpa nilainya. Maintenance tetap tersembunyi di luar development.
 
 Enkripsi AES-GCM dan format ciphertext lama dipertahankan. Tidak ada fallback key publik. Kegagalan dekripsi tidak sama dengan kredensial kosong: pembacaan/pembaruan provider harus gagal tanpa mengirim ciphertext ke provider atau menghapus key lama. Penggantian key enkripsi memerlukan backup dan re-enkripsi terkontrol; bukan penggantian secret acak pada deployment.
 

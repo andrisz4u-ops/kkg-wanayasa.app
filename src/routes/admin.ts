@@ -1391,6 +1391,7 @@ admin.get('/ai-providers', async (c) => {
 
     return successResponse(c, providers);
   } catch (e: any) {
+    if (e instanceof EncryptionError) return c.json({ success: false, error: { code: e.code, message: e.message } }, 503);
     console.error('List AI providers error:', e);
     return Errors.internal(c);
   }
@@ -1452,6 +1453,7 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
 
     return successResponse(c, { id: result.meta.last_row_id, slug: d.slug }, 'Provider berhasil ditambahkan', 201);
   } catch (e: any) {
+    if (e instanceof EncryptionError) return c.json({ success: false, error: { code: e.code, message: e.message } }, 503);
     console.error('Create AI provider error:', e);
     return Errors.internal(c);
   }

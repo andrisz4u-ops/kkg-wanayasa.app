@@ -43,6 +43,7 @@ import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
 import { allowedCorsOrigin } from './lib/cors-origin';
 import { DEFAULT_TENANT_ID } from './lib/tenant';
 import { validateEnv, reportEnvIssue } from './lib/env';
+import { hasEncryptionKey } from './lib/crypto';
 import type { AppBindings, AppVariables } from './types/env';
 
 const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
@@ -231,8 +232,9 @@ app.get('/api/health', async (c) => {
   const isHealthy = checks.database;
 
   return successResponse(c, {
-    status: isHealthy ? 'healthy' : 'unhealthy',
+    status: !isHealthy ? 'unhealthy' : hasEncryptionKey(c.env) ? 'healthy' : 'degraded',
     ...checks,
+    features: { credential_encryption: hasEncryptionKey(c.env) },
     uptime: 'running' // Cloudflare Workers don't have traditional uptime
   }, isHealthy ? 'OK' : 'Service unhealthy', isHealthy ? 200 : 503);
 });
@@ -243,6 +245,7 @@ app.get('/api/health/detailed', requireAdminOnly, async (c) => {
   const checks = {
     database: { status: false, latency: 0 },
     sentry: { status: false, configured: false },
+    credential_encryption: { configured: hasEncryptionKey(c.env) },
     timestamp: new Date().toISOString(),
     version: '2.0.0'
   };

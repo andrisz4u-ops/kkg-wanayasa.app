@@ -44,3 +44,11 @@ Artefak final:
 Audit dependency penuh masih mencatat 22 advisory toolchain (4 moderate, 14 high, 4 critical). Percobaan pembaruan otomatis berhenti pada konflik peer Workers types 4.x dengan Wrangler terbaru yang memerlukan 5.x. Tidak digunakan pemaksaan dependency. Pembaruan toolchain memerlukan pekerjaan kompatibilitas tersendiri; hasil nol audit produksi tidak berarti seluruh dependency aman.
 
 Masih diperlukan bukti operator untuk konfigurasi secret live, migrasi key yang sudah dipakai, pemisahan staging/preview, backup/restore D1 dan object storage, smoke test browser serta alert yang benar-benar diterima. Aplikasi tetap tenant tunggal. Tahap 2–3 merupakan backlog bersyarat sesuai roadmap, bukan klaim sudah diterapkan seluruhnya.
+
+## Hotfix ketersediaan runtime setelah deployment
+
+Pemeriksaan konfigurasi versi awal terlalu luas: tidak adanya key enkripsi provider memblokir homepage dan seluruh API. Hotfix memindahkan kewajiban key ke operasi enkripsi/dekripsi. Halaman, login dan storage tetap tersedia tanpa key provider, sementara health mengembalikan HTTP 200 dengan `status=degraded` dan `features.credential_encryption=false`. Nilai konfigurasi yang diisi tetapi invalid tetap ditolak; tidak ada fallback key publik yang dikembalikan.
+
+Verifikasi hotfix: 1.119 tes lulus dan 1 integrasi dilewati oleh suite umum, typecheck lulus, build dan budget lulus. Coverage lines 66,57%; statements 64,46%; branches 57,33%; functions 74,08%. Worker raw 5.781.733 byte. Tes baru menggunakan aplikasi utama dengan environment production untuk homepage HTML, login, upload R2 dan penolakan penulisan kredensial tanpa key.
+
+Pemeriksaan Cloudflare pada insiden hanya membaca nama secret dan agregat metadata enkripsi D1. Pemulihan layanan inti tidak memigrasikan kredensial. Kredensial provider yang sudah terenkripsi tetap membutuhkan pasangan key yang benar atau migrasi terkontrol; memasang key acak tidak membuktikan data lama dapat dibaca.

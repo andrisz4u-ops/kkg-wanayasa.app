@@ -557,12 +557,21 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const SVG_ELEMENTS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'defs', 'lineargradient', 'radialgradient', 'stop']);
+const SVG_ELEMENTS = new Set([
+  'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'defs',
+  'lineargradient', 'radialgradient', 'stop', 'title', 'desc', 'marker', 'clippath', 'pattern', 'filter',
+  'fegaussianblur', 'fedropshadow', 'femerge', 'femergenode',
+]);
 const SVG_ATTRIBUTES = new Set([
   'xmlns', 'xmlns:xlink', 'viewbox', 'preserveaspectratio', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
   'd', 'points', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
   'stroke-dashoffset', 'stroke-opacity', 'opacity', 'transform', 'id', 'offset', 'stop-color', 'stop-opacity', 'gradientunits',
   'gradienttransform', 'spreadmethod', 'font-family', 'font-size', 'font-weight', 'text-anchor', 'dominant-baseline', 'href', 'xlink:href',
+  // Presentational & accessibility metadata emitted by the visual engine.
+  'style', 'role', 'aria-labelledby', 'font-style', 'letter-spacing', 'stroke-miterlimit', 'dx', 'dy',
+  'clip-path', 'filter', 'in', 'result', 'stddeviation', 'flood-color', 'flood-opacity',
+  'marker-start', 'marker-end', 'markerwidth', 'markerheight', 'orient', 'refx', 'refy',
+  'patternunits', 'patterntransform',
 ]);
 
 function decodeSvgDataUri(value, maxBytes) {
@@ -587,7 +596,7 @@ function decodeSvgDataUri(value, maxBytes) {
   return decoded;
 }
 
-function sanitizeAssessmentSvg(source, maxBytes) {
+export function sanitizeAssessmentSvg(source, maxBytes) {
   if (typeof source !== 'string' || source.length > maxBytes
     || /<!\s*(?:doctype|entity)\b/i.test(source)) throw new Error('SVG rejected');
   const parser = new DOMParser();
@@ -619,11 +628,12 @@ function sanitizeAssessmentSvg(source, maxBytes) {
         && /(?:javascript:|https?:|data:|file:|expression\s*\(|@import)/i.test(value)) throw new Error('SVG rejected');
     }
   }
+  const localPaintTargets = new Set(['lineargradient', 'radialgradient', 'pattern', 'clippath', 'filter', 'marker']);
   for (const element of elements) {
     for (const attr of [...element.attributes]) {
       const value = attr.value.trim();
       const localRef = value.match(/^url\(#([A-Za-z_][\w.-]{0,127})\)$/i);
-      if (localRef && !['lineargradient', 'radialgradient'].includes(ids.get(localRef[1]))) throw new Error('SVG rejected');
+      if (localRef && !localPaintTargets.has(ids.get(localRef[1]))) throw new Error('SVG rejected');
       if ((attr.name.toLowerCase() === 'href' || attr.name.toLowerCase() === 'xlink:href')
         && !['lineargradient', 'radialgradient'].includes(ids.get(value.slice(1)))) throw new Error('SVG rejected');
     }

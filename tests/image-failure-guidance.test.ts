@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it, vi } from 'vitest';
-import { buildStimulusSignature, questionNeedsDiagram, resolveQuestionVisualStimulus } from '../src/routes/kisi';
+import { buildStimulusSignature, hasMarkdownTable, questionNeedsDiagram, resolveQuestionVisualStimulus } from '../src/routes/kisi';
 import { describeImageFailure } from '../public/static/js/image-failure.js';
 
 describe('questionNeedsDiagram', () => {
@@ -19,6 +19,35 @@ describe('questionNeedsDiagram', () => {
     '',
   ])('ignores text that does not require a figure: %s', (soal) => {
     expect(questionNeedsDiagram(soal)).toBe(false);
+  });
+});
+
+describe('markdown table questions', () => {
+  const table = 'Perhatikan tabel kegiatan penggunaan air berikut!\n\n| No | Kegiatan |\n| :--- | :--- |\n| 1 | Menyiram tanaman |';
+
+  it('detects markdown tables', () => {
+    expect(hasMarkdownTable(table)).toBe(true);
+    expect(hasMarkdownTable('Sebuah lingkaran memiliki diameter 20 cm.')).toBe(false);
+    expect(hasMarkdownTable('')).toBe(false);
+  });
+
+  it('never asks a provider for an extra image when the question already has a table', async () => {
+    const searchImage = vi.fn(async () => ({ url: 'https://cdn.example/x.jpg', creditName: 'Provider', source: 'vultr-ai' }));
+    const question: any = {
+      no: 4,
+      soal: table,
+      visual_stimulus: { type: 'siklus_air', params: { pointer: 'evaporasi' } },
+      gambar_keyword: 'siklus air',
+      gambar_prompt_en: 'water cycle diagram',
+    };
+    await resolveQuestionVisualStimulus(
+      question, 'IPAS', 'Siklus Air', { searchImage } as any, new Set(), new Set(), new Set(), false,
+    );
+    expect(searchImage).not.toHaveBeenCalled();
+    expect(question.gambar).toBeUndefined();
+    expect(question.visual_stimulus).toBeUndefined();
+    expect(question.gambar_keyword).toBeUndefined();
+    expect(question.gambar_prompt_en).toBeUndefined();
   });
 });
 

@@ -392,6 +392,10 @@ export const cleanPromptDebris = (text: string): string => {
     return s;
 };
 
+// Helper: deteksi tabel Markdown yang sudah menjadi stimulus soal
+export const hasMarkdownTable = (text: unknown): boolean =>
+    /(?:^|\n)[ \t]*\|[^\n]*\|/.test(String(text || ''));
+
 // Helper: normalisasi Markdown table agar terpisah rapi dari teks pembuka & pertanyaan
 export const normalizeSoalMarkdown = (text: string): string => {
     if (!text) return '';
@@ -647,6 +651,13 @@ export const resolveQuestionVisualStimulus = async (
     usedImageIds?: Set<string>,
     forcePhotoOnly: boolean = false
 ): Promise<void> => {
+    // Tabel Markdown adalah stimulus teks; jangan menambahkan gambar kedua kalinya.
+    if (hasMarkdownTable(q?.soal)) {
+        delete q.visual_stimulus;
+        delete q.gambar_keyword;
+        delete q.gambar_prompt_en;
+        return;
+    }
     // 1. Cek visual stimulus eksplisit dari AI
     let visualCfg = forcePhotoOnly ? null : q.visual_stimulus;
 
@@ -1417,7 +1428,8 @@ export const buildAssessmentPrompt = (params: {
                | :--- | :---: | :---: | :---: | :---: | :---: |
                | Penjualan (kg) | 25 | 32 | 18 | 35 | 29 |
              * DILARANG KERAS menyajikan data tabel hanya dengan spasi/tab tanpa pipa (|), dan DILARANG menulis format semi-tabel seperti "Hari : Senin | Selasa | ...". Seluruh data tabel WAJIB di dalam tabel Markdown utuh!
-             * Berikan jarak baris kosong (\\n\\n) sebelum tabel dan setelah tabel.${gambarRule}
+             * Berikan jarak baris kosong (\\n\\n) sebelum tabel dan setelah tabel.
+             * Butir soal yang menyajikan TABEL Markdown TIDAK BOLEH dijadikan butir bergambar: isi "visual_stimulus": null, "gambar_keyword": "", dan "gambar_prompt_en": "". Tabel TIDAK dihitung sebagai bagian dari kuota butir bergambar.${gambarRule}
         ${isPG ? '9.' : '8.'} LARANGAN: JANGAN menulis teks label "L1", "L2", "L3" di dalam teks pertanyaan yang dibaca murid. Label disimpan pada field "level". JANGAN menambahkan field "gambar" ke soal isian maupun uraian.${isianRule}
         ${getKelasAdaptation(jenjangKelas)}
 
@@ -1612,6 +1624,18 @@ export async function enrichAndNormalizePG(
     // Renumber setelah dedup
     deduped.forEach((q: any, i: number) => { q.no = i + 1; });
 
+    // Tabel Markdown sudah menjadi stimulus mandiri; butir seperti ini tidak boleh
+    // meminta gambar tambahan (mencegah tabel + placeholder gambar sekaligus).
+    for (const q of deduped) {
+        if (!hasMarkdownTable(q.soal)) continue;
+        delete q.visual_stimulus;
+        delete q.gambar_keyword;
+        delete q.gambar_prompt_en;
+        delete q.gambar;
+        delete q.visual_required;
+        if (q.imageRequired === true) q.imageRequired = false;
+    }
+
     // Enforce exact image count jika visual stimulus aktif
     // SPLIT STRATEGY: Bagi kuota 50/50 antara SVG Dinamik dan Foto AI (Vultr/Wiki)
     // Contoh: 10 PG â†’ 2 visual = 1 SVG + 1 Foto, 15 PG â†’ 3 visual = 2 SVG + 1 Foto
@@ -1619,7 +1643,9 @@ export async function enrichAndNormalizePG(
         const svgSlots = Math.ceil(exactImageCount / 2);   // SVG mendapat 50% (dibulatkan ke atas)
         const photoSlots = exactImageCount - svgSlots;     // Foto mendapat sisanya
 
-        const scoredQuestions = deduped.map((q: any, index: number) => {
+        const scoredQuestions = deduped
+            .filter((q: any) => !hasMarkdownTable(q.soal))
+            .map((q: any, index: number) => {
             let score = 0;
             let svgAffinity = 0;   // Semakin tinggi = lebih cocok untuk SVG
             let photoAffinity = 0; // Semakin tinggi = lebih cocok untuk Foto
@@ -1631,11 +1657,11 @@ export async function enrichAndNormalizePG(
 
             // Prioritas tertinggi (+35): Soal yang naskahnya secara intrinsik merujuk pada gambar
             if (/(?:perhatikan|amatilah|look\s+at)\s+(?:the\s+)?(?:gambar|foto|diagram|ilustrasi|picture|image)|(?:pada\s+gambar|in\s+the\s+picture|based\s+on\s+the\s+picture)|gambar\s+di\s+bawah/i.test(soalText)) score += 35;
-            if (soalText.includes('gambar') || soalText.includes('picture') || soalText.includes('image') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta') || soalText.includes('tabel')) score += 5;
+            if (soalText.includes('gambar') || soalText.includes('picture') || soalText.includes('image') || soalText.includes('diagram') || soalText.includes('bagan') || soalText.includes('skema') || soalText.includes('kalender') || soalText.includes('pohon') || soalText.includes('grafik') || soalText.includes('peta')) score += 5;
             if (soalText.includes('perhatikan') || soalText.includes('look at') || soalText.includes('berikut') || soalText.includes('amatilah')) score += 3;
 
             // SVG affinity: konten diagram, geometri, siklus, organ, rangkaian
-            if (/diagram|bangun|sudut|pecahan|siklus|organ|rangkaian|grafik|tabel|jam|waktu|termometer|peta|kompas|tata surya|alur/i.test(soalText)) svgAffinity += 20;
+            if (/diagram|bangun|sudut|pecahan|siklus|organ|rangkaian|grafik|jam|waktu|termometer|peta|kompas|tata surya|alur/i.test(soalText)) svgAffinity += 20;
             // Photo affinity: konten objek konkret, hewan, tumbuhan, tokoh, alat
             if (/hewan|tumbuhan|buah|sayur|makanan|minuman|olahraga|alat|bola|raket|tokoh|pahlawan|profesi|baju|rumah|kendaraan|food|drink|animal|taste/i.test(soalText)) photoAffinity += 20;
 

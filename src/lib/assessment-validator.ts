@@ -195,6 +195,13 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
         const hasVisual = !!(healed.gambar || (healed.visual_stimulus && healed.visual_stimulus.type));
         const hasTable = /\|[\s\S]*?\|[\s\S]*?\|/.test(healed.soal);
 
+        // Tabel Markdown sudah menjadi stimulus; permintaan gambar tambahan dibuang.
+        if (hasTable) {
+            delete healed.visual_stimulus;
+            delete healed.gambar_keyword;
+            delete healed.gambar_prompt_en;
+        }
+
         // Jika soal bilang "perhatikan gambar" padahal tidak ada gambar
         if (!hasVisual && /^(?:perhatikan|amatilah)\s+(?:gambar|foto|bagan|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i.test(healed.soal)) {
             issues.push({

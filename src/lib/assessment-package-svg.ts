@@ -2,7 +2,7 @@ import { load } from 'cheerio';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MAX_SVG_CHARS = 256 * 1024;
-const TAGS = new Set(['svg', 'g', 'defs', 'linearGradient', 'radialGradient', 'stop', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'text', 'tspan', 'title', 'desc', 'clipPath', 'marker', 'filter', 'feDropShadow', 'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode', 'feBlend']);
+const TAGS = new Set(['svg', 'g', 'defs', 'linearGradient', 'radialGradient', 'stop', 'pattern', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'text', 'tspan', 'title', 'desc', 'clipPath', 'marker', 'filter', 'feDropShadow', 'feGaussianBlur', 'feOffset', 'feMerge', 'feMergeNode', 'feBlend']);
 const NUMERIC_ATTRS = new Set([
   'x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'width', 'height', 'viewBox', 'points', 'd',
   'stroke-width', 'stroke-dasharray', 'stroke-dashoffset', 'fill-opacity', 'stroke-opacity', 'stop-opacity', 'opacity', 'offset',
@@ -13,7 +13,7 @@ const NUMERIC_ATTRS = new Set([
 ]);
 const PAINT_ATTRS = new Set(['fill', 'stroke', 'stop-color', 'flood-color', 'color']);
 const LOCAL_REF_ATTRS = new Set(['clip-path', 'filter', 'marker-start', 'marker-mid', 'marker-end']);
-const STYLE_PROPS = new Set(['background', 'border-radius', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'fill-opacity', 'stroke-opacity', 'font-family', 'font-size', 'font-weight', 'text-anchor', 'dominant-baseline']);
+const STYLE_PROPS = new Set(['background', 'border-radius', 'box-shadow', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'opacity', 'fill-opacity', 'stroke-opacity', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'dominant-baseline']);
 
 export class UnsafeAssessmentSvgError extends Error {
   constructor(reason = 'untrusted_svg') { super(reason); }
@@ -37,6 +37,14 @@ function validTransform(value: string) {
   if (value.length > 512 || /[^A-Za-z0-9eE.,+\-\s()]/.test(value) || !boundedNumbers(value)) return false;
   return /^(?:(?:matrix|translate|scale|rotate|skewX|skewY)\([0-9eE.,+\-\s]+\)\s*)+$/.test(value.trim());
 }
+function validDropShadow(value: string) {
+  if (value.length > 160) return false;
+  return /^drop-shadow\(\s*-?[0-9.]+(?:px)?\s+-?[0-9.]+(?:px)?\s+[0-9.]+(?:px)?\s+(?:rgba?\(\s*[0-9.,\s%]{5,40}\)|#[0-9a-f]{3,8}|[a-z]{3,20})\s*\)$/i.test(value.trim());
+}
+function validBoxShadow(value: string) {
+  if (value.length > 160) return false;
+  return /^(?:none|(?:inset\s+)?-?[0-9.]+(?:px)?\s+-?[0-9.]+(?:px)?\s+[0-9.]+(?:px)?(?:\s+[0-9.]+(?:px)?)?\s+(?:rgba?\(\s*[0-9.,\s%]{5,40}\)|#[0-9a-f]{3,8}|[a-z]{3,20}))$/i.test(value.trim());
+}
 function safeStyle(input: string) {
   if (input.length > 1024 || /(?:url\s*\(|@import|expression|javascript:|data:|\\|[<>])/i.test(input)) throw new UnsafeAssessmentSvgError();
   const declarations: string[] = [];
@@ -53,9 +61,12 @@ function safeStyle(input: string) {
 function safeStyleValue(property: string, value: string) {
   if (PAINT_ATTRS.has(property)) return validPaint(value);
   if (property === 'background') return /^(?:none|transparent|#[0-9a-f]{3,8}|white|black)$/i.test(value);
+  if (property === 'box-shadow') return validBoxShadow(value);
   if (property === 'border-radius') return /^[0-9.]+(?:px|%)?$/.test(value);
   if (property === 'font-family') return /^[A-Za-z0-9 ,"'-]{1,120}$/.test(value);
   if (property === 'font-weight') return /^(?:normal|bold|[1-9]00)$/.test(value);
+  if (property === 'font-style') return /^(?:normal|italic|oblique)$/.test(value);
+  if (property === 'stroke-miterlimit') return validNumberList(value);
   if (property === 'text-anchor') return /^(?:start|middle|end)$/.test(value);
   if (property === 'stroke-linecap') return /^(?:butt|round|square)$/.test(value);
   if (property === 'stroke-linejoin') return /^(?:miter|round|bevel|miter-clip|arcs)$/.test(value);
@@ -128,9 +139,31 @@ function checkAttribute(name: string, value: string, isRoot: boolean): string {
     if (!/^(?:none|non-scaling-stroke)$/.test(value)) throw new UnsafeAssessmentSvgError();
     return value;
   }
-  if (LOCAL_REF_ATTRS.has(lowerName)) {
-    if (!/^url\(#[A-Za-z_][\w.-]*\)$/.test(value)) throw new UnsafeAssessmentSvgError();
+  if (lowerName === 'font-style') {
+    if (!/^(?:normal|italic|oblique)$/.test(value)) throw new UnsafeAssessmentSvgError();
     return value;
+  }
+  if (lowerName === 'stroke-miterlimit') {
+    if (!validNumberList(value)) throw new UnsafeAssessmentSvgError();
+    return value;
+  }
+  if (lowerName === 'patternunits') {
+    if (!/^(?:objectBoundingBox|userSpaceOnUse)$/.test(value)) throw new UnsafeAssessmentSvgError();
+    return value;
+  }
+  if (lowerName === 'patterntransform') {
+    if (!validTransform(value)) throw new UnsafeAssessmentSvgError();
+    return value;
+  }
+  if (lowerName === 'orient') {
+    if (value !== 'auto' && value !== 'auto-start-reverse' && !validNumberList(value)) throw new UnsafeAssessmentSvgError();
+    return value;
+  }
+  if (LOCAL_REF_ATTRS.has(lowerName)) {
+    if (value === 'none') return value;
+    if (/^url\(#[A-Za-z_][\w.-]*\)$/.test(value)) return value;
+    if (lowerName === 'filter' && validDropShadow(value)) return value;
+    throw new UnsafeAssessmentSvgError();
   }
   if (lowerName === 'text-anchor') {
     if (!/^(?:start|middle|end)$/.test(value)) throw new UnsafeAssessmentSvgError();
@@ -162,7 +195,7 @@ function checkAttribute(name: string, value: string, isRoot: boolean): string {
   }
   if (NUMERIC_ATTRS.has(name)) {
     const ok = name === 'transform' || name === 'gradientTransform' ? validTransform(value)
-      : name === 'viewBox' || name === 'points' || name === 'd' || name === 'stroke-dasharray' ? validNumberList(value) || name === 'd' && /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]+$/.test(value)
+      : name === 'viewBox' || name === 'points' || name === 'd' || name === 'stroke-dasharray' ? validNumberList(value) || name === 'stroke-dasharray' && value === 'none' || name === 'd' && /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]+$/.test(value)
       : name === 'preserveAspectRatio' ? /^(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max)(?: meet| slice)?)$/.test(value)
       : name === 'orient' ? value === 'auto' || validNumberList(value)
       : ['x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'width', 'height', 'offset'].includes(name) ? validNumberList(value, true)

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getVisualCatalog } from '../src/lib/visuals/catalog';
 import { generateVisualStimulus } from '../src/lib/visual-engine';
+import { sanitizeAssessmentSvg } from '../src/lib/assessment-package-svg';
 import { Window } from 'happy-dom';
 
 describe('Deep XML & DOM Audit for All 200 Visual Stimulus SVGs', () => {
@@ -103,6 +104,20 @@ describe('Deep XML & DOM Audit for All 200 Visual Stimulus SVGs', () => {
       }
     }
 
+    expect(failures).toEqual([]);
+  });
+
+  it('server sanitizer accepts every generated SVG so packages can be saved', () => {
+    const failures: string[] = [];
+    for (const item of catalog) {
+      const res = generateVisualStimulus({ type: item.id, params: item.sampleParams, caption: item.name });
+      if (!res?.svg) continue;
+      try {
+        expect(sanitizeAssessmentSvg(res.svg)).toContain('<svg');
+      } catch (error) {
+        failures.push(`${item.id}: ${(error as Error).message}`);
+      }
+    }
     expect(failures).toEqual([]);
   });
 });

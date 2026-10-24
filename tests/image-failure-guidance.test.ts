@@ -114,6 +114,22 @@ describe('duplicate SVG handling', () => {
     expect(question.gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'required_diagram_missing' });
   });
 
+  it('does not request or flag an image when a data table already answers "Grafik berikut"', async () => {
+    const searchImage = vi.fn(async () => ({ url: 'https://cdn.example/x.jpg', creditName: 'Provider', source: 'vultr-ai' }));
+    const question: any = {
+      no: 8,
+      soal: 'Grafik berikut menunjukkan perubahan suhu udara.\n\n| Waktu | Suhu |\n| :--- | :--- |\n| 06.00 | 22 |',
+      visual_stimulus: { type: 'grafik_garis', params: {} },
+      gambar_keyword: 'grafik suhu',
+    };
+    await resolveQuestionVisualStimulus(
+      question, 'IPAS', 'Suhu Udara', { searchImage } as any, new Set(), new Set(), new Set(), false,
+    );
+    expect(searchImage).not.toHaveBeenCalled();
+    expect(question.gambar).toBeUndefined();
+    expect(question.imageUnavailable).toBeUndefined();
+  });
+
   it('still removes a decorative duplicate diagram without a provider', async () => {
     const question: any = {
       no: 7,

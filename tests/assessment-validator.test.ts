@@ -405,6 +405,39 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             expect(result.summary.flagged_count).toBe(0);
         });
 
+        it('drops PG items with empty options instead of passing them through audit', async () => {
+            const mockAi = { generateJSON: vi.fn().mockResolvedValue({ verifications: [] }) } as any;
+            const finalData = {
+                pg: [
+                    {
+                        no: 1,
+                        soal: 'Hasil dari 2/5 + 1/3 adalah ...',
+                        opsi: { A: '3/8', B: '11/15', C: '3/15', D: '7/15' },
+                        kunci: 'B',
+                        level: 'L2'
+                    },
+                    {
+                        no: 2,
+                        soal: 'Grafik berikut menunjukkan perubahan suhu udara.',
+                        opsi: { A: '', B: '', C: '', D: '' },
+                        kunci: 'C',
+                        level: 'L2'
+                    }
+                ]
+            };
+
+            const result = await runAssessmentQualityGate(mockAi, finalData, {
+                mataPelajaran: 'Matematika',
+                topik: 'Pecahan',
+                jenjangKelas: 'Kelas 5'
+            });
+
+            expect(result.finalData.pg).toHaveLength(1);
+            expect(result.finalData.pg[0].no).toBe(1);
+            expect(result.finalData._qualityGateDropped).toEqual([{ no: 2, reason: 'empty_option' }]);
+            expect(result.finalData._audit.flagged_count).toBeGreaterThanOrEqual(1);
+        });
+
         it('should gracefully degrade using Heuristics Tier if AI Verifier fails or times out', async () => {
             const mockFailingAi = {
                 generateJSON: vi.fn().mockRejectedValue(new Error('API quota exceeded / timeout'))

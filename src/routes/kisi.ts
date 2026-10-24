@@ -1125,7 +1125,7 @@ export const resolveQuestionVisualStimulus = async (
             markQuestionImageUnavailable(q, 'image_search_unavailable');
             delete q.visual_stimulus;
         }
-    } else if (providerImageFallback || questionNeedsDiagram(q.soal)) {
+    } else if (providerImageFallback || (questionNeedsDiagram(q.soal) && !hasMarkdownTable(q.soal))) {
         markQuestionImageUnavailable(q, 'required_diagram_missing');
         delete q.visual_stimulus;
     }
@@ -1781,7 +1781,7 @@ export async function enrichAndNormalizePG(
     // Butir yang menuntut gambar tetapi tidak mendapatkannya harus terlihat oleh guru
     // sebagai kegagalan eksplisit, bukan soal tanpa gambar yang membingungkan siswa.
     for (const q of deduped) {
-        if (questionNeedsDiagram(q?.soal) && !q?.gambar && !q?.visual_stimulus) {
+        if (questionNeedsDiagram(q?.soal) && !hasMarkdownTable(q?.soal) && !q?.gambar && !q?.visual_stimulus) {
             markQuestionImageUnavailable(q, 'required_diagram_missing');
         }
     }
@@ -1986,6 +1986,17 @@ kisi.post('/generate', requireSession, async (c) => {
 
         Object.assign(finalData, attachCurriculumProvenance(finalData, provenance));
         const generationWarnings: string[] = [];
+        const droppedItems = Array.isArray(finalData._qualityGateDropped) ? finalData._qualityGateDropped : [];
+        delete finalData._qualityGateDropped;
+        const dropReasons: Record<string, string> = {
+            empty_option: 'opsi jawaban kosong',
+            duplicate_options: 'opsi jawaban duplikat',
+            missing_key: 'kunci jawaban tidak sesuai opsi',
+            missing_options: 'opsi jawaban tidak tersedia',
+        };
+        for (const dropped of droppedItems) {
+            generationWarnings.push(`Butir PG No. ${dropped.no} dibuang karena ${dropReasons[dropped.reason] || 'opsi jawaban tidak valid'}.`);
+        }
         if (finalData.pg.length < totalPG) generationWarnings.push(`Soal PG tersedia ${finalData.pg.length} dari ${totalPG} yang diminta.`);
         if (finalData.uraian.length < totalUraian) generationWarnings.push(`Soal uraian tersedia ${finalData.uraian.length} dari ${totalUraian} yang diminta.`);
         finalData._generation = { partial: generationWarnings.length > 0, warnings: generationWarnings, requested: { pg: totalPG, isian: totalIsian, uraian: totalUraian } };
@@ -2462,7 +2473,10 @@ kisi.post('/regenerate-batch', requireSession, requireAIAdmission, async (c) => 
                 }
 
                 // Tier 1 Heuristic Quality Gate
-                const { healedItem } = validateQuestionHeuristics(found, jenjangKelas);
+                const { healedItem, isValid } = validateQuestionHeuristics(found, jenjangKelas);
+                if (!isValid) {
+                    return Errors.validation(c, `Butir pengganti No. ${target.no} tidak lolos audit karena opsi atau kunci jawaban tidak valid. Silakan regenerasi ulang.`);
+                }
                 healedItem.audit = {
                     status: 'repaired',
                     quality_score: 95,

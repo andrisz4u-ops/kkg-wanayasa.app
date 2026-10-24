@@ -672,7 +672,29 @@ export async function runAssessmentQualityGate(
         }
     }
 
-    finalData.pg = healedItems;
+    // Hard gate: butir PG dengan opsi kosong/duplikat atau kunci hilang tidak boleh
+    // masuk ke paket. Audit sebelumnya hanya memberi flag tanpa menahan butir rusak.
+    const optionKeys = ['A', 'B', 'C', 'D'];
+    const completePgOptions = (item: any): { ok: boolean; reason?: string } => {
+        const opsi = item?.opsi;
+        if (!opsi || typeof opsi !== 'object') return { ok: false, reason: 'missing_options' };
+        const values = optionKeys.map(key => String(opsi[key] ?? '').trim());
+        if (values.some(value => !value)) return { ok: false, reason: 'empty_option' };
+        if (new Set(values.map(value => value.toLowerCase())).size < 2) return { ok: false, reason: 'duplicate_options' };
+        const kunci = String(item.kunci || '').trim().toUpperCase();
+        if (!optionKeys.includes(kunci) || !String(opsi[kunci] ?? '').trim()) return { ok: false, reason: 'missing_key' };
+        return { ok: true };
+    };
+    const gateDropped: Array<{ no: unknown; reason: string }> = [];
+    const validItems = healedItems.filter((item: any) => {
+        const verdict = completePgOptions(item);
+        if (verdict.ok) return true;
+        gateDropped.push({ no: item?.no, reason: verdict.reason || 'invalid_options' });
+        return false;
+    });
+
+    finalData.pg = validItems;
+    if (gateDropped.length) finalData._qualityGateDropped = gateDropped;
 
     // Update summary
     auditSummary.repaired_count = repairedCount + heuristicRepairs;
@@ -682,6 +704,7 @@ export async function runAssessmentQualityGate(
         ? Math.round(healedItems.reduce((total: number, item: any) => total + (item.audit?.quality_score || 0), 0) / totalItems)
         : 0;
     auditSummary.verifier_model = verifierModel;
+    auditSummary.flagged_count += gateDropped.length;
     finalData._audit = auditSummary;
 
     return { finalData, summary: auditSummary };

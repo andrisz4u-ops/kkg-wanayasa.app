@@ -1,5 +1,5 @@
 import { showToast, showLoading, hideLoading, populateAiModelSelect, renderTahunAjaranOptions, detectUserDefaultKelas, openAiLiveMonitor, closeAiLiveMonitor, streamPost, hasActiveAiJob } from '../utils.js';
-import { api } from '../api.js';
+import { api, apiFetch } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
 import { renderLockedFeature } from '../components.js';
@@ -770,7 +770,7 @@ export function initRpp() {
       onDownloadDocx: async (item) => {
         showToast('Menyiapkan file DOCX...', 'info');
         try {
-          const resp = await fetch('/api/rpp/docx', {
+          const resp = await apiFetch('/api/rpp/docx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -863,7 +863,7 @@ export function initRpp() {
     showToast('Menyiapkan dokumen DOCX...', 'info');
 
     try {
-      const response = await fetch('/api/rpp/docx', {
+      const response = await apiFetch('/api/rpp/docx', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

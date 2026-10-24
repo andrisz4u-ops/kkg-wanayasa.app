@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,7 +22,7 @@ function routeDb() {
     statement.bind = (...values: any[]) => bind(...values.map(value => value instanceof ArrayBuffer ? Buffer.from(value) : value));
     return statement;
   }) as any;
-  db.sqlite.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT);
+  db.sqlite.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1);
     CREATE TABLE sekolah (id INTEGER PRIMARY KEY, nama TEXT, kepala_sekolah TEXT, nip_kepala_sekolah TEXT, kop_surat_url TEXT, npsn TEXT, alamat TEXT);
     CREATE TABLE sessions (id TEXT PRIMARY KEY,user_id INTEGER,expires_at TEXT);
     INSERT INTO users(id,nama,email,role) VALUES (1,'Owner','owner@test','user'),(2,'Foreign','foreign@test','user'),(3,'Admin','admin@test','admin');

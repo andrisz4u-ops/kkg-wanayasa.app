@@ -11,7 +11,7 @@ Ruang kerja digital KKG Gugus 3 Wanayasa untuk mengelola kegiatan komunitas dan 
 
 ## Menjalankan secara lokal
 
-Gunakan Node.js 24. Simpan secret lokal di `.dev.vars`, bukan di Git.
+Gunakan Node.js 24. Salin `.env.example` ke `.dev.vars` dan pilih `ENVIRONMENT=development`. Simpan secret lokal di `.dev.vars`, bukan di Git. Produksi/staging memerlukan key enkripsi eksplisit; jangan mengganti key yang sudah dipakai tanpa migrasi ciphertext.
 
 ```bash
 npm ci
@@ -24,12 +24,19 @@ npm run dev
 ## Pemeriksaan sebelum rilis
 
 ```bash
-npm run check:secrets
-npm test
+npm run check:secrets:full
+npm audit --omit=dev
+npm run typecheck
+npm run check:migrations
+npm run test:coverage
+npm run test:integration
 npm run build
+npm run check:build-budget
 ```
 
-Ketiga pemeriksaan ini berjalan pada setiap pull request melalui `.github/workflows/verify.yml`. Pemeriksaan TypeScript penuh belum masuk CI karena masih ada galat tipe pada generator DOCX, impor modul JavaScript, dan fixture tes. Build yang berhasil tidak berarti pemeriksaan tipe telah bersih.
+Pemeriksaan ini berjalan pada pull request melalui `.github/workflows/verify.yml`. TypeScript dikunci sebagai devDependency. Tes backend HTTP memakai environment Node, sedangkan tes UI memakai DOM. Pengujian integrasi D1 berjalan terisolasi; tidak memakai database produksi.
+
+Roadmap aktif: [docs/ROADMAP_ENTERPRISE.md](docs/ROADMAP_ENTERPRISE.md). Prosedur staging, migrasi key, backup/restore, monitoring dan kriteria rilis: [docs/OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md).
 
 ## Database dan deploy
 

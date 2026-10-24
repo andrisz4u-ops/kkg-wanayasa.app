@@ -3,9 +3,10 @@
   "type": "module",
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
-    "build": "npm run build:slides && npm run build:css && vite build",
+    "build": "npm run build:slides && vite build && npm run build:css:dist",
     "build:slides": "node ./scripts/build-slide-vendor.mjs",
     "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --minify",
+    "build:css:dist": "tailwindcss -i ./src/styles/input.css -o ./dist/static/style.css --minify",
     "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/static/style.css --watch",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist",
@@ -18,7 +19,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check:secrets": "node ./scripts/check-secrets.mjs"
+    "check:secrets": "node ./scripts/check-secrets.mjs",
+    "check:secrets:full": "node ./scripts/check-secrets.mjs --full-scan",
+    "typecheck": "tsc --noEmit",
+    "check:build-budget": "node ./scripts/check-build-budget.mjs",
+    "check:migrations": "node ./scripts/check-migrations.mjs",
+    "test:integration": "node ./scripts/test-integration.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.986.0",
@@ -56,6 +62,7 @@
     "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
+    "typescript": "5.9.3",
     "vite": "^6.3.5",
     "vitest": "^4.0.18",
     "wrangler": "^4.4.0"

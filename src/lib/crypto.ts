@@ -6,7 +6,14 @@
 const ENCRYPTION_ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 const IV_LENGTH = 12;
-const SALT_LENGTH = 16;
+export class EncryptionError extends Error {
+    constructor(public readonly code: 'ENCRYPTION_KEY_REQUIRED' | 'ENCRYPTION_KEY_INVALID' | 'DECRYPT_FAILED') {
+        super(code === 'DECRYPT_FAILED'
+            ? 'Kredensial tersimpan tidak dapat dibaca. Periksa kunci enkripsi dan prosedur pemulihan.'
+            : 'Konfigurasi kunci enkripsi aplikasi belum valid.');
+        this.name = 'EncryptionError';
+    }
+}
 
 let cachedSecret: string | null = null;
 let cachedCryptoKey: CryptoKey | null = null;
@@ -16,7 +23,13 @@ let cachedCryptoKey: CryptoKey | null = null;
  * In production, use a secure key from environment variables
  */
 async function getEncryptionKey(env: Record<string, any>): Promise<CryptoKey> {
-    const secret = env?.ENCRYPTION_KEY || env?.SECRET_KEY || 'default-encryption-key-change-in-production';
+    const secret = env?.ENCRYPTION_KEY || env?.SECRET_KEY;
+    if (!secret) {
+        throw new EncryptionError('ENCRYPTION_KEY_REQUIRED');
+    }
+    if (typeof secret !== 'string' || secret.trim().length < 16) {
+        throw new EncryptionError('ENCRYPTION_KEY_INVALID');
+    }
     if (cachedCryptoKey && cachedSecret === secret) {
         return cachedCryptoKey;
     }
@@ -88,6 +101,7 @@ export async function decrypt(ciphertext: string, env: Record<string, any>): Pro
     
     try {
         const key = await getEncryptionKey(env);
+        if (!isEncrypted(ciphertext)) throw new EncryptionError('DECRYPT_FAILED');
         const [ivHex, encryptedHex] = ciphertext.split(':');
         
         const iv = new Uint8Array(ivHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
@@ -100,9 +114,9 @@ export async function decrypt(ciphertext: string, env: Record<string, any>): Pro
         );
         
         return new TextDecoder().decode(decrypted);
-    } catch (e) {
-        console.error('Decryption failed:', e);
-        return '';
+    } catch (error) {
+        if (error instanceof EncryptionError) throw error;
+        throw new EncryptionError('DECRYPT_FAILED');
     }
 }
 
@@ -113,7 +127,7 @@ export function isEncrypted(value: string): boolean {
     if (!value) return false;
     const parts = value.split(':');
     if (parts.length !== 2) return false;
-    return /^[0-9a-f]{24}$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
+    return /^[0-9a-f]{24}$/i.test(parts[0]) && /^(?:[0-9a-f]{2}){16,}$/i.test(parts[1]);
 }
 
 /**

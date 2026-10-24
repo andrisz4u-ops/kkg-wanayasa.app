@@ -14,6 +14,12 @@ export default defineConfig({
                 'src/types/**',
                 'src/**/*.d.ts',
             ],
+            thresholds: {
+                lines: 64,
+                functions: 72,
+                branches: 56,
+                statements: 62,
+            },
         },
         // Timeout for async tests
         testTimeout: 10000,

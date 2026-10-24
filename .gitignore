@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+coverage/
 
 # Wrangler
 .wrangler/
@@ -17,6 +18,8 @@ pids
 # Secrets, Credentials, and Environment files (NEVER COMMIT)
 .env
 .env.*
+# Templates contain no real secrets; this exception must follow .env.*.
+!.env.example
 *.env
 .dev.vars
 .dev.vars.*

@@ -23,8 +23,9 @@
         "binding": "AI"
     },
     // PERINGATAN KEAMANAN: JANGAN masukkan secrets/API keys (seperti SUPABASE_KEY) di sini!
-    // Gunakan 'npx wrangler secret put <NAME>' atau file lokal '.dev.vars'.
+    // Gunakan 'npx wrangler pages secret put <NAME> --project-name kkg-wanayasa' atau '.dev.vars'.
     "vars": {
+        "ENVIRONMENT": "production",
         "SUPABASE_URL": "https://mytonopqqqxlwywqbadt.supabase.co",
         "SUPABASE_BUCKET": "materi-kkg"
     }

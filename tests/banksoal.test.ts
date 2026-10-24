@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import banksoal from '../src/routes/banksoal';
 import { booleanField, readApiRecord, recordField } from './helpers/typed-api-response';

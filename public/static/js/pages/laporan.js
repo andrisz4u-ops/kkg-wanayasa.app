@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, apiFetch } from '../api.js';
 import { showToast, showLoading, hideLoading, escapeHtml, getActiveTahunAjaran, populateAiModelSelect, getActiveAiProviders } from '../utils.js';
 import { state } from '../state.js';
 import { renderAdminLayout } from '../layouts/admin.js';
@@ -794,7 +794,7 @@ window.handleFotoUploadBatch = async (input) => {
             const formData = new FormData();
             formData.append('file', file);
 
-            const res = await fetch('/api/files/upload', {
+            const res = await apiFetch('/api/files/upload', {
                 method: 'POST',
                 body: formData
             });

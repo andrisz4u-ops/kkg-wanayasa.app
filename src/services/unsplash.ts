@@ -163,11 +163,7 @@ export class UnsplashService {
                 if (row?.api_key) {
                     let key = row.api_key;
                     if (isEncrypted(key)) {
-                        try {
-                            key = await decrypt(key, this.env);
-                        } catch (e) {
-                            console.warn('[VULTR-IMAGE] Decrypt failed:', e);
-                        }
+                        key = await decrypt(key, this.env);
                     }
                     const keys = parseKeyPool(key);
                     if (keys.length > 0 && keys[0]) {
@@ -190,9 +186,7 @@ export class UnsplashService {
                 if (settingRow?.value) {
                     let key = settingRow.value;
                     if (isEncrypted(key)) {
-                        try {
-                            key = await decrypt(key, this.env);
-                        } catch {}
+                        key = await decrypt(key, this.env);
                     }
                     const keys = parseKeyPool(key);
                     if (keys.length > 0 && keys[0]) {

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -42,6 +43,16 @@ function createApp(limit = 1) {
 }
 
 describe('AI session and admission middleware', () => {
+  it('rejects before provider invocation if the quota schema is missing', async () => {
+    let invoked = false;
+    const app = new Hono<any>();
+    app.use('*', async (c, next) => { c.set('user', { id: 7 }); await next(); });
+    app.post('/generate', requireAIAdmission, c => { invoked = true; return c.text('unexpected'); });
+    const response = await app.request('/generate', { method: 'POST' }, { DB: { prepare() { throw new Error('no such table: ai_user_admission'); } } });
+    expect(response.status).toBe(503); expect(invoked).toBe(false);
+    expect(response.headers.get('retry-after')).toBe('30');
+    expect(await response.text()).not.toContain('no such table');
+  });
   it('rejects anonymous requests before the provider is called', async () => {
     const test = createApp();
     const response = await test.app.request('/generate', { method: 'POST' }, test.env);

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import { readFileSync } from 'node:fs';
@@ -11,7 +12,7 @@ function createDatabase() {
     CREATE TABLE users(
       id INTEGER PRIMARY KEY, nama TEXT, email TEXT, password_hash TEXT, role TEXT,
       role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT,
-      foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT
+      foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1
     );
     INSERT INTO users(id, nama, email, role) VALUES(1, 'Owner One', 'one@example.test', 'user'), (2, 'Owner Two', 'two@example.test', 'user');
     CREATE TABLE sessions(id TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT);

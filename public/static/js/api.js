@@ -1,200 +1,26 @@
 // API utility for making requests to the backend
 // Handles standard response format and errors
 
-import { state } from './state.js';
-import { showToast, hasActiveAiJob, getActiveAiJobSignal } from './utils.js';
-
-const API_BASE = '/api';
-let csrfRetryCount = 0;
-const MAX_CSRF_RETRIES = 1;
-
-/**
- * Refresh CSRF token from server
- */
-export async function refreshCsrfToken() {
-    try {
-        const response = await fetch(`${API_BASE}/auth/csrf-token`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            return data.data?.csrf_token || null;
-        }
-    } catch (e) {
-        console.error('Failed to refresh CSRF token:', e);
-    }
-    return null;
-}
-
-/**
- * Custom API Error class
- */
-export class ApiError extends Error {
-    constructor(message, code = 'UNKNOWN_ERROR', status = 500) {
-        super(message);
-        this.name = 'ApiError';
-        this.code = code;
-        this.status = status;
-    }
-}
-
-/**
- * Get CSRF token from cookie
- */
-export function getCsrfToken() {
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrf_token') {
-            return value;
-        }
-    }
-    return null;
-}
+import { hasActiveAiJob, getActiveAiJobSignal } from './utils.js';
+import { request, responseError } from './http-client.js';
+export { ApiError, getCsrfToken, refreshCsrfToken } from './http-client.js';
 
 /**
  * Standard API request wrapper
  * Handles authentication, CSRF, and error responses
  */
-export async function api(path, options = {}) {
+export async function apiFetch(path, options = {}) {
   if (options.method?.toUpperCase() === 'POST' && /\/(rpp|kisi|analisis-cp|program-sekolah|presentation|tts|surat|proker|laporan)\/(generate(?:-section)?|outline|patch-slide|custom)(?:$|\?)/.test(path) && hasActiveAiJob() && options.signal !== getActiveAiJobSignal()) {
     throw new Error('Tinjau hasil atau selesaikan proses AI yang masih terbuka terlebih dahulu.');
   }
-    let cleanPath = path;
-    if (cleanPath.startsWith('/api/')) {
-        cleanPath = cleanPath.substring(4);
-    } else if (cleanPath.startsWith('api/')) {
-        cleanPath = cleanPath.substring(3);
-    }
-    const url = cleanPath.startsWith('/') ? `${API_BASE}${cleanPath}` : `${API_BASE}/${cleanPath}`;
+  return request(path, options);
+}
 
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Important for cookies
-    };
-
-    // Add CSRF token for state-changing methods with auto-fetch if missing
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase())) {
-        let csrfToken = getCsrfToken();
-        if (!csrfToken && !path.includes('/auth/login') && !path.includes('/auth/register') && !path.includes('/auth/csrf-token')) {
-            csrfToken = await refreshCsrfToken();
-        }
-        if (csrfToken) {
-            defaultOptions.headers['X-CSRF-Token'] = csrfToken;
-        }
-    }
-
-    const mergedOptions = {
-        ...defaultOptions,
-        ...options,
-        headers: {
-            ...defaultOptions.headers,
-            ...options.headers,
-        },
-    };
-
-    // If body is FormData, remove Content-Type to let browser set boundary
-    if (mergedOptions.body instanceof FormData) {
-        delete mergedOptions.headers['Content-Type'];
-    }
-    // If body is an object (and not FormData), stringify it
-    else if (mergedOptions.body && typeof mergedOptions.body === 'object') {
-        mergedOptions.body = JSON.stringify(mergedOptions.body);
-    }
-
-    const controller = new AbortController();
-    const cancel = () => controller.abort(options.signal.reason || new DOMException('Permintaan dibatalkan.', 'AbortError'));
-    if (options.signal?.aborted) cancel();
-    else options.signal?.addEventListener('abort', cancel, { once: true });
-    let id;
-    try {
-        const isAiOperation = path.includes('analisis-cp') || path.includes('generate') || path.includes('extract') || path.includes('lampiran') || path.includes('kisi');
-        const defaultTimeout = isAiOperation ? 120000 : 30000;
-        const timeoutMs = options.timeout || defaultTimeout;
-        id = setTimeout(() => controller.abort(), timeoutMs);
-        mergedOptions.signal = controller.signal;
-        // Remove non-fetch properties
-        delete mergedOptions.timeout;
-
-        const response = await fetch(url, mergedOptions);
-
-        // Handle rate limiting
-        if (response.status === 429) {
-            const retryAfter = response.headers.get('Retry-After') || '60';
-            let message = `Terlalu banyak permintaan. Coba lagi dalam ${retryAfter} detik.`;
-            try {
-                const errorData = await response.json();
-                if (errorData.error?.message) message = errorData.error.message;
-            } catch (e) { }
-
-            throw new ApiError(message, 'RATE_LIMITED', 429);
-        }
-
-        // Parse JSON response
-        const data = await response.json();
-
-        // Handle CSRF errors - retry once with fresh token
-        if (response.status === 403 && (data.error?.code === 'CSRF_MISSING' || data.error?.code === 'CSRF_INVALID')) {
-            if (csrfRetryCount < MAX_CSRF_RETRIES) {
-                csrfRetryCount++;
-                console.log('CSRF token invalid, refreshing...');
-                await refreshCsrfToken();
-                // Retry the request with fresh token (csrfRetryCount stays incremented to prevent infinite loop)
-                const result = await api(path, options);
-                csrfRetryCount = 0;
-                return result;
-            }
-            csrfRetryCount = 0;
-        }
-
-        // Handle standardized error responses
-        if (!response.ok || data.success === false) {
-            let errorMessage = data.error?.message || data.message || 'Terjadi kesalahan';
-            const details = data.error?.details;
-            if (details && Array.isArray(details) && details.length > 0) {
-                const detailMsgs = details.map(d => typeof d === 'string' ? d : d.message || `${d.path ? d.path.join('.') + ': ' : ''}${d.message}`).filter(Boolean);
-                if (detailMsgs.length > 0) {
-                    errorMessage = `${errorMessage} (${detailMsgs.join(', ')})`;
-                }
-            }
-            const errorCode = data.error?.code || 'UNKNOWN_ERROR';
-
-            throw new ApiError(errorMessage, errorCode, response.status);
-        }
-
-        return data;
-    } catch (error) {
-        if (options.signal?.aborted) throw options.signal.reason || new DOMException('Permintaan dibatalkan.', 'AbortError');
-        if (error instanceof ApiError) {
-            throw error;
-        }
-
-        // Detailed technical error in console for debugging
-        console.error(`API Error on [${path}]:`, error);
-
-        // Auto-retry once for idempotent GET requests on transient network glitches (e.g. dev server HMR reload)
-        const isGet = !options.method || options.method.toUpperCase() === 'GET';
-        if (isGet && (!options._retryCount || options._retryCount < 1) && error.name !== 'AbortError') {
-            console.warn(`[API] Transient network error on GET [${path}], auto-retrying in 500ms...`);
-            await new Promise(r => setTimeout(r, 500));
-            return api(path, { ...options, _retryCount: (options._retryCount || 0) + 1 });
-        }
-
-        let msg = 'Gagal menghubungi server. Periksa koneksi internet Anda.';
-        if (error.name === 'AbortError') {
-            msg = 'Request timeout. Server terlalu lama merespons (AI sedang sibuk).';
-        } else if (error.message.includes('Failed to fetch')) {
-            msg = 'Tidak dapat menyambung ke server. Periksa koneksi, lalu coba lagi.';
-        }
-
-        throw new ApiError(msg, 'NETWORK_ERROR', 0);
-    } finally {
-        clearTimeout(id);
-        options.signal?.removeEventListener('abort', cancel);
-    }
+export async function api(path, options = {}) {
+  const response = await apiFetch(path, options);
+  const data = await response.json();
+  if (data.success === false) throw responseError(data, response.status);
+  return data;
 }
 
 

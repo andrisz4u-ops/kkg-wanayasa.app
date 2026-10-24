@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import app from '../src/index';
 import { getCurrentUser } from '../src/lib/auth';
@@ -22,12 +23,12 @@ describe('Deployment boundaries', () => {
   it('rejects a request for an organization whose data is not yet isolated', async () => {
     const response = await app.request('https://example.test/api/ai-providers/active', {
       headers: { 'X-Tenant-ID': 'other-organization' },
-    }, { DB: db as any, ENVIRONMENT: 'production' });
+    }, { DB: db as any, ENVIRONMENT: 'production', ENCRYPTION_KEY: 'fixture-encryption-key-for-tests' });
     expect(response.status).toBe(403);
   });
 
   it('does not authorize a valid session from another organization', async () => {
-    db.sqlite.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT);
+    db.sqlite.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1);
       CREATE TABLE sekolah (id INTEGER PRIMARY KEY, nama TEXT, kepala_sekolah TEXT, nip_kepala_sekolah TEXT, kop_surat_url TEXT, npsn TEXT, alamat TEXT);
       CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT);
       INSERT INTO users (id, nama, role, tenant_id) VALUES (1, 'Guru', 'user', 'other-organization');

@@ -42,9 +42,24 @@ import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
 import { allowedCorsOrigin } from './lib/cors-origin';
 import { DEFAULT_TENANT_ID } from './lib/tenant';
+import { validateEnv, reportEnvIssue } from './lib/env';
 import type { AppBindings, AppVariables } from './types/env';
 
 const app = new Hono<{ Bindings: AppBindings, Variables: AppVariables }>();
+
+// Fail-safe configuration; production is the default unless explicitly selected.
+app.use('*', async (c, next) => {
+  if (['/api/init-db', '/api/db-patch/fix-notifications'].includes(c.req.path) && c.env.ENVIRONMENT !== 'development') return c.notFound();
+  const validation = validateEnv(c.env as Record<string, unknown>);
+  if (!validation.ok) {
+    reportEnvIssue(`Konfigurasi tidak valid: ${validation.errors.join(', ')}`);
+    c.header('Cache-Control', 'no-store');
+    return c.json({ success: false, error: { code: 'CONFIGURATION_ERROR', message: 'Konfigurasi layanan belum siap. Hubungi administrator.' } }, 503);
+  }
+  c.env = { ...c.env, ...validation.env }; // Preserve DB, R2, AI and feature bindings.
+  for (const warning of validation.warnings) reportEnvIssue(warning);
+  await next();
+});
 
 // Initialize Sentry error tracking & logger environment
 app.use('*', async (c, next) => {
@@ -91,7 +106,7 @@ app.use('*', secureHeaders({
 // CORS - with proper configuration
 app.use('/api/*', cors({
   origin: (origin, c) => allowedCorsOrigin(origin, c.req.url, c.env.ENVIRONMENT, c.env.CORS_ORIGINS),
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-AI-Job-Id'],
   credentials: true,
   maxAge: 86400,

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { readFileSync } from 'node:fs';
@@ -11,7 +12,7 @@ function createDatabase() {
     CREATE TABLE users(
       id INTEGER PRIMARY KEY, nama TEXT, email TEXT, role TEXT, role_label TEXT,
       nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT,
-      sekolah_id INTEGER, tenant_id TEXT
+      sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1
     );
     INSERT INTO users(id, role, tenant_id) VALUES(1, 'admin', NULL);
     INSERT INTO users(id, role, tenant_id) VALUES(2, 'user', NULL);
@@ -77,6 +78,7 @@ describe('AI admission with SQLite', () => {
     vi.stubGlobal('fetch', fetchMock);
     try {
       const env = {
+        ENVIRONMENT: 'development',
         DB: db,
         AI_ADMISSION_MAX_REQUESTS: '1',
         AI_ADMISSION_WINDOW_SECONDS: '60',

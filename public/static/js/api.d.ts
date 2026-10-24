@@ -1,13 +1,6 @@
-export interface ApiRequestOptions extends RequestInit {
-  body?: BodyInit | Record<string, unknown>;
-}
-
-export class ApiError extends Error {
-  code: string;
-  status: number;
-  constructor(message: string, code?: string, status?: number);
-}
+import type { RequestOptions } from './http-client.js';
+export type ApiRequestOptions = RequestOptions;
+export { ApiError, refreshCsrfToken, getCsrfToken } from './http-client.js';
 
 export function api<T = unknown>(path: string, options?: ApiRequestOptions): Promise<T>;
-export function refreshCsrfToken(): Promise<string | null>;
-export function getCsrfToken(): string | null;
+export function apiFetch(path: string, options?: ApiRequestOptions): Promise<Response>;

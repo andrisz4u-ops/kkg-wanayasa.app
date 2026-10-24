@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import {
   hashPassword,
   verifyPassword,
+  isLegacyPasswordHash,
   generateSessionId,
   getSessionExpiry,
   getCurrentUser,
@@ -33,7 +34,7 @@ const auth = new Hono<{ Bindings: Bindings }>();
 // ============================================
 auth.get('/csrf-token', (c) => {
   const csrfToken = generateCSRFToken();
-  const isProduction = !c.req.url.includes('localhost');
+  const isProduction = new URL(c.req.url).protocol === 'https:';
 
   // Set CSRF cookie (c.header with append: mutasi langsung c.res.headers hilang
   // bila tak ada middleware yang memanggil c.header sebelumnya)
@@ -76,7 +77,7 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
     // Find user with school information
     const user: any = await c.env.DB.prepare(`
       SELECT u.id, u.email, u.password_hash, u.nama, COALESCE(u.role_label, u.role) as role, u.role_label,
-             u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.is_approved, u.sekolah_id, u.tenant_id,
+             u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.is_approved, u.is_active, u.sekolah_id, u.tenant_id,
              s.nama as sekolah_nama, s.kepala_sekolah, s.nip_kepala_sekolah, s.kop_surat_url
       FROM users u
       LEFT JOIN sekolah s ON u.sekolah_id = s.id
@@ -87,6 +88,8 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
       logger.auth('login_failed', undefined, { reason: 'user_not_found', email });
       return Errors.unauthorized(c, 'Email atau password salah');
     }
+
+    if (user.is_active === 0) return Errors.unauthorized(c, 'Email atau password salah');
 
     if (user.tenant_id && user.tenant_id !== DEFAULT_TENANT_ID) {
       logger.auth('login_failed', user.id, { reason: 'tenant_not_enabled' });
@@ -116,13 +119,24 @@ auth.post('/login', rateLimitMiddleware(RATE_LIMITS.auth), async (c) => {
       return Errors.unauthorized(c, 'Email atau password salah');
     }
 
+    let verifiedHash = user.password_hash;
+    if (isLegacyPasswordHash(verifiedHash)) {
+      const upgradedHash = await hashPassword(password);
+      const upgraded = await c.env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?')
+        .bind(upgradedHash, user.id, verifiedHash).run();
+      if (!upgraded.meta.changes) return Errors.unauthorized(c, 'Data akun berubah. Silakan login kembali.');
+      verifiedHash = upgradedHash;
+    }
+
     // Create session
     const sessionId = generateSessionId();
     const expiresAt = getSessionExpiry();
 
-    await c.env.DB.prepare(
-      'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)'
-    ).bind(sessionId, user.id, expiresAt).run();
+    // The credential fence also covers a reset occurring during hash verification.
+    const session = await c.env.DB.prepare(`INSERT INTO sessions (id, user_id, expires_at)
+      SELECT ?, id, ? FROM users WHERE id = ? AND password_hash = ? AND (is_active = 1 OR is_active IS NULL)`)
+      .bind(sessionId, expiresAt, user.id, verifiedHash).run();
+    if (!session.meta.changes) return Errors.unauthorized(c, 'Data akun berubah. Silakan login kembali.');
 
     // Generate CSRF token
     const csrfToken = generateCSRFToken();

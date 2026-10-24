@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
@@ -165,9 +166,10 @@ describe('actual assessment generation ledger routes', () => {
   it('settles a reservation failed when AI admission storage throws', async () => {
     db.sqlite.exec(`CREATE TRIGGER reject_admission BEFORE INSERT ON ai_user_admission BEGIN SELECT RAISE(ABORT,'fixture admission storage failure'); END;`);
     const response = await request('generate');
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: { code: 'ADMISSION_UNAVAILABLE' } });
     expect(harness.calls).toBe(0);
-    expect(db.sqlite.prepare('SELECT state,failure_code FROM assessment_generation_requests').get()).toMatchObject({ state: 'failed', failure_code: 'GENERATION_FAILED' });
+    expect(db.sqlite.prepare('SELECT state,failure_code FROM assessment_generation_requests').get()).toMatchObject({ state: 'failed', failure_code: 'AI_ADMISSION_REJECTED' });
   });
 
   it('retains the shared admission middleware 429 contract and closes the rejected ledger reservation', async () => {

@@ -1,5 +1,5 @@
 import { state } from '../../state.js';
-import { api } from '../../api.js';
+import { api, apiFetch } from '../../api.js';
 import { debounce, escapeHtml } from '../../utils.js';
 import { THEME_PRESETS, renderThemeCards, applyThemeColor } from '../../theme-color.js';
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
@@ -184,14 +184,8 @@ window.uploadLogo = async function (input) {
     previewContainer.innerHTML = '<div class="flex items-center justify-center h-full"><i class="fas fa-spinner fa-spin text-2xl text-[var(--color-primary)]"></i></div>';
 
     try {
-      // Use fetch directly for FormData to let browser set Content-Type with boundary
-      const headers = {};
-      const csrfMatch = document.cookie.match(/csrf_token=([^;]+)/);
-      if (csrfMatch) headers['X-CSRF-Token'] = csrfMatch[1];
-
-      const res = await fetch('/api/admin/settings/logo', {
+      const res = await apiFetch('/api/admin/settings/logo', {
         method: 'POST',
-        headers: headers,
         body: formData
       });
 

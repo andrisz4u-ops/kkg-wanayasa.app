@@ -3,6 +3,8 @@
 
 import { DEFAULT_TENANT_ID } from './tenant';
 
+export type SessionUser = Record<string, unknown> & { id: number };
+
 const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 const SALT_LENGTH = 16;
@@ -51,6 +53,7 @@ export async function hashPassword(password: string): Promise<string> {
  * Supports both new format (salt:hash) and legacy format (plain SHA-256)
  */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (typeof storedHash !== 'string') return false;
   // Check if legacy format (no colon = plain SHA-256)
   if (!storedHash.includes(':')) {
     // Legacy verification for backwards compatibility
@@ -60,11 +63,12 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     const legacyHash = Array.from(new Uint8Array(hash))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    return legacyHash === storedHash;
+    return /^[0-9a-f]{64}$/i.test(storedHash) && timingSafeEqual(legacyHash, storedHash.toLowerCase());
   }
 
   // New format: salt:hash
-  const [saltHex, expectedHashHex] = storedHash.split(':');
+  if (!/^[0-9a-f]{32}:[0-9a-f]{64}$/i.test(storedHash)) return false;
+  const [saltHex, expectedHashHex] = storedHash.toLowerCase().split(':');
 
   // Convert salt from hex to Uint8Array
   const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
@@ -143,41 +147,18 @@ export function getSessionExpiry(): string {
   return date.toISOString();
 }
 
-interface CachedSessionUser {
-  user: any;
-  cachedAt: number;
+export function isLegacyPasswordHash(hash: string): boolean {
+  return /^[0-9a-f]{64}$/i.test(hash);
 }
 
-// Edge in-memory session user cache (reduces repetitive D1 SQLite reads by >85%)
-const sessionUserCache = new Map<string, CachedSessionUser>();
-const SESSION_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes TTL
+/** @deprecated Sessions are no longer cached. Retained for existing callers. */
+export function invalidateSessionUserCache(_sessionId?: string): void {}
 
 /**
- * Invalidate cached session user (called on logout or profile updates)
- */
-export function invalidateSessionUserCache(sessionId?: string): void {
-  if (sessionId) {
-    sessionUserCache.delete(sessionId);
-  } else {
-    sessionUserCache.clear();
-  }
-}
-
-/**
- * Get current authenticated user from session with high-speed edge caching
+ * Read current authorization from D1 on every request, including revocations.
  */
 export async function getCurrentUser(db: D1Database, sessionId: string | undefined) {
   if (!sessionId) return null;
-
-  const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true');
-  const now = Date.now();
-
-  if (!isTest) {
-    const cached = sessionUserCache.get(sessionId);
-    if (cached && (now - cached.cachedAt) < SESSION_CACHE_TTL_MS) {
-      return cached.user;
-    }
-  }
 
   const result = await db.prepare(`
     SELECT u.id, u.nama, u.email, COALESCE(u.role_label, u.role) as role, u.role_label, u.nip, u.sekolah, u.mata_pelajaran, u.no_hp, u.foto_url, u.sekolah_id, u.tenant_id,
@@ -185,22 +166,14 @@ export async function getCurrentUser(db: D1Database, sessionId: string | undefin
     FROM sessions sess 
     JOIN users u ON sess.user_id = u.id 
     LEFT JOIN sekolah s ON u.sekolah_id = s.id
-    WHERE sess.id = ? AND sess.expires_at > datetime('now')
-  `).bind(sessionId).first();
+    WHERE sess.id = ? AND datetime(sess.expires_at) > datetime('now')
+      AND (u.is_active = 1 OR u.is_active IS NULL)
+  `).bind(sessionId).first<SessionUser>();
 
   // Multi-organization data queries are not isolated yet. Reject sessions from
   // other tenants until every route enforces ownership of its records.
   if (result && (result as any).tenant_id && (result as any).tenant_id !== DEFAULT_TENANT_ID) {
-    sessionUserCache.delete(sessionId);
     return null;
-  }
-
-  if (!isTest) {
-    if (result) {
-      sessionUserCache.set(sessionId, { user: result, cachedAt: now });
-    } else {
-      sessionUserCache.delete(sessionId);
-    }
   }
 
   return result;

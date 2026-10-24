@@ -1,0 +1,48 @@
+import { z } from 'zod';
+
+const optionalText = z.preprocess(value => value === '' ? undefined : value, z.string().optional());
+const optionalUrl = z.preprocess(value => value === '' ? undefined : value, z.string().url().optional());
+const optionalKey = z.preprocess(value => value === '' ? undefined : value,
+    z.string().refine(value => value.trim().length >= 16, 'Kunci enkripsi minimal 16 karakter non-spasi').optional());
+
+const envSchema = z.object({
+    ENVIRONMENT: z.enum(['development', 'staging', 'production']).default('production'),
+    ENCRYPTION_KEY: optionalKey,
+    SECRET_KEY: optionalKey,
+    SUPABASE_URL: optionalUrl,
+    SUPABASE_KEY: optionalText,
+    SUPABASE_BUCKET: optionalText,
+    SENTRY_DSN: optionalUrl,
+    CORS_ORIGINS: optionalText,
+    CF_PAGES_COMMIT_SHA: optionalText,
+    QR_SIGNING_SECRET: optionalText,
+    R2_PUBLIC_URL: optionalUrl,
+}).superRefine((env, context) => {
+    if (env.ENVIRONMENT !== 'development' && !env.ENCRYPTION_KEY && !env.SECRET_KEY) {
+        context.addIssue({ code: 'custom', path: ['ENCRYPTION_KEY'], message: 'Kunci enkripsi wajib di production/staging' });
+    }
+});
+
+export type ValidatedEnv = z.infer<typeof envSchema>;
+export type EnvValidationResult =
+    | { ok: true; env: ValidatedEnv; warnings: string[] }
+    | { ok: false; errors: string[]; warnings: string[] };
+
+// The caller retains bindings and provider-specific fields. Never log values.
+export function validateEnv(raw: Record<string, unknown>): EnvValidationResult {
+    const result = envSchema.safeParse(raw);
+    if (!result.success) {
+        return { ok: false, errors: [...new Set(result.error.issues.map(issue => String(issue.path[0] || 'environment')))], warnings: [] };
+    }
+    const warnings: string[] = [];
+    if (result.data.ENVIRONMENT !== 'development' && !result.data.SENTRY_DSN) warnings.push('SENTRY_DSN belum dikonfigurasi.');
+    return { ok: true, env: result.data, warnings };
+}
+
+const reported = new Set<string>();
+export function reportEnvIssue(message: string): void {
+    if (!reported.has(message)) {
+        reported.add(message);
+        console.warn(`[ENV] ${message}`);
+    }
+}

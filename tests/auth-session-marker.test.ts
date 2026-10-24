@@ -21,7 +21,7 @@ const getSetCookies = (res: Response): string[] => {
 
 beforeEach(async () => {
   db = new SqliteD1();
-  db.sqlite.exec(`CREATE TABLE users(id INTEGER PRIMARY KEY, email TEXT, password_hash TEXT, nama TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, is_approved INTEGER, sekolah_id INTEGER, tenant_id TEXT);
+  db.sqlite.exec(`CREATE TABLE users(id INTEGER PRIMARY KEY, email TEXT, password_hash TEXT, nama TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, is_approved INTEGER, is_active INTEGER DEFAULT 1, sekolah_id INTEGER, tenant_id TEXT, last_login_at TEXT);
     CREATE TABLE sekolah(id INTEGER PRIMARY KEY, nama TEXT, kepala_sekolah TEXT, nip_kepala_sekolah TEXT, kop_surat_url TEXT, npsn TEXT, alamat TEXT);
     CREATE TABLE sessions(id TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT);
     CREATE TABLE audit_logs(id INTEGER PRIMARY KEY, user_id INTEGER, action TEXT, entity_type TEXT, entity_id TEXT, details TEXT, ip_address TEXT, user_agent TEXT);`);

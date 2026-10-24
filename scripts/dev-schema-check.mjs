@@ -1,5 +1,5 @@
 export const REQUIRED_LOCAL_SCHEMA = {
-  users: ['id'],
+  users: ['id', 'is_active', 'role_label', 'tenant_id', 'password_hash'],
   sertifikat_presensi: ['nomor_sertifikat'],
   pengumuman: ['id'],
   kegiatan: ['id'],

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi } from 'vitest';
 import app from '../src/index';
 import { arrayField, recordField, readApiRecord, stringField } from './helpers/typed-api-response';
@@ -8,6 +9,7 @@ vi.mock('../src/lib/auth', async importOriginal => ({
 }));
 
 const mockEnv = {
+    ENVIRONMENT: 'development',
     DB: {
         prepare: vi.fn((sql: string) => ({
             bind: vi.fn(() => ({
@@ -23,11 +25,17 @@ const mockEnv = {
     SENTRY_DSN: ''
 };
 
+const CSRF_TOKEN = 'test-csrf-token';
+const csrfHeaders = {
+    Cookie: `csrf_token=${CSRF_TOKEN}`,
+    'X-CSRF-Token': CSRF_TOKEN,
+};
+
 describe('TTS (Teka-Teki Silang) Route Tests', () => {
     it('should reject generation when topik is missing', async () => {
         const res = await app.request('/api/tts/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
+            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session', ...csrfHeaders },
             body: JSON.stringify({
                 mataPelajaran: 'IPAS',
                 topik: ''
@@ -50,7 +58,7 @@ describe('TTS (Teka-Teki Silang) Route Tests', () => {
 
         const res = await app.request('/api/tts/custom', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
+            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session', ...csrfHeaders },
             body: JSON.stringify({
                 mataPelajaran: 'IPAS',
                 jenjangKelas: 'Kelas 5',
@@ -74,7 +82,7 @@ describe('TTS (Teka-Teki Silang) Route Tests', () => {
     it('should reject custom crossword with less than 3 words', async () => {
         const res = await app.request('/api/tts/custom', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
+            headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session', ...csrfHeaders },
             body: JSON.stringify({
                 topik: 'Tes',
                 words: [{ word: 'AIR', clue: 'Benda cair' }]

@@ -1,5 +1,8 @@
 name: Verify
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -15,6 +18,26 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm run check:secrets
-      - run: npm test
-      - run: npm run build
+      - name: Secret scan (full repo)
+        run: npm run check:secrets:full
+      - name: Production dependency advisories
+        run: npm audit --omit=dev
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Fresh and historical migration compatibility
+        run: npm run check:migrations
+      - name: Tests with coverage
+        run: npm run test:coverage
+      - name: Isolated D1 integration
+        run: npm run test:integration
+      - name: Build
+        run: npm run build
+      - name: Separate Worker and browser budgets
+        run: npm run check:build-budget
+      - name: Retain coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore

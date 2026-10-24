@@ -1,6 +1,6 @@
 // public/static/js/pages/program-sekolah/downloaders.js
 
-import { api } from '../../api.js';
+import { api, apiFetch } from '../../api.js';
 import { showToast, showLoading, hideLoading } from '../../utils.js';
 
 /**
@@ -20,7 +20,7 @@ export async function downloadProgramDocx(programData) {
   showLoading('Menyiapkan file Microsoft Word (DOCX)...');
 
   try {
-    const res = await fetch('/api/program-sekolah/docx', {
+    const res = await apiFetch('/api/program-sekolah/docx', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -241,7 +241,7 @@ export async function downloadProgramLampiranOnlyDocx(programData) {
   showLoading('Menyiapkan Lembar Refleksi & Rubrik (DOCX)...');
 
   try {
-    const res = await fetch('/api/program-sekolah/docx-lampiran', {
+    const res = await apiFetch('/api/program-sekolah/docx-lampiran', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ export async function downloadKaldikExcel(programData) {
   showLoading('Menyiapkan file spreadsheet Kalender Pendidikan (Excel .xlsx)...');
 
   try {
-    const res = await fetch('/api/program-sekolah/kaldik-excel', {
+    const res = await apiFetch('/api/program-sekolah/kaldik-excel', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

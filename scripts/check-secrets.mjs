@@ -1,144 +1,84 @@
 #!/usr/bin/env node
-/**
- * scripts/check-secrets.mjs
- * Pre-commit / CI Guard: Mendeteksi dan mencegah kebocoran API Key dan Secret Tokens ke Git.
- */
+// Working-tree or staged-index guard. This is not a Git-history scanner.
+import { execFileSync } from 'node:child_process';
+import { readFileSync, lstatSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-
-const SECRET_PATTERNS = [
-  {
-    name: 'Supabase Service Role JWT Key',
-    regex: /eyJhbGciOi[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g,
-    exclude: /placeholder|dummy|example|mock/i
-  },
-  {
-    name: 'Google API Key',
-    regex: /AIza[0-9A-Za-z-_]{35}/g,
-    exclude: /placeholder|dummy|example|mock/i
-  },
-  {
-    name: 'GitHub Personal Access Token',
-    regex: /(ghp_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{50,})/g,
-    exclude: /placeholder/i
-  },
-  {
-    name: 'Private Key Block',
-    regex: /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/g,
-    exclude: null
-  },
-  {
-    name: 'OpenAI / Claude Secret Key',
-    regex: /sk-(?:live|ant|proj)?[a-zA-Z0-9_-]{32,}/g,
-    exclude: /placeholder|dummy/i
-  }
+const patterns = [
+  ['JWT credential', /eyJhbGciOi[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g],
+  ['Google API key', /AIza[0-9A-Za-z_-]{35}/g],
+  ['GitHub token', /(?:ghp_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{50,})/g],
+  ['Private key', /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/g],
+  ['Provider secret', /sk-(?:live|ant|proj)?[a-zA-Z0-9_-]{32,}/g],
 ];
+const ignoredDirectories = new Set(['.git', 'node_modules', 'dist', '.wrangler', 'coverage', 'graphify-out']);
+const maxBytes = 64 * 1024 * 1024;
 
-const IGNORED_FILES = [
-  'package-lock.json',
-  'scripts/check-secrets.mjs',
-  '.git',
-  'node_modules',
-  'dist'
-];
-
-function getStagedOrTargetFiles() {
-  try {
-    // Coba ambil file yang sedang di-stage untuk git commit
-    const staged = execSync('git diff --cached --name-only --diff-filter=ACM', { encoding: 'utf-8' })
-      .trim()
-      .split('\n')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    if (staged.length > 0) return staged;
-  } catch (e) {
-    // Abaikan jika bukan git repository atau gagal
-  }
-
-  // Jika tidak ada staged files, periksa file-file penting konfigurasi
-  return ['wrangler.jsonc'];
+export function isIgnoredPath(file) {
+  return file.replaceAll('\\', '/').split('/').slice(0, -1).some(part => ignoredDirectories.has(part));
 }
 
-function scanFile(filePath) {
-  if (IGNORED_FILES.some(ign => filePath.includes(ign))) return [];
-  if (!fs.existsSync(filePath)) return [];
-
-  // Khusus wrangler.jsonc: cek jika vars memuat nama secret berbahaya
-  if (filePath.endsWith('wrangler.jsonc') || filePath.endsWith('wrangler.json')) {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const dangerousVars = ['SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SECRET_KEY', 'PRIVATE_KEY', 'API_KEY'];
-    for (const dVar of dangerousVars) {
-      if (new RegExp(`"${dVar}"\\s*:`, 'i').test(content)) {
-        return [{
-          file: filePath,
-          pattern: `Wrangler vars memuat secret key (${dVar})! Gunakan 'npx wrangler secret put' atau file lokal '.dev.vars'.`,
-          line: 1
-        }];
-      }
-    }
-  }
-
-  const stat = fs.statSync(filePath);
-  if (stat.isDirectory() || stat.size > 2 * 1024 * 1024) return []; // Lewati file biner > 2MB
-
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+export function scanContent(file, content) {
   const findings = [];
-
-  for (let lIdx = 0; lIdx < lines.length; lIdx++) {
-    const line = lines[lIdx];
-    for (const pat of SECRET_PATTERNS) {
-      const matches = line.match(pat.regex);
-      if (matches) {
-        for (const m of matches) {
-          if (pat.exclude && pat.exclude.test(line)) continue;
-          // Lewati jika ini adalah placeholder dokumentasi atau template
-          if (line.includes('your-secret') || line.includes('xxx') || line.includes('placeholder')) continue;
-
-          findings.push({
-            file: filePath,
-            pattern: pat.name,
-            line: lIdx + 1,
-            snippet: m.slice(0, 12) + '...' + m.slice(-6)
-          });
-        }
+  const wrangler = /^wrangler(?:[.-][^.]+)*\.jsonc?$/.test(basename(file));
+  for (const [index, line] of content.split(/\r?\n/).entries()) {
+    for (const [name, pattern] of patterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(line)) findings.push({ file, line: index + 1, pattern: name });
+    }
+    if (wrangler) {
+      const property = line.match(/"([A-Z][A-Z0-9_]*)"\s*:/);
+      if (property && /(?:^|_)(?:KEYS?|TOKEN|SECRET)(?:_|$)/.test(property[1])) {
+        findings.push({ file, line: index + 1, pattern: `Secret binding ${property[1]} in Wrangler JSON; use Pages secrets` });
       }
     }
   }
+  return findings; // Never return token bytes or previews.
+}
 
-  return findings;
+export function scanRepository({ cwd = process.cwd(), staged = false } = {}) {
+  const git = (args, encoding = 'utf8') => execFileSync('git', args, { cwd, encoding, maxBuffer: maxBytes });
+  const names = git(staged
+    ? ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z']
+    : ['ls-files', '--cached', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean);
+  const files = [...new Set(names)].filter(file => !isIgnoredPath(file));
+  const findings = [];
+  let scanned = 0, binary = 0;
+  for (const file of files) {
+    let bytes;
+    if (staged) {
+      bytes = git(['show', `:${file}`], null); // Inspect the index, not unstaged edits.
+    } else {
+      let stat;
+      try { stat = lstatSync(resolve(cwd, file)); }
+      catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+      if (stat.isSymbolicLink()) throw new Error(`Symlink needs explicit review: ${file}`);
+      if (!stat.isFile()) continue;
+      if (stat.size > maxBytes) throw new Error(`File exceeds scan budget: ${file}`);
+      bytes = readFileSync(resolve(cwd, file));
+    }
+    if (bytes.subarray(0, 8192).includes(0)) { binary++; continue; }
+    findings.push(...scanContent(file, bytes.toString('utf8')));
+    scanned++;
+  }
+  return { findings, scanned, binary, scope: staged ? 'staged-index' : 'working-tree', historyScanned: false };
 }
 
 function main() {
-  const files = getStagedOrTargetFiles();
-  let totalFindings = [];
-
-  for (const f of files) {
-    const fFindings = scanFile(f);
-    if (fFindings.length > 0) {
-      totalFindings.push(...fFindings);
+  try {
+    const args = process.argv.slice(2);
+    if (args.some(arg => !['--staged', '--full-scan'].includes(arg)) || args.length > 1) throw new Error('Use --full-scan or --staged');
+    const result = scanRepository({ staged: args.includes('--staged') });
+    console.log(`[Security Guard] scope=${result.scope}; text=${result.scanned}; binary-skipped=${result.binary}; history=not-scanned`);
+    for (const finding of result.findings) console.error(`${finding.file}:${finding.line}: ${finding.pattern}`);
+    if (result.findings.length) {
+      console.error('Kredensial terdeteksi. Simpan melalui Pages secrets atau .dev.vars; jangan menambahkan pengecualian baris umum.');
+      process.exitCode = 1;
     }
+  } catch (error) {
+    console.error(`[Security Guard] Scan incomplete: ${error.message}`);
+    process.exitCode = 1;
   }
-
-  if (totalFindings.length > 0) {
-    console.error('\n\x1b[41m\x1b[37m[SECURITY GUARD] TERDETEKSI SECRET / API KEY BERBAHAYA!\x1b[0m');
-    console.error('Commit DIBATALKAN untuk mencegah kebocoran kredensial ke GitHub:\n');
-    totalFindings.forEach(f => {
-      console.error(`  - \x1b[33m${f.file}:${f.line}\x1b[0m -> \x1b[31m${f.pattern}\x1b[0m`);
-      if (f.snippet) console.error(`    Teks: ${f.snippet}`);
-    });
-    console.error('\n\x1b[36mSolusi:\x1b[0m');
-    console.error('1. Hapus secret dari file kode / konfigurasi.');
-    console.error('2. Simpan secret di Cloudflare menggunakan: npx wrangler secret put <NAME>');
-    console.error('3. Untuk pengujian lokal, gunakan file .dev.vars (pastikan tercantum di .gitignore).\n');
-    process.exit(1);
-  }
-
-  console.log('\x1b[32m[Security Guard] OK: Tidak ditemukan secret atau API key terlarang.\x1b[0m');
-  process.exit(0);
 }
-
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();

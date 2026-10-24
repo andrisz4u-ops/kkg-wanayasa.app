@@ -2,7 +2,7 @@
 // public/static/js/pages/analisis-cp/downloaders.js
 
 import { showToast } from '../../utils.js';
-import { api } from '../../api.js';
+import { api, apiFetch } from '../../api.js';
 import { state } from '../../state.js';
 import { openArchiveDrawer } from '../../storage-archive.js';
 import { syncCanvasToAnalysisData } from './renderers.js';
@@ -77,7 +77,7 @@ export async function downloadDocx(type = 'analisis', currentAnalysisData, curre
         await new Promise(r => setTimeout(r, attempt * 1200));
       }
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

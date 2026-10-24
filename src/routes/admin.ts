@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { getCurrentUser, getCookie, hashPassword } from '../lib/auth';
-import { encrypt, decrypt, isEncrypted } from '../lib/crypto';
+import { encrypt, decrypt, isEncrypted, EncryptionError } from '../lib/crypto';
 import { successResponse, Errors } from '../lib/response';
 import {
   createAuditLog,
+  buildAuditStatement,
   getAuditLogs,
   getAuditActionTypes,
   getAuditEntityTypes,
@@ -530,23 +531,20 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       updates.push({ key: 'supabase_key', value: validatedData.supabase_key });
     }
 
-    // Execute updates
-    for (const { key, value } of updates) {
-      await c.env.DB.prepare(`
+    const statements = updates.map(({ key, value }) => c.env.DB.prepare(`
         INSERT INTO settings (key, value, updated_at) 
         VALUES (?, ?, datetime('now'))
         ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')
-      `).bind(key, value, value).run();
-    }
+      `).bind(key, value, value));
 
     // Audit log
-    await createAuditLog(c.env.DB, {
+    await c.env.DB.batch([...statements, buildAuditStatement(c.env.DB, {
       user_id: currentUser.id,
       action: 'SETTINGS_UPDATE',
       details: { updated_keys: updates.map(u => u.key) },
       ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
       user_agent: c.req.header('User-Agent')
-    });
+    })]);
 
     return successResponse(c, null, 'Pengaturan berhasil disimpan');
   } catch (e: any) {
@@ -653,7 +651,7 @@ admin.post('/users', requireStrictAdmin, userCreateRateLimit, async (c) => {
     }
 
     const { nama, email, password, role, sekolah, nip } = validation.data;
-    const dbRole = (role === 'operator' || role === 'super_admin') ? 'admin' : 'user';
+    const dbRole = ['admin', 'operator', 'super_admin'].includes(role) ? 'admin' : 'user';
 
     // Check if email exists
     const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first();
@@ -663,7 +661,7 @@ admin.post('/users', requireStrictAdmin, userCreateRateLimit, async (c) => {
 
     const passwordHash = await hashPassword(password);
 
-    const result = await c.env.DB.prepare(`
+    const mutation = c.env.DB.prepare(`
       INSERT INTO users (nama, email, password_hash, role, role_label, sekolah, nip, is_approved, approved_at, approved_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), ?)
     `).bind(
@@ -675,18 +673,17 @@ admin.post('/users', requireStrictAdmin, userCreateRateLimit, async (c) => {
       sekolah || null,
       nip || null,
       currentUser.id
-    ).run();
+    );
 
     // Audit log
-    await createAuditLog(c.env.DB, {
+    const [result] = await c.env.DB.batch([mutation, buildAuditStatement(c.env.DB, {
       user_id: currentUser.id,
       action: 'USER_CREATE',
       entity_type: 'user',
-      entity_id: result.meta.last_row_id,
       details: { name: nama, email, role },
       ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
       user_agent: c.req.header('User-Agent')
-    });
+    }, { kind: 'user', key: email.toLowerCase() })]);
 
     return successResponse(c, { id: result.meta.last_row_id }, 'User berhasil dibuat', 201);
   } catch (e: any) {
@@ -827,7 +824,7 @@ admin.put('/users/:id', requireStrictAdmin, writeRateLimit, async (c) => {
     }
 
     const { nama, sekolah, email, role, nip } = validation.data;
-    const dbRole = (role === 'operator' || role === 'super_admin') ? 'admin' : 'user';
+    const dbRole = role && ['admin', 'operator', 'super_admin'].includes(role) ? 'admin' : 'user';
 
     // Check user exists
     const user: any = await c.env.DB.prepare(
@@ -859,7 +856,7 @@ admin.put('/users/:id', requireStrictAdmin, writeRateLimit, async (c) => {
     }
 
     const updates: any[] = [];
-    let query = 'UPDATE users SET updated_at = datetime("now")';
+    let query = "UPDATE users SET updated_at = datetime('now')";
 
     if (nama !== undefined) { query += ', nama = ?'; updates.push(nama); }
     if (nip !== undefined) { query += ', nip = ?'; updates.push(nip || null); }
@@ -890,18 +887,15 @@ admin.put('/users/:id', requireStrictAdmin, writeRateLimit, async (c) => {
     query += ' WHERE id = ?';
     updates.push(idNum);
 
-    await c.env.DB.prepare(query).bind(...updates).run();
-
-    // Audit log
-    await createAuditLog(c.env.DB, {
+    await c.env.DB.batch([c.env.DB.prepare(query).bind(...updates), buildAuditStatement(c.env.DB, {
       user_id: currentUser.id,
-      action: 'USER_PROFILE_UPDATE',
+      action: role === undefined ? 'USER_PROFILE_UPDATE' : 'USER_ROLE_CHANGE',
       entity_type: 'user',
       entity_id: idNum,
       details: { updated_user_id: idNum, updates: { nama, sekolah, email, role } },
       ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
       user_agent: c.req.header('User-Agent')
-    });
+    })]);
 
     return successResponse(c, null, 'Data user berhasil diperbarui');
   } catch (e: any) {
@@ -952,12 +946,11 @@ admin.post('/users/:id/reset-password', requireStrictAdmin, writeRateLimit, asyn
 
     // Hash and update password
     const newHash = await hashPassword(new_password);
-    await c.env.DB.prepare(`
+    await c.env.DB.batch([c.env.DB.prepare(`
       UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?
-    `).bind(newHash, idNum).run();
-
-    // Invalidate all sessions for this user
-    await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(idNum).run();
+    `).bind(newHash, idNum),
+    c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(idNum),
+    buildAuditStatement(c.env.DB, { user_id: c.get('user').id, action: 'USER_PASSWORD_RESET', entity_type: 'user', entity_id: idNum })]);
 
     return successResponse(c, null, 'Password berhasil direset');
   } catch (e: any) {
@@ -1001,10 +994,7 @@ admin.delete('/users/:id', requireStrictAdmin, async (c) => {
       }
     }
 
-    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
-
-    // Log the action
-    await createAuditLog(c.env.DB, {
+    await c.env.DB.batch([c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id), buildAuditStatement(c.env.DB, {
       user_id: currentUser.id,
       action: 'USER_DELETE',
       entity_type: 'user',
@@ -1012,7 +1002,7 @@ admin.delete('/users/:id', requireStrictAdmin, async (c) => {
       details: { deleted_user_id: id },
       ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
       user_agent: c.req.header('User-Agent')
-    });
+    })]);
 
     return successResponse(c, null, 'User berhasil dihapus');
   } catch (e: any) {
@@ -1389,11 +1379,7 @@ admin.get('/ai-providers', async (c) => {
     const providers = await Promise.all((result.results || []).map(async (row: any) => {
       let rawKey = row.api_key || '';
       if (rawKey && isEncrypted(rawKey)) {
-        try {
-          rawKey = await decrypt(rawKey, c.env);
-        } catch {
-          // keep as is
-        }
+        rawKey = await decrypt(rawKey, c.env);
       }
       const pool = maskApiKeyPool(rawKey);
       return {
@@ -1447,23 +1433,22 @@ admin.post('/ai-providers', requireStrictAdmin, providerWriteLimit, async (c) =>
       }
     }
 
-    const result = await c.env.DB.prepare(`
+    const mutation = c.env.DB.prepare(`
       INSERT INTO ai_providers (name, slug, api_type, base_url, model, api_key, priority, is_active, max_tokens, temperature, extra_headers, extra_body, capability)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       d.name, d.slug, d.api_type, d.base_url, d.model, storedKey,
       d.priority, d.is_active, d.max_tokens, d.temperature,
       d.extra_headers || '{}', d.extra_body || '{}', d.capability || 'text'
-    ).run();
+    );
 
     const currentUser: any = c.get('user');
-    await createAuditLog(c.env.DB, {
-      user_id: currentUser?.id || 1,
+    const [result] = await c.env.DB.batch([mutation, buildAuditStatement(c.env.DB, {
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_CREATE',
       entity_type: 'ai_provider',
-      entity_id: result.meta.last_row_id,
       details: `Created AI provider: ${d.name} (${d.slug})`
-    });
+    }, { kind: 'ai_provider', key: d.slug })]);
 
     return successResponse(c, { id: result.meta.last_row_id, slug: d.slug }, 'Provider berhasil ditambahkan', 201);
   } catch (e: any) {
@@ -1490,15 +1475,13 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
     const d = validation.data;
 
     // Check if api_key was modified or left masked (Smart Mask Reconciliation)
-    if (d.api_key !== undefined) {
+    if (Object.prototype.hasOwnProperty.call(body, 'api_key') && d.api_key !== undefined) {
       const lines = d.api_key.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
 
       // Decrypt existing stored keys to reconcile masked lines
       let existingRawKey = existing.api_key || '';
       if (existingRawKey && isEncrypted(existingRawKey)) {
-        try {
-          existingRawKey = await decrypt(existingRawKey, c.env);
-        } catch {}
+        existingRawKey = await decrypt(existingRawKey, c.env);
       }
       const existingKeyList = parseKeyPool(existingRawKey);
 
@@ -1560,7 +1543,7 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
     };
 
     for (const [key, val] of Object.entries(fields)) {
-      if (val !== undefined) {
+      if (Object.prototype.hasOwnProperty.call(body, key) && val !== undefined) {
         updates.push(`${key} = ?`);
         values.push(val);
       }
@@ -1573,21 +1556,18 @@ admin.put('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async (c)
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
 
-    await c.env.DB.prepare(
-      `UPDATE ai_providers SET ${updates.join(', ')} WHERE id = ?`
-    ).bind(...values).run();
-
     const currentUser: any = c.get('user');
-    await createAuditLog(c.env.DB, {
-      user_id: currentUser?.id || 1,
+    await c.env.DB.batch([c.env.DB.prepare(`UPDATE ai_providers SET ${updates.join(', ')} WHERE id = ?`).bind(...values), buildAuditStatement(c.env.DB, {
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_UPDATE',
       entity_type: 'ai_provider',
       entity_id: id,
       details: `Updated AI provider: ${d.name || existing.name}`
-    });
+    })]);
 
     return successResponse(c, null, 'Provider berhasil diperbarui');
   } catch (e: any) {
+    if (e instanceof EncryptionError) return c.json({ success: false, error: { code: e.code, message: e.message } }, 503);
     console.error('Update AI provider error:', e);
     return Errors.internal(c);
   }
@@ -1602,16 +1582,14 @@ admin.delete('/ai-providers/:id', requireStrictAdmin, providerWriteLimit, async 
     const existing: any = await c.env.DB.prepare('SELECT name FROM ai_providers WHERE id = ?').bind(id).first();
     if (!existing) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
 
-    await c.env.DB.prepare('DELETE FROM ai_providers WHERE id = ?').bind(id).run();
-
     const currentUser: any = c.get('user');
-    await createAuditLog(c.env.DB, {
-      user_id: currentUser?.id || 1,
+    await c.env.DB.batch([c.env.DB.prepare('DELETE FROM ai_providers WHERE id = ?').bind(id), buildAuditStatement(c.env.DB, {
+      user_id: currentUser.id,
       action: 'AI_PROVIDER_DELETE',
       entity_type: 'ai_provider',
       entity_id: id,
       details: `Deleted AI provider: ${existing.name}`
-    });
+    })]);
 
     return successResponse(c, null, 'Provider berhasil dihapus');
   } catch (e: any) {
@@ -1724,9 +1702,7 @@ admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit,
       if (existing?.api_key) {
         let stored = existing.api_key;
         if (isEncrypted(stored)) {
-          try {
-            stored = await decrypt(stored, c.env);
-          } catch {}
+          stored = await decrypt(stored, c.env);
         }
         const keyList = parseKeyPool(stored);
         if (keyList.length > 0) {
@@ -1849,9 +1825,12 @@ admin.put('/ai-providers/:id/toggle', requireStrictAdmin, providerWriteLimit, as
     if (!existing) return c.json({ success: false, error: { code: 'NOT_FOUND', message: 'Provider tidak ditemukan' } }, 404);
 
     const newState = existing.is_active ? 0 : 1;
-    await c.env.DB.prepare(
+    await c.env.DB.batch([c.env.DB.prepare(
       'UPDATE ai_providers SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(newState, id).run();
+    ).bind(newState, id), buildAuditStatement(c.env.DB, {
+      user_id: c.get('user').id, action: 'AI_PROVIDER_TOGGLE', entity_type: 'ai_provider', entity_id: id,
+      details: { is_active: newState },
+    })]);
 
     return successResponse(c, { is_active: newState }, `Provider ${newState ? 'diaktifkan' : 'dinonaktifkan'}`);
   } catch (e: any) {

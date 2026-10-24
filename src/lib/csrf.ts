@@ -7,32 +7,14 @@ const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_EXPIRY_SECONDS = 60 * 60 * 24; // 24 hours
 
-// Paths that should be excluded from CSRF protection (auth-related endpoints)
-const CSRF_IGNORE_PATHS = [
+// Exact pre-auth endpoints only. Multipart, exports, logout and maintenance
+// use the same token rule as other state-changing requests.
+const CSRF_IGNORE_PATHS = new Set([
     '/api/auth/login',
     '/api/auth/register',
-    '/api/auth/logout',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
-    '/api/health',
-    '/api/init-db',
-    '/api/admin/settings/logo', // File upload uses FormData
-    '/api/files/upload', // File upload uses FormData
-    '/api/rpp/generate', // AI generation (session-authenticated)
-    '/api/rpp/docx', // DOCX generation (session-authenticated, JSON body)
-    '/api/analisis-cp/generate', // AI generation (session-authenticated)
-    '/api/analisis-cp/generate-stream', // AI streaming (session-authenticated)
-    '/api/analisis-cp/extract-structure', // Structure extraction (session-authenticated)
-    '/api/analisis-cp/docx', // DOCX generation (session-authenticated, JSON body)
-    '/api/kisi/generate', // AI generation (session-authenticated)
-    '/api/presentation/generate', // AI generation (session-authenticated)
-    '/api/presentation/outline', // AI outline (session-authenticated)
-    '/api/presentation/patch-slide', // AI single-slide patch (session-authenticated)
-    '/api/tts/generate', // AI generation (session-authenticated)
-    '/api/tts/custom', // Crossword assembler (session-authenticated)
-    '/api/banksoal*', // Bank Soal API (session-authenticated)
-    '/api/program-sekolah*', // Program Sekolah AI & DOCX (session-authenticated)
-];
+]);
 
 /**
  * Generate and set CSRF token cookie
@@ -41,7 +23,8 @@ export function setCSRFCookie(c: any): string {
     const token = generateCSRFToken();
     c.header(
         'Set-Cookie',
-        `${CSRF_COOKIE_NAME}=${token}; Path=/; HttpOnly=false; SameSite=Strict; Max-Age=${CSRF_EXPIRY_SECONDS}`
+        `${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Lax; Max-Age=${CSRF_EXPIRY_SECONDS}${new URL(c.req.url).protocol === 'https:' ? '; Secure' : ''}`,
+        { append: true }
     );
     return token;
 }
@@ -50,12 +33,7 @@ export function setCSRFCookie(c: any): string {
  * Check if a path should be ignored for CSRF validation
  */
 function shouldIgnorePath(path: string): boolean {
-    return CSRF_IGNORE_PATHS.some(ignorePath => {
-        if (ignorePath.endsWith('*')) {
-            return path.startsWith(ignorePath.slice(0, -1));
-        }
-        return path === ignorePath || path.startsWith(ignorePath + '/');
-    });
+    return CSRF_IGNORE_PATHS.has(path);
 }
 
 /**
@@ -79,12 +57,13 @@ export function csrfMiddleware() {
             return;
         }
 
-        // Get token from cookie
-        const cookieHeader = c.req.header('Cookie');
+        // Get token from cookie (Hono normalizes header names to lower-case on iteration,
+        // but c.req.header() is case-insensitive via Headers.get)
+        const cookieHeader = c.req.header('Cookie') ?? c.req.header('cookie');
         const cookieToken = getCookie(cookieHeader, CSRF_COOKIE_NAME);
 
-        // Get token from header
-        const headerToken = c.req.header(CSRF_HEADER_NAME);
+        // Get token from header (case-insensitive)
+        const headerToken = c.req.header(CSRF_HEADER_NAME) ?? c.req.header(CSRF_HEADER_NAME.toLowerCase());
 
         // Validate tokens exist and match
         if (!cookieToken || !headerToken) {

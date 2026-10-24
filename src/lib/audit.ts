@@ -52,29 +52,33 @@ export interface AuditLogWithUser extends AuditLogEntry {
 }
 
 /**
- * Create an audit log entry
+ * Compose an audit statement for the same D1 batch as a critical mutation.
+ * A new entity can be looked up by its unique key inside that transaction.
  */
+export function buildAuditStatement(
+    db: D1Database,
+    entry: AuditLogEntry,
+    createdEntity?: { kind: 'user' | 'ai_provider'; key: string },
+): D1PreparedStatement {
+    const entitySql = createdEntity
+        ? createdEntity.kind === 'user' ? '(SELECT id FROM users WHERE email = ?)' : '(SELECT id FROM ai_providers WHERE slug = ?)'
+        : '?';
+    const details = typeof entry.details === 'object' ? JSON.stringify(entry.details) : entry.details || null;
+    return db.prepare(`INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, user_agent)
+        VALUES (?, ?, ?, ${entitySql}, ?, ?, ?)`).bind(
+        entry.user_id, entry.action, entry.entity_type || null,
+        createdEntity?.key ?? entry.entity_id ?? null, details,
+        entry.ip_address || null, entry.user_agent || null,
+    );
+}
+
+/** Best-effort audit for noncritical activity; critical writers use a batch. */
 export async function createAuditLog(
     db: D1Database,
     entry: AuditLogEntry
 ): Promise<void> {
     try {
-        const detailsJson = typeof entry.details === 'object'
-            ? JSON.stringify(entry.details)
-            : entry.details || null;
-
-        await db.prepare(`
-            INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, user_agent)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).bind(
-            entry.user_id,
-            entry.action,
-            entry.entity_type || null,
-            entry.entity_id || null,
-            detailsJson,
-            entry.ip_address || null,
-            entry.user_agent || null
-        ).run();
+        await buildAuditStatement(db, entry).run();
     } catch (error) {
         console.error('Failed to create audit log:', error);
         // Don't throw - audit logging should not break the main flow

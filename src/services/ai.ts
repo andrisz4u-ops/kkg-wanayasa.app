@@ -213,11 +213,7 @@ export class AIService {
 
             // Decrypt key if stored with AES-GCM encryption
             if (key && isEncrypted(key)) {
-                try {
-                    key = await decrypt(key, this.env);
-                } catch (decErr) {
-                    console.warn(`[AI-KEY] Decryption failed for provider ${row.slug}:`, decErr);
-                }
+                key = await decrypt(key, this.env);
             }
 
             // Parse key pool (supports single string, newline-separated list, or JSON array)
@@ -265,7 +261,7 @@ export class AIService {
         if (slug.includes('claude') || slug.includes('anthropic')) return this.env.ANTHROPIC_API_KEY || '';
         if (slug.includes('bedrock')) return this.env.BEDROCK_API_KEY || '';
         if (slug.includes('glm') || slug.includes('z_ai') || slug.includes('zhipu')) return this.env.Z_AI_API_KEY || '';
-        if (p.api_type === 'custom_proxy') return this.env.AI_BACKEND_KEY || 'kkg-2026-rahasia';
+        if (p.api_type === 'custom_proxy') return this.env.AI_BACKEND_KEY || '';
         return '';
     }
 
@@ -1820,7 +1816,13 @@ CRITICAL JSON RULES:
     // ─── Custom Proxy ─────────────────────────────────────────────
 
     private async callCustomProxy(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
-        const apiKey = p.api_key || this.env?.AI_BACKEND_KEY || 'kkg-2026-rahasia';
+        const apiKey = p.api_key || this.env?.AI_BACKEND_KEY || '';
+        if (!apiKey) {
+            throw new Error(
+                `API key untuk custom_proxy "${p.name}" (${p.slug}) tidak tersedia. ` +
+                'Isi api_key di tabel ai_providers atau set AI_BACKEND_KEY via `wrangler secret put`.'
+            );
+        }
 
         const response = await fetch(p.base_url, {
             method: 'POST',
@@ -1864,11 +1866,7 @@ CRITICAL JSON RULES:
 
         let key = row.api_key || '';
         if (key && isEncrypted(key)) {
-            try {
-                key = await decrypt(key, this.env);
-            } catch (e) {
-                console.warn('[AI-CHECK] Decrypt failed:', e);
-            }
+            key = await decrypt(key, this.env);
         }
 
         let keys = parseKeyPool(key);

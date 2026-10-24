@@ -35,12 +35,11 @@ export const requireAIAdmission: MiddlewareHandler<{
     if (!admitted) {
       return Errors.rateLimited(c, Math.max(1, windowStart + windowSeconds - now));
     }
-  } catch (err: any) {
-    if (String(err?.message || err).includes('no such table: ai_user_admission')) {
-      console.warn('[AI Admission] Table ai_user_admission not ready, allowing request gracefully.');
-    } else {
-      throw err;
-    }
+  } catch {
+    // No provider call is allowed if its shared quota could not be checked.
+    console.error('[AI Admission] Shared quota unavailable; request rejected.');
+    c.header('Retry-After', '30');
+    return c.json({ success: false, error: { code: 'ADMISSION_UNAVAILABLE', message: 'Layanan AI belum siap. Silakan coba lagi nanti.' } }, 503);
   }
   await next();
 };

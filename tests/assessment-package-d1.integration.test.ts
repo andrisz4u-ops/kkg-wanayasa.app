@@ -35,7 +35,7 @@ describe.skipIf(!enabled)('assessment package routes on isolated Wrangler D1', (
           try { await db.prepare(statement).run(); } catch (error) { throw new Error(`${file}: ${statement.slice(0, 100)}`, { cause: error }); }
         }
       };
-      await db.prepare('CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, password_hash TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT)').run();
+      await db.prepare('CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, password_hash TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1)').run();
       await db.prepare('CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT)').run();
       await db.prepare('CREATE TABLE sekolah (id INTEGER PRIMARY KEY, nama TEXT, kepala_sekolah TEXT, nip_kepala_sekolah TEXT, kop_surat_url TEXT, npsn TEXT, alamat TEXT)').run();
       await execSql('0018_bank_soal.sql');

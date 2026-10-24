@@ -91,7 +91,7 @@ export const generateSuratSchema = z.object({
     model: z.string().max(100).optional().default('vertex'),
     aiProvider: z.string().max(100).optional(),
     lampiran: z.string().max(200).optional().nullable(),
-}).passthrough();
+}).strict();
 
 export const guruSppdItemSchema = z.object({
     nama: z.string().min(1, 'Nama guru harus diisi'),
@@ -127,7 +127,7 @@ export const generateSppdSchema = z.object({
     isi_lhp: z.string().optional(),
     model: z.string().max(100).optional().default('vertex'),
     aiProvider: z.string().max(100).optional(),
-}).passthrough();
+}).strict();
 
 // ============================================
 // Proker Schemas
@@ -229,7 +229,7 @@ export const presentationGenerateSchema = z.object({
     slideCount: z.coerce.number().int().min(3).max(30).default(8),
     aiProvider: z.string().optional(),
     template: z.string().max(80).optional(),
-    customOutline: z.array(presentationOutlineItemSchema.passthrough()).optional(),
+    customOutline: z.array(presentationOutlineItemSchema.strip()).optional(),
 });
 
 const speakerNotesSchema = z
@@ -247,6 +247,18 @@ export const presentationImageSchema = z.object({
     creditUrl: z.string().optional().default('https://unsplash.com'),
     unsplashId: z.string().max(80).optional().default('image'),
 });
+
+const visualLabel = z.string().max(300).optional();
+const visualNodes = z.array(z.object({ label: z.string().min(1).max(120), detail: z.string().max(500).optional() })).min(2).max(4);
+// Keep the same diagram contract used by slides/lesson-model.js and its editor.
+// Strip unrelated normalized fields (including NaN -> null from JSON) per variant.
+export const presentationVisualSchema = z.discriminatedUnion('type', [
+    z.object({ type: z.literal('fraction'), numerator: z.number().int().min(0), denominator: z.number().int().min(2).max(12), label: visualLabel })
+        .refine(v => v.numerator <= v.denominator, 'Pembilang tidak boleh melebihi penyebut'),
+    z.object({ type: z.literal('numberLine'), min: z.number(), max: z.number(), value: z.number(), label: visualLabel })
+        .refine(v => v.max > v.min && v.value >= v.min && v.value <= v.max, 'Posisi garis bilangan tidak valid'),
+    ...(['process', 'cycle', 'concept'] as const).map(type => z.object({ type: z.literal(type), nodes: visualNodes, label: visualLabel })),
+]);
 
 export const baseSlideSchema = z.object({
     layout: z.string().optional().default('content'),
@@ -289,8 +301,9 @@ export const baseSlideSchema = z.object({
     imageQuery: z.any().transform(v => v ? String(v) : undefined).optional(),
     imageAlt: z.any().transform(v => v ? String(v) : undefined).optional(),
     image: z.any().optional(),
+    visual: presentationVisualSchema.optional(),
     speakerNotes: z.any().transform(v => v ? String(v) : undefined).optional(),
-}).passthrough().transform((slide: any) => {
+}).strip().transform((slide: any) => {
     // If question is an array of objects (e.g. Mistral format)
     if (Array.isArray(slide.question) && slide.question.length > 0) {
         const q0 = slide.question[0];
@@ -336,7 +349,7 @@ export const presentationResponseSchema = z.object({
     title: z.any().transform(v => String(v || 'Presentasi Pembelajaran')).optional().default('Presentasi Pembelajaran'),
     subtitle: z.any().transform(v => v ? String(v) : undefined).optional(),
     slides: z.array(baseSlideSchema).min(1).max(50),
-}).passthrough();
+}).strip();
 
 export const presentationPatchSlideSchema = z.object({
     currentSlide: baseSlideSchema,
@@ -420,6 +433,7 @@ export const updateSettingsSchema = z.object({
     supabase_bucket: z.string().max(100).optional(),
     nama_kkg: z.string().max(200).optional(),
     nama_organisasi: z.string().max(200).optional(),
+    gugus: z.string().max(100).optional(),
     nama_ketua: z.string().max(100).optional(),
     nip_ketua: z.string().max(30).optional(),
     nama_sekretaris: z.string().max(100).optional(),
@@ -450,7 +464,7 @@ export const updateSettingsSchema = z.object({
     kutipan_pengawas: z.string().max(2000).optional(),
     kutipan_ketua: z.string().max(2000).optional(),
     theme_color: z.string().max(50).optional(),
-}).passthrough();
+}).strict();
 
 // Extended admin schemas for better validation
 export const createUserAdminSchema = z.object({

@@ -771,6 +771,7 @@ describe('Visual Quota Allocation & Split Contract (10 PG -> 1 SVG + 1 Photo)', 
                 exactImageCount: 2
             });
 
+            expect(result.length).toBe(10);
             expect(result[1].gambar?.type).toBe('svg');
             expect(result[1].gambar?.svg).toBeDefined();
 

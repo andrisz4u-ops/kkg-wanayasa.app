@@ -354,6 +354,10 @@ function normalizeSoalMarkdown(text) {
   if (!text) return '';
   let clean = cleanPromptDebris(text);
 
+  // Pisahkan kalimat pengantar soal jika menyatu dalam satu baris dengan tabel
+  clean = clean.replace(/([^\n|]+?)\s*:\s*(\|.+)/g, '$1:\n$2');
+  clean = clean.replace(/([^\n|]+?[!.:])\s*(\|[ \t]*[^-\s|][^|]*\|)/g, '$1\n$2');
+
   // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
   clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');
 
@@ -516,6 +520,15 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
       .filter(row => row.length > 0);
 
     if (rows.length > 0) {
+      if (isFirstLine && noText) {
+        items.push(makeParaRaw([new TextRun({ text: `${noText} `, bold: true, size: 22, font: FONT_LATIN })], {
+          align: AlignmentType.LEFT,
+          spaceBefore: 4,
+          spaceAfter: 2,
+          indent: { left, hanging }
+        }));
+        isFirstLine = false;
+      }
       const header = rows[0];
       const dataRows = rows.slice(1);
       const BORDER_BLACK = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
@@ -1024,72 +1037,12 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
       const HANGING        = QUESTION_INDENT;
 
       if (imgData) {
-          const isUltraWide = imgData.width > 0 && imgData.height > 0 && (imgData.width / imgData.height >= 2.5);
-
-          if (isUltraWide) {
-              const cell1 = new window.docx.TableCell({
-                 children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
-                 borders: NO_BORDERS,
-                 width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
-                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
-                 verticalAlign: window.docx.VerticalAlign.TOP
-              });
-
-              const cell2Children = [];
-              cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
-              cell2Children.push(makeAssessmentImageParagraph(imgData, 14, 3.2));
-              cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0, IMAGE_CELL_TEXT_WIDTH, 12));
-
-              const cell2 = new window.docx.TableCell({
-                 children: cell2Children,
-                 borders: NO_BORDERS,
-                 width: { size: IMAGE_CELL_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
-                 verticalAlign: window.docx.VerticalAlign.TOP
-              });
-
-              children.push(new window.docx.Table({
-                 width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-                 borders: NO_BORDERS,
-                 rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
-              }));
-          } else {
-              // SIDE BY SIDE: Kolom 1 Nomor, Kolom 2 Teks & Opsi, Kolom 3 Gambar Stimulus
-              const cell1 = new window.docx.TableCell({
-                 children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
-                 borders: NO_BORDERS,
-                 width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
-                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
-                 verticalAlign: window.docx.VerticalAlign.TOP
-              });
-
-              const sideColLayout = Math.min(colLayout, 2);
-              const cellTextChildren = [];
-              cellTextChildren.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
-              cellTextChildren.push(...makeOpsiParagraphs(opts, sideColLayout, 0, SIDE_TEXT_WIDTH, 12));
-
-              const cellText = new window.docx.TableCell({
-                 children: cellTextChildren,
-                 borders: NO_BORDERS,
-                 width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-                 margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
-                 verticalAlign: window.docx.VerticalAlign.TOP
-              });
-
-              const cellImage = new window.docx.TableCell({
-                 children: [makeAssessmentImageParagraph(imgData, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
-                 borders: NO_BORDERS,
-                 width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
-                 margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
-                 verticalAlign: window.docx.VerticalAlign.TOP
-              });
-
-              children.push(new window.docx.Table({
-                 width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-                 borders: NO_BORDERS,
-                 rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
-              }));
-          }
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
+        const isUltraWide = imgData.width > 0 && imgData.height > 0 && (imgData.width / imgData.height >= 2.5);
+        const maxW = isUltraWide ? 14 : 8.0;
+        const maxH = isUltraWide ? 3.2 : 4.2;
+        children.push(makeAssessmentImageParagraph(imgData, maxW, maxH, AlignmentType.CENTER));
+        children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT, PAGE_TEXT_WIDTH, 12));
       } else {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
         children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT, PAGE_TEXT_WIDTH, 12));
@@ -1258,42 +1211,13 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
       }
     } else {
       for (const q of data.isian.data) {
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
         const image = assessmentImages.get(q);
         if (image) {
           const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
-          if (isUltraWide) {
-            children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
-            children.push(makeAssessmentImageParagraph(image, 14, 3.2));
-          } else {
-            const cell1 = new window.docx.TableCell({
-              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
-              borders: NO_BORDERS,
-              width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
-              margins: { top: 0, bottom: 0, left: 0, right: 0 },
-              verticalAlign: window.docx.VerticalAlign.TOP
-            });
-            const cellText = new window.docx.TableCell({
-              children: [...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 })],
-              borders: NO_BORDERS,
-              width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-              margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
-              verticalAlign: window.docx.VerticalAlign.TOP
-            });
-            const cellImage = new window.docx.TableCell({
-              children: [makeAssessmentImageParagraph(image, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
-              borders: NO_BORDERS,
-              width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
-              margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
-              verticalAlign: window.docx.VerticalAlign.TOP
-            });
-            children.push(new window.docx.Table({
-              width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-              borders: NO_BORDERS,
-              rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
-            }));
-          }
-        } else {
-          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+          const maxW = isUltraWide ? 14 : 8.0;
+          const maxH = isUltraWide ? 3.2 : 4.2;
+          children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.CENTER));
         }
       }
     }
@@ -1304,42 +1228,13 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
     for (const q of data.uraian) {
+      children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
       const image = assessmentImages.get(q);
       if (image) {
         const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
-        if (isUltraWide) {
-          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
-          children.push(makeAssessmentImageParagraph(image, 14, 3.2));
-        } else {
-          const cell1 = new window.docx.TableCell({
-            children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
-            borders: NO_BORDERS,
-            width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
-            margins: { top: 0, bottom: 0, left: 0, right: 0 },
-            verticalAlign: window.docx.VerticalAlign.TOP
-          });
-          const cellText = new window.docx.TableCell({
-            children: [...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 })],
-            borders: NO_BORDERS,
-            width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-            margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
-            verticalAlign: window.docx.VerticalAlign.TOP
-          });
-          const cellImage = new window.docx.TableCell({
-            children: [makeAssessmentImageParagraph(image, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
-            borders: NO_BORDERS,
-            width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
-            margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
-            verticalAlign: window.docx.VerticalAlign.TOP
-          });
-          children.push(new window.docx.Table({
-            width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-            borders: NO_BORDERS,
-            rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
-          }));
-        }
-      } else {
-        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+        const maxW = isUltraWide ? 14 : 8.0;
+        const maxH = isUltraWide ? 3.2 : 4.2;
+        children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.CENTER));
       }
     }
   }

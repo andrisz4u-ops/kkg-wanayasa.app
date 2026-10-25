@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { inspectAssessmentImageCapDependencies } from '../scripts/preflight-assessment-image-cap.mjs';
 
 const cap = 1_572_864;
-const tempParent = join(tmpdir(), 'opencode');
+const tempParent = tmpdir();
 const migrationPath = resolve('migrations/0044_assessment_image_capacity.sql');
 const migrations = new Set<Awaited<ReturnType<typeof getPlatformProxy>>>();
 const temporaryRoots = new Set<string>();

@@ -17,9 +17,7 @@ const assetId = '123e4567-e89b-42d3-a456-426614174001';
 
 describe.skipIf(!enabled)('assessment package routes on isolated Wrangler D1', () => {
   it('runs asset, package, moderation, copy, revision, and CAS regressions on real Miniflare D1', async () => {
-    const tempParent = join(tmpdir(), 'opencode');
-    await mkdir(tempParent, { recursive: true });
-    const root = await mkdtemp(join(tempParent, 'kkg-assessment-d1-'));
+    const root = await mkdtemp(join(tmpdir(), 'kkg-assessment-d1-'));
     const state = join(root, 'state');
     const configPath = join(root, 'wrangler.jsonc');
     let proxy: Awaited<ReturnType<typeof getPlatformProxy>> | undefined;

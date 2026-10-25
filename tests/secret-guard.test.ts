@@ -27,7 +27,7 @@ describe('secret guard coverage', () => {
   });
 
   it('examines workflows, untracked files, and staged bytes rather than later edits', () => {
-    const root = mkdtempSync(join(tmpdir(), 'opencode', 'kkg-secret-guard-')); roots.push(root);
+    const root = mkdtempSync(join(tmpdir(), 'kkg-secret-guard-')); roots.push(root);
     execFileSync('git', ['init', '--quiet'], { cwd: root });
     mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
     const file = join(root, '.github', 'workflows', 'fixture.yml');
@@ -40,7 +40,7 @@ describe('secret guard coverage', () => {
   });
 
   it('fails explicitly outside a git repository', () => {
-    const root = mkdtempSync(join(tmpdir(), 'opencode', 'kkg-not-git-')); roots.push(root);
+    const root = mkdtempSync(join(tmpdir(), 'kkg-not-git-')); roots.push(root);
     expect(() => scanRepository({ cwd: root })).toThrow();
   });
 });

@@ -50,7 +50,7 @@ SELECT COUNT(*) AS assets, COALESCE(SUM(byte_length),0) AS bytes FROM assessment
 `;
 
 function runQuery(text) {
-  const dir = mkdtempSync(join(tmpdir(), 'opencode', 'kkg-inspect-'));
+  const dir = mkdtempSync(join(tmpdir(), 'kkg-inspect-'));
   const file = join(dir, 'inspect.sql');
   try {
     writeFileSync(file, text, 'utf8');

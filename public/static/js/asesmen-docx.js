@@ -36,6 +36,15 @@ const IMAGE_MAX_WIDTH_CM = 7;
 const IMAGE_MAX_HEIGHT_CM = 5;
 const CM_TO_PX = 96 / 2.54;
 
+// Layout Side-by-Side untuk Butir Soal Bergambar:
+// Kolom 1 (Nomor Soal) = QUESTION_INDENT (~0.6 cm = 340 dxa)
+// Kolom 2 (Teks Soal + Opsi Jawaban) = SIDE_TEXT_WIDTH (~11.0 cm = 6237 dxa)
+// Kolom 3 (Gambar Stimulus di Kanan) = SIDE_IMAGE_WIDTH (~6.8 cm = 3856 dxa)
+const SIDE_IMAGE_WIDTH = CM(6.8);
+const SIDE_TEXT_WIDTH = PAGE_TEXT_WIDTH - QUESTION_INDENT - SIDE_IMAGE_WIDTH;
+const SIDE_MAX_IMAGE_WIDTH_CM = 6.4;
+const SIDE_MAX_IMAGE_HEIGHT_CM = 4.8;
+
 // ============================================================
 // HELPER: split teks menjadi segmen {text, isSunda}
 // ============================================================
@@ -119,22 +128,25 @@ export function selectOptionColumns(opsi) {
   return longest <= 12 ? 4 : longest <= 30 ? 2 : 1;
 }
 
-export function assessmentImageDisplaySize(image) {
+export function assessmentImageDisplaySize(image, maxW_cm = IMAGE_MAX_WIDTH_CM, maxH_cm = IMAGE_MAX_HEIGHT_CM) {
   const width = Number(image && image.width);
   const height = Number(image && image.height);
-  if (!(width > 0) || !(height > 0)) return { width: 220, height: 145 };
-  const maxWidthPx = IMAGE_MAX_WIDTH_CM * CM_TO_PX;
-  const maxHeightPx = IMAGE_MAX_HEIGHT_CM * CM_TO_PX;
+  if (!(width > 0) || !(height > 0)) {
+    const defaultScale = Math.min(maxW_cm / IMAGE_MAX_WIDTH_CM, maxH_cm / IMAGE_MAX_HEIGHT_CM);
+    return { width: Math.round(220 * defaultScale), height: Math.round(145 * defaultScale) };
+  }
+  const maxWidthPx = maxW_cm * CM_TO_PX;
+  const maxHeightPx = maxH_cm * CM_TO_PX;
   const scale = Math.min(maxWidthPx / width, maxHeightPx / height, 2);
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
 
-function makeAssessmentImageParagraph(image) {
-  const size = assessmentImageDisplaySize(image);
+function makeAssessmentImageParagraph(image, maxW_cm = IMAGE_MAX_WIDTH_CM, maxH_cm = IMAGE_MAX_HEIGHT_CM, align = window.docx.AlignmentType.CENTER) {
+  const size = assessmentImageDisplaySize(image, maxW_cm, maxH_cm);
   return new window.docx.Paragraph({
-    alignment: window.docx.AlignmentType.CENTER,
+    alignment: align,
     keepNext: true,
-    spacing: { before: PT(3), after: PT(4) },
+    spacing: { before: PT(2), after: PT(2) },
     children: [new window.docx.ImageRun({
       data: image.buffer,
       transformation: size,
@@ -1012,32 +1024,72 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
       const HANGING        = QUESTION_INDENT;
 
       if (imgData) {
-          const cell1 = new window.docx.TableCell({
-             children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
-             borders: NO_BORDERS,
-             width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
-             margins: { top: 0, bottom: 0, left: 0, right: 0 },
-             verticalAlign: window.docx.VerticalAlign.TOP
-          });
+          const isUltraWide = imgData.width > 0 && imgData.height > 0 && (imgData.width / imgData.height >= 2.5);
 
-          const cell2Children = [];
-          cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
-          cell2Children.push(makeAssessmentImageParagraph(imgData));
-          cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0, IMAGE_CELL_TEXT_WIDTH, 12));
+          if (isUltraWide) {
+              const cell1 = new window.docx.TableCell({
+                 children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
+                 borders: NO_BORDERS,
+                 width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
+                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                 verticalAlign: window.docx.VerticalAlign.TOP
+              });
 
-          const cell2 = new window.docx.TableCell({
-             children: cell2Children,
-             borders: NO_BORDERS,
-             width: { size: IMAGE_CELL_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-             margins: { top: 0, bottom: 0, left: 0, right: 0 },
-             verticalAlign: window.docx.VerticalAlign.TOP
-          });
+              const cell2Children = [];
+              cell2Children.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
+              cell2Children.push(makeAssessmentImageParagraph(imgData, 14, 3.2));
+              cell2Children.push(...makeOpsiParagraphs(opts, colLayout, 0, IMAGE_CELL_TEXT_WIDTH, 12));
 
-          children.push(new window.docx.Table({
-             width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
-             borders: NO_BORDERS,
-             rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
-          }));
+              const cell2 = new window.docx.TableCell({
+                 children: cell2Children,
+                 borders: NO_BORDERS,
+                 width: { size: IMAGE_CELL_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                 verticalAlign: window.docx.VerticalAlign.TOP
+              });
+
+              children.push(new window.docx.Table({
+                 width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+                 borders: NO_BORDERS,
+                 rows: [new window.docx.TableRow({ children: [cell1, cell2] })]
+              }));
+          } else {
+              // SIDE BY SIDE: Kolom 1 Nomor, Kolom 2 Teks & Opsi, Kolom 3 Gambar Stimulus
+              const cell1 = new window.docx.TableCell({
+                 children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
+                 borders: NO_BORDERS,
+                 width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
+                 margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                 verticalAlign: window.docx.VerticalAlign.TOP
+              });
+
+              const sideColLayout = Math.min(colLayout, 2);
+              const cellTextChildren = [];
+              cellTextChildren.push(...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 }));
+              cellTextChildren.push(...makeOpsiParagraphs(opts, sideColLayout, 0, SIDE_TEXT_WIDTH, 12));
+
+              const cellText = new window.docx.TableCell({
+                 children: cellTextChildren,
+                 borders: NO_BORDERS,
+                 width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+                 margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
+                 verticalAlign: window.docx.VerticalAlign.TOP
+              });
+
+              const cellImage = new window.docx.TableCell({
+                 children: [makeAssessmentImageParagraph(imgData, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
+                 borders: NO_BORDERS,
+                 width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
+                 margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
+                 verticalAlign: window.docx.VerticalAlign.TOP
+              });
+
+              children.push(new window.docx.Table({
+                 width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+                 borders: NO_BORDERS,
+                 rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
+              }));
+          }
       } else {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
         children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT, PAGE_TEXT_WIDTH, 12));
@@ -1206,9 +1258,43 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
       }
     } else {
       for (const q of data.isian.data) {
-        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
         const image = assessmentImages.get(q);
-        if (image) children.push(makeAssessmentImageParagraph(image));
+        if (image) {
+          const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
+          if (isUltraWide) {
+            children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+            children.push(makeAssessmentImageParagraph(image, 14, 3.2));
+          } else {
+            const cell1 = new window.docx.TableCell({
+              children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
+              borders: NO_BORDERS,
+              width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
+              margins: { top: 0, bottom: 0, left: 0, right: 0 },
+              verticalAlign: window.docx.VerticalAlign.TOP
+            });
+            const cellText = new window.docx.TableCell({
+              children: [...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 })],
+              borders: NO_BORDERS,
+              width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+              margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
+              verticalAlign: window.docx.VerticalAlign.TOP
+            });
+            const cellImage = new window.docx.TableCell({
+              children: [makeAssessmentImageParagraph(image, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
+              borders: NO_BORDERS,
+              width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
+              margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
+              verticalAlign: window.docx.VerticalAlign.TOP
+            });
+            children.push(new window.docx.Table({
+              width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+              borders: NO_BORDERS,
+              rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
+            }));
+          }
+        } else {
+          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+        }
       }
     }
   }
@@ -1218,9 +1304,43 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     children.push(makePara('III. URAIAN', { bold: true, size: 22, spaceBefore: 10, spaceAfter: 4 }));
     children.push(makePara('Jawablah pertanyaan di bawah ini dengan jelas dan tepat!', { italics: true, size: 19, spaceAfter: 6 }));
     for (const q of data.uraian) {
-      children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
       const image = assessmentImages.get(q);
-      if (image) children.push(makeAssessmentImageParagraph(image));
+      if (image) {
+        const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
+        if (isUltraWide) {
+          children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+          children.push(makeAssessmentImageParagraph(image, 14, 3.2));
+        } else {
+          const cell1 = new window.docx.TableCell({
+            children: [makeParaRaw([new TextRun({ text: `${q.no}. `, bold: true, size: 22, font: FONT_LATIN })], { align: AlignmentType.LEFT })],
+            borders: NO_BORDERS,
+            width: { size: QUESTION_INDENT, type: window.docx.WidthType.DXA },
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            verticalAlign: window.docx.VerticalAlign.TOP
+          });
+          const cellText = new window.docx.TableCell({
+            children: [...buildSoalDocxChildren('', q.soal, { left: 0, hanging: 0 })],
+            borders: NO_BORDERS,
+            width: { size: SIDE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+            margins: { top: 0, bottom: 0, left: 0, right: PT(8) },
+            verticalAlign: window.docx.VerticalAlign.TOP
+          });
+          const cellImage = new window.docx.TableCell({
+            children: [makeAssessmentImageParagraph(image, SIDE_MAX_IMAGE_WIDTH_CM, SIDE_MAX_IMAGE_HEIGHT_CM, AlignmentType.CENTER)],
+            borders: NO_BORDERS,
+            width: { size: SIDE_IMAGE_WIDTH, type: window.docx.WidthType.DXA },
+            margins: { top: 0, bottom: 0, left: PT(4), right: 0 },
+            verticalAlign: window.docx.VerticalAlign.TOP
+          });
+          children.push(new window.docx.Table({
+            width: { size: PAGE_TEXT_WIDTH, type: window.docx.WidthType.DXA },
+            borders: NO_BORDERS,
+            rows: [new window.docx.TableRow({ children: [cell1, cellText, cellImage] })]
+          }));
+        }
+      } else {
+        children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: CM(0.6), hanging: CM(0.6) }));
+      }
     }
   }
 

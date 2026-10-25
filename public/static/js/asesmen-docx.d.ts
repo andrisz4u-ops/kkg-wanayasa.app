@@ -4,7 +4,7 @@ export function preloadAsesmenImages(data: AssessmentData | null | undefined): v
 export function prepareAssessmentExportImages(data: AssessmentData | null | undefined): Promise<AssessmentImagePreflightResult>;
 export function sanitizeAssessmentSvg(source: string, maxBytes: number): string;
 export function selectOptionColumns(opsi: Record<string, unknown> | null | undefined): 1 | 2 | 4;
-export function assessmentImageDisplaySize(image: { width?: number; height?: number } | null | undefined): { width: number; height: number };
+export function assessmentImageDisplaySize(image: { width?: number; height?: number } | null | undefined, maxW_cm?: number, maxH_cm?: number): { width: number; height: number };
 export function generateAsesmenDocx(
   data: AssessmentData,
   formData: Record<string, unknown>,

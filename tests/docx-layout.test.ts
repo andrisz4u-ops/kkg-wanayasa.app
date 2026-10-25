@@ -62,6 +62,12 @@ describe('DOCX assessment image sizing', () => {
     expect(thin.height).toBeCloseTo((7 * CM_TO_PX) * (100 / 1000), 0);
   });
 
+  it('supports custom maximum dimensions for side-by-side layout', () => {
+    const side = assessmentImageDisplaySize({ width: 480, height: 340 }, 6.4, 4.8);
+    expect(side.width).toBeCloseTo(6.4 * CM_TO_PX, 0);
+    expect(side.height).toBeCloseTo((6.4 * CM_TO_PX) * (340 / 480), 0);
+  });
+
   it('falls back to the legacy size when dimensions are unknown', () => {
     expect(assessmentImageDisplaySize({})).toEqual({ width: 220, height: 145 });
     expect(assessmentImageDisplaySize({ width: 0, height: 100 })).toEqual({ width: 220, height: 145 });

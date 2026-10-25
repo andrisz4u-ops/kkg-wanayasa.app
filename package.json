@@ -34,7 +34,6 @@
     "@hono/vite-cloudflare-pages": "^0.4.3",
     "@mistralai/mistralai": "^1.14.0",
     "@sentry/cloudflare": "^10.39.0",
-    "@supabase/supabase-js": "^2.95.3",
     "cheerio": "^1.2.0",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",

@@ -103,7 +103,7 @@ materi.post('/', async (c) => {
     let finalFileName: string | null = null;
     let fileSize: number = 0;
 
-    // 1. Prioritas 1: Upload File Fisik (via Supabase)
+    // 1. Prioritas 1: Upload File Fisik (via R2)
     if (file) {
       // Limit size 10MB
       if (file.size > 10 * 1024 * 1024) {
@@ -113,7 +113,7 @@ materi.post('/', async (c) => {
       const storageEnv = await import('../lib/storage').then(m => m.resolveStorageConfig(c.env.DB, c.env));
       const uploadResult = await uploadFile(storageEnv, file, 'materi');
       if (uploadResult.error) {
-        console.error('Supabase upload failed:', uploadResult.error);
+        console.error('R2 upload failed:', uploadResult.error);
         return Errors.internal(c, `Gagal upload file: ${uploadResult.error}`);
       }
 

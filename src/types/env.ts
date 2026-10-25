@@ -34,9 +34,6 @@ export type AppBindings = {
     AI_BACKEND_KEY?: string;
 
     // ─── External Services ───────────────────────
-    SUPABASE_URL?: string;
-    SUPABASE_KEY?: string;
-    SUPABASE_BUCKET?: string;
     UNSPLASH_ACCESS_KEY?: string;
     UNSPLASH_SECRET_KEY?: string;
 };

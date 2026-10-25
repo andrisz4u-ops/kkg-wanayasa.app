@@ -238,6 +238,19 @@ files.post('/upload', async (c) => {
 // ============================================
 // Get File
 // ============================================
+// Register the literal route before the catch-all file key route.
+files.get('/config', async (c) => {
+    return successResponse(c, {
+        maxFileSize: UPLOAD_CONFIG.maxFileSize,
+        maxFileSizeFormatted: UPLOAD_CONFIG.maxFileSizeFormatted,
+        allowedMimeTypes: ALL_ALLOWED_MIME_TYPES,
+        allowedExtensions: {
+            ...UPLOAD_CONFIG.allowedExtensions
+        },
+        isConfigured: !!c.env.STORAGE
+    });
+});
+
 files.get('/:key{.+}', async (c) => {
     try {
         const key = c.req.param('key');
@@ -289,25 +302,8 @@ files.get('/:key{.+}', async (c) => {
             }
         }
 
-        // Never fall through to a public legacy provider for a managed private
-        // object, even when it is temporarily absent from R2.
+        // Missing private objects must never redirect to a public fallback.
         if (metadata?.visibility === 'private') return Errors.notFound(c, 'File tidak ditemukan');
-
-        // Priority 2: Supabase (Legacy Fallback)
-        try {
-            const { resolveStorageConfig } = await import('../lib/storage');
-            const storageEnv = await resolveStorageConfig(c.env.DB, c.env);
-
-            if (storageEnv.SUPABASE_URL && storageEnv.SUPABASE_KEY) {
-                const { createClient } = await import('@supabase/supabase-js');
-                const supabase = createClient(storageEnv.SUPABASE_URL, storageEnv.SUPABASE_KEY);
-                const bucket = storageEnv.SUPABASE_BUCKET || 'materi-kkg';
-                const { data } = supabase.storage.from(bucket).getPublicUrl(key);
-                if (data?.publicUrl) return c.redirect(data.publicUrl);
-            }
-        } catch (supaErr: any) {
-            logger.warn('Supabase fallback error', { key, error: supaErr?.message });
-        }
 
         // Graceful fallback for logo images if file is missing
         if (key.startsWith('logos/') || key.includes('logo')) {
@@ -355,21 +351,6 @@ files.delete('/:key{.+}', async (c) => {
         logger.error('Delete file error', e, { userId: user.id });
         return Errors.internal(c);
     }
-});
-
-// ============================================
-// Get Upload Config (for frontend)
-// ============================================
-files.get('/config', async (c) => {
-    return successResponse(c, {
-        maxFileSize: UPLOAD_CONFIG.maxFileSize,
-        maxFileSizeFormatted: UPLOAD_CONFIG.maxFileSizeFormatted,
-        allowedMimeTypes: ALL_ALLOWED_MIME_TYPES,
-        allowedExtensions: {
-            ...UPLOAD_CONFIG.allowedExtensions
-        },
-        isConfigured: !!(c.env.SUPABASE_URL && c.env.SUPABASE_KEY)
-    });
 });
 
 export default files;

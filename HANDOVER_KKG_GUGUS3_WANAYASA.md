@@ -1,5 +1,7 @@
 # Dokumen Serah-Terima Proyek
 
+> Dokumen historis. Status operasional terkini mengikuti README.md dan docs/OPERATIONS_RUNBOOK.md. Supabase bukan lagi kebutuhan runtime; lihat docs/SUPABASE_RETIREMENT.md. Catatan insiden kredensial lama tetap merupakan riwayat yang perlu ditindaklanjuti bila belum selesai.
+
 ## Identitas Proyek
 - Nama: Portal Digital KKG Gugus 3 Wanayasa
 - Tipe: Web App (Cloudflare Pages + D1)

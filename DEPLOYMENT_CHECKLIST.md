@@ -1,5 +1,7 @@
 # 🚀 Production Deployment Checklist
 
+> Arsip checklist lama. Instruksi Supabase di bawah tidak berlaku untuk deployment baru: upload sekarang menggunakan R2. Gunakan [runbook aktif](docs/OPERATIONS_RUNBOOK.md), [README](README.md), dan [hasil audit Supabase](docs/SUPABASE_RETIREMENT.md).
+
 ## ✅ Completed Steps (Developer Side)
 
 ### 1. Security Hardening ✅

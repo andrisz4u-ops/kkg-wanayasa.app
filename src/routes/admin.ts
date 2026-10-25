@@ -371,8 +371,6 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
     // Get all relevant settings
     const settingsKeys = [
       'mistral_api_key', 'z_ai_api_key', 'gemini_api_key', 'bedrock_api_key', 'vertex_api_key', 'vertex_project_id', 'vultr_api_key', 'nama_ketua', 'tahun_ajaran', 'alamat_sekretariat',
-      // Supabase settings
-      'supabase_url', 'supabase_key', 'supabase_bucket',
       // New KKG Profile fields
       'nama_kkg', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
       'email_kkg', 'telepon_kkg', 'website_kkg',
@@ -438,13 +436,6 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
         : '****';
     }
 
-    if (settings.supabase_key) {
-      const key = settings.supabase_key;
-      settings.supabase_key = key.length > 8
-        ? key.substring(0, 4) + '****' + key.substring(key.length - 4)
-        : '****';
-    }
-
     return successResponse(c, settings);
   } catch (e: any) {
     console.error('Get settings error:', e);
@@ -482,7 +473,6 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       'nama_sekretaris', 'nama_bendahara',
       'struktur_organisasi', 'visi_misi',
       'npsn_sekolah_induk', 'nama_sekolah_induk',
-      'supabase_url', 'supabase_bucket',
       // Landing page customization
       'hero_title', 'hero_deskripsi', 'visi', 'misi',
       'pengawas_nama', 'pengawas_nip', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
@@ -525,10 +515,6 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
 
     if (validatedData.vultr_api_key && !validatedData.vultr_api_key.includes('****')) {
       updates.push({ key: 'vultr_api_key', value: validatedData.vultr_api_key });
-    }
-
-    if (validatedData.supabase_key && !validatedData.supabase_key.includes('****')) {
-      updates.push({ key: 'supabase_key', value: validatedData.supabase_key });
     }
 
     const statements = updates.map(({ key, value }) => c.env.DB.prepare(`
@@ -582,12 +568,12 @@ admin.post('/settings/logo', requireStrictAdmin, async (c) => {
       return Errors.validation(c, 'Tipe file tidak didukung. Gunakan PNG, JPEG, GIF, atau WebP');
     }
 
-    // Supabase Upload Logic
+    // Upload logo to Cloudflare R2.
     const { uploadFile } = await import('../lib/storage');
     // Using explicit cast to any for env to satisfy StorageBindings check inside uploadFile if needed, 
     // or better, validate env first. But uploadFile does check env.
 
-    // Check file size for Supabase (e.g. 2MB limit same as before)
+    // Logos are limited to 2 MB.
     if (file.size > 2 * 1024 * 1024) {
       return Errors.validation(c, 'Ukuran file maksimal 2MB');
     }
@@ -595,15 +581,8 @@ admin.post('/settings/logo', requireStrictAdmin, async (c) => {
     const result = await uploadFile(c.env as any, file, 'logos');
 
     if (result.error) {
-      console.error('Supabase upload error:', result.error);
-
-      // Fallback to DB if Supabase fails? 
-      // No, user specifically said they use Supabase and NOT R2. 
-      // If Supabase is not configured, we should error out or maybe fallback to DB if absolutely necessary but let's stick to Supabase first as requested.
-      // Actually, for small files (logos), DB fallback is still useful for dev/quickstart without config.
-      // But user request "cek secara mendalam bagian mana yang masih berhubungan dengan R2" implies they want R2 GONE.
-
-      return Errors.internal(c, 'Gagal mengupload logo ke Supabase: ' + result.error);
+      console.error('R2 upload error:', result.error);
+      return Errors.internal(c, 'Gagal mengupload logo ke R2: ' + result.error);
     }
 
     const logoUrl = result.url;
@@ -618,7 +597,7 @@ admin.post('/settings/logo', requireStrictAdmin, async (c) => {
     await createAuditLog(c.env.DB, {
       user_id: currentUser.id,
       action: 'SETTINGS_UPDATE',
-      details: { action: 'upload_logo', file_name: file.name, storage: 'supabase' },
+      details: { action: 'upload_logo', file_name: file.name, storage: 'r2' },
       ip_address: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
       user_agent: c.req.header('User-Agent')
     });

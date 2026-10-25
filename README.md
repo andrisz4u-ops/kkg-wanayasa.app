@@ -9,6 +9,8 @@ Ruang kerja digital KKG Gugus 3 Wanayasa untuk mengelola kegiatan komunitas dan 
 - Cloudflare D1 untuk data dan R2 untuk berkas
 - Penyedia AI dikonfigurasi melalui panel administrator
 
+Penyimpanan upload menggunakan binding R2 `STORAGE`; Supabase tidak diperlukan. Audit referensi historis dan status pembersihan: [docs/SUPABASE_RETIREMENT.md](docs/SUPABASE_RETIREMENT.md).
+
 ## Menjalankan secara lokal
 
 Gunakan Node.js 24. Salin `.env.example` ke `.dev.vars` dan pilih `ENVIRONMENT=development`. Simpan secret lokal di `.dev.vars`, bukan di Git. Operasi enkripsi kredensial provider memerlukan key eksplisit; jangan mengganti key yang sudah dipakai tanpa migrasi ciphertext. Halaman umum, autentikasi dan storage tetap berjalan tanpa key provider tersebut; health menandai fitur enkripsi belum siap.

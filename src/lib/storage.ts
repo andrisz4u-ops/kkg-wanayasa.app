@@ -1,9 +1,6 @@
 export interface StorageBindings {
     STORAGE?: R2Bucket;
     R2_PUBLIC_URL?: string;
-    SUPABASE_URL?: string;
-    SUPABASE_KEY?: string;
-    SUPABASE_BUCKET?: string;
 }
 
 export const resolveStorageConfig = async (db: D1Database, env: any): Promise<StorageBindings> => {

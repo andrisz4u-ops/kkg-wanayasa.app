@@ -23,7 +23,7 @@ describe('environment validation', () => {
 
   it('returns a generic no-store 503 before accessing a database on invalid configuration', async () => {
     const prepare = vi.fn();
-    const response = await app.request('/api/health', {}, { DB: { prepare } as any, SUPABASE_URL: 'fixture-private-value' });
+    const response = await app.request('/api/health', {}, { DB: { prepare } as any, R2_PUBLIC_URL: 'fixture-private-value' });
     expect(response.status).toBe(503);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.text()).not.toContain('fixture-private-value');
@@ -41,7 +41,7 @@ describe('environment validation', () => {
   it('serves the actual production landing page and reports feature readiness without an encryption key', async () => {
     const db = migratedDatabase();
     try {
-      const env = { DB: db as any, ENVIRONMENT: 'production', R2_PUBLIC_URL: 'https://cdn.fixture.invalid', SUPABASE_URL: 'https://project.fixture.invalid', SUPABASE_KEY: 'fixture-storage-key' };
+      const env = { DB: db as any, ENVIRONMENT: 'production', R2_PUBLIC_URL: 'https://cdn.fixture.invalid' };
       const home = await app.request('/', {}, env);
       expect(home.status).toBe(200);
       expect(home.headers.get('content-type')).toContain('text/html');

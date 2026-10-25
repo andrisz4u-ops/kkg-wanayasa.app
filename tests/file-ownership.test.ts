@@ -37,6 +37,27 @@ const env = () => ({ DB: db, STORAGE: storage as any });
 const req = (url: string, init?: RequestInit) => app.request(url, init, env());
 
 describe('Managed file access and validation', () => {
+  it('serves upload readiness from the R2 binding before matching file keys', async () => {
+    const response = await req('/api/files/config');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ data: { isConfigured: true } });
+    expect(storage.get).not.toHaveBeenCalled();
+
+    const unavailable = await app.request('/api/files/config', {}, { DB: db });
+    expect(unavailable.status).toBe(200);
+    expect(await unavailable.json()).toMatchObject({ data: { isConfigured: false } });
+  });
+
+  it('returns 404 for missing legacy files without fetching an external provider', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    try {
+      const response = await req('/api/files/materi/missing.pdf');
+      expect(response.status).toBe(404);
+      expect(response.headers.get('location')).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally { fetchSpy.mockRestore(); }
+  });
+
   it('prevents user A from deleting user B file, even with its key', async () => {
     db.sqlite.prepare(`INSERT INTO file_ownership(key, owner_id, tenant_id, visibility, content_type, size, filename) VALUES (?, 2, ?, 'public', 'image/png', 8, 'b.png')`).run('uploads/known', 'kkg-gugus-3-wanayasa');
     objects.set('uploads/known', new Uint8Array([1]));

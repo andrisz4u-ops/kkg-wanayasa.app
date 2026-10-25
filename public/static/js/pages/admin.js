@@ -660,23 +660,9 @@ export async function renderAdmin() {
 
              <div class="pt-4 border-t border-slate-200/50">
                 <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <i class="fas fa-database text-indigo-600"></i> Supabase Storage (File Upload)
+                  <i class="fas fa-database text-indigo-600"></i> Cloudflare R2 (Penyimpanan Berkas)
                 </h3>
-                <div class="space-y-4">
-                   <div>
-                      <label class="label">Supabase URL</label>
-                      <input type="text" id="settings-supabase_url" class="input-field font-mono" placeholder="https://xyz.supabase.co">
-                   </div>
-                   <div>
-                      <label class="label">Supabase Service Key (Secret)</label>
-                      <input type="password" id="settings-supabase_key" class="input-field font-mono" placeholder="eyJhbGciOiJIUzI1NiI...">
-                   </div>
-                   <div>
-                      <label class="label">Supabase Bucket Name</label>
-                      <input type="text" id="settings-supabase_bucket" class="input-field font-mono" placeholder="materi-kkg">
-                   </div>
-                </div>
-                <p class="text-[10px] text-slate-500 mt-3">Konfigurasi ini digunakan untuk menyimpan file materi dan logo. Jika dikosongkan, sistem akan menggunakan nilai dari environment server.</p>
+                 <p class="text-xs text-slate-500 leading-relaxed">Materi, foto, dan logo disimpan di Cloudflare R2. Bucket dikonfigurasi melalui binding <code>STORAGE</code> pada deployment Cloudflare, bukan melalui formulir ini.</p>
              </div>
 
               <!-- Vultr Serverless Inference (Z-Image Turbo) Settings -->

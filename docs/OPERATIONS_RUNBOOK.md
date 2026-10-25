@@ -30,7 +30,7 @@ Build meminifikasi CSS langsung ke `dist` sehingga file CSS tracked tidak dituli
 - Runtime menganggap environment yang tidak diset sebagai production. Operasi enkripsi kredensial provider memerlukan ENCRYPTION_KEY atau SECRET_KEY minimal 16 karakter non-spasi. Tanpanya, halaman umum, login dan storage tetap berjalan, tetapi fitur enkripsi dinyatakan belum siap pada health. Untuk key baru gunakan material acak 32 byte atau lebih dari secret manager setelah inventaris/migrasi data diperiksa.
 - Untuk deployment yang sudah memiliki ciphertext, gunakan key yang sesuai; ikuti bagian migrasi key sebelum menggantinya.
 - Pilih project/environment Pages yang dimaksud saat menyimpan secret. Jalur CLI Pages: `npx wrangler pages secret put ENCRYPTION_KEY --project-name kkg-wanayasa`. Untuk preview/project staging, gunakan pengaturan secret pada environment/project yang bersangkutan; jangan mengasumsikan secret production diwariskan dengan benar.
-- Preview harus memiliki database D1, bucket R2/Supabase dan key provider pengujian tersendiri. Periksa ID binding aktual di dashboard/config sebelum menjalankan perubahan data. Verifikasi itu belum dibuktikan oleh keberadaan `wrangler.jsonc`.
+- Preview harus memiliki database D1, bucket R2 dan key provider pengujian tersendiri. Periksa ID binding aktual di dashboard/config sebelum menjalankan perubahan data. Verifikasi itu belum dibuktikan oleh keberadaan `wrangler.jsonc`.
 - Jalankan pemeriksaan migrasi kosong/upgrade, lalu migrasi pada staging. Lakukan smoke test login, logout, reset password, role, upload, ekspor, generasi dan pembatalan/recovery AI menggunakan data sintetis.
 
 ## 3. Key enkripsi dan kredensial provider
@@ -51,7 +51,7 @@ Tidak ada migrasi key produksi otomatis pada aplikasi. Jika data pernah memakai 
 ## 4. Backup dan drill restore
 
 - Catat recovery point D1 dan ambil export/backup menggunakan fasilitas D1 yang tersedia pada akun. Simpan export di storage privat terenkripsi, di luar Git dan public bucket.
-- Backup file R2/Supabase beserta manifest key objek, digest, metadata kepemilikan dan referensi database. Byte gambar asesmen yang berada dalam D1 mengikuti backup D1; berkas yang berada pada object storage memerlukan backup tersendiri.
+- Backup file R2 beserta manifest key objek, digest, metadata kepemilikan dan referensi database. Byte gambar asesmen yang berada dalam D1 mengikuti backup D1; berkas yang berada pada object storage memerlukan backup tersendiri.
 - Restore terlebih dahulu ke D1 dan bucket latihan terpisah. Pasang key enkripsi yang cocok dengan backup. Jangan mengarahkan aplikasi produksi ke resource latihan.
 - Bandingkan jumlah baris penting, foreign key, digest file, kepemilikan akses dan hasil ekspor. Uji kredensial tidak terbaca dengan key salah tanpa mengubah data asli.
 - Ukur durasi pemulihan aktual dan selisih recovery point. Gunakan hasil ini untuk menetapkan RTO/RPO yang realistis.

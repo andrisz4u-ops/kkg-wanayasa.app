@@ -168,15 +168,6 @@ export function optimizeImageUrl(
         return `${url}/${params.join(',')}`;
     }
     
-    // Supabase Storage
-    if (url.includes('supabase.co')) {
-        const params = [];
-        if (width) params.push(`width=${width}`);
-        if (height) params.push(`height=${height}`);
-        params.push(`quality=${quality}`);
-        return `${url}?${params.join('&')}`;
-    }
-    
     // No transformation available
     return url;
 }

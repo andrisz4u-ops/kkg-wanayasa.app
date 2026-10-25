@@ -48,9 +48,6 @@ window.loadAdminSettings = async function loadAdminSettings() {
     setVal('settings-groq_api_key', s.groq_api_key || '');
     setVal('settings-vertex_api_key', s.vertex_api_key || '');
     setVal('settings-vertex_project_id', s.vertex_project_id || '');
-    setVal('settings-supabase_url', s.supabase_url || '');
-    setVal('settings-supabase_key', s.supabase_key || '');
-    setVal('settings-supabase_bucket', s.supabase_bucket || '');
     setVal('settings-vultr_api_key', s.vultr_api_key || '');
 
     const logoContainer = document.getElementById('logo-preview');
@@ -129,9 +126,6 @@ window.saveProfilKKG = async function () {
       kutipan_pengawas: document.getElementById('profil-kutipan_pengawas')?.value || '',
       kutipan_ketua: document.getElementById('profil-kutipan_ketua')?.value || '',
       theme_color: document.getElementById('profil-theme_color')?.value || 'teal',
-      supabase_url: document.getElementById('settings-supabase_url')?.value || '',
-      supabase_key: document.getElementById('settings-supabase_key')?.value || '',
-      supabase_bucket: document.getElementById('settings-supabase_bucket')?.value || '',
       vultr_api_key: document.getElementById('settings-vultr_api_key')?.value || '',
     };
 

@@ -141,15 +141,15 @@ function findEventForDate(dateStr: string): EventRule | null {
  */
 export async function generateKaldikExcelBuffer(input: KaldikExcelInput = {}): Promise<Uint8Array> {
   const meta = input.metadata || {};
-  const namaSekolah = meta.nama_sekolah || 'SD NEGERI 1 WANAYASA';
+  const namaSekolah = meta.nama_sekolah || 'SD NEGERI';
   const npsn = meta.npsn || '';
   const tahunAjaran = meta.tahun_ajaran || '2026/2027';
-  const kepalaSekolah = meta.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.';
-  const nipKepalaSekolah = meta.nip_kepala_sekolah || '19760314 200501 2 006';
+  const kepalaSekolah = meta.kepala_sekolah || '';
+  const nipKepalaSekolah = meta.nip_kepala_sekolah || '';
   const penyusun = meta.penyusun || 'Tim Pengembang Kurikulum';
   const nipPenyusun = meta.nip_penyusun || '-';
   const kabupaten = meta.kabupaten || meta.kota || 'Purwakarta';
-  const kecamatan = meta.kecamatan || 'Wanayasa';
+  const kecamatan = meta.kecamatan || '';
   const alamat = meta.alamat_sekolah || `Kecamatan ${kecamatan}, Kabupaten ${kabupaten}`;
   const instansi = meta.instansi || 'DINAS PENDIDIKAN';
 

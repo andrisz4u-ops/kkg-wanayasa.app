@@ -4,6 +4,7 @@ import { successResponse, Errors, validateRequired } from '../lib/response';
 import { requireSession } from '../lib/session-middleware';
 import { hasPermission, PERMISSIONS } from '../lib/permissions';
 import { hasCompleteReflections, isValidCertificateDate, issueCertificate, issueForActivity, READY_CERTIFICATE_SQL } from '../lib/certificate-issuance';
+import { getOrganizationSettings } from '../lib/organization';
 
 type Bindings = { DB: D1Database };
 
@@ -425,9 +426,10 @@ sertifikat.get('/verify/:token', async (c) => {
       });
     }
 
+    const profile = await getOrganizationSettings(c.env.DB);
     return successResponse(c, {
       valid: true,
-      message: 'DOKUMEN RESMI TERVERIFIKASI & TERDAFTAR DI DATABASE KKG GUGUS 3 WANAYASA',
+      message: `DOKUMEN RESMI TERVERIFIKASI & TERDAFTAR DI DATABASE ${profile.nama_kkg.toUpperCase()}`,
       sertifikat: {
         nomor_sertifikat: row.nomor_sertifikat,
         nama_peserta: row.nama_guru,

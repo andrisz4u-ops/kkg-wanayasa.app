@@ -1941,7 +1941,7 @@ programSekolah.post('/kaldik-excel', async (c) => {
     }
 
     const kab = settingsMap.kabupaten || 'Purwakarta';
-    const kec = settingsMap.kecamatan || 'Wanayasa';
+    const kec = settingsMap.kecamatan || '';
     const instansi = settingsMap.nama_instansi || 'DINAS PENDIDIKAN';
 
     // 3. Gabungkan metadata lengkap untuk KOP Surat resmi masing-masing sekolah

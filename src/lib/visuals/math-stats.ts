@@ -867,7 +867,7 @@ export function renderMataAnginSvg(params: {
     const places = [
       { name: 'Masjid', x: 75, y: 70, fill: '#ecfdf5', stroke: '#10b981', color: '#065f46' },
       { name: 'Taman Kota', x: 195, y: 70, fill: '#f0fdf4', stroke: '#22c55e', color: '#15803d' },
-      { name: 'SD Wanayasa', x: 315, y: 70, fill: '#eff6ff', stroke: '#3b82f6', color: '#1d4ed8' },
+      { name: 'SD Negeri', x: 315, y: 70, fill: '#eff6ff', stroke: '#3b82f6', color: '#1d4ed8' },
       { name: 'Pasar', x: 75, y: 155, fill: '#fef3c7', stroke: '#f59e0b', color: '#b45309' },
       { name: 'Alun-Alun', x: 195, y: 155, fill: '#e0f2fe', stroke: '#0284c7', color: '#0369a1', isCenter: true },
       { name: 'Puskesmas', x: 315, y: 155, fill: '#fee2e2', stroke: '#ef4444', color: '#b91c1c' },

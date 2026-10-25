@@ -1258,7 +1258,7 @@ D. 32 cm`;
 
       const denah = renderMataAnginSvg({ mode: 'denah' });
       expect(denah).toContain('Denah Wilayah & Arah Mata Angin');
-      expect(denah).toContain('SD Wanayasa');
+      expect(denah).toContain('SD Negeri');
       expect(denah).toContain('Masjid');
       expect(denah).toContain('Alun-Alun');
       expect(denah).toContain('Puskesmas');

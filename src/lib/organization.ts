@@ -29,10 +29,14 @@ export async function getOrganizationSettings(db: D1Database, baseTenant?: any):
         kop_surat_url: tenant.kop_surat_url || '', app_name: 'RuangKKG', app_url: '',
         region_profile: String(tenant.kabupaten || '').toLowerCase() === 'purwakarta' ? 'purwakarta' : 'custom',
     };
-    const rows = await db.prepare(`SELECT key, value FROM settings WHERE key IN (${PUBLIC_ORGANIZATION_KEYS.map(() => '?').join(',')})`)
-        .bind(...PUBLIC_ORGANIZATION_KEYS).all<{ key: string; value: string }>();
-    for (const row of rows.results || []) defaults[row.key] = row.value;
-    if (!(rows.results || []).some(row => row.key === 'nama_kkg') && (rows.results || []).some(row => row.key === 'nama_organisasi')) {
+    let results: Array<{ key: string; value: string }> = [];
+    try {
+        const rows = await db.prepare(`SELECT key, value FROM settings WHERE key IN (${PUBLIC_ORGANIZATION_KEYS.map(() => '?').join(',')})`)
+            .bind(...PUBLIC_ORGANIZATION_KEYS).all<{ key: string; value: string }>();
+        results = rows.results || [];
+    } catch { /* Settings may not exist yet during partial migrations/tests. */ }
+    for (const row of results) defaults[row.key] = row.value;
+    if (!results.some(row => row.key === 'nama_kkg') && results.some(row => row.key === 'nama_organisasi')) {
         defaults.nama_kkg = defaults.nama_organisasi;
     }
     defaults.nama_organisasi = defaults.nama_kkg;

@@ -123,7 +123,7 @@ export const generateSppdSchema = z.object({
     mata_anggaran: z.string().optional().default('Dana BOS'),
     lama_hari: z.string().optional().default('1 (satu) hari'),
     tanggal_lhp: z.string().optional(),
-    dasar_surat: z.string().optional().default('Surat Undangan Ketua KKG Gugus 3 Wanayasa'),
+    dasar_surat: z.string().optional().default('Surat Undangan dari Pengurus KKG'),
     isi_lhp: z.string().optional(),
     model: z.string().max(100).optional().default('vertex'),
     aiProvider: z.string().max(100).optional(),

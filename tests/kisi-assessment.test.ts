@@ -783,6 +783,53 @@ describe('Visual Quota Allocation & Split Contract (10 PG -> 1 SVG + 1 Photo)', 
             expect(result[4].soal).not.toMatch(/^Perhatikan gambar/i);
             expect(result[4].soal).toContain('Jika musim kemarau panjang menyebabkan volume air menyusut drastis');
         });
+
+        it('should strictly allocate 100% SVG for Matematika and NEVER query provider AI images', async () => {
+            const { enrichAndNormalizePG } = await import('../src/routes/kisi');
+            const fakeUnsplash = {
+                searchImage: vi.fn(async () => ({
+                    url: 'https://cdn.example/hallucinated-clock.jpg',
+                    creditName: 'Z-Image-Turbo Generator',
+                    source: 'vultr-ai'
+                }))
+            };
+
+            const mathQuestions = [
+                { no: 1, soal: 'Hasil dari 12 x 15 adalah ...', opsi: { A: '180', B: '150', C: '160', D: '170' }, kunci: 'A' },
+                { no: 2, soal: 'Sebuah balok memiliki panjang 10 cm, lebar 6 cm, dan tinggi 4 cm. Volume balok adalah ...', opsi: { A: '240 cm³', B: '120 cm³', C: '200 cm³', D: '260 cm³' }, kunci: 'A', visual_stimulus: { type: 'balok', params: { p: 10, l: 6, t: 4, unit: 'cm' } } },
+                { no: 3, soal: 'Hasil dari 2/5 + 1/3 adalah ...', opsi: { A: '3/8', B: '11/15', C: '3/15', D: '7/15' }, kunci: 'B' },
+                { no: 4, soal: 'Sebuah segitiga memiliki alas 10 cm dan tinggi 6 cm. Luas segitiga tersebut adalah ...', opsi: { A: '60 cm²', B: '30 cm²', C: '16 cm²', D: '20 cm²' }, kunci: 'B', visual_stimulus: { type: 'segitiga_siku', params: { alas: 10, tinggi: 6, unit: 'cm' } } },
+                { no: 5, soal: 'Keliling persegi dengan panjang sisi 8 cm adalah ...', opsi: { A: '32 cm', B: '24 cm', C: '16 cm', D: '64 cm' }, kunci: 'A' },
+                { no: 6, soal: 'Sebuah lingkaran memiliki jari-jari 7 cm. Luas lingkaran adalah ...', opsi: { A: '154 cm²', B: '144 cm²', C: '134 cm²', D: '164 cm²' }, kunci: 'A', visual_stimulus: { type: 'lingkaran', params: { r: 7, unit: 'cm' } } },
+                { no: 7, soal: 'Hasil dari 150 : 5 + 25 adalah ...', opsi: { A: '55', B: '60', C: '65', D: '50' }, kunci: 'A' },
+                { no: 8, soal: 'Sudut siku-siku memiliki besar sudut ...', opsi: { A: '90°', B: '60°', C: '45°', D: '180°' }, kunci: 'A' },
+                { no: 9, soal: 'Nilai pecahan 3/4 senilai dengan ...', opsi: { A: '6/8', B: '5/8', C: '4/8', D: '7/8' }, kunci: 'A' },
+                { no: 10, soal: 'FPB dari 12 dan 18 adalah ...', opsi: { A: '6', B: '4', C: '3', D: '2' }, kunci: 'A' },
+            ];
+
+            const result = await enrichAndNormalizePG(mathQuestions, {
+                mataPelajaran: 'Matematika',
+                topik: 'Geometri & Pengukuran',
+                isGambarEnabled: true,
+                unsplash: fakeUnsplash as any,
+                exactImageCount: 2
+            });
+
+            expect(result.length).toBe(10);
+            // Provider AI generator is NEVER queried for Matematika:
+            expect(fakeUnsplash.searchImage).not.toHaveBeenCalled();
+
+            // Total visual items with images is exactly 2:
+            const itemsWithImage = result.filter(q => q.gambar && q.gambar.url);
+            expect(itemsWithImage.length).toBe(2);
+
+            // 100% of the images are precision SVGs:
+            itemsWithImage.forEach(q => {
+                expect(q.gambar?.type).toBe('svg');
+                expect(q.gambar?.svg).toBeDefined();
+                expect(q.gambar?.url).toContain('data:image/svg+xml');
+            });
+        });
     });
 });
 

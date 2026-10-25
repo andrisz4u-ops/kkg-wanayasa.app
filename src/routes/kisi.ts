@@ -466,8 +466,9 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
           * "gambar_prompt_en": "architecture photograph of [religious place/symbol], respectful and peaceful lighting, clean background"`;
     }
     if (m.includes('matematika')) {
-        return `PANDUAN VISUAL MAPEL MATEMATIKA:
-          * SANGAT PENTING: Gunakan parameter "visual_stimulus" agar sistem merender SVG presisi matematis!
+        return `PANDUAN VISUAL MAPEL MATEMATIKA (100% SVG DINAMIK PARAMETRIK WAJIB):
+          * SANGAT PENTING: DILARANG KERAS menggunakan foto generator AI (Z-Image-Turbo / Unsplash) untuk Matematika! Model generator gambar AI tidak memahami sudut, skala, dan label geometri sehingga menghasilkan gambar yang menyesatkan.
+          * Seluruh stimulus visual Matematika WAJIB 100% menggunakan parameter "visual_stimulus" agar sistem merender SVG presisi matematis! Field "gambar_prompt_en" dan "gambar_keyword" WAJIB dikosongkan ("").
           * Tipe visual yang didukung pada "visual_stimulus":
             - Balok: { "type": "balok", "params": { "p": 12, "l": 8, "t": 6, "unit": "cm" } }
             - Kubus: { "type": "kubus", "params": { "s": 10, "unit": "cm" } }
@@ -752,7 +753,7 @@ export const resolveQuestionVisualStimulus = async (
     // SKIP jika forcePhotoOnly
     let providerImageFallback = false;
     let providerVisualSpec: typeof visualCfg = null;
-    const isProviderFallbackSubject = /matematika|ipas|\bipa\b/i.test(String(mataPelajaran || ''));
+    const isProviderFallbackSubject = /ipas|\bipa\b/i.test(String(mataPelajaran || ''));
     if (!forcePhotoOnly && visualCfg && visualCfg.type && usedStimulusSignatures) {
         const signature = buildStimulusSignature(visualCfg);
 
@@ -761,7 +762,13 @@ export const resolveQuestionVisualStimulus = async (
             const originalSig = signature;
             // Deteksi tabrakan! Cari sub-diagram alternatif yang lebih spesifik
             const text = String(q.soal || '').toLowerCase();
-            if (isProviderFallbackSubject) {
+            const isMath = /matematika/i.test(String(mataPelajaran || ''));
+            if (isMath) {
+                // Matematika 100% SVG Dinamik Total: Dilarang mengubah bangun geometri ke bangun lain
+                // (misal kubus diubah jadi balok) dan DILARANG memanggil provider foto AI.
+                visualCfg = null;
+                providerImageFallback = false;
+            } else if (isProviderFallbackSubject) {
                 // Do not change the scientific target or shape merely to obtain
                 // a different SVG. The AI image must illustrate the same task.
                 providerVisualSpec = visualCfg;
@@ -1049,7 +1056,21 @@ export const resolveQuestionVisualStimulus = async (
         }
     }
 
-    // 5. Jika bukan SVG parametrik atau dialihkan oleh Diversity Guard, cari gambar otentik (Wikipedia / Unsplash)
+    // 5. Khusus Matematika: WAJIB 100% SVG Dinamik Total. DILARANG memanggil generator foto AI (Z-Image-Turbo / Unsplash).
+    const isMathSubject = /matematika/i.test(String(mataPelajaran || ''));
+    if (isMathSubject) {
+        if (questionNeedsDiagram(String(q.soal || ''))) {
+            markQuestionImageUnavailable(q, 'required_diagram_missing');
+        } else {
+            delete q.visual_stimulus;
+            delete q.gambar_keyword;
+            delete q.gambar_prompt_en;
+            delete q.gambar;
+        }
+        return;
+    }
+
+    // 6. Jika bukan SVG parametrik atau dialihkan oleh Diversity Guard (Mapel Non-Matematika), cari gambar otentik (Wikipedia / Unsplash)
     if (unsplash) {
         const soalTextLower = String(q.soal || '').toLowerCase();
         // Guard: Soal yang membutuhkan stimulus diagram/skema presisi berlabel (tanda panah, huruf X, pola urutan, alur)
@@ -1399,9 +1420,23 @@ export const buildAssessmentPrompt = (params: {
             const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, count, jenjangKelas);
             const exactImages = adaptiveQuota.exactImages;
             const pct = Math.round(adaptiveQuota.ratio * 100);
-            const svgSlots = Math.ceil(exactImages / 2);
-            const photoSlots = exactImages - svgSlots;
-            gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${pct}%: ${svgSlots} DIAGRAM SVG + ${photoSlots} FOTO GENERATOR AI): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual dengan rincian kuota:
+            const isMath = /matematika/i.test(mataPelajaran);
+            const svgSlots = isMath ? exactImages : Math.ceil(exactImages / 2);
+            const photoSlots = isMath ? 0 : exactImages - svgSlots;
+
+            if (isMath) {
+                gambarRule = `\n                7. ATURAN GAMBAR MATEMATIKA (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - 100% DIAGRAM SVG PARAMETRIK PRESISI): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Khusus mata pelajaran Matematika, seluruh ${exactImages} butir soal bergambar WAJIB 100% menggunakan DIAGRAM SVG PRESISI ("visual_stimulus").
+            - DILARANG KERAS MENGGUNAKAN FOTO GENERATOR AI: Atribut JSON "gambar_keyword" dan "gambar_prompt_en" WAJIB diisi string kosong/null. Generator AI tidak memahami sudut dan skala geometri sehingga DILARANG.
+            - PERENCANAAN VARIASI VISUAL: Setiap butir diagram SVG WAJIB unik dan berbeda satu sama lain. DILARANG membuat 2 diagram bertipe sama dalam satu paket ujian!
+            - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
+              * ${getSubjectImagePromptGuideline(mataPelajaran)}
+            - SISA ${count - exactImages} BUTIR SOAL LAINNYA WAJIB TEKS MURNI: atribut "visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "".
+              * DILARANG KERAS menyertakan frasa "Perhatikan gambar...", "Perhatikan diagram...", atau sejenisnya di dalam teks naskah soal pada butir-butir teks murni tersebut!
+              * DILARANG KERAS menanyakan tanda huruf seperti "huruf X", "bagian X", atau "panah X" pada butir-butir teks murni!
+              * Pada ${count - exactImages} butir teks murni, rumuskan pertanyaan langsung secara konseptual atau hitungan matematis murni (contoh: "Sebuah lingkaran memiliki keliling...", BUKAN "Perhatikan gambar lingkaran berikut...").
+              * DILARANG KERAS menuliskan teks "visual_stimulus {...}" di dalam teks naskah soal ("soal").`;
+            } else {
+                gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${pct}%: ${svgSlots} DIAGRAM SVG + ${photoSlots} FOTO GENERATOR AI): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual dengan rincian kuota:
             - TEPAT ${svgSlots} BUTIR DIAGRAM SVG PRESISI: Atribut JSON "visual_stimulus" terisi spesifikasi tipe diagram, atribut "gambar_keyword" dan "gambar_prompt_en" WAJIB string kosong/null.
             - TEPAT ${photoSlots} BUTIR GAMBAR FOTO OBJEK KONKRET / FENOMENA ALAM NYATA GENERATOR AI (Z-Image-Turbo / Unsplash): Atribut JSON "gambar_keyword" (1-3 kata ringkas) dan "gambar_prompt_en" (15-25 kata deskriptif) terisi, atribut "visual_stimulus" WAJIB diisi null.
             - PERENCANAAN VARIASI VISUAL:
@@ -1417,6 +1452,7 @@ export const buildAssessmentPrompt = (params: {
               * DILARANG KERAS menanyakan tanda huruf seperti "huruf X", "bagian X", atau "panah X" pada butir-butir teks murni! Huruf X HANYA boleh ada pada ${svgSlots} butir diagram SVG presisi.
               * Pada ${count - exactImages} butir teks murni, rumuskan pertanyaan langsung secara konseptual (contoh: "Organ lambung pada sistem pencernaan berfungsi untuk...", BUKAN "Bagian yang ditunjuk oleh huruf X berfungsi untuk...").
               * DILARANG KERAS menuliskan teks "visual_stimulus {...}" di dalam teks naskah soal ("soal").`;
+            }
         } else {
             gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
         }
@@ -1518,7 +1554,7 @@ function normalizeAssessmentItems(finalData: any, resolvedCP: string, topik: str
     }
 }
 
-const DIAGRAM_REFERENCE_PATTERN = /\b(?:perhatikan|amatilah|lihatlah|cermati|berdasarkan)\b[\s\S]{0,80}?\b(?:gambar|diagram|grafik|bagan|ilustrasi)\b|\b(?:gambar|diagram|grafik|bagan|ilustrasi)\s+(?:berikut|di\s+bawah|di\s+samping)\b/i;
+const DIAGRAM_REFERENCE_PATTERN = /\b(?:perhatikan|amatilah|lihatlah|cermati|berdasarkan)\b[\s\S]{0,80}?\b(?:gambar|diagram|grafik|bagan|ilustrasi|jaring|skema|model)\b|\b(?:gambar|diagram|grafik|bagan|ilustrasi|jaring|skema|model)\s+(?:berikut|di\s+bawah|di\s+samping)\b/i;
 
 export function questionNeedsDiagram(soal: unknown): boolean {
     return DIAGRAM_REFERENCE_PATTERN.test(String(soal || ''));
@@ -1942,11 +1978,11 @@ export async function enrichAndNormalizePG(
     const targetSelected = new Set<any>();
 
     // Enforce exact image count jika visual stimulus aktif
-    // SPLIT STRATEGY: Bagi kuota 50/50 antara SVG Dinamik dan Foto AI (Vultr/Wiki)
-    // Contoh: 10 PG â†’ 2 visual = 1 SVG + 1 Foto, 15 PG â†’ 3 visual = 2 SVG + 1 Foto
+    // SPLIT STRATEGY: Khusus Matematika 100% SVG Dinamik Presisi. Mapel lain bagi 50/50 antara SVG dan Foto AI.
     if (isGambarEnabled && exactImageCount > 0 && deduped.length > 0) {
-        const svgSlots = Math.ceil(exactImageCount / 2);   // SVG mendapat 50% (dibulatkan ke atas)
-        const photoSlots = exactImageCount - svgSlots;     // Foto mendapat sisanya
+        const isMath = /matematika/i.test(mataPelajaran);
+        const svgSlots = isMath ? exactImageCount : Math.ceil(exactImageCount / 2);   // Matematika 100% SVG
+        const photoSlots = isMath ? 0 : exactImageCount - svgSlots;                   // Foto 0 untuk Matematika
 
         const scoredQuestions = deduped
             .filter((q: any) => !hasMarkdownTable(q.soal))
@@ -2034,7 +2070,7 @@ export async function enrichAndNormalizePG(
 
         if (svgList.length < svgSlots) {
             const fallbackPool = [
-                ...photoCandidates.filter((p: any) => !photoList.includes(p.q)),
+                ...(!isMath ? photoCandidates.filter((p: any) => !photoList.includes(p.q)) : []),
                 ...generalCandidates
             ];
             for (const item of fallbackPool) {

@@ -58,7 +58,7 @@ describe('duplicate SVG handling', () => {
     searchImage: vi.fn(async () => ({ url: 'https://cdn.example/lingkaran-diagram.jpg', creditName: 'Provider AI', source: 'vultr-ai' })),
   };
 
-  it('replaces a duplicated SVG with a provider image for Matematika', async () => {
+  it('never replaces a duplicated SVG with a provider image for Matematika (100% SVG only)', async () => {
     const question: any = {
       no: 2,
       soal: 'Perhatikan gambar lingkaran berikut! Luas lingkaran tersebut adalah ...',
@@ -66,10 +66,10 @@ describe('duplicate SVG handling', () => {
       gambar_keyword: 'diagram lingkaran diameter 28 cm',
     };
     await resolveQuestionVisualStimulus(question, 'Matematika', 'Luas Lingkaran', providerImage as any, usedSignatures(), new Set(), new Set(), false);
-    expect(question.gambar.type).toBe('ai');
-    expect(question.gambar.url).toBe('https://cdn.example/lingkaran-diagram.jpg');
-    expect(question.gambar.svg).toBeFalsy();
-    expect(question.visual_stimulus).toBeUndefined();
+    expect(providerImage.searchImage).not.toHaveBeenCalled();
+    expect(question.gambar?.type).not.toBe('ai');
+    expect(question.gambar?.imageUnavailable).toBe(true);
+    expect(question.gambar?.imageUnavailableReason).toBe('required_diagram_missing');
   });
 
   it('replaces a duplicated SVG with a provider image for IPAS', async () => {

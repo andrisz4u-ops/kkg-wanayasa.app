@@ -6,12 +6,12 @@ import { Hono } from 'hono';
 import { SqliteD1 } from './helpers/sqlite-d1';
 import { createAssessmentSchema } from '../src/lib/validation';
 
-const harness = vi.hoisted(() => ({ calls: 0, wait: undefined as undefined | (() => Promise<void>), failLoad: false, onGenerate: undefined as undefined | (() => void) }));
+const harness = vi.hoisted(() => ({ calls: 0, responses: [] as any[], wait: undefined as undefined | (() => Promise<void>), failLoad: false, onGenerate: undefined as undefined | (() => void) }));
 vi.mock('../src/lib/auth', async original => ({ ...await original<any>(), getCurrentUser: vi.fn() }));
 vi.mock('../src/services/ai', () => ({ AIService: class {
   async loadProviders() { if (harness.failLoad) throw new Error('fixture provider configuration failure'); }
-  async generateJSON() { harness.calls++; await harness.wait?.(); harness.onGenerate?.(); return { pg: [{ no: 1, soal: 'Apa hasil pengamatan pada materi ini?', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' }] }; }
-  async generateJSONStream(_prompt: string, _provider: string, onToken: (token: string) => Promise<void>) { harness.calls++; await harness.wait?.(); harness.onGenerate?.(); await onToken('{}'); return { pg: [{ no: 1, soal: 'Apa hasil pengamatan pada materi ini?', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' }] }; }
+  async generateJSON() { harness.calls++; await harness.wait?.(); harness.onGenerate?.(); return harness.responses.shift() || { pg: [{ no: 1, soal: 'Apa hasil pengamatan pada materi ini?', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' }] }; }
+  async generateJSONStream(_prompt: string, _provider: string, onToken: (token: string) => Promise<void>) { harness.calls++; await harness.wait?.(); harness.onGenerate?.(); await onToken('{}'); return harness.responses.shift() || { pg: [{ no: 1, soal: 'Apa hasil pengamatan pada materi ini?', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' }] }; }
   setAbortSignal() {}
 } }));
 vi.mock('../src/lib/assessment-validator', async original => ({ ...await original<any>(), runAssessmentQualityGate: async () => {} }));
@@ -46,10 +46,28 @@ function fixture() {
   vi.mocked(getCurrentUser).mockResolvedValue({ id: ownerId, role: 'guru', nama: 'Fixture Teacher', sekolah: 'Fixture School' } as any);
 }
 
-beforeEach(() => { vi.stubGlobal('crypto', webcrypto); harness.calls = 0; harness.wait = undefined; harness.failLoad = false; harness.onGenerate = undefined; fixture(); });
+beforeEach(() => { vi.stubGlobal('crypto', webcrypto); harness.calls = 0; harness.responses = []; harness.wait = undefined; harness.failLoad = false; harness.onGenerate = undefined; fixture(); });
 afterEach(() => { db.close(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('actual assessment generation ledger routes', () => {
+  it.each(['generate', 'generate-stream'])('fills 8 PG to 10 before saving and replaying through %s', async (route) => {
+    const questions = Array.from({ length: 10 }, (_, index) => ({ no: index + 1, soal: `Apa kesimpulan percobaan nomor ${index + 1}?`, opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' }));
+    harness.responses = [{ pg: questions.slice(0, 8) }, { pg: questions.slice(8) }];
+    const body = { ...payload, jumlahPG: 10, clientDocumentId };
+    const response = await request(route, clientDocumentId, {}, body);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    const result = route === 'generate' ? JSON.parse(text) : JSON.parse(text.split(/\r?\n\r?\n/).find(frame => frame.includes('event: done'))!.split(/\r?\n/).find(line => line.startsWith('data: '))!.slice(6));
+    expect(result.data.pg).toHaveLength(10);
+    expect(new Set(result.data.pg.map((q: any) => q.soal)).size).toBe(10);
+    expect(result.data._generation).toMatchObject({ partial: false, requested: { pg: 10 } });
+    expect(harness.calls).toBe(2);
+    expect(db.sqlite.prepare('SELECT jumlah_pg FROM bank_soal').get()).toMatchObject({ jumlah_pg: 10 });
+    const replay: any = await (await request('generate', clientDocumentId, {}, body)).json();
+    expect(replay.data.pg).toHaveLength(10);
+    expect(harness.calls).toBe(2);
+  });
+
   it('uses one winner across normal/SSE and replays the current saved package without another admission/provider call', async () => {
     const response = await request('generate');
     expect(response.status).toBe(200);
@@ -197,7 +215,7 @@ describe('actual assessment generation ledger routes', () => {
     expect(ssePayload.partial).toBe(true);
     expect(ssePayload.warnings).toEqual(firstPayload.data._generation.warnings);
     expect(ssePayload.data._generation).toEqual(firstPayload.data._generation);
-    expect(harness.calls).toBe(1);
+    expect(harness.calls).toBe(3); // Initial generation plus two bounded duplicate-only refills.
     expect(db.sqlite.prepare('SELECT request_count FROM ai_user_admission WHERE user_id=?').get(ownerId)).toMatchObject({ request_count: 1 });
   });
 
@@ -215,7 +233,7 @@ describe('actual assessment generation ledger routes', () => {
     expect(ssePayload.partial).toBe(true);
     expect(ssePayload.warnings).toEqual(first.data._generation.warnings);
     expect(ssePayload.data._generation).toEqual(first.data._generation);
-    expect(harness.calls).toBe(1);
+    expect(harness.calls).toBe(3); // Replays never repeat the bounded refill attempts.
     expect(db.sqlite.prepare('SELECT request_count FROM ai_user_admission WHERE user_id=?').get(ownerId)).toMatchObject({ request_count: 1 });
   });
 

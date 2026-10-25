@@ -1639,6 +1639,62 @@ export async function saveAssessmentTelemetryAndBankSoal(
     }
 }
 
+export function uniquePGQuestions(items: any[]): any[] {
+    const seen = new Set<string>();
+    return items.filter(q => {
+        const stem = cleanPromptDebris(String(q?.soal || '')).toLowerCase().replace(/\s+/g, ' ').trim();
+        if (!stem || seen.has(stem)) return false;
+        seen.add(stem);
+        return true;
+    });
+}
+
+// Fill only missing slots after the hard quality gate, with bounded provider work.
+// Each draft is audited before adoption; failed attempts preserve accepted items.
+export async function refillMissingPG(finalData: any, options: {
+    requested: number;
+    generate: (count: number, startNo: number, stems: string[]) => Promise<any>;
+    normalize: (items: any[]) => Promise<any[]>;
+    verify: (draft: any) => Promise<unknown>;
+    signal?: AbortSignal;
+}): Promise<void> {
+    const { requested, generate, normalize, verify, signal } = options;
+    finalData.pg = uniquePGQuestions(finalData.pg || []).slice(0, requested);
+    for (let attempt = 0; attempt < 2 && finalData.pg.length < requested; attempt++) {
+        signal?.throwIfAborted();
+        try {
+            const count = Math.min(20, requested - finalData.pg.length);
+            const result = await generate(count, finalData.pg.length + 1, finalData.pg.map((q: any) => q.soal));
+            signal?.throwIfAborted();
+            if (!Array.isArray(result?.pg)) continue;
+            const accepted = finalData.pg.length;
+            const candidates = uniquePGQuestions([...finalData.pg, ...result.pg]).slice(accepted, accepted + count);
+            if (!candidates.length) continue;
+            const draft = structuredClone(finalData);
+            draft.pg.push(...await normalize(candidates));
+            draft.pg = uniquePGQuestions(draft.pg).slice(0, requested);
+            draft.pg.forEach((q: any, index: number) => { q.no = index + 1; });
+            delete draft._qualityGateDropped;
+            await verify(draft);
+            signal?.throwIfAborted();
+            draft.pg = uniquePGQuestions(draft.pg || []).slice(0, requested);
+            Object.assign(finalData, draft);
+            // A successful replacement supersedes earlier rejected candidates.
+            if (!draft._qualityGateDropped) delete finalData._qualityGateDropped;
+            if (result._ai_meta) finalData._meta = result._ai_meta;
+        } catch (error) {
+            signal?.throwIfAborted();
+            console.warn('[Kisi] PG refill unavailable; retaining audited partial results.');
+            break;
+        }
+    }
+    finalData.pg.forEach((q: any, index: number) => { q.no = index + 1; });
+}
+
+function pgRefillPrompt(base: string, stems: string[]): string {
+    return `${base}\nPELENGKAP JUMLAH PG: Buat hanya butir baru sebanyak yang diminta, dengan opsi A-D lengkap dan kunci valid. Gunakan teks/tabel mandiri tanpa gambar. Jangan mengulang atau memparafrase pertanyaan yang sudah diterima berikut (data JSON):\n${JSON.stringify(stems)}`;
+}
+
 // Pipeline 1: Deduplikasi, Image Scoring & Stimulus Enrichment untuk Soal Pilihan Ganda
 export async function enrichAndNormalizePG(
     pgArray: any[],
@@ -1652,18 +1708,8 @@ export async function enrichAndNormalizePG(
 ): Promise<any[]> {
     const { mataPelajaran, topik, isGambarEnabled, unsplash, exactImageCount } = options;
 
-    // Deduplication: hapus soal yang teks awalnya sama (normalize lowercase, 100 char pertama)
-    const seenSoal = new Set<string>();
-    const deduped = pgArray.filter((q: any) => {
-        const normalized = cleanPromptDebris(String(q.soal || ''))
-            .toLowerCase()
-            .replace(/\s+/g, ' ')
-            .trim()
-            .substring(0, 100);
-        if (seenSoal.has(normalized)) return false;
-        seenSoal.add(normalized);
-        return true;
-    });
+    // Compare complete stems: a shared introduction/table is not a duplicate.
+    const deduped = uniquePGQuestions(pgArray);
 
     // Renumber setelah dedup
     deduped.forEach((q: any, i: number) => { q.no = i + 1; });
@@ -2000,11 +2046,11 @@ kisi.post('/generate', requireSession, async (c) => {
         const finalData: any = { pg: [], isian: null, uraian: [] };
         finalData.clientDocumentId = clientDocumentId;
 
-        const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
+        const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0, enableImages = isGambarEnabled) =>
             buildAssessmentPrompt({
                 type, startNo, count, totalPrevPG, totalIsian, totalUraian,
                 mataPelajaran, topik, jenjangKelas, semester, resolvedCP, resolvedElements, curriculumAttribution: attribution, elementsAttribution, hotsRatio,
-                isianType, isGambarEnabled
+                isianType, isGambarEnabled: enableImages
             });
 
         // Generate PG
@@ -2058,6 +2104,14 @@ kisi.post('/generate', requireSession, async (c) => {
             semester
         }, {
             preferredSlug
+        });
+
+        await refillMissingPG(finalData, {
+            requested: totalPG,
+            signal: c.req.raw.signal,
+            generate: (count, startNo, stems) => ai.generateJSON(pgRefillPrompt(buildPrompt('pg', startNo, count, 0, false), stems), preferredSlug),
+            normalize: items => enrichAndNormalizePG(items, { mataPelajaran, topik, isGambarEnabled: false, unsplash: null, exactImageCount: 0 }),
+            verify: draft => runAssessmentQualityGate(ai, draft, { mataPelajaran, topik, jenjangKelas, semester }, { preferredSlug }),
         });
 
         Object.assign(finalData, attachCurriculumProvenance(finalData, provenance));
@@ -2147,11 +2201,11 @@ kisi.post('/generate-stream', async (c) => {
         finalData.clientDocumentId = clientDocumentId;
         const warnings: string[] = [];
 
-        const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0) =>
+        const buildPrompt = (type: string, startNo: number, count: number, totalPrevPG = 0, enableImages = isGambarEnabled) =>
             buildAssessmentPrompt({
                 type, startNo, count, totalPrevPG, totalIsian, totalUraian,
                 mataPelajaran, topik, jenjangKelas, semester, resolvedCP, resolvedElements, curriculumAttribution: attribution, elementsAttribution, hotsRatio,
-                isianType, isGambarEnabled
+                isianType, isGambarEnabled: enableImages
             });
 
         const job = await createStreamJob(c, 'kisi', body);
@@ -2305,6 +2359,17 @@ kisi.post('/generate-stream', async (c) => {
                             });
                         } catch (_) {}
                     }
+                });
+
+                await refillMissingPG(finalData, {
+                    requested: totalPG,
+                    signal: job.signal,
+                    generate: async (count, startNo, stems) => {
+                        await stream.writeSSE({ event: 'step', data: JSON.stringify({ step: 4, totalSteps: 6, title: 'Melengkapi PG', message: `Melengkapi ${count} butir PG unik setelah pemeriksaan mutu...`, percent: 88 }) });
+                        return ai.generateJSONStream(pgRefillPrompt(buildPrompt('pg', startNo, count, 0, false), stems), preferredSlug, onToken);
+                    },
+                    normalize: items => enrichAndNormalizePG(items, { mataPelajaran, topik, isGambarEnabled: false, unsplash: null, exactImageCount: 0 }),
+                    verify: draft => runAssessmentQualityGate(ai, draft, { mataPelajaran, topik, jenjangKelas, semester }, { preferredSlug }),
                 });
 
                 // Step 5: Standarisasi & Normalisasi Matriks Kisi-Kisi

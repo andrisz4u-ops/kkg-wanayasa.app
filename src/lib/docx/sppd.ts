@@ -108,15 +108,15 @@ const tableBorderNone = {
 function createKopSekolahTable(sekolahNama: string, alamatSekolah?: string, settings?: KKGSettings): Table {
     let pemdaBuffer: Uint8Array | null = null;
     try {
-        if (LOGO_PEMDA_BASE64) {
+        if (settings?.legacy_logo_assets !== false && LOGO_PEMDA_BASE64) {
             pemdaBuffer = base64toBuffer(LOGO_PEMDA_BASE64);
         }
     } catch { }
 
     const cleanSekolahNama = (sekolahNama || 'SD NEGERI').toUpperCase();
-    const cleanKabupaten = (settings?.kabupaten || 'PURWAKARTA').toUpperCase();
-    const cleanKecamatan = settings?.kecamatan || 'Wanayasa';
-    const cleanAlamat = alamatSekolah || `Kecamatan ${cleanKecamatan}, Kabupaten ${settings?.kabupaten || 'Purwakarta'}`;
+    const cleanKabupaten = (settings?.kabupaten || '').toUpperCase();
+    const cleanKecamatan = settings?.kecamatan || '';
+    const cleanAlamat = alamatSekolah || `Kecamatan ${cleanKecamatan}, Kabupaten ${settings?.kabupaten || ''}`;
 
     return new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -190,6 +190,8 @@ function createKopSekolahTable(sekolahNama: string, alamatSekolah?: string, sett
 }
 
 export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): Promise<Document> {
+    const orgName = settings?.nama_kkg || settings?.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
+    const location = settings?.kecamatan || settings?.kabupaten || '';
     const tglKegiatanIndo = formatTanggalIndo(data.tanggal_kegiatan);
     const hariTglIndo = formatHariTanggalIndo(data.tanggal_kegiatan);
     const tglLhp = data.tanggal_lhp || hitungHPlus1(data.tanggal_kegiatan);
@@ -301,7 +303,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 width: { size: 82, type: WidthType.PERCENTAGE },
                                 margins: { top: 60, bottom: 60, left: 60, right: 60 },
                                 borders: tableBorderNone,
-                                children: [new Paragraph({ spacing: { line: 260 }, children: [new TextRun({ text: data.dasar_surat || 'Surat Undangan dari Pengurus Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa', font: FONT_FAMILY, size: 22 })] })],
+                                children: [new Paragraph({ spacing: { line: 260 }, children: [new TextRun({ text: data.dasar_surat || `Surat Undangan dari Pengurus ${orgName}`, font: FONT_FAMILY, size: 22 })] })],
                             }),
                         ],
                     }),
@@ -312,7 +314,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 new TextRun({ text: 'MEMERINTAHKAN :', bold: true, font: FONT_FAMILY, size: 22 })
             ]}),
             new Paragraph({ spacing: { after: 100 }, children: [
-                new TextRun({ text: `Kepala ${data.sekolah_asal_nama} Kecamatan Wanayasa Kabupaten Purwakarta menugaskan kepada:`, font: FONT_FAMILY, size: 22 })
+                new TextRun({ text: `Kepala ${data.sekolah_asal_nama} Kecamatan ${settings?.kecamatan || ''} Kabupaten ${settings?.kabupaten || ''} menugaskan kepada:`, font: FONT_FAMILY, size: 22 })
             ]}),
 
             // Tabel Daftar Guru
@@ -345,7 +347,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
 
             // Untuk
             new Paragraph({ spacing: { before: 180, after: 80 }, children: [
-                new TextRun({ text: `Untuk : Mengikuti kegiatan Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa, yang akan dilaksanakan pada:`, font: FONT_FAMILY, size: 22 })
+                new TextRun({ text: `Untuk : Mengikuti kegiatan ${orgName}, yang akan dilaksanakan pada:`, font: FONT_FAMILY, size: 22 })
             ]}),
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
@@ -391,7 +393,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${settings?.kecamatan || 'Wanayasa'}`, font: FONT_FAMILY, size: 22 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${location}`, font: FONT_FAMILY, size: 22 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 22 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 22 })] }),
                                     new Paragraph({ spacing: { after: 720 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 22 })] }),
@@ -556,7 +558,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${settings?.kecamatan || 'Wanayasa'}`, font: FONT_FAMILY, size: 21 })] }),
+                                    new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Dikeluarkan di : ${location}`, font: FONT_FAMILY, size: 21 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: `Pada tanggal   : ${tglKegiatanIndo}`, font: FONT_FAMILY, size: 21 })] }),
                                     new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: 'Kepala Sekolah,', font: FONT_FAMILY, size: 21 })] }),
                                     new Paragraph({ spacing: { after: 680 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 21 })] }),
@@ -754,7 +756,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                 new TextRun({ text: 'LAPORAN HASIL PEKERJAAN', bold: true, underline: {}, size: 26, font: FONT_FAMILY })
             ]}),
             new Paragraph({ spacing: { after: 80 }, alignment: AlignmentType.CENTER, children: [
-                new TextRun({ text: `Kegiatan Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa`, size: 20, font: FONT_FAMILY })
+                new TextRun({ text: `Kegiatan ${orgName}`, size: 20, font: FONT_FAMILY })
             ]}),
 
             // Kepada Yth
@@ -822,7 +824,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
                                 width: { size: 45, type: WidthType.PERCENTAGE },
                                 borders: tableBorderNone,
                                 children: [
-                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `Wanayasa, ${tglLhpIndo}`, font: FONT_FAMILY, size: 20 })] }),
+                                    new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: `${location}, ${tglLhpIndo}`, font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 15 }, children: [new TextRun({ text: 'Pegawai yang Melaporkan,', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 440 }, children: [new TextRun({ text: '', font: FONT_FAMILY, size: 20 })] }),
                                     new Paragraph({ spacing: { after: 10 }, children: [new TextRun({ text: guruUtama.nama, bold: true, underline: {}, font: FONT_FAMILY, size: 22 })] }),
@@ -837,7 +839,7 @@ export async function generateSppdDocx(data: SppdData, settings?: KKGSettings): 
     };
 
     return new Document({
-        creator: `Portal Digital KKG Wanayasa`,
+        creator: settings?.app_name || 'RuangKKG',
         title: `Paket Surat Tugas & SPPD - ${data.sekolah_asal_nama}`,
         description: `Dokumen Surat Perintah Tugas, SPD, Visum, dan LHP untuk ${data.agenda}`,
         styles: {

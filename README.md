@@ -11,6 +11,13 @@ Ruang kerja digital KKG Gugus 3 Wanayasa untuk mengelola kegiatan komunitas dan 
 
 Penyimpanan upload menggunakan binding R2 `STORAGE`; Supabase tidak diperlukan. Audit referensi historis dan status pembersihan: [docs/SUPABASE_RETIREMENT.md](docs/SUPABASE_RETIREMENT.md).
 
+## Menggunakan aplikasi untuk gugus lain
+
+Gunakan satu basis kode dengan Pages, D1 dan R2 terpisah per gugus. Profil contoh:
+`installations/gugus.example.json`. Alur validasi, konfigurasi, migrasi, bootstrap
+admin/sekolah dan deploy tersedia melalui `npm run installation`.
+Panduan lengkap dan batas konten daerah: [docs/INSTALLATIONS.md](docs/INSTALLATIONS.md).
+
 ## Menjalankan secara lokal
 
 Gunakan Node.js 24. Salin `.env.example` ke `.dev.vars` dan pilih `ENVIRONMENT=development`. Simpan secret lokal di `.dev.vars`, bukan di Git. Operasi enkripsi kredensial provider memerlukan key eksplisit; jangan mengganti key yang sudah dipakai tanpa migrasi ciphertext. Halaman umum, autentikasi dan storage tetap berjalan tanpa key provider tersebut; health menandai fitur enkripsi belum siap.
@@ -53,7 +60,7 @@ Migrasi `0031_ai_generation_feature_accuracy.sql` memperluas kategori analitik A
 
 Endpoint `POST /api/init-db` dan `POST /api/db-patch/fix-notifications` hanya tersedia ketika `ENVIRONMENT=development` dan meminta sesi administrator. Keduanya tidak tersedia di produksi. Inisialisasi produksi dilakukan melalui migrasi, bukan lewat URL aplikasi.
 
-Sistem saat ini hanya menerima tenant utama `kkg-gugus-3-wanayasa`. Akun dan header tenant lain ditolak sampai semua kueri data dibatasi berdasarkan organisasi. Jangan membuka tenant tambahan hanya dengan membuat baris pada tabel `tenants`.
+Setiap instalasi hanya menerima namespace tenant utama `kkg-gugus-3-wanayasa` untuk kompatibilitas skema/sesi; nama publik gugus berasal dari profil, bukan ID ini. Gugus lain memakai database dan deployment terpisah. Akun/header tenant tambahan pada database yang sama tetap ditolak. Jangan membuka tenant tambahan hanya dengan membuat baris pada tabel `tenants`.
 
 ## Struktur utama
 

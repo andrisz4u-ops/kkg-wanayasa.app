@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getOrganizationSettings, expandOrganizationTokens } from '../lib/organization';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { successResponse, Errors, validateRequired } from '../lib/response';
 import { createAuditLog } from '../lib/audit';
@@ -358,7 +359,7 @@ templates.post('/:id/preview', async (c) => {
             return Errors.notFound(c, 'Template');
         }
 
-        let preview = template.konten;
+        let preview = expandOrganizationTokens(template.konten, await getOrganizationSettings(c.env.DB));
         const variables = template.variables ? JSON.parse(template.variables) : [];
 
         // Replace variables with provided data or placeholders

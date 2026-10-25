@@ -5,20 +5,8 @@ import { showToast, escapeHtml } from '../utils.js';
 import { navigate } from '../router.js';
 import { fetchUnreadCount } from '../notifications.js';
 
-// Base 9 Schools of KKG Gugus 3 Wanayasa (Always guaranteed in dropdown)
-const BASE_KKG_SCHOOLS = [
-  { id: 1, nama: 'SDN 2 Nangerang' },
-  { id: 2, nama: 'SDN 1 Nangerang' },
-  { id: 3, nama: 'SDN Nagrog' },
-  { id: 4, nama: 'SDN Raharja' },
-  { id: 5, nama: 'SDN 1 Cibuntu' },
-  { id: 6, nama: 'SDN 2 Cibuntu' },
-  { id: 7, nama: 'SDN Sumurugul' },
-  { id: 8, nama: 'SDN Sakambang' },
-  { id: 9, nama: 'SDIT Al-Qalam' }
-];
-
-let allKnownSchools = [...BASE_KKG_SCHOOLS];
+// The current deployment's database is the only source of school identities.
+let allKnownSchools = [];
 
 function canonicalSchoolKey(name) {
   if (!name) return '';
@@ -274,18 +262,7 @@ export function renderLogin() {
                   required
                 >
                   <option value="" class="text-[var(--color-text-secondary)] bg-white">-- Pilih Asal Sekolah / Instansi --</option>
-                  <optgroup id="optgroup-gugus-3" label="🏫 9 Sekolah Anggota KKG Gugus 3 Wanayasa">
-                    <option value="SDN 2 Nangerang" class="font-medium text-slate-900 bg-white">SDN 2 Nangerang (Sekretariat KKG)</option>
-                    <option value="SDN 1 Nangerang" class="font-medium text-slate-900 bg-white">SDN 1 Nangerang</option>
-                    <option value="SDN Nagrog" class="font-medium text-slate-900 bg-white">SDN Nagrog</option>
-                    <option value="SDN Raharja" class="font-medium text-slate-900 bg-white">SDN Raharja (Sekolah Penggerak)</option>
-                    <option value="SDN 1 Cibuntu" class="font-medium text-slate-900 bg-white">SDN 1 Cibuntu</option>
-                    <option value="SDN 2 Cibuntu" class="font-medium text-slate-900 bg-white">SDN 2 Cibuntu</option>
-                    <option value="SDN Sumurugul" class="font-medium text-slate-900 bg-white">SDN Sumurugul</option>
-                    <option value="SDN Sakambang" class="font-medium text-slate-900 bg-white">SDN Sakambang</option>
-                    <option value="SDIT Al-Qalam" class="font-medium text-slate-900 bg-white">SDIT Al-Qalam</option>
-                  </optgroup>
-                  <optgroup id="optgroup-sekolah-lainnya" label="🌐 Sekolah Terdaftar Lainnya" class="hidden"></optgroup>
+                  <optgroup id="optgroup-anggota" label="Sekolah terdaftar"></optgroup>
                   <option value="__other__" class="text-amber-800 font-bold bg-amber-50">✍️ Sekolah Lainnya (Tulis / Ketik Manual)...</option>
                 </select>
                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-text-tertiary)]">
@@ -520,37 +497,28 @@ window.selectCanonicalSchool = function (schoolName) {
   showToast(`Sekolah disinkronkan ke: ${schoolName}`, 'info');
 };
 
-async function loadSekolahForRegister(select) {
+export async function loadSekolahForRegister(select) {
   if (!select) return;
+  allKnownSchools = [];
+  select.querySelector('#optgroup-anggota')?.replaceChildren();
   try {
     const res = await api('/sekolah');
     const apiSchools = res.data || [];
 
-    if (apiSchools.length > 0) {
-      const map = new Map();
-      allKnownSchools.forEach(s => map.set(s.nama.toLowerCase(), s));
-      apiSchools.forEach(s => map.set(s.nama.toLowerCase(), s));
-      allKnownSchools = Array.from(map.values());
-
-      const optgroupLainnya = document.getElementById('optgroup-sekolah-lainnya');
-      if (optgroupLainnya) {
-        const defaultNames = BASE_KKG_SCHOOLS.map(s => s.nama.toLowerCase());
-        const extraSchools = apiSchools.filter(s => !defaultNames.includes(s.nama.toLowerCase()));
-
-        if (extraSchools.length > 0) {
-          optgroupLainnya.innerHTML = '';
-          optgroupLainnya.classList.remove('hidden');
-          extraSchools.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.nama;
-            opt.textContent = s.nama;
-            opt.className = 'text-slate-900 bg-white';
-            optgroupLainnya.appendChild(opt);
-          });
-        }
-      }
+    allKnownSchools = Array.isArray(apiSchools) ? apiSchools : [];
+    const group = select.querySelector('#optgroup-anggota');
+    if (group) {
+      group.replaceChildren();
+      group.label = `Sekolah anggota ${state.settings?.nama_kkg || 'KKG'}`;
+      allKnownSchools.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.nama;
+        opt.textContent = s.nama + (s.is_sekretariat ? ' (Sekretariat KKG)' : '');
+        group.appendChild(opt);
+      });
     }
   } catch (e) {
+    allKnownSchools = [];
     console.warn('Load sekolah note:', e);
   }
 }

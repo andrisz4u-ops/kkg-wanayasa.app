@@ -33,7 +33,7 @@ export async function renderSertifikat() {
           Sertifikat & Portofolio KKG
         </h1>
         <p class="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-2xl">
-          Arsip bukti dukung resmi kegiatan KKG Gugus 3 Wanayasa bertanda tangan ganda Ketua KKG dan Pengawas Pembina. Sah digunakan untuk RHK Komunitas Belajar (4 Poin).
+          Arsip bukti dukung kegiatan ${escapeHtml(state.settings?.nama_kkg || 'KKG')} bertanda tangan Ketua KKG dan Pengawas Pembina.
         </p>
       </div>
 
@@ -136,7 +136,7 @@ function renderSertifikatCard(s) {
           </div>
           <div class="flex items-center gap-2">
             <i class="fas fa-map-marker-alt w-4 text-slate-400"></i>
-            <span>${escapeHtml(s.tempat || 'Gugus 3 Wanayasa')}</span>
+            <span>${escapeHtml(s.tempat || state.settings?.alamat_sekretariat || 'Sekretariat KKG')}</span>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export async function renderVerifikasi() {
         </div>
         <h1 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Sertifikat Tidak Terverifikasi</h1>
         <p class="text-sm text-rose-600 dark:text-rose-400 font-medium mt-2">
-          ${escapeHtml(verifyData?.message || 'Nomor registrasi atau token tanda tangan tidak ditemukan dalam database resmi KKG Gugus 3 Wanayasa.')}
+          ${escapeHtml(verifyData?.message || 'Nomor registrasi atau token tanda tangan tidak ditemukan dalam database organisasi ini.')}
         </p>
         <div class="mt-6 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500">
           Dokumen ini mungkin belum disahkan oleh Pengawas Pembina dan Ketua KKG, atau token telah dimodifikasi.
@@ -228,7 +228,7 @@ export async function renderVerifikasi() {
             Status: Asli & Terdaftar
           </span>
           <h2 class="text-xl font-extrabold">DOKUMEN RESMI TERVERIFIKASI</h2>
-          <p class="text-xs text-white/80 mt-1">Sistem Registrasi Portofolio Digital KKG Gugus 3 Wanayasa</p>
+          <p class="text-xs text-white/80 mt-1">Sistem Registrasi Portofolio Digital ${escapeHtml(state.settings?.nama_kkg || 'KKG')}</p>
         </div>
 
         <!-- Detail Verifikasi -->
@@ -287,7 +287,7 @@ export async function renderVerifikasi() {
               <div class="p-3.5 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 rounded-2xl">
                 <div class="flex items-center gap-2 mb-1.5 text-emerald-700 dark:text-emerald-300 font-bold">
                   <i class="fas fa-signature"></i>
-                  <span>Ketua KKG Gugus 3</span>
+                  <span>Ketua ${escapeHtml(state.settings?.nama_kkg || 'KKG')}</span>
                 </div>
                 <div class="font-semibold text-slate-800 dark:text-slate-100">${escapeHtml(cert.disahkan_oleh.ketua_kkg.nama)}</div>
                 <div class="text-[11px] text-slate-500">NIP: ${escapeHtml(cert.disahkan_oleh.ketua_kkg.nip)}</div>
@@ -313,7 +313,7 @@ export async function renderVerifikasi() {
 
         <!-- Footer -->
         <div class="px-8 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 text-center text-xs text-slate-400">
-          Kelompok Kerja Guru (KKG) Gugus 3 Kecamatan Wanayasa, Kabupaten Purwakarta
+          ${escapeHtml(state.settings?.nama_kkg || 'Kelompok Kerja Guru (KKG)')} · Kecamatan ${escapeHtml(state.settings?.kecamatan || '')}, Kabupaten ${escapeHtml(state.settings?.kabupaten || '')}
         </div>
       </div>
     </div>
@@ -458,7 +458,7 @@ function buildSertifikatPaperHTML(data) {
           KELOMPOK KERJA GURU (KKG) GUGUS 3 KECAMATAN WANAYASA
         </h2>
         <p class="text-[11px] text-slate-500">
-          Sekretariat: SDN 2 Nangerang, Kec. Wanayasa, Kab. Purwakarta · kkg-wanayasa.app
+          Sekretariat: ${escapeHtml(state.settings?.alamat_sekretariat || '')} · ${escapeHtml(state.settings?.app_url || state.settings?.website_kkg || '')}
         </p>
 
         <!-- Garis Pemisah Emas -->
@@ -498,15 +498,15 @@ function buildSertifikatPaperHTML(data) {
         </div>
 
         <p class="text-xs text-slate-600">
-          Diselenggarakan pada tanggal <strong>${formatDate(data.tanggal)}</strong> bertempat di <strong>${escapeHtml(data.tempat || 'Gugus 3 Wanayasa')}</strong> dengan total beban belajar setara <strong>${data.alokasi_jp || 4} Jam Pelajaran (JP)</strong>.
+          Diselenggarakan pada tanggal <strong>${formatDate(data.tanggal)}</strong> bertempat di <strong>${escapeHtml(data.tempat || state.settings?.alamat_sekretariat || 'Sekretariat KKG')}</strong> dengan total beban belajar setara <strong>${data.alokasi_jp || 4} Jam Pelajaran (JP)</strong>.
         </p>
 
         <!-- Tanda Tangan Ganda Berdampingan -->
         <div class="grid grid-cols-2 gap-8 mt-8 sm:mt-12 text-center text-xs sm:text-sm">
           <!-- Kolom Ketua KKG -->
           <div class="flex flex-col items-center">
-            <span class="text-slate-500">Wanayasa, ${formatDate(data.tanggal)}</span>
-            <span class="font-bold text-slate-800 mt-0.5">Ketua KKG Gugus 3 Wanayasa</span>
+            <span class="text-slate-500">${escapeHtml(state.settings?.kecamatan || '')}, ${formatDate(data.tanggal)}</span>
+            <span class="font-bold text-slate-800 mt-0.5">Ketua ${escapeHtml(state.settings?.nama_kkg || 'KKG')}</span>
             
             <!-- Area Tanda Tangan & Stempel -->
             <div class="relative h-20 w-44 flex items-center justify-center my-1">
@@ -528,7 +528,7 @@ function buildSertifikatPaperHTML(data) {
           <!-- Kolom Pengawas Pembina -->
           <div class="flex flex-col items-center">
             <span class="text-slate-500">Mengetahui / Mengesahkan,</span>
-            <span class="font-bold text-slate-800 mt-0.5">Pengawas SD Pembina Gugus 3</span>
+            <span class="font-bold text-slate-800 mt-0.5">${escapeHtml(state.settings?.pengawas_instansi || 'Pengawas SD Pembina')}</span>
 
             <!-- Area Tanda Tangan -->
             <div class="relative h-20 w-44 flex items-center justify-center my-1">
@@ -605,7 +605,7 @@ function buildSertifikatPaperHTML(data) {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mb-8">
         <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
           <span class="font-bold text-slate-700 block mb-1">Narasumber / Fasilitator:</span>
-          <span>${escapeHtml(data.narasumber || 'Pengawas Pembina & Tim Fasilitator KKG Gugus 3')}</span>
+          <span>${escapeHtml(data.narasumber || `Pengawas Pembina & Tim Fasilitator ${state.settings?.nama_kkg || 'KKG'}`)}</span>
         </div>
         <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
           <span class="font-bold text-slate-700 block mb-1">Bentuk Evaluasi:</span>
@@ -616,8 +616,8 @@ function buildSertifikatPaperHTML(data) {
       <!-- TTD Pengesahan Halaman 2 -->
       <div class="flex justify-end text-xs sm:text-sm">
         <div class="text-center w-64">
-          <span class="text-slate-500">Wanayasa, ${formatDate(data.tanggal)}</span><br>
-          <span class="font-bold text-slate-800">Pengawas SD Pembina Gugus 3</span>
+          <span class="text-slate-500">${escapeHtml(state.settings?.kecamatan || '')}, ${formatDate(data.tanggal)}</span><br>
+          <span class="font-bold text-slate-800">${escapeHtml(state.settings?.pengawas_instansi || 'Pengawas SD Pembina')}</span>
           <div class="h-20 flex items-center justify-center">
             <span class="font-serif italic text-base text-[#1e3a8a] font-semibold">${escapeHtml(data.ttd_pengawas_nama || 'Pengawas Pembina')}</span>
           </div>

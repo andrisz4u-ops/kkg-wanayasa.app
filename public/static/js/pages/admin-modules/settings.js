@@ -49,6 +49,9 @@ window.loadAdminSettings = async function loadAdminSettings() {
     setVal('settings-vertex_api_key', s.vertex_api_key || '');
     setVal('settings-vertex_project_id', s.vertex_project_id || '');
     setVal('settings-vultr_api_key', s.vultr_api_key || '');
+    setVal('profil-app_name', s.app_name || 'RuangKKG');
+    setVal('profil-app_url', s.app_url || '');
+    setVal('profil-gugus', s.gugus || '');
 
     const logoContainer = document.getElementById('logo-preview');
     if (logoContainer && s.logo_url) {
@@ -96,6 +99,9 @@ window.saveSettings = async function (e) {
 window.saveProfilKKG = async function () {
   try {
     const data = {
+      app_name: document.getElementById('profil-app_name')?.value || 'RuangKKG',
+      app_url: document.getElementById('profil-app_url')?.value || '',
+      gugus: document.getElementById('profil-gugus')?.value || '',
       nama_kkg: document.getElementById('profil-nama_kkg').value,
       tahun_ajaran: document.getElementById('profil-tahun_ajaran').value,
       npsn_sekolah_induk: document.getElementById('profil-npsn_sekolah_induk').value,
@@ -121,8 +127,6 @@ window.saveProfilKKG = async function () {
       hero_deskripsi: document.getElementById('profil-hero_deskripsi')?.value || '',
       visi: document.getElementById('profil-visi')?.value || '',
       misi: document.getElementById('profil-misi')?.value || '',
-      pengawas_nama: document.getElementById('profil-pengawas_nama')?.value || '',
-      pengawas_instansi: document.getElementById('profil-pengawas_instansi')?.value || '',
       kutipan_pengawas: document.getElementById('profil-kutipan_pengawas')?.value || '',
       kutipan_ketua: document.getElementById('profil-kutipan_ketua')?.value || '',
       theme_color: document.getElementById('profil-theme_color')?.value || 'teal',
@@ -139,21 +143,6 @@ window.saveProfilKKG = async function () {
       applyThemeColor(data.theme_color, true);
     }
     document.dispatchEvent(new CustomEvent('settings-updated', { detail: data }));
-
-    // Also sync to active tenant metadata
-    try {
-      await api('/tenants/current', {
-        method: 'PUT',
-        body: {
-          nama: data.nama_kkg,
-          kecamatan: data.kecamatan,
-          kabupaten: data.kabupaten,
-          alamat_sekretariat: data.alamat_sekretariat,
-          email: data.email_kkg,
-          no_kontak: data.telepon_kkg
-        }
-      });
-    } catch (_) { }
 
     moduleToast('Profil', 'Konfigurasi berhasil disimpan', 'success');
   } catch (e) { moduleToast('Profil', e.message || 'Gagal menyimpan konfigurasi', 'error'); }

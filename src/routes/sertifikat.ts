@@ -28,18 +28,18 @@ async function getDefaultSigners(db: D1Database) {
 
     return {
       ketua: {
-        nama: map.nama_ketua || 'Ketua KKG Gugus 3',
+        nama: map.nama_ketua || 'Ketua KKG',
         nip: map.nip_ketua || ''
       },
       pengawas: {
         nama: map.pengawas_nama || 'Pengawas Pembina SD',
         nip: map.pengawas_nip || '',
-        instansi: map.pengawas_instansi || 'Pengawas SD Pembina Gugus 3 Wanayasa'
+        instansi: map.pengawas_instansi || 'Pengawas SD Pembina'
       }
     };
   } catch (_) {
     return {
-      ketua: { nama: 'Ketua KKG Gugus 3', nip: '' },
+      ketua: { nama: 'Ketua KKG', nip: '' },
       pengawas: { nama: 'Pengawas Pembina SD', nip: '', instansi: 'Pengawas SD Pembina' }
     };
   }
@@ -378,7 +378,7 @@ sertifikat.get('/detail/:token', async (c) => {
       ];
     }
 
-    const host = c.req.header('host') || 'kkg-wanayasa.app';
+    const host = new URL(c.req.url).host;
     const proto = c.req.header('x-forwarded-proto') || 'https';
     const verifyUrl = `${proto}://${host}/verifikasi?token=${encodeURIComponent(row.token_hash)}`;
 

@@ -421,6 +421,10 @@ export const resetPasswordSchema = z.object({
 });
 
 export const updateSettingsSchema = z.object({
+    app_name: z.string().trim().min(1).max(100).optional(),
+    app_url: z.string().url().max(255).refine(value => /^https?:\/\//.test(value)).or(z.literal('')).optional(),
+    jenjang: z.string().max(30).optional(),
+    region_profile: z.enum(['purwakarta', 'custom']).optional(),
     mistral_api_key: z.string().max(200).optional(),
     z_ai_api_key: z.string().max(200).optional(),
     gemini_api_key: z.string().max(200).optional(),
@@ -428,7 +432,7 @@ export const updateSettingsSchema = z.object({
     vertex_api_key: z.string().max(200).optional(),
     vertex_project_id: z.string().max(100).optional(),
     vultr_api_key: z.string().max(300).optional(),
-    nama_kkg: z.string().max(200).optional(),
+    nama_kkg: z.string().trim().min(1).max(200).optional(),
     nama_organisasi: z.string().max(200).optional(),
     gugus: z.string().max(100).optional(),
     nama_ketua: z.string().max(100).optional(),

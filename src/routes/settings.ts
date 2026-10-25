@@ -1,34 +1,25 @@
 
 import { Hono } from 'hono';
 import { successResponse, Errors } from '../lib/response';
+import { getOrganizationSettings } from '../lib/organization';
 
 type Bindings = { DB: D1Database };
 
 const settings = new Hono<{ Bindings: Bindings }>();
 
+settings.get('/manifest', async (c) => {
+    const profile = await getOrganizationSettings(c.env.DB);
+    c.header('Cache-Control', 'no-cache');
+    c.header('Content-Type', 'application/manifest+json');
+    return c.body(JSON.stringify({ name: `${profile.app_name} - ${profile.nama_kkg}`, short_name: profile.app_name,
+        start_url: '/', scope: '/', id: '/', display: 'standalone', lang: 'id',
+        icons: [{ src: '/static/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }, { src: '/static/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }] }));
+});
+
 // Get public settings (no auth required)
 settings.get('/public', async (c) => {
     try {
-        const keys = [
-            'nama_kkg', 'alamat_sekretariat', 'logo_url', 'kecamatan', 'kabupaten', 'provinsi', 'tahun_ajaran', 
-            'nama_organisasi', 'npsn_sekolah_induk', 'nama_sekolah_induk',
-            'nama_ketua', 'nip_ketua', 'nama_sekretaris', 'nama_bendahara', 'email_kkg', 'telepon_kkg', 'website_kkg',
-            'hero_title', 'hero_deskripsi', 'visi', 'misi', 'visi_misi',
-            'pengawas_nama', 'pengawas_nip', 'pengawas_instansi', 'kutipan_pengawas', 'kutipan_ketua',
-            'theme_color'
-        ];
-
-        const placeholders = keys.map(() => '?').join(',');
-        const result = await c.env.DB.prepare(
-            `SELECT key, value FROM settings WHERE key IN (${placeholders})`
-        ).bind(...keys).all();
-
-        const publicSettings: any = {};
-        result.results?.forEach((row: any) => {
-            publicSettings[row.key] = row.value;
-        });
-
-        return successResponse(c, publicSettings);
+        return successResponse(c, await getOrganizationSettings(c.env.DB));
     } catch (e: any) {
         console.error('Get public settings error:', e);
         return Errors.internal(c);

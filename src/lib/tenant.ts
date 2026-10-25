@@ -19,6 +19,8 @@ export interface TenantConfig {
   max_users?: number;
 }
 
+// Legacy storage namespace, NOT the display name or deployment slug. Separate
+// installations deliberately retain this key for schema/session compatibility.
 export const DEFAULT_TENANT_ID = 'kkg-gugus-3-wanayasa';
 
 export const DEFAULT_TENANT: TenantConfig = {
@@ -34,20 +36,8 @@ export const DEFAULT_TENANT: TenantConfig = {
   max_users: 500,
 };
 
-// In-memory edge cache for tenant metadata
-const tenantCache = new Map<string, { data: TenantConfig; cachedAt: number }>();
-const TENANT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
-
-/**
- * Clear tenant cache (on update)
- */
-export function invalidateTenantCache(tenantId?: string): void {
-  if (tenantId) {
-    tenantCache.delete(tenantId);
-  } else {
-    tenantCache.clear();
-  }
-}
+/** @deprecated Profiles are read from the current database, never globally cached. */
+export function invalidateTenantCache(_tenantId?: string): void {}
 
 /**
  * Resolve tenant from request headers, query string, or fallback
@@ -71,33 +61,27 @@ export function resolveTenantId(req?: Request | { header: (name: string) => stri
 }
 
 /**
- * Fetch tenant configuration with edge caching and safe fallback
+ * Read current organization metadata from this installation's database.
  */
 export async function getTenantConfig(db?: D1Database, tenantId: string = DEFAULT_TENANT_ID): Promise<TenantConfig> {
-  const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true');
-  const now = Date.now();
-
-  if (!isTest) {
-    const cached = tenantCache.get(tenantId);
-    if (cached && (now - cached.cachedAt) < TENANT_CACHE_TTL_MS) {
-      return cached.data;
-    }
-  }
-
+  let config: TenantConfig = { ...DEFAULT_TENANT };
   if (db) {
     try {
       const row = await db.prepare('SELECT * FROM tenants WHERE id = ?').bind(tenantId).first();
       if (row) {
-        const config = row as unknown as TenantConfig;
-        if (!isTest) {
-          tenantCache.set(tenantId, { data: config, cachedAt: now });
-        }
-        return config;
+        config = row as unknown as TenantConfig;
       }
     } catch (_) {
       // Fallback gracefully if table not yet initialized
     }
   }
-
-  return DEFAULT_TENANT;
+  if (db && tenantId === DEFAULT_TENANT_ID) {
+    const { getOrganizationSettings } = await import('./organization');
+    const profile = await getOrganizationSettings(db, config);
+    return { ...config, nama: profile.nama_kkg, jenjang: profile.jenjang,
+      kecamatan: profile.kecamatan, kabupaten: profile.kabupaten, provinsi: profile.provinsi,
+      alamat_sekretariat: profile.alamat_sekretariat, email: profile.email_kkg,
+      no_kontak: profile.telepon_kkg, logo_url: profile.logo_url, kop_surat_url: profile.kop_surat_url };
+  }
+  return config;
 }

@@ -276,7 +276,8 @@ export async function sendEmail(
     message: EmailMessage
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const from = config.from || 'noreply@kkg-wanayasa.id';
+        const from = config.from;
+        if (!from) throw new Error('Alamat email pengirim belum dikonfigurasi.');
 
         if (!config.apiKey) {
             console.error('Email API key not configured');

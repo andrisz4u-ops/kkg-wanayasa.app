@@ -538,13 +538,12 @@ window.populateSppdSchoolSelects = function () {
   // Populate datalist with schools and common educational/official venues
   if (tujuanDatalist) {
     const commonVenues = [
-      `Gedung Guru PGRI Cabang ${state.settings?.kecamatan || 'Wanayasa'}`,
-      `Kantor Dinas Pendidikan Kabupaten ${state.settings?.kabupaten || 'Purwakarta'}`,
-      `Aula Bale Guru Linuhung ${state.settings?.kabupaten || 'Purwakarta'}`,
-      `Kantor Korwil Bidik Kecamatan ${state.settings?.kecamatan || 'Wanayasa'}`,
+      `Gedung Guru PGRI Cabang ${state.settings?.kecamatan || ''}`,
+      `Kantor Dinas Pendidikan Kabupaten ${state.settings?.kabupaten || ''}`,
+      `Aula Kegiatan ${state.settings?.nama_kkg || 'KKG'}`,
+      `Kantor Korwil Bidik Kecamatan ${state.settings?.kecamatan || ''}`,
       'Bale Pasanggrahan Padjadjaran',
-      'Hotel Harper Purwakarta',
-      'Hotel Prime Plaza Purwakarta'
+      'Tempat kegiatan lainnya'
     ];
 
     const schoolOptions = schools.map(s => `<option value="${escapeHtml(s.nama)}">${escapeHtml(s.nama)} (Sekolah Anggota)</option>`).join('');
@@ -570,7 +569,7 @@ window.onSekolahAsalChange = function (namaSekolah) {
   if (s) {
     if (ksInput) ksInput.value = s.kepala_sekolah || '';
     if (nipInput) nipInput.value = s.nip_kepala_sekolah || '-';
-    if (alamatInput) alamatInput.value = s.alamat || `Kecamatan ${state.settings?.kecamatan || 'Wanayasa'}, Kabupaten ${state.settings?.kabupaten || 'Purwakarta'}`;
+    if (alamatInput) alamatInput.value = s.alamat || `Kecamatan ${state.settings?.kecamatan || ''}, Kabupaten ${state.settings?.kabupaten || ''}`;
 
     const kopUrl = s.kop_surat_url || (state.user?.sekolah === namaSekolah ? state.user?.kop_surat_url : '') || '';
     if (kopInput) kopInput.value = kopUrl;
@@ -860,10 +859,10 @@ window.switchSppdPreviewTab = function (tabIndex) {
 
 function renderKopSekolahHtml(meta) {
   const cleanSekolahNama = escapeHtml(meta.sekolah_asal_nama || 'SD NEGERI');
-  const cleanKabupaten = escapeHtml((state.settings?.kabupaten || 'Purwakarta').toUpperCase());
-  const cleanKecamatan = escapeHtml(state.settings?.kecamatan || 'Wanayasa');
-  const cleanAlamat = escapeHtml(meta.alamat_sekolah_asal || `Kecamatan ${cleanKecamatan}, Kabupaten ${state.settings?.kabupaten || 'Purwakarta'}`);
-  const logoUrl = escapeHtml(state.settings?.logo_url || 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Logo_Kabupaten_Purwakarta.png');
+  const cleanKabupaten = escapeHtml((state.settings?.kabupaten || '').toUpperCase());
+  const cleanKecamatan = escapeHtml(state.settings?.kecamatan || '');
+  const cleanAlamat = escapeHtml(meta.alamat_sekolah_asal || `Kecamatan ${state.settings?.kecamatan || ''}, Kabupaten ${state.settings?.kabupaten || ''}`);
+  const logoUrl = escapeHtml(state.settings?.logo_url || '/static/icons/icon-192x192.png');
 
   if (meta.kop_surat_url) {
     return `
@@ -918,12 +917,12 @@ function getSptPageHtml(meta) {
         <tr>
           <td class="w-20 font-bold align-top">Dasar</td>
           <td class="w-4 align-top">:</td>
-          <td class="align-top">${escapeHtml(meta.dasar_surat || 'Surat Undangan dari Pengurus Kelompok Kerja Guru (KKG) Gugus 3 Wanayasa')}</td>
+          <td class="align-top">${escapeHtml(meta.dasar_surat || `Surat Undangan dari Pengurus ${state.settings?.nama_kkg || 'KKG'}`)}</td>
         </tr>
       </table>
 
       <div class="text-center font-bold text-xs my-2 tracking-wider">MEMERINTAHKAN :</div>
-      <div class="text-xs mb-3">Kepala ${escapeHtml(meta.sekolah_asal_nama)} Kecamatan ${escapeHtml(state.settings?.kecamatan || 'Wanayasa')} Kabupaten ${escapeHtml(state.settings?.kabupaten || 'Purwakarta')} menugaskan kepada:</div>
+      <div class="text-xs mb-3">Kepala ${escapeHtml(meta.sekolah_asal_nama)} Kecamatan ${escapeHtml(state.settings?.kecamatan || '')} Kabupaten ${escapeHtml(state.settings?.kabupaten || '')} menugaskan kepada:</div>
 
       <!-- TABEL GURU -->
       <table class="w-full text-xs mb-4 border-collapse border border-black">
@@ -979,7 +978,7 @@ function getSptPageHtml(meta) {
       <!-- TTD -->
       <div class="flex justify-end text-xs">
         <div class="w-64 text-left">
-          <div>Dikeluarkan di : ${escapeHtml(state.settings?.kecamatan || 'Wanayasa')}</div>
+          <div>Dikeluarkan di : ${escapeHtml(state.settings?.kecamatan || '')}</div>
           <div class="mb-1">Pada tanggal : ${tglIndo}</div>
           <div class="mb-16">Kepala Sekolah,</div>
           <div class="font-bold underline text-sm">${escapeHtml(meta.kepala_sekolah_asal)}</div>
@@ -1107,7 +1106,7 @@ function getSpdPageHtml(meta) {
       <!-- TTD -->
       <div class="flex justify-end text-xs">
         <div class="w-64 text-left">
-          <div>Dikeluarkan di : ${escapeHtml(state.settings?.kecamatan || 'Wanayasa')}</div>
+          <div>Dikeluarkan di : ${escapeHtml(state.settings?.kecamatan || '')}</div>
           <div class="mb-1">Pada tanggal : ${tglIndo}</div>
           <div class="mb-16">Kepala Sekolah,</div>
           <div class="font-bold underline text-sm">${escapeHtml(meta.kepala_sekolah_asal)}</div>
@@ -1257,7 +1256,7 @@ function getLhpPageHtml(meta) {
       <!-- TTD (Wajib H+1 !) -->
       <div class="flex justify-end text-xs">
         <div class="w-64 text-left">
-          <div class="mb-1">${escapeHtml(state.settings?.kecamatan || 'Wanayasa')}, <span class="font-bold">${tglLhpIndo}</span></div>
+          <div class="mb-1">${escapeHtml(state.settings?.kecamatan || '')}, <span class="font-bold">${tglLhpIndo}</span></div>
           <div class="mb-16">Pegawai yang Melaporkan,</div>
           <div class="font-bold underline text-sm">${escapeHtml(guruUtama.nama)}</div>
           <div>NIP. ${escapeHtml(guruUtama.nip || '-')}</div>
@@ -1793,7 +1792,7 @@ async function fetchLetterSettings() {
       nama_ketua: state.settings?.nama_ketua || 'Ketua KKG',
       nip_ketua: state.settings?.nip_ketua || '-',
       alamat_sekretariat: state.settings?.alamat_sekretariat || '',
-      kabupaten: state.settings?.kabupaten || 'Purwakarta',
+      kabupaten: state.settings?.kabupaten || '',
       kecamatan: state.settings?.kecamatan || '',
       gugus: state.settings?.gugus || '01'
     };
@@ -1953,7 +1952,7 @@ window.generateFromTemplate = async function () {
     }
 
     // Replace variables in template content
-    let content = selectedTemplate.konten;
+    let content = selectedTemplate.konten.replace(/\{\{(nama_kkg|kecamatan|kabupaten|alamat_sekretariat)\}\}/g, (_token, key) => state.settings?.[key] || '');
     for (const [key, value] of Object.entries(data)) {
       content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
     }
@@ -2062,7 +2061,7 @@ window.generateFromTemplateNew = async function () {
     }
 
     // Replace content
-    let content = selectedTemplate.konten;
+    let content = selectedTemplate.konten.replace(/\{\{(nama_kkg|kecamatan|kabupaten|alamat_sekretariat)\}\}/g, (_token, key) => state.settings?.[key] || '');
     for (const [key, value] of Object.entries(data)) {
       content = content.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
     }

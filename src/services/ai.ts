@@ -941,8 +941,8 @@ CRITICAL JSON RULES:
         const isProxyStream = (p.base_url && (p.base_url.includes('openrouter.ai') || p.base_url.includes('xkiro.com'))) ||
                               (p.slug && (p.slug.includes('xkiro') || p.slug.includes('openrouter')));
         if (isProxyStream) {
-            if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
-            if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+            if (!headers['HTTP-Referer'] && this.env.APP_URL) headers['HTTP-Referer'] = this.env.APP_URL;
+            if (!headers['X-Title']) headers['X-Title'] = this.env.APP_NAME || 'RuangKKG';
         }
 
         const controller = new AbortController();
@@ -1257,8 +1257,8 @@ CRITICAL JSON RULES:
         const isProxyNonStream = (p.base_url && (p.base_url.includes('openrouter.ai') || p.base_url.includes('xkiro.com'))) ||
                                  (p.slug && (p.slug.includes('xkiro') || p.slug.includes('openrouter')));
         if (isProxyNonStream) {
-            if (!headers['HTTP-Referer']) headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
-            if (!headers['X-Title']) headers['X-Title'] = 'KKG Wanayasa App';
+            if (!headers['HTTP-Referer'] && this.env.APP_URL) headers['HTTP-Referer'] = this.env.APP_URL;
+            if (!headers['X-Title']) headers['X-Title'] = this.env.APP_NAME || 'RuangKKG';
         }
 
         const response = await fetch(url, {

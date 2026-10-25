@@ -2,6 +2,7 @@
   "name": "kkg-gugus3-wanayasa",
   "type": "module",
   "scripts": {
+    "installation": "node ./scripts/installation.mjs",
     "dev": "node ./scripts/dev.mjs",
     "build": "npm run build:slides && vite build && npm run build:css:dist",
     "build:slides": "node ./scripts/build-slide-vendor.mjs",

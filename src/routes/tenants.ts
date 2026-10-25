@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { getTenantConfig, resolveTenantId, invalidateTenantCache, DEFAULT_TENANT_ID } from '../lib/tenant';
 import { successResponse, Errors } from '../lib/response';
 import { getCurrentUser, getCookie } from '../lib/auth';
-import { createAuditLog } from '../lib/audit';
+import { buildAuditStatement } from '../lib/audit';
+import { validate, updateSettingsSchema } from '../lib/validation';
 
 type Bindings = { DB: D1Database };
 
@@ -17,7 +18,7 @@ tenants.get('/current', async (c) => {
     const tenantConfig = await getTenantConfig(c.env.DB, tenantId);
 
     // Count affiliated schools
-    let schoolCount = 9;
+    let schoolCount = 0;
     try {
       const countRes: any = await c.env.DB.prepare(
         'SELECT COUNT(*) as total FROM sekolah WHERE tenant_id = ? OR tenant_id IS NULL'
@@ -49,16 +50,7 @@ tenants.get('/', async (c) => {
       return Errors.forbidden(c, 'Hanya administrator yang dapat melihat daftar tenant');
     }
 
-    try {
-      const rows = await c.env.DB.prepare(
-        'SELECT id, nama, jenjang, kecamatan, kabupaten, provinsi, email, no_kontak, is_active, created_at FROM tenants ORDER BY created_at ASC'
-      ).all();
-
-      return successResponse(c, rows.results || []);
-    } catch (_) {
-      const current = await getTenantConfig(c.env.DB);
-      return successResponse(c, [current]);
-    }
+    return successResponse(c, [await getTenantConfig(c.env.DB)]);
   } catch (e: any) {
     console.error('List tenants error:', e);
     return Errors.internal(c);
@@ -83,41 +75,28 @@ tenants.put('/current', async (c) => {
       return Errors.forbidden(c, 'Anda tidak dapat mengubah organisasi ini.');
     }
     const body = await c.req.json();
-    const { nama, kecamatan, kabupaten, alamat_sekretariat, email, no_kontak, logo_url } = body;
-
-    if (!nama) {
+    if (typeof body.nama !== 'string' || !body.nama.trim()) {
       return Errors.validation(c, 'Nama organisasi gugus tidak boleh kosong');
     }
+    const aliases: Record<string, string> = { nama: 'nama_kkg', jenjang: 'jenjang', kecamatan: 'kecamatan', kabupaten: 'kabupaten', provinsi: 'provinsi', alamat_sekretariat: 'alamat_sekretariat', email: 'email_kkg', no_kontak: 'telepon_kkg', logo_url: 'logo_url', kop_surat_url: 'kop_surat_url' };
+    const profile: Record<string, unknown> = {};
+    for (const [input, key] of Object.entries(aliases)) if (body[input] !== undefined) profile[key] = body[input];
+    const checked = validate(updateSettingsSchema, profile);
+    if (!checked.success) return Errors.validation(c, 'Profil organisasi tidak valid');
 
     try {
-      await c.env.DB.prepare(`
-        UPDATE tenants 
-        SET nama = ?, kecamatan = COALESCE(?, kecamatan), kabupaten = COALESCE(?, kabupaten),
-            alamat_sekretariat = COALESCE(?, alamat_sekretariat), email = COALESCE(?, email),
-            no_kontak = COALESCE(?, no_kontak), logo_url = COALESCE(?, logo_url),
-            updated_at = datetime('now')
-        WHERE id = ?
-      `).bind(
-        nama.trim(),
-        kecamatan?.trim() || null,
-        kabupaten?.trim() || null,
-        alamat_sekretariat?.trim() || null,
-        email?.trim() || null,
-        no_kontak?.trim() || null,
-        logo_url?.trim() || null,
-        tenantId
-      ).run();
-
-      invalidateTenantCache(tenantId);
-
-      await createAuditLog(c.env.DB, {
+      const statements = Object.entries(checked.data).map(([key, value]) => c.env.DB.prepare(
+        "INSERT INTO settings(key,value,updated_at) VALUES(?,?,datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at"
+      ).bind(key, String(value).trim()));
+      await c.env.DB.batch([...statements, buildAuditStatement(c.env.DB, {
         user_id: user.id,
         action: 'SETTINGS_UPDATE',
         entity_type: 'tenants',
-        details: { tenant_id: tenantId, nama, kecamatan, kabupaten },
+        details: { tenant_id: tenantId, updated_keys: Object.keys(profile) },
         ip_address: c.req.header('CF-Connecting-IP') || 'unknown',
         user_agent: c.req.header('User-Agent') || 'unknown'
-      });
+      })]);
+      invalidateTenantCache(tenantId);
     } catch (e: any) {
       console.error('Tenant update failed:', e);
       return Errors.internal(c, 'Data organisasi gagal diperbarui.');

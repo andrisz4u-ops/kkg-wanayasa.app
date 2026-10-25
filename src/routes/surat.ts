@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getOrganizationSettings, getDocumentOrganizationSettings } from '../lib/organization';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { AIService } from '../services/ai';
 import { buildSuratPrompt, buildSppdLhpPrompt } from '../lib/prompts';
@@ -53,25 +54,14 @@ const surat = new Hono<{ Bindings: Bindings }>();
 // ============================================
 surat.get('/settings', async (c) => {
   try {
-    const settings = await c.env.DB.prepare(`
-      SELECT key, value FROM settings 
-      WHERE key IN ('nama_ketua', 'nip_ketua', 'alamat_sekretariat', 'logo_url', 'kabupaten', 'kecamatan', 'gugus')
-    `).all();
-
-    // Transform array to object
-    const savedSettings: any = {};
-    if (settings.results) {
-      settings.results.forEach((s: any) => {
-        savedSettings[s.key] = s.value;
-      });
-    }
+    const savedSettings: any = await getOrganizationSettings(c.env.DB);
 
     // Defaults
     const defaults = {
       nama_ketua: 'Ketua KKG',
       nip_ketua: '-',
       alamat_sekretariat: '',
-      kabupaten: 'Purwakarta',
+      kabupaten: '',
       kecamatan: '',
       gugus: ''
     };
@@ -131,11 +121,7 @@ surat.post('/generate', requireSession, requireAIAdmission, rateLimitMiddleware(
     // Generate nomor surat
     const currentYear = new Date().getFullYear();
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
-    const settingsRows = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten')"
-    ).all();
-    const settingsMap: any = {};
-    settingsRows.results?.forEach((r: any) => { settingsMap[r.key] = r.value; });
+    const settingsMap: any = await getOrganizationSettings(c.env.DB);
 
     const isTugas = /tugas|spt|penugasan/i.test(jenis_kegiatan) || /tugas|spt|penugasan/i.test(agenda);
     const kodeSurat = isTugas ? 'ST' : 'UND';
@@ -331,7 +317,8 @@ surat.post('/generate-sppd', requireSession, requireAIAdmission, rateLimitMiddle
     }
 
     if (!isiLhp || isiLhp.trim().length < 10) {
-      isiLhp = `1. Telah mengikuti seluruh rangkaian kegiatan KKG Gugus 3 Wanayasa dengan materi "${data.agenda}" secara aktif dan tuntas.\n2. Memahami dan menguasai langkah-langkah implementasi materi pembelajaran serta berpartisipasi dalam penyusunan instrumen perangkat pembelajaran bersama guru-guru gugus.\n3. Berdiskusi dan memecahkan kendala teknis kurikulum di satuan pendidikan masing-masing bersama narasumber dan pengurus KKG.\n4. Menyusun rencana tindak lanjut untuk mengimbaskan hasil kegiatan kepada rekan pendidik dan menerapkannya pada proses belajar mengajar di ${data.sekolah_asal_nama}.`;
+      const profile = await getOrganizationSettings(c.env.DB);
+      isiLhp = `1. Telah mengikuti seluruh rangkaian kegiatan ${profile.nama_kkg} dengan materi "${data.agenda}" secara aktif dan tuntas.\n2. Memahami dan menguasai langkah-langkah implementasi materi pembelajaran serta berpartisipasi dalam penyusunan instrumen perangkat pembelajaran bersama guru-guru gugus.\n3. Berdiskusi dan memecahkan kendala teknis kurikulum di satuan pendidikan masing-masing bersama narasumber dan pengurus KKG.\n4. Menyusun rencana tindak lanjut untuk mengimbaskan hasil kegiatan kepada rekan pendidik dan menerapkannya pada proses belajar mengajar di ${data.sekolah_asal_nama}.`;
     }
 
     // Resolve kop_surat_url from input or database for sekolah_asal
@@ -709,14 +696,7 @@ surat.get('/:id/download', async (c) => {
     }
 
     // Get KKG settings
-    const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings"
-    ).all();
-
-    const settings: any = {};
-    settingsResult.results?.forEach((row: any) => {
-      settings[row.key] = row.value;
-    });
+    const settings: any = await getDocumentOrganizationSettings(c.env.DB, (c.env as any).STORAGE);
 
     // Parse peserta JSON
     let peserta = [];

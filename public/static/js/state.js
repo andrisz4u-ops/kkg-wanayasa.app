@@ -7,11 +7,12 @@ export const state = {
     mobileMenuOpen: false,
     pageParams: {},
     settings: {
-        alamat_sekretariat: 'Purwakarta, Jawa Barat',
+        alamat_sekretariat: '',
         nama_kkg: 'RuangKKG Digital',
-        email: 'admin@ruangkkg.my.id',
-        email_kkg: 'admin@ruangkkg.my.id',
-        website_kkg: 'https://ruangkkg.my.id',
+        email: '',
+        email_kkg: '',
+        website_kkg: '',
+        ...(typeof window !== 'undefined' ? window.__KKG_ORGANIZATION__ || {} : {}),
         theme_color: (typeof localStorage !== 'undefined' ? localStorage.getItem('kkg_theme_color') : null) || 'teal'
     },
     unreadNotifications: 0

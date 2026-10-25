@@ -223,7 +223,7 @@ export function buildSuratPrompt(input: {
    const s = input.settings || {};
    const namaOrg = s.nama_kkg || s.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
    const kec = s.kecamatan || '';
-   const kab = s.kabupaten || 'Purwakarta';
+   const kab = s.kabupaten || '';
 
    const isSuratTugas = /tugas|spt|penugasan/i.test(input.jenis_kegiatan) || /tugas|spt|penugasan/i.test(input.agenda);
 
@@ -319,7 +319,7 @@ export function buildProkerPrompt(input: {
    const s = input.settings || {};
    const namaOrg = s.nama_kkg || s.nama_organisasi || 'Kelompok Kerja Guru (KKG)';
    const kec = s.kecamatan || 'Kecamatan';
-   const kab = s.kabupaten || 'Purwakarta';
+   const kab = s.kabupaten || '';
 
    const sekolahInfo = input.sekolah_list && input.sekolah_list.length > 0
       ? `\n\nDAFTAR SEKOLAH ANGGOTA ${namaOrg.toUpperCase()}:\n${input.sekolah_list.map((sc, i) => `${i + 1}. ${sc}`).join('\n')}\n\nPENTING: Gunakan HANYA nama-nama sekolah di atas. JANGAN gunakan nama sekolah lain yang tidak ada di daftar.`
@@ -446,8 +446,8 @@ Setelah narasi, sajikan identitas dalam bentuk TABEL berikut:
 |--------|------------|
 | Nama Organisasi | ${s.nama_kkg || 'KKG Kecamatan ' + kec} |
 | Alamat Sekretariat | ${s.alamat_sekretariat || '[sebutkan alamat]'} |
-| Kecamatan | ${s.kecamatan || 'Wanayasa'} |
-| Kabupaten | ${s.kabupaten || 'Purwakarta'} |
+| Kecamatan | ${s.kecamatan || ''} |
+| Kabupaten | ${s.kabupaten || ''} |
 | Provinsi | ${s.provinsi || 'Jawa Barat'} |
 | Email | ${s.email_kkg || '-'} |
 
@@ -550,7 +550,7 @@ JADWAL PELAKSANAAN KEGIATAN SEMESTER 1 (JULI - DESEMBER ${input.tahun_ajaran.spl
 
 | No | Bulan | Minggu | Kegiatan | Tempat | Keterangan |
 |----|-------|--------|----------|--------|------------|
-| 1 | Juli | Minggu 2 | Rapat Koordinasi Awal Tahun | SDN Wanayasa 1 | Pembahasan program kerja |
+| 1 | Juli | Minggu 2 | Rapat Koordinasi Awal Tahun | ${s.nama_sekolah_induk || 'Sekretariat KKG'} | Pembahasan program kerja |
 (lanjutkan)
 
 JADWAL PELAKSANAAN KEGIATAN SEMESTER 2 (JANUARI - JUNI ${input.tahun_ajaran.split('/')[1]}):

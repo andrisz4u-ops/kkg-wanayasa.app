@@ -94,7 +94,7 @@ async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): P
 
         // 1. Query Wikipedia Bahasa Indonesia (Prioritas untuk sejarah, tokoh, & tempat Indonesia)
         const idWikiUrl = `https://id.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
-        const res = await fetch(idWikiUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
+        const res = await fetch(idWikiUrl, { headers: { 'User-Agent': 'RuangKKG/2.0 (education)' } });
         if (res.ok) {
             const data = await res.json() as any;
             const pages = data?.query?.pages;
@@ -117,7 +117,7 @@ async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): P
 
         // 2. Query Wikimedia Commons langsung
         const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
-        const commRes = await fetch(commonsUrl, { headers: { 'User-Agent': 'KKGWanayasa/2.0 (edtech; contact@kkgwanayasa.id)' } });
+        const commRes = await fetch(commonsUrl, { headers: { 'User-Agent': 'RuangKKG/2.0 (education)' } });
         if (commRes.ok) {
             const commData = await commRes.json() as any;
             const commPages = commData?.query?.pages;

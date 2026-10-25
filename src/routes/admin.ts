@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getOrganizationSettings } from '../lib/organization';
 import { getCurrentUser, getCookie, hashPassword } from '../lib/auth';
 import { encrypt, decrypt, isEncrypted, EncryptionError } from '../lib/crypto';
 import { successResponse, Errors } from '../lib/response';
@@ -436,7 +437,7 @@ admin.get('/settings', requireStrictAdmin, async (c) => {
         : '****';
     }
 
-    return successResponse(c, settings);
+    return successResponse(c, { ...settings, ...await getOrganizationSettings(c.env.DB) });
   } catch (e: any) {
     console.error('Get settings error:', e);
     return Errors.internal(c);
@@ -466,6 +467,7 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
 
     // All updatable settings
     const allowedKeys = [
+      'app_name', 'app_url', 'jenjang', 'region_profile',
       'nama_ketua', 'nip_ketua', 'tahun_ajaran', 'alamat_sekretariat',
       'nama_kkg', 'nama_organisasi', 'gugus', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
       'email_kkg', 'telepon_kkg', 'website_kkg',
@@ -1746,8 +1748,8 @@ admin.post('/ai-providers/fetch-models', requireStrictAdmin, providerWriteLimit,
         headers['Authorization'] = `Bearer ${rawApiKey}`;
       }
       if (cleanUrl.includes('openrouter.ai') || cleanUrl.includes('xkiro.com')) {
-        headers['HTTP-Referer'] = 'https://kkg-wanayasa.app';
-        headers['X-Title'] = 'KKG Wanayasa App';
+        if (c.env.APP_URL) headers['HTTP-Referer'] = c.env.APP_URL;
+        headers['X-Title'] = c.env.APP_NAME || 'RuangKKG';
       }
 
       let res = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000) });

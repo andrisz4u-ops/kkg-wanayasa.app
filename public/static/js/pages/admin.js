@@ -400,8 +400,13 @@ export async function renderAdmin() {
           <div class="flex-1 grid gap-6">
             <div>
               <label class="label">Nama Organisasi (KKG)</label>
-              <input type="text" id="profil-nama_kkg" class="input-field" placeholder="Contoh: KKG Gugus 1">
-            </div>
+               <input type="text" id="profil-nama_kkg" class="input-field" placeholder="Contoh: KKG Gugus 1">
+             </div>
+             <div class="grid grid-cols-2 gap-6">
+               <div><label class="label" for="profil-app_name">Nama Aplikasi</label><input type="text" id="profil-app_name" class="input-field" placeholder="RuangKKG"></div>
+               <div><label class="label" for="profil-app_url">Alamat Website Aplikasi</label><input type="url" id="profil-app_url" class="input-field" placeholder="https://gugus-anda.pages.dev"></div>
+             </div>
+             <div><label class="label" for="profil-gugus">Nomor / Nama Gugus</label><input type="text" id="profil-gugus" class="input-field" placeholder="1"></div>
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <label class="label">Tahun Ajaran Aktif</label>

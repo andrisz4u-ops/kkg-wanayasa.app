@@ -1,5 +1,6 @@
 
 import { Hono } from 'hono';
+import { getOrganizationSettings, getDocumentOrganizationSettings } from '../lib/organization';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { AIService } from '../services/ai';
 import { buildLaporanPrompt } from '../lib/prompts';
@@ -53,13 +54,7 @@ laporan.post('/generate-content', requireSession, requireAIAdmission, rateLimitM
         const { judul_laporan, periode, program_kerja_judul, tema, narasumber, tempat, model = 'vertex' } = body;
 
         // Get All Settings
-        const { results: allSettingsRows } = await c.env.DB.prepare(
-            "SELECT key, value FROM settings"
-        ).all();
-        const settings: any = {};
-        allSettingsRows?.forEach((row: any) => {
-            settings[row.key] = row.value;
-        });
+        const settings: any = await getOrganizationSettings(c.env.DB);
 
         const prompt = buildLaporanPrompt({
             judul_laporan,
@@ -315,11 +310,7 @@ laporan.get('/:id/docx', async (c) => {
         ).bind(id).first();
 
         // Get Settings
-        const { results: settingsRows } = await c.env.DB.prepare("SELECT key, value FROM settings").all();
-        const settings = settingsRows.reduce((acc: any, row: any) => {
-            acc[row.key] = row.value;
-            return acc;
-        }, {});
+        const settings = await getDocumentOrganizationSettings(c.env.DB, (c.env as any).STORAGE);
 
         const data = {
             ...result,

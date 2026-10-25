@@ -1,0 +1,27 @@
+{
+  "slug": "kkg-gugus-baru",
+  "projectName": "kkg-gugus-baru",
+  "databaseName": "kkg-gugus-baru-db",
+  "databaseId": "00000000-0000-4000-8000-000000000001",
+  "bucketName": "kkg-gugus-baru-storage",
+  "organization": {
+    "nama_kkg": "KKG Gugus Baru",
+    "gugus": "1",
+    "kecamatan": "Sukasari",
+    "kabupaten": "Purwakarta",
+    "provinsi": "Jawa Barat",
+    "alamat_sekretariat": "Alamat sekretariat gugus baru",
+    "email_kkg": "pengurus@example.org",
+    "website_kkg": "https://kkg-gugus-baru.pages.dev",
+    "app_name": "RuangKKG",
+    "app_url": "https://kkg-gugus-baru.pages.dev",
+    "region_profile": "purwakarta",
+    "tahun_ajaran": "2026/2027",
+    "nama_ketua": "Nama Ketua KKG",
+    "theme_color": "blue"
+  },
+  "admin": { "nama": "Admin Gugus Baru", "email": "admin@example.org" },
+  "schools": [
+    { "nama": "SDN Contoh", "npsn": "12345678", "tipe": "negeri", "is_sekretariat": true }
+  ]
+}

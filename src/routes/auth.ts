@@ -555,14 +555,14 @@ auth.post('/forgot-password', rateLimitMiddleware(RATE_LIMITS.auth), async (c) =
     const resetUrl = `${baseUrl}/#/reset-password?token=${token}`;
 
     // Send email if configured
-    if (settings.email_api_key) {
+    if (settings.email_api_key && settings.email_from) {
       const emailTemplate = getPasswordResetEmailTemplate(resetUrl, user.nama);
 
       await sendEmail(
         {
           provider: settings.email_provider || 'resend',
           apiKey: settings.email_api_key,
-          from: settings.email_from || 'noreply@kkg-wanayasa.id'
+          from: settings.email_from
         },
         {
           to: user.email,

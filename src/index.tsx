@@ -42,6 +42,7 @@ import { loggingMiddleware, logger, initLoggerEnv } from './lib/logger';
 import { csrfMiddleware, getOrCreateCSRFToken } from './lib/csrf';
 import { allowedCorsOrigin } from './lib/cors-origin';
 import { DEFAULT_TENANT_ID } from './lib/tenant';
+import { getOrganizationSettings, usesPurwakartaContent } from './lib/organization';
 import { validateEnv, reportEnvIssue } from './lib/env';
 import { hasEncryptionKey } from './lib/crypto';
 import type { AppBindings, AppVariables } from './types/env';
@@ -119,6 +120,17 @@ app.use('/api/*', async (c, next) => {
   const requestedTenant = c.req.header('X-Tenant-ID')?.trim();
   if (requestedTenant && requestedTenant !== DEFAULT_TENANT_ID) {
     return Errors.forbidden(c, 'Akses organisasi ini belum tersedia.');
+  }
+  await next();
+});
+
+// These generators embed Purwakarta regulations; custom regions must configure
+// their own curriculum/calendar before enabling them. Ordinary AI tools remain available.
+app.use('/api/*', async (c, next) => {
+  const regional = c.req.path.startsWith('/api/program-sekolah')
+    || /^\/api\/analisis-cp\/docx\/(prota|promes|rpe)$/.test(c.req.path);
+  if (regional && (c.env.REGION_PROFILE === 'custom' || !await usesPurwakartaContent(c.env.DB))) {
+    return c.json({ success: false, error: { code: 'REGIONAL_CONTENT_UNAVAILABLE', message: 'Template ini memuat regulasi Purwakarta. Profil kalender dan program daerah Anda belum tersedia.' } }, 409);
   }
   await next();
 });
@@ -854,11 +866,11 @@ Demikian permohonan ini kami sampaikan. Atas perhatian dan kesediaannya, kami uc
 // Serve SPA for all other routes
 app.get('*', async (c) => {
   let serverTheme = 'teal';
+  let profile: Record<string, string> = {};
   try {
-    const row: any = await c.env.DB.prepare("SELECT value FROM settings WHERE key = 'theme_color'").first();
-    if (row?.value) {
-      serverTheme = row.value;
-    }
+    profile = await getOrganizationSettings(c.env.DB);
+    if (!profile.app_url) profile.app_url = c.env.APP_URL || new URL(c.req.url).origin;
+    serverTheme = profile.theme_color || serverTheme;
   } catch (e) {
     // Fallback to default
   }
@@ -866,7 +878,7 @@ app.get('*', async (c) => {
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   c.header('Pragma', 'no-cache');
   c.header('Expires', '0');
-  return c.html(renderHTML(serverTheme));
+  return c.html(renderHTML(serverTheme, profile));
 });
 
 

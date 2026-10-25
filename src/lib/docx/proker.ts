@@ -103,7 +103,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         spacing: { after: 120 },
                         children: [
                             new TextRun({
-                                text: `KECAMATAN ${(settings.kecamatan || 'Wanayasa').toUpperCase()}`,
+                                text: `KECAMATAN ${(settings.kecamatan || '').toUpperCase()}`,
                                 font: FONT_FAMILY,
                                 size: 44,
                                 bold: true,
@@ -115,7 +115,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         spacing: { after: 480 },
                         children: [
                             new TextRun({
-                                text: `KABUPATEN ${(settings.kabupaten || 'Purwakarta').toUpperCase()}`,
+                                text: `KABUPATEN ${(settings.kabupaten || '').toUpperCase()}`,
                                 font: FONT_FAMILY,
                                 size: 44,
                                 bold: true,
@@ -157,7 +157,7 @@ export function generateProkerDocx(data: ProkerData, settings: KKGSettings): Doc
                         alignment: AlignmentType.CENTER,
                         children: [
                             new TextRun({
-                                text: 'KABUPATEN PURWAKARTA',
+                                text: `KABUPATEN ${(settings.kabupaten || '').toUpperCase()}`,
                                 font: FONT_FAMILY,
                                 size: FONT_SIZE_HEADER,
                                 bold: true,

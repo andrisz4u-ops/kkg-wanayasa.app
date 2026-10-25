@@ -145,32 +145,42 @@ export function getThemeCss(themeKey: string = 'teal'): string {
   `;
 }
 
-export function renderHTML(initialTheme: string = 'teal'): string {
+function htmlText(value: string): string {
+  return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+}
+
+export function renderHTML(initialTheme: string = 'teal', profile: Record<string, string> = {}): string {
   const APP_VERSION = Date.now().toString(36);
   const theme = THEME_PRESETS[initialTheme] || THEME_PRESETS.teal;
   const themeCss = getThemeCss(initialTheme);
+  const appName = htmlText(profile.app_name || 'RuangKKG');
+  const orgName = htmlText(profile.nama_kkg || 'Untuk guru SD Indonesia');
+  const appUrl = htmlText(profile.app_url || profile.website_kkg || '');
+  const contact = htmlText(profile.email_kkg || '');
+  const bootProfile = JSON.stringify(profile).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="id" class="scroll-smooth" data-color-theme="${theme.id}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RuangKKG | Asisten AI untuk Guru SD</title>
+    <title>${appName} | ${orgName}</title>
     <meta name="description" content="RuangKKG membantu guru SD di KKG menganalisis CP, menyusun draf RPP dan asesmen, serta menyiapkan slide dan game edukasi dalam satu ruang kerja.">
-  <meta name="author" content="RuangKKG Digital">
-    <meta property="og:title" content="RuangKKG | Asisten AI untuk Guru SD">
+  <meta name="author" content="${orgName}">
+    <meta property="og:title" content="${appName} | ${orgName}">
     <meta property="og:description" content="Analisis CP, draf RPP dan asesmen, slide, serta game edukasi untuk guru SD di KKG.">
-  <meta property="og:url" content="https://ruangkkg.my.id">
-  <meta property="og:site_name" content="RuangKKG Digital">
+  <meta property="og:url" content="${appUrl}">
+  <meta property="og:site_name" content="${appName}">
   <meta name="theme-color" content="${theme.primary}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RuangKKG Digital">
+  <meta name="apple-mobile-web-app-title" content="${appName}">
 
   <link rel="icon" type="image/png" href="/static/icons/icon-192x192.png">
   <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
-  <link rel="manifest" href="/manifest.json">
+   <link rel="manifest" href="/api/settings/manifest">
+   <script>window.__KKG_ORGANIZATION__ = ${bootProfile};</script>
   
   <link rel="stylesheet" href="/static/style.css?v=${APP_VERSION}">
 
@@ -234,7 +244,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
       <span class="mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H9.6L4 20.5Z"/><path d="M9.5 9.5l2 2 3.8-3.8"/></svg>
       </span>
-      <span class="word">RuangKKG<small>Untuk guru SD Indonesia</small></span>
+      <span class="word">${appName}<small>${orgName}</small></span>
     </a>
     <nav class="nav" aria-label="Navigasi utama">
       <a href="#fitur">Modul AI</a>
@@ -621,7 +631,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
           </div>
         </div>
         <p style="font-size:0.875rem; line-height:1.6; color:#4b5563; margin:0;">
-           Baca <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi <a href="mailto:admin@ruangkkg.my.id">admin@ruangkkg.my.id</a>.
+           Baca <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi <a href="mailto:${contact}">${contact || 'pengurus KKG'}</a>.
         </p>
       </div>
     </div>
@@ -674,7 +684,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi RuangKKG</a>. Jika ada pertanyaan tentang data Anda, hubungi <a href="mailto:admin@ruangkkg.my.id">admin@ruangkkg.my.id</a>.</p>
+             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a>. Jika ada pertanyaan tentang data Anda, hubungi <a href="mailto:${contact}">${contact || 'pengurus KKG'}</a>.</p>
           </div>
         </div>
 
@@ -704,7 +714,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Untuk mengetahui paket, biaya, dan cara pembayaran yang berlaku, hubungi <a href="mailto:admin@ruangkkg.my.id?subject=Informasi%20paket%20RuangKKG">tim RuangKKG melalui email</a> sebelum memilih layanan.</p>
+             <p>Untuk mengetahui ketentuan layanan yang berlaku, hubungi <a href="mailto:${contact}">pengurus ${orgName}</a>.</p>
           </div>
         </div>
 
@@ -714,7 +724,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-            <p><b>Tersedia panduan lengkap dan layanan bantuan ramah.</b> Kami menyediakan panduan video langkah demi langkah dalam bahasa Indonesia, contoh template terverifikasi, serta layanan bantuan pelanggan responsif melalui email support@ruangkkg.my.id.</p>
+            <p>Panduan penggunaan dan bantuan layanan tersedia melalui pengurus ${orgName}: ${contact}.</p>
           </div>
         </div>
       </div>
@@ -747,7 +757,7 @@ export function renderHTML(initialTheme: string = 'teal'): string {
       <div class="foot-brand">
         <a class="brand" href="#beranda" aria-label="RuangKKG — beranda">
           <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H9.6L4 20.5Z"/><path d="M9.5 9.5l2 2 3.8-3.8"/></svg></span>
-          <span class="word">RuangKKG</span>
+          <span class="word">${appName}</span>
         </a>
           <p>Ruang kerja guru SD dan KKG: analisis CP, RPP, asesmen, slide, dan game edukasi dalam satu alur.</p>
       </div>
@@ -761,12 +771,12 @@ export function renderHTML(initialTheme: string = 'teal'): string {
       </div>
       <div class="foot-col">
          <h3>Bantuan</h3>
-        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:admin@ruangkkg.my.id?subject=Bantuan%20RuangKKG">Hubungi CS</a></li><li><a href="#faq">Panduan penggunaan</a></li></ul>
+        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:${contact}">Hubungi Pengurus</a></li><li><a href="#faq">Panduan penggunaan</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
-       <span>© 2026 RuangKKG · ruangkkg.my.id — Dibuat di Indonesia untuk guru SD.</span>
-      <div class="links"><a href="/terms" onclick="window.navigate && window.navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a><a href="mailto:support@ruangkkg.my.id">Bantuan CS</a></div>
+       <span>© ${new Date().getFullYear()} ${appName} · ${orgName}</span>
+      <div class="links"><a href="/terms" onclick="window.navigate && window.navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a><a href="mailto:${contact}">Bantuan</a></div>
     </div>
   </div>
 </footer>

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getOrganizationSettings } from '../lib/organization';
 import { streamSSE } from 'hono/streaming';
 import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
@@ -438,19 +439,13 @@ rpp.post('/docx', async (c) => {
     }
 
     // Get KKG settings
-    const settingsResult: any = await c.env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('nama_ketua', 'nip_ketua', 'alamat_sekretariat', 'tahun_ajaran', 'nama_organisasi')"
-    ).all();
-
-    const kkg: any = {};
-    settingsResult.results?.forEach((row: any) => {
-      kkg[row.key] = row.value;
-    });
+    const kkg: any = await getOrganizationSettings(c.env.DB);
 
     const buffer = await generateRppBuffer(
       replacePesertaDidik(inputData) as RppInputData,
       replacePesertaDidik(content) as RppContentData,
       {
+        ...kkg,
         nama_ketua: kkg.nama_ketua,
         nip_ketua: kkg.nip_ketua,
         alamat_sekretariat: kkg.alamat_sekretariat,

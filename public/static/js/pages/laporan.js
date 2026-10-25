@@ -318,7 +318,7 @@ export async function renderLaporan() {
                     <div class="border-b-4 border-double border-gray-900 pb-3 flex items-center gap-6">
                         <img src="${escapeHtml(state.settings?.logo_url || '/static/img/logo-kkg.png')}" alt="Logo KKG" class="w-20 h-20 object-contain shrink-0" onerror="this.src='/static/img/logo-kkg.png'">
                         <div class="flex-1 text-center font-sans">
-                            <h4 class="text-xs uppercase tracking-widest font-semibold text-gray-600">PEMERINTAH KABUPATEN ${escapeHtml((state.settings?.kabupaten || 'Purwakarta').toUpperCase())}</h4>
+                            <h4 class="text-xs uppercase tracking-widest font-semibold text-gray-600">PEMERINTAH KABUPATEN ${escapeHtml((state.settings?.kabupaten || '').toUpperCase())}</h4>
                             <h3 class="text-sm font-bold uppercase text-gray-800">DINAS PENDIDIKAN</h3>
                             <h2 class="text-base sm:text-lg font-black uppercase text-gray-900 tracking-wide">
                                 ${escapeHtml((state.settings?.nama_kkg || state.settings?.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase())}

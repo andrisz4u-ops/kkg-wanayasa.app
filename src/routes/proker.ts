@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getOrganizationSettings, getDocumentOrganizationSettings } from '../lib/organization';
 import { getCurrentUser, getCookie } from '../lib/auth';
 import { AIService } from '../services/ai';
 import { buildProkerPrompt } from '../lib/prompts';
@@ -48,14 +49,7 @@ proker.post('/generate', requireSession, requireAIAdmission, rateLimitMiddleware
     }
 
     // Get settings including organization details
-    const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings"
-    ).all();
-
-    const settings: any = {};
-    settingsResult.results?.forEach((row: any) => {
-      settings[row.key] = row.value;
-    });
+    const settings: any = await getOrganizationSettings(c.env.DB);
 
     // Get list of schools from database to prevent AI hallucination
     const sekolahResult = await c.env.DB.prepare(
@@ -267,14 +261,7 @@ proker.get('/:id/download', async (c) => {
     }
 
     // Get KKG settings
-    const settingsResult = await c.env.DB.prepare(
-      "SELECT key, value FROM settings"
-    ).all();
-
-    const settings: any = {};
-    settingsResult.results?.forEach((row: any) => {
-      settings[row.key] = row.value;
-    });
+    const settings: any = await getDocumentOrganizationSettings(c.env.DB, (c.env as any).STORAGE);
 
     // Parse kegiatan JSON
     let kegiatan = [];

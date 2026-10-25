@@ -31,7 +31,6 @@ import {
 
 import { SuratData, ProkerData, LaporanData, KKGSettings, Kegiatan, RppInputData, RppContentData, FONT_FAMILY, FONT_SIZE_NORMAL, FONT_SIZE_SMALL, FONT_SIZE_HEADER, FONT_SIZE_TITLE } from './types';
 
-const DEFAULT_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/e/e2/Logo_Kabupaten_Purwakarta.png';
 
 
 export function replacePesertaDidik(text: any): string {
@@ -336,9 +335,9 @@ export function createLembarPengesahan(settings: KKGSettings, createdAt: string)
     });
 
     const namaKkg = (settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase();
-    const kec = (settings.kecamatan || 'Wanayasa').toUpperCase();
-    const kab = (settings.kabupaten || 'Purwakarta').toUpperCase();
-    const kecTitle = settings.kecamatan || 'Wanayasa';
+    const kec = (settings.kecamatan || '').toUpperCase();
+    const kab = (settings.kabupaten || '').toUpperCase();
+    const kecTitle = settings.kecamatan || '';
 
     return [
         new Paragraph({ children: [new PageBreak()] }),
@@ -913,10 +912,12 @@ export async function getHeaderWithLogo(settings: KKGSettings): Promise<Header> 
     let kkgBuffer: Uint8Array | null = null;
 
     try {
-        if (LOGO_PEMDA_BASE64) {
+        if (settings.legacy_logo_assets !== false && LOGO_PEMDA_BASE64) {
             pemdaBuffer = base64toBuffer(LOGO_PEMDA_BASE64);
         }
-        if (LOGO_KKG_BASE64) {
+        if (settings.logo_image instanceof Uint8Array) {
+            kkgBuffer = settings.logo_image;
+        } else if (settings.legacy_logo_assets !== false && LOGO_KKG_BASE64) {
             kkgBuffer = base64toBuffer(LOGO_KKG_BASE64);
         }
     } catch (e) {
@@ -924,8 +925,8 @@ export async function getHeaderWithLogo(settings: KKGSettings): Promise<Header> 
     }
 
     // 2. Prepare Header Text
-    const kab = (settings.kabupaten || 'Purwakarta').toUpperCase();
-    const kec = (settings.kecamatan || 'Wanayasa').toUpperCase();
+    const kab = (settings.kabupaten || '').toUpperCase();
+    const kec = (settings.kecamatan || '').toUpperCase();
     const namaKkg = (settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase();
 
     const titleText = [
@@ -1000,7 +1001,7 @@ export async function getHeaderWithLogo(settings: KKGSettings): Promise<Header> 
                                             new ImageRun({
                                                 data: kkgBuffer,
                                                 transformation: imageSize,
-                                                type: 'png',
+                                                type: settings.logo_image_type || 'png',
                                             })
                                         ] : [],
                                     }),
@@ -1061,7 +1062,7 @@ export function createMetadataTable(data: SuratData): Table {
 
 // Helper function to create the signature block
 export function createSignatureBlock(data: SuratData, settings: KKGSettings): (Paragraph | Table)[] {
-    const dateStr = `Wanayasa, ${new Date(data.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    const dateStr = `${settings.kecamatan || settings.kabupaten || ''}, ${new Date(data.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
     return [
         new Table({

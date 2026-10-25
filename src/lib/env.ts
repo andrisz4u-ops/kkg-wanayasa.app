@@ -7,6 +7,9 @@ const optionalKey = z.preprocess(value => value === '' ? undefined : value,
 
 const envSchema = z.object({
     ENVIRONMENT: z.enum(['development', 'staging', 'production']).default('production'),
+    REGION_PROFILE: z.enum(['purwakarta', 'custom']).optional(),
+    APP_NAME: optionalText,
+    APP_URL: optionalUrl,
     ENCRYPTION_KEY: optionalKey,
     SECRET_KEY: optionalKey,
     SENTRY_DSN: optionalUrl,

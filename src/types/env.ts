@@ -21,6 +21,9 @@ export type AppBindings = {
     // ─── Monitoring & Environment ────────────────
     SENTRY_DSN?: string;
     ENVIRONMENT?: string;
+    REGION_PROFILE?: 'purwakarta' | 'custom';
+    APP_NAME?: string;
+    APP_URL?: string;
     CORS_ORIGINS?: string;
     CF_PAGES_COMMIT_SHA?: string;
 

@@ -98,8 +98,8 @@ export function generateLaporanDocx(data: LaporanData, settings: KKGSettings): D
 
                 new Paragraph({ spacing: { before: 720 } }),
                 createParagraph((settings.nama_kkg || settings.nama_organisasi || 'KELOMPOK KERJA GURU (KKG)').toUpperCase(), { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
-                createParagraph(`KECAMATAN ${(settings.kecamatan || 'Wanayasa').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
-                createParagraph(`KABUPATEN ${(settings.kabupaten || 'Purwakarta').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true, spacing: { after: 480 } }),
+                createParagraph(`KECAMATAN ${(settings.kecamatan || '').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true }),
+                createParagraph(`KABUPATEN ${(settings.kabupaten || '').toUpperCase()}`, { alignment: AlignmentType.CENTER, fontSize: 44, bold: true, spacing: { after: 480 } }),
 
                 // BAB I
                 ...createChapterTitle('BAB I', 'PENDAHULUAN'),

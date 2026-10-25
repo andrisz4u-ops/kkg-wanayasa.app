@@ -704,6 +704,7 @@ async function render() {
   const isCustomLayout = customLayoutPages.includes(page);
 
   const namaKkg = state.settings?.nama_kkg || state.tenant?.nama || 'Portal Digital KKG';
+  const appName = state.settings?.app_name || 'RuangKKG';
   const kecamatan = state.settings?.kecamatan || '';
 
   const pageMetadata = {
@@ -743,15 +744,15 @@ async function render() {
 
   if (isPublicHome) {
     document.body.classList.add('rk-landing');
-    document.title = 'RuangKKG | Asisten AI untuk Guru SD';
+    document.title = `${appName} | ${namaKkg}`;
   } else {
     document.body.classList.remove('rk-landing');
     if (isCustomLayout) {
-      document.title = `${currentMeta.title} — RuangKKG Digital`;
+      document.title = `${currentMeta.title} — ${appName}`;
     } else if (isAuthPage) {
-      document.title = `${currentMeta.title} — RuangKKG Digital`;
+      document.title = `${currentMeta.title} — ${appName}`;
     } else {
-      document.title = `${currentMeta.title} — ${namaKkg} | RuangKKG`;
+      document.title = `${currentMeta.title} — ${namaKkg} | ${appName}`;
     }
   }
 
@@ -981,10 +982,10 @@ async function init() {
 
   // Set dynamic browser page title
   if (!state.user || state.currentPage === 'home') {
-    document.title = 'RuangKKG | Asisten AI untuk Guru SD';
+    document.title = `${state.settings?.app_name || 'RuangKKG'} | ${state.settings?.nama_kkg || 'Portal KKG'}`;
   } else {
     const activeOrgName = state.settings?.nama_kkg || state.tenant?.nama || 'Portal KKG';
-    document.title = `Portal ${activeOrgName} | RuangKKG`;
+    document.title = `Portal ${activeOrgName} | ${state.settings?.app_name || 'RuangKKG'}`;
   }
 
   // Bind router handler

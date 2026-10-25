@@ -830,7 +830,7 @@ export async function generateRppDocx(
                             width: { size: 50, type: WidthType.PERCENTAGE },
                             borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
                             children: [
-                                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: `Purwakarta, ${tanggalStr}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })] }),
+                                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: `${settings.kabupaten || settings.kecamatan || ''}, ${tanggalStr}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })] }),
                                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: inputData.jabatanGuru || 'Guru Pengampu', font: FONT_FAMILY, size: FONT_SIZE_SMALL })] }),
                                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 0 }, children: [new TextRun({ text: String(inputData.namaGuru || '......................................'), font: FONT_FAMILY, size: FONT_SIZE_SMALL, bold: true, underline: {} })] }),
                                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: `NIP. ${inputData.nipGuru || '..............................'}`, font: FONT_FAMILY, size: FONT_SIZE_SMALL })] }),

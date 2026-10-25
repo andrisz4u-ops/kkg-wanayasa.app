@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { normalizeItemKisiMetadata } from '../src/routes/kisi';
 import { arrayField, recordField, readApiRecord, stringField } from './helpers/typed-api-response';
 
@@ -737,6 +737,50 @@ Organ pencernaan yang ditunjuk oleh huruf X berfungsi untuk menghasilkan enzim .
 
             const privateRes = await kisiRoute.request('/proxy-image?url=http://192.168.1.1/admin');
             expect(privateRes.status).toBe(403);
+        });
+    });
+describe('Visual Quota Allocation & Split Contract (10 PG -> 1 SVG + 1 Photo)', () => {
+        it('should strictly allocate exactly 1 SVG and 1 Photo generator image and heal unselected question stems', async () => {
+            const { enrichAndNormalizePG } = await import('../src/routes/kisi');
+            const fakeUnsplash = {
+                searchImage: vi.fn(async () => ({
+                    url: 'https://cdn.example/embun-daun.jpg',
+                    creditName: 'Z-Image-Turbo Generator',
+                    source: 'vultr-ai'
+                }))
+            };
+
+            const pgQuestions = [
+                { no: 1, soal: 'Air di permukaan bumi mengalami pemanasan oleh sinar matahari.', opsi: { A: '1', B: '2', C: '3', D: '4' }, kunci: 'A' },
+                { no: 2, soal: 'Perhatikan diagram siklus air berikut! Proses yang ditunjukkan huruf X adalah ...', opsi: { A: 'Evaporasi', B: 'Kondensasi', C: 'Presipitasi', D: 'Infiltrasi' }, kunci: 'B', visual_stimulus: { type: 'siklus_air', params: { pointer: 'kondensasi', label: 'X' } } },
+                { no: 3, soal: 'Pak Anton menanam pohon untuk membantu resapan air tanah.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+                { no: 4, soal: 'Infiltrasi air bergantung pada jenis tanah penutup.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+                { no: 5, soal: 'Perhatikan gambar rantai makanan di ekosistem danau berikut! Jika musim kemarau panjang menyebabkan volume air menyusut drastis, analisis dampaknya adalah ....', opsi: { A: 'Fitoplankton meningkat', B: 'Ikan berkurang', C: 'Oksigen turun', D: 'Burung lapar' }, kunci: 'C', visual_stimulus: { type: 'rantai_makanan', params: { pointer: 'produsen', label: 'X' } } },
+                { no: 6, soal: 'Desa Sukamaju mengalami kekeringan di musim kemarau.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+                { no: 7, soal: 'Perhatikan gambar berikut! Fenomena embun di daun pada pagi hari merupakan contoh peristiwa ....', opsi: { A: 'Evaporasi', B: 'Transpirasi', C: 'Kondensasi', D: 'Presipitasi' }, kunci: 'C', gambar_keyword: 'Embun di daun', gambar_prompt_en: 'morning dew drops on green leaves' },
+                { no: 8, soal: 'Tumbuhan kaktus memiliki daun berbentuk duri.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+                { no: 9, soal: 'Hewan beruang kutub memiliki lapisan lemak yang tebal.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+                { no: 10, soal: 'Adaptasi morfologi adalah penyesuaian bentuk tubuh makhluk hidup.', opsi: { A: 'A', B: 'B', C: 'C', D: 'D' }, kunci: 'A' },
+            ];
+
+            const result = await enrichAndNormalizePG(pgQuestions, {
+                mataPelajaran: 'IPAS',
+                topik: 'Siklus Air & Ekosistem',
+                isGambarEnabled: true,
+                unsplash: fakeUnsplash as any,
+                exactImageCount: 2
+            });
+
+            expect(result[1].gambar?.type).toBe('svg');
+            expect(result[1].gambar?.svg).toBeDefined();
+
+            expect(result[6].gambar?.url).toBe('https://cdn.example/embun-daun.jpg');
+            expect(fakeUnsplash.searchImage).toHaveBeenCalledTimes(1);
+
+            expect(result[4].gambar).toBeUndefined();
+            expect(result[4].imageUnavailable).toBeUndefined();
+            expect(result[4].soal).not.toMatch(/^Perhatikan gambar/i);
+            expect(result[4].soal).toContain('Jika musim kemarau panjang menyebabkan volume air menyusut drastis');
         });
     });
 });

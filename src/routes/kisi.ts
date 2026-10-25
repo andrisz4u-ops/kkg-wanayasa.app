@@ -1,4 +1,4 @@
-﻿import { Hono } from 'hono';
+import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { createStreamJob, requireSession } from '../lib/ai-stream-job';
 import { AIService } from '../services/ai';
@@ -1398,26 +1398,23 @@ export const buildAssessmentPrompt = (params: {
         } else if (effectiveGambarEnabled) {
             const adaptiveQuota = calculateAdaptiveVisualQuota(mataPelajaran, topik, count, jenjangKelas);
             const exactImages = adaptiveQuota.exactImages;
-            gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${Math.round(adaptiveQuota.ratio * 100)}%): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual berupa diagram SVG presisi / foto objek konkret yang jelas.
-            - PERENCANAAN VARIASI VISUAL (SANGAT PENTING â€” BACA SEBELUM MULAI MENYUSUN SOAL):
-              * SEBELUM mulai menulis soal, RENCANAKAN terlebih dahulu ${exactImages} jenis stimulus visual yang BERBEDA-BEDA untuk ${exactImages} butir soal bergambar.
-              * Setiap butir soal bergambar WAJIB menggunakan tipe visual_stimulus atau gambar_keyword yang UNIK dan BERBEDA dari butir soal bergambar lainnya.
-              * DILARANG KERAS menggunakan tipe visual_stimulus yang sama (misal tipe + pointer identik) pada lebih dari 1 butir soal dalam satu paket ujian!
-              * Contoh BENAR (variasi visual):
-                - Soal 2 (atribut JSON "visual_stimulus"): { "type": "organ_pencernaan", "params": { "pointer": "lambung", "label": "X" } }
-                - Soal 5 (atribut JSON "visual_stimulus"): { "type": "vili_usus", "params": { "pointer": "kapiler", "label": "X" } }
-                - Soal 8 (atribut JSON "gambar_keyword"): "Kelinci"
-              * Contoh SALAH (duplikasi â€” DILARANG):
-                - Soal 2: tipe "organ_pencernaan" dengan pointer "lambung"
-                - Soal 7: tipe "organ_pencernaan" dengan pointer "lambung" â† DUPLIKAT!
+            const pct = Math.round(adaptiveQuota.ratio * 100);
+            const svgSlots = Math.ceil(exactImages / 2);
+            const photoSlots = exactImages - svgSlots;
+            gambarRule = `\n                7. ATURAN GAMBAR (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - PROPORSI ADAPTIF ${pct}%: ${svgSlots} DIAGRAM SVG + ${photoSlots} FOTO GENERATOR AI): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Dari ${count} butir soal PG ini, Anda WAJIB memilih TEPAT ${exactImages} butir soal (tidak boleh lebih dan tidak boleh kurang) yang menggunakan stimulus visual dengan rincian kuota:
+            - TEPAT ${svgSlots} BUTIR DIAGRAM SVG PRESISI: Atribut JSON "visual_stimulus" terisi spesifikasi tipe diagram, atribut "gambar_keyword" dan "gambar_prompt_en" WAJIB string kosong/null.
+            - TEPAT ${photoSlots} BUTIR GAMBAR FOTO OBJEK KONKRET / FENOMENA ALAM NYATA GENERATOR AI (Z-Image-Turbo / Unsplash): Atribut JSON "gambar_keyword" (1-3 kata ringkas) dan "gambar_prompt_en" (15-25 kata deskriptif) terisi, atribut "visual_stimulus" WAJIB diisi null.
+            - PERENCANAAN VARIASI VISUAL:
+              * Setiap butir soal bergambar WAJIB unik dan berbeda satu sama lain. DILARANG membuat 2 diagram bertipe sama dalam satu paket ujian!
+              * Contoh Pembagian BENAR (${exactImages} butir bergambar):
+                - Butir Diagram SVG (${svgSlots} butir): atribut JSON "visual_stimulus": { "type": "siklus_air", "params": { "pointer": "kondensasi", "label": "X" } }
+                - Butir Foto Generator AI (${photoSlots} butir): atribut JSON "gambar_keyword": "Embun di daun", "gambar_prompt_en": "close up of fresh water morning dew drops on green plant leaves, educational photo"
             - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
               * ${getSubjectImagePromptGuideline(mataPelajaran)}
-            - LARANGAN MUTLAK PADA SOAL BERGAMBAR:
-              * DILARANG KERAS menuliskan teks "visual_stimulus {...}", "gambar_keyword", atau format kode prompt apa pun di dalam teks naskah soal ("soal")! Naskah "soal" hanya boleh berisi kalimat pengantar dan pertanyaan bersih (contoh: "Perhatikan gambar berikut! Berdasarkan gambar tersebut, besar sudut tersebut adalah ...").
-              * Parameter visual_stimulus HANYA boleh diletakkan pada atribut JSON "visual_stimulus" terpisah di luar string soal!
-              * DILARANG KERAS membuat soal diagram alur/bagan bertuliskan teks atau diagram pohon faktor angka.
-              * DILARANG KERAS menuliskan teks deskripsi seperti "[Diagram menunjukkan...]" di dalam teks soal!
-            - Pada butir soal lainnya, WAJIB mengosongkan field ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "").`;
+            - LARANGAN MUTLAK PADA SISA ${count - exactImages} BUTIR SOAL LAINNYA (WAJIB TEKS MURNI TANPA GAMBAR):
+              * Sisa ${count - exactImages} butir soal lainnya WAJIB BERUPA TEKS MURNI: atribut "visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "".
+              * DILARANG KERAS menyertakan frasa "Perhatikan gambar...", "Perhatikan diagram...", atau sejenisnya di dalam teks naskah soal pada butir-butir teks murni tersebut!
+              * DILARANG KERAS menuliskan teks "visual_stimulus {...}" di dalam teks naskah soal ("soal").`;
         } else {
             gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
         }
@@ -1537,6 +1534,16 @@ function markQuestionImageUnavailable(question: any, reason = 'image_unavailable
 }
 
 function skipGeneratedQuestionImage(question: any, reason: string) {
+    if (reason === 'image_not_selected' && typeof question.soal === 'string') {
+        const cleaned = question.soal
+            .replace(/^(?:Perhatikan|Amatilah|Lihatlah|Cermati|Berdasarkan)\s+(?:gambar|diagram|foto|bagan|skema|ilustrasi)[^!.\n]*[!.]\s*/i, '')
+            .trim();
+        const stillNeedsFigure = /\b(?:tanda\s+panah|panah\s+menunjuk|huruf\s+[a-dx]|tanda\s+x|bagian\s+[a-z]|bernomor|tanda\s+tanya|\(\?\)|pada\s+gambar|pada\s+diagram)\b/i.test(cleaned);
+        if (cleaned.length > 10 && !stillNeedsFigure) {
+            question.soal = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+        }
+    }
+
     const required = question.imageRequired === true || question.visual_required === true
         || questionNeedsDiagram(question.soal);
     // A skipped renderer spec must not later resurrect the image in persistence.
@@ -1771,10 +1778,6 @@ export async function enrichAndNormalizePG(
             return { q, index, score, svgAffinity, photoAffinity };
         });
 
-        // Langkah 1: Pilih top N berdasarkan score umum
-        scoredQuestions.sort((a: any, b: any) => b.score - a.score);
-        const topCandidates = scoredQuestions.slice(0, exactImageCount);
-
         // Kriteria apakah butir soal MEMBUTUHKAN diagram struktural / skema berlabel (tanda panah, huruf X, proses siklus):
         const requiresDiagramStructure = (q: any): boolean => {
             const text = String(q.soal || '').toLowerCase();
@@ -1786,25 +1789,62 @@ export async function enrichAndNormalizePG(
             const text = String(q.soal || '').toLowerCase();
             if (requiresDiagramStructure(q)) return false;
             if (q.gambar_keyword && q.gambar_keyword.trim() !== '') return true;
-            return /hewan|tumbuhan|buah|sayur|makanan|minuman|olahraga|alat|bola|raket|tokoh|pahlawan|profesi|baju|rumah|kendaraan|food|drink|animal/i.test(text);
+            return /hewan|tumbuhan|buah|sayur|makanan|minuman|olahraga|alat|bola|raket|tokoh|pahlawan|profesi|baju|rumah|kendaraan|food|drink|animal|embun|fenomena/i.test(text);
         };
 
-        // Langkah 2: Distribusi cerdas antara SVG dan Foto
-        // Prioritas utama: Butir yang butuh diagram struktural (tanda X, siklus, skema) HARUS dapat slot SVG
+        // Langkah 1: Pisahkan kandidat SVG dan kandidat Foto secara terarah
+        const diagramCandidates = scoredQuestions
+            .filter((item: any) => requiresDiagramStructure(item.q) || (item.q.visual_stimulus && item.q.visual_stimulus.type))
+            .sort((a: any, b: any) => (b.svgAffinity + b.score) - (a.svgAffinity + a.score));
+
+        const photoCandidates = scoredQuestions
+            .filter((item: any) => !diagramCandidates.some((d: any) => d.q === item.q) && (prefersPhoto(item.q) || (item.q.gambar_keyword && item.q.gambar_keyword.trim()) || (item.q.gambar_prompt_en && item.q.gambar_prompt_en.trim())))
+            .sort((a: any, b: any) => (b.photoAffinity + b.score) - (a.photoAffinity + a.score));
+
+        const generalCandidates = scoredQuestions
+            .filter((item: any) => !diagramCandidates.some((d: any) => d.q === item.q) && !photoCandidates.some((p: any) => p.q === item.q))
+            .sort((a: any, b: any) => b.score - a.score);
+
+        // Langkah 2: Distribusi cerdas dan terikat batas kuota (strictly bounded)
+        // Menjamin: jika kuota = 2 butir (10 PG), tepat 1 SVG dan 1 Foto dialokasikan
         const svgList: any[] = [];
         const photoList: any[] = [];
 
-        for (const item of topCandidates) {
-            if (requiresDiagramStructure(item.q)) {
+        // Isi slot SVG (maksimal svgSlots butir)
+        for (const item of diagramCandidates) {
+            if (svgList.length < svgSlots) {
                 svgList.push(item.q);
-            } else if (prefersPhoto(item.q)) {
+            }
+        }
+
+        // Isi slot Foto (maksimal photoSlots butir)
+        for (const item of photoCandidates) {
+            if (photoList.length < photoSlots && !svgList.includes(item.q)) {
                 photoList.push(item.q);
-            } else {
-                // Netral: seimbangkan antara SVG dan Foto
-                if (svgList.length <= photoList.length) {
-                    svgList.push(item.q);
-                } else {
+            }
+        }
+
+        // Fallback jika salah satu pool kandidat kurang
+        if (photoList.length < photoSlots) {
+            const fallbackPool = [
+                ...diagramCandidates.filter((d: any) => !svgList.includes(d.q)),
+                ...generalCandidates
+            ];
+            for (const item of fallbackPool) {
+                if (photoList.length < photoSlots && !svgList.includes(item.q) && !photoList.includes(item.q)) {
                     photoList.push(item.q);
+                }
+            }
+        }
+
+        if (svgList.length < svgSlots) {
+            const fallbackPool = [
+                ...photoCandidates.filter((p: any) => !photoList.includes(p.q)),
+                ...generalCandidates
+            ];
+            for (const item of fallbackPool) {
+                if (svgList.length < svgSlots && !svgList.includes(item.q) && !photoList.includes(item.q)) {
+                    svgList.push(item.q);
                 }
             }
         }

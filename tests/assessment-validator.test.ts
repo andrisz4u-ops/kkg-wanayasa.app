@@ -48,7 +48,7 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             expect(forbiddenIssue?.message).toContain('Semua jawaban benar');
         });
 
-        it('should auto-heal orphan visual stimulus reference when no image exists', () => {
+        it('should flag orphan visual stimulus references without rewriting required text', () => {
             const item = {
                 no: 3,
                 soal: 'Perhatikan gambar berikut! Bagian tumbuhan yang berfungsi menyerap air adalah...',
@@ -67,12 +67,12 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             const result = validateQuestionHeuristics(item, 'Kelas 4');
             const orphanIssue = result.issues.find(i => i.type === 'ORPHAN_STIMULUS');
             expect(orphanIssue).toBeDefined();
-            // Teks pembuka "Perhatikan gambar berikut!" harus dibersihkan secara otomatis
-            expect(result.healedItem.soal).toBe('Bagian tumbuhan yang berfungsi menyerap air adalah...');
-            expect(result.healedItem.soal).not.toContain('Perhatikan gambar');
+            expect(orphanIssue?.autoFixable).toBe(false);
+            expect(result.isValid).toBe(false);
+            expect(result.healedItem.soal).toBe(item.soal);
         });
 
-        it('should auto-heal orphan table stimulus reference when no markdown table exists', () => {
+        it('should flag orphan table stimulus references without rewriting required text', () => {
             const item = {
                 no: 4,
                 soal: 'Perhatikan tabel berikut! Berdasarkan data, penjualan terbanyak terjadi pada hari...',
@@ -89,7 +89,8 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             const result = validateQuestionHeuristics(item, 'Kelas 5');
             const orphanIssue = result.issues.find(i => i.type === 'ORPHAN_STIMULUS');
             expect(orphanIssue).toBeDefined();
-            expect(result.healedItem.soal).toBe('Berdasarkan data, penjualan terbanyak terjadi pada hari...');
+            expect(orphanIssue?.autoFixable).toBe(false);
+            expect(result.healedItem.soal).toBe(item.soal);
         });
 
         it('should normalize formatted keys such as "A. Opsi Jawaban" to "A"', () => {
@@ -463,8 +464,8 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             });
 
             expect(result.finalData.pg).toHaveLength(1);
-            // Orphan reference "Perhatikan gambar berikut!" should still be healed by Tier 1
-            expect(result.finalData.pg[0].soal).toBe('Apa fungsi jantung?');
+            expect(result.finalData.pg[0].soal).toBe(finalData.pg[0].soal);
+            expect(result.finalData.pg[0].soal).toContain('Perhatikan gambar berikut!');
             expect(result.finalData._audit).toBeDefined();
             expect(result.finalData._audit.total_reviewed).toBe(1);
             expect(result.finalData.pg[0].audit.status).toBe('flagged');
@@ -491,15 +492,18 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             const result = validateQuestionHeuristics(item, 'Kelas 4');
             expect(result.healedItem.gambar).toBeUndefined();
             expect(result.healedItem.visual_stimulus).toBeUndefined();
-            expect(result.healedItem.soal).not.toContain('Perhatikan gambar berikut');
+            expect(result.healedItem.soal).toBe(item.soal);
             expect(result.healedItem.soal).toContain('Nilai sila ketiga Pancasila adalah persatuan bangsa...');
             expect(result.issues.some(i => i.message.includes('Andrey Sizov'))).toBe(true);
         });
 
-        it('should enforce zero duplicate images across the exam packet (purging 4 identical photos down to 1)', async () => {
+        it('should preserve required photos and stems while the route resolver handles diversity', async () => {
             const mockAi = {
                 generateJSON: vi.fn().mockResolvedValue({
-                    verifications: [],
+                    verifications: Array.from({ length: 4 }, (_, index) => ({
+                        index, verdict: 'PASS', quality_score: 95,
+                        key_verified: true, kaidah_puspendik: true, hots_valid: true, distraktor_homogen: true
+                    })),
                     summary: { overall_quality_score: 95 }
                 })
             } as any;
@@ -548,25 +552,17 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
                 jenjangKelas: 'Kelas 5'
             });
 
-            // Question 1 keeps the unique image
-            expect(result.finalData.pg[0].gambar).toBeDefined();
-            expect(result.finalData.pg[0].gambar.url).toContain(duplicateUrl);
-
-            // Questions 2, 3, 4 MUST have the duplicate image stripped!
-            expect(result.finalData.pg[1].gambar).toBeUndefined();
-            expect(result.finalData.pg[2].gambar).toBeUndefined();
-            expect(result.finalData.pg[3].gambar).toBeUndefined();
-
-            // All questions must have orphan text cleaned
-            expect(result.finalData.pg[1].soal).not.toContain('Perhatikan gambar');
-            expect(result.finalData.pg[2].soal).not.toContain('Perhatikan gambar');
-            expect(result.finalData.pg[3].soal).not.toContain('Perhatikan gambar');
-
-            // Audit repaired count should reflect the 3 duplicates stripped
-            expect(result.summary.repaired_count).toBeGreaterThanOrEqual(3);
+            for (const question of result.finalData.pg) {
+                expect(question.gambar.url).toContain(duplicateUrl);
+                expect(question.soal).toContain('Perhatikan gambar berikut!');
+                expect(question.audit.status).toBe('verified');
+            }
+            expect(result.summary.repaired_count).toBe(0);
+            expect(result.summary.passed_count).toBe(4);
+            expect(result.summary.flagged_count).toBe(0);
         });
 
-        it('should purge duplicate SVG stimulus signatures in the same packet', async () => {
+        it('should preserve identical required SVG specifications in the quality gate', async () => {
             const mockAi = {
                 generateJSON: vi.fn().mockResolvedValue({
                     verifications: [],
@@ -604,10 +600,10 @@ describe('Assessment Quality Gate & AI Verifier Engine Tests', () => {
             });
 
             expect(result.finalData.pg[0].visual_stimulus).toBeDefined();
-            // Duplicate identical SVG on Question 2 must be purged!
-            expect(result.finalData.pg[1].visual_stimulus).toBeUndefined();
-            expect(result.finalData.pg[1].gambar).toBeUndefined();
-            expect(result.finalData.pg[1].soal).not.toContain('Perhatikan diagram');
+            expect(result.finalData.pg[1].visual_stimulus).toEqual(result.finalData.pg[0].visual_stimulus);
+            expect(result.finalData.pg[1].gambar.url).toBe('data:image/svg+xml;utf8,<svg>2</svg>');
+            expect(result.finalData.pg[1].soal).toContain('Perhatikan diagram berikut!');
+            expect(result.summary.repaired_count).toBe(0);
         });
     });
 });

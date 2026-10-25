@@ -1,4 +1,5 @@
 import { decrypt, isEncrypted } from '../lib/crypto';
+import { ASSESSMENT_ASSET_MAX_BYTES } from '../lib/assessment-assets';
 import { parseKeyPool } from './ai';
 
 type UnsplashEnv = {
@@ -17,6 +18,40 @@ export interface UnsplashImagePayload {
     creditName: string;
     creditUrl: string;
     unsplashId: string;
+}
+
+function base64ImageDataUrl(value: unknown): string | null {
+    const maxEncodedLength = Math.ceil(ASSESSMENT_ASSET_MAX_BYTES / 3) * 4;
+    if (typeof value !== 'string' || !value || value.length > maxEncodedLength
+        || value.length % 4 === 1 || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+        return null;
+    }
+
+    const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
+    const byteLength = Math.floor(value.length * 3 / 4) - padding;
+    if ((padding && value.length % 4 !== 0) || byteLength < 3 || byteLength > ASSESSMENT_ASSET_MAX_BYTES) {
+        return null;
+    }
+
+    try {
+        const tail = value.slice(-(value.length % 4 || 4));
+        if (btoa(atob(tail)).replace(/=+$/, '') !== tail.replace(/=+$/, '')) return null;
+
+        const signature = atob(value.slice(0, 16));
+        let mime: string;
+        if (signature.startsWith('\x89PNG\r\n\x1a\n')) {
+            mime = 'image/png';
+        } else if (signature.startsWith('\xff\xd8\xff')) {
+            mime = 'image/jpeg';
+        } else if (signature.startsWith('RIFF') && signature.slice(8, 12) === 'WEBP') {
+            mime = 'image/webp';
+        } else {
+            return null;
+        }
+        return `data:${mime};base64,${value}`;
+    } catch {
+        return null;
+    }
 }
 
 function extractCoreKeyword(text: string): string {
@@ -103,8 +138,8 @@ async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): P
                 }
             }
         }
-    } catch (e) {
-        console.warn('Wikimedia image search note:', e);
+    } catch {
+        console.warn('Wikimedia image search note: request failed');
     }
     return null;
 }
@@ -174,8 +209,8 @@ export class UnsplashService {
                         };
                     }
                 }
-            } catch (dbErr) {
-                console.warn('[VULTR-IMAGE] ai_providers lookup note:', dbErr);
+            } catch {
+                console.warn('[VULTR-IMAGE] ai_providers lookup note: lookup failed');
             }
 
             // 3. Check settings table
@@ -197,8 +232,8 @@ export class UnsplashService {
                         };
                     }
                 }
-            } catch (setErr) {
-                console.warn('[VULTR-IMAGE] settings lookup note:', setErr);
+            } catch {
+                console.warn('[VULTR-IMAGE] settings lookup note: lookup failed');
             }
         }
 
@@ -246,8 +281,8 @@ export class UnsplashService {
             });
 
             if (!res.ok) {
-                const errText = await res.text();
-                console.warn(`[VULTR-IMAGE] Error ${res.status}: ${errText.substring(0, 200)}`);
+                console.warn(`[VULTR-IMAGE] Error ${res.status}`);
+                await res.body?.cancel();
                 return null;
             }
 
@@ -255,10 +290,10 @@ export class UnsplashService {
             const imgItem = data?.data?.[0];
             let finalUrl: string | null = null;
 
-            if (imgItem?.url) {
+            if (typeof imgItem?.url === 'string' && imgItem.url) {
                 finalUrl = imgItem.url;
-            } else if (imgItem?.b64_json) {
-                finalUrl = `data:image/jpeg;base64,${imgItem.b64_json}`;
+            } else {
+                finalUrl = base64ImageDataUrl(imgItem?.b64_json);
             }
 
             const durationMs = Date.now() - startTime;
@@ -274,8 +309,8 @@ export class UnsplashService {
                     unsplashId: `vultr_${Date.now()}`
                 };
             }
-        } catch (e) {
-            console.warn('[VULTR-IMAGE] Exception:', e);
+        } catch {
+            console.warn('[VULTR-IMAGE] Exception: generation failed');
         }
         return null;
     }

@@ -1,7 +1,7 @@
 import { ASSESSMENT_ASSET_OWNER_MAX_BYTES, ASSESSMENT_ASSET_OWNER_MAX_COUNT, prepareAssessmentAsset } from './assessment-assets';
 import { assessmentSvgDataUri, decodeAssessmentSvgDataUri, sanitizeAssessmentSvg, UnsafeAssessmentSvgError } from './assessment-package-svg';
 import { generateVisualStimulus } from './visual-engine';
-import { getVisualCatalog } from './visuals/catalog';
+import { validatedAssessmentVisualSpec } from './assessment-visual-spec';
 import { generationFencePredicate, type AssessmentGenerationFence } from './assessment-generation-requests';
 import { buildStagedAssessmentAssetInsert, readOwnedAssessmentAssetMetadata, resolveAssessmentAssetMetadata } from './assessment-assets';
 import type { AssessmentAssetStage, StagedAssessmentAsset } from './assessment-assets';
@@ -113,38 +113,6 @@ export function legacyImageSource(imageValue: unknown, legacySvgValue?: unknown)
   return null;
 }
 
-function cleanVisualSpec(value: any): { type: string; params: Record<string, any>; caption?: string } | null {
-  if (!isRecord(value) || typeof value.type !== 'string') return null;
-  const sample = getVisualCatalog().find(item => item.id === value.type)?.sampleParams;
-  if (!sample) return null;
-  const clean = (source: any, shape: any, depth = 0): any => {
-    if (depth > 5) return undefined;
-    if (Array.isArray(shape)) {
-      if (!Array.isArray(source) || source.length > 64) return undefined;
-      const values = source.map(item => clean(item, shape[0], depth + 1));
-      return values.some(item => item === undefined) ? undefined : values;
-    }
-    if (isRecord(shape)) {
-      if (!isRecord(source)) return undefined;
-      const output: Record<string, any> = {};
-      for (const [key, item] of Object.entries(source)) {
-        if (!Object.prototype.hasOwnProperty.call(shape, key) || /(?:url|uri|svg|script|href|src|html|xml|image|gambar|onload)/i.test(key)) continue;
-        const sanitized = clean(item, shape[key], depth + 1);
-        if (sanitized !== undefined) output[key] = sanitized;
-      }
-      return output;
-    }
-    if (typeof shape === 'number') return typeof source === 'number' && Number.isFinite(source) && Math.abs(source) <= 1_000_000 ? source : undefined;
-    if (typeof shape === 'boolean') return typeof source === 'boolean' ? source : undefined;
-    if (typeof shape === 'string') return typeof source === 'string' && source.length <= 120 && !/(?:https?:\/\/|data:|javascript:|[<>]|\bon\w+\s*=)/i.test(source) ? source : undefined;
-    return undefined;
-  };
-  const params = clean(isRecord(value.params) ? value.params : {}, sample);
-  if (!isRecord(params)) return null;
-  const spec = { type: value.type, params, ...(typeof value.caption === 'string' && value.caption.length <= 120 && !/(?:https?:\/\/|data:|[<>])/i.test(value.caption) ? { caption: value.caption } : {}) };
-  return JSON.stringify(spec).length <= 8192 ? spec : null;
-}
-
 function sanitizedSvg(svg: string): string {
   try { return sanitizeAssessmentSvg(svg); }
   catch (error) { if (error instanceof UnsafeAssessmentSvgError) throw new AssessmentPackageWriteError('untrusted_svg'); throw error; }
@@ -170,7 +138,7 @@ function prepareQuestionImage(item: any): string | null {
     delete item.visual_stimulus;
     return null;
   }
-  const visualSpec = cleanVisualSpec(item.visual_stimulus);
+  const visualSpec = validatedAssessmentVisualSpec(item.visual_stimulus);
   if (visualSpec) {
     const rendered = generateVisualStimulus(visualSpec);
     if (rendered?.svg) {
@@ -743,11 +711,12 @@ export function normalizeAssetUrls(content: any, packageId: number | string) {
   const warnings: string[] = [];
   for (const [index, item] of questionItems(clone).entries()) {
     let warning: string | null = null;
-    // URL presigned (mis. Vultr/Z-Image) kedaluwarsa dalam hitungan jam dan tidak dapat
-    // dipulihkan. Tandai jelas agar UI tidak menampilkan gambar rusak atau tombol pulihkan.
+    // Presigned URLs cannot be recovered here. An independent renderer spec can
+    // still rebuild the stimulus locally; preparation validates SVG aliases and
+    // replaces the transient URL without losing that spec.
     const presignedUrl = typeof item.gambar?.assetId !== 'string' && typeof item.gambar?.url === 'string'
       && /[?&]x-amz-(?:expires|signature|credential)=/i.test(item.gambar.url);
-    if (presignedUrl) {
+    if (presignedUrl && !validatedAssessmentVisualSpec(item.visual_stimulus)) {
       item.gambar = { ...(safeImageMetadata(imageRecord(item.gambar) || {})), imageUnavailable: true, imageUnavailableReason: 'expired_or_missing' };
       delete item.visual_stimulus;
     }

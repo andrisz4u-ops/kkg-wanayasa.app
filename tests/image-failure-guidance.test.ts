@@ -73,15 +73,15 @@ describe('duplicate SVG handling', () => {
   });
 
   it('replaces a duplicated SVG with a provider image for IPAS', async () => {
-    const diagram = { type: 'lingkaran', params: { r: 9 } };
+    const diagram = { type: 'organ_pencernaan', params: { pointer: 'lambung', label: 'X' } };
     const question: any = {
       no: 4,
       soal: 'Perhatikan gambar berikut! Bagian yang ditunjuk X berfungsi untuk ...',
       visual_stimulus: diagram,
-      gambar_keyword: 'diagram siklus air',
+      gambar_keyword: 'diagram organ pencernaan',
     };
     await resolveQuestionVisualStimulus(
-      question, 'IPAS', 'Siklus Air', providerImage as any,
+      question, 'IPAS', 'Organ Pencernaan', providerImage as any,
       new Set([buildStimulusSignature(diagram)]), new Set(), new Set(), false,
     );
     expect(question.gambar.type).toBe('ai');

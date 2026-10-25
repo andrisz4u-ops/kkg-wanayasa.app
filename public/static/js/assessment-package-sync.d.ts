@@ -1,4 +1,4 @@
-export type AssessmentPackageSaveStatus = 'unsaved' | 'saving' | 'saved' | 'failed' | 'conflict';
+﻿export type AssessmentPackageSaveStatus = 'unsaved' | 'saving' | 'saved' | 'failed' | 'conflict';
 export declare const ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES: 1572864;
 export interface AssessmentPackageContext {
   packageId: number | string | null;
@@ -19,7 +19,7 @@ export interface AssessmentPackageSyncOptions {
   setTimer?: typeof setTimeout;
   clearTimer?: typeof clearTimeout;
   onStatus?: (event: { status: AssessmentPackageSaveStatus; label: string; error: unknown; context: AssessmentPackageContext | null; imageWarnings: string[] }) => void;
-  onSaved?: (context: AssessmentPackageContext, draft: { content: unknown; metadata: Record<string, unknown> }) => void;
+  onSaved?: (context: AssessmentPackageContext, draft: { content: unknown; metadata: Record<string, unknown>; serverCanonical: boolean; version: number }) => void;
   onConflict?: (event: { error: unknown; context: AssessmentPackageContext; local: { content: unknown; metadata: Record<string, unknown> } }) => void;
 }
 export function canonicalAssessmentContent(content: unknown): any;

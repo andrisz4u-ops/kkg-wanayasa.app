@@ -142,7 +142,18 @@ export class AssessmentPackageSync {
         context.revision = Number(saved.revision);
         context.foreign = false;
         this.savedVersion = version;
-        this.onSaved({ ...context }, clone(draft));
+        // A warning-free acknowledgement must clear earlier warnings, and the
+        // server's canonical content is authoritative only while no newer edit
+        // has been made locally.
+        const currentAck = version === this.version;
+        if (currentAck) this.imageWarnings = Array.isArray(saved.imageWarnings) ? saved.imageWarnings.slice(0, 200) : [];
+        const canonical = currentAck && saved.content && typeof saved.content === 'object' ? clone(saved.content) : null;
+        this.onSaved({ ...context }, {
+          content: canonical || clone(draft.content),
+          metadata: clone(draft.metadata),
+          serverCanonical: Boolean(canonical),
+          version,
+        });
         if (version === this.version) this.setStatus('saved');
       } catch (error) {
         if (!this.current(token)) return { stale: true };

@@ -282,10 +282,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
 
             const qB: any = { no: 2, soal: 'Perhatikan jaring-jaring kubus dengan rusuk 5 cm berikut!' };
             await resolveQuestionVisualStimulus(qB, 'Matematika', 'Bangun Ruang', null, usedStimulusSignatures);
-            expect(qB.gambar?.type).toBe('svg');
-            // Diverted to alternative geometric shape (jaring_balok)
-            expect(qB.gambar?.title).toContain('Jaring-jaring Balok');
-            expect(qA.gambar?.svg).not.toEqual(qB.gambar?.svg);
+            // Without an AI image provider a cube must not silently turn into a
+            // cuboid. Keep the missing required-image state explicit instead.
+            expect(qB.gambar?.svg).toBeUndefined();
+            expect(qB.gambar?.imageUnavailable).toBe(true);
+            expect(qB.gambar?.imageUnavailableReason).toBe('required_diagram_missing');
         });
 
         it('should provide full visual catalog with 200 distinct templates', async () => {

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { AssessmentPackageSync, canonicalAssessmentContent } from '../public/static/js/assessment-package-sync.js';
 
@@ -28,6 +28,20 @@ describe('assessment package sync client', () => {
     expect(sync.context!.revision).toBe(2);
     expect(sync.status).toBe('saved');
     expect(canonicalAssessmentContent({ pg: [], _persistence: { revision: 1 } })).toEqual({ pg: [] });
+  });
+
+  it('adopts canonical server content and clears warnings, but never treats a stale ack as canonical', async () => {
+    const saved = vi.fn();
+    const request = vi.fn()
+      .mockResolvedValueOnce({ data: { packageId: 61, revision: 1, saveStatus: 'saved',
+        content: { pg: [{ no: 1, soal: 'canonical' }] }, imageWarnings: [] } });
+    const sync: any = new AssessmentPackageSync({ request, onSaved: saved, debounceMs: 60000 });
+    sync.setContext({ owner: '7', token: 'canonical' });
+    sync.imageWarnings = ['Butir 1: gambar belum tersimpan sebagai aset paket.'];
+    sync.edit({ pg: [{ no: 1, soal: 'local' }] }, { topik: 'T' });
+    await sync.flush();
+    expect(sync.imageWarnings).toEqual([]);
+    expect(saved.mock.calls[0][1]).toMatchObject({ serverCanonical: true, content: { pg: [{ no: 1, soal: 'canonical' }] } });
   });
 
   it('keeps local work on network failure and permits an explicit retry', async () => {

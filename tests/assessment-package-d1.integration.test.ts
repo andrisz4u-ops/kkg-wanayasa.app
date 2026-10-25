@@ -7,6 +7,8 @@ import { getPlatformProxy } from 'wrangler';
 import banksoal from '../src/routes/banksoal';
 import assets from '../src/routes/assessment-assets';
 import { getCookie, getCurrentUser } from '../src/lib/auth';
+import { resolveQuestionVisualStimulus, saveAssessmentTelemetryAndBankSoal } from '../src/routes/kisi';
+import { runAssessmentQualityGate } from '../src/lib/assessment-validator';
 
 const enabled = process.env.KKG_RUN_D1_INTEGRATION === '1';
 const timeoutMs = 90_000;
@@ -38,6 +40,7 @@ describe.skipIf(!enabled)('assessment package routes on isolated Wrangler D1', (
       await db.prepare('CREATE TABLE users (id INTEGER PRIMARY KEY, nama TEXT, email TEXT, password_hash TEXT, role TEXT, role_label TEXT, nip TEXT, sekolah TEXT, mata_pelajaran TEXT, no_hp TEXT, foto_url TEXT, sekolah_id INTEGER, tenant_id TEXT, is_active INTEGER DEFAULT 1)').run();
       await db.prepare('CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT)').run();
       await db.prepare('CREATE TABLE sekolah (id INTEGER PRIMARY KEY, nama TEXT, kepala_sekolah TEXT, nip_kepala_sekolah TEXT, kop_surat_url TEXT, npsn TEXT, alamat TEXT)').run();
+      await execSql('0016_ai_generation_logs.sql');
       await execSql('0018_bank_soal.sql');
       for (const file of ['0040_bank_soal_moderation.sql', '0041_assessment_image_assets.sql', '0042_assessment_package_revisions.sql', '0043_assessment_generation_requests.sql']) await execSql(file);
       await db.prepare('CREATE TABLE ai_generation_jobs (user_id INTEGER NOT NULL, job_id TEXT NOT NULL, state TEXT NOT NULL, lease_until INTEGER NOT NULL, PRIMARY KEY(user_id,job_id))').run();
@@ -82,6 +85,10 @@ describe.skipIf(!enabled)('assessment package routes on isolated Wrangler D1', (
       expect(revision).not.toBeNull();
       const edited = await request(banksoal, `/${editId}`, 'PUT', 'owner', { baseRevision: (revision as { revision: number }).revision, content: { pg: [{ no: 1, soal: 'After', gambar: { assetId: secondData.data.id } }] } });
       expect(edited.status).toBe(200);
+      // The acknowledgement carries canonical content so the client can reconcile
+      // exactly what was stored instead of assuming its submitted draft.
+      const editedPayload: any = await edited.json();
+      expect(editedPayload.data.content.pg[0]).toMatchObject({ soal: 'After', gambar: { assetId: secondData.data.id } });
       const reloaded: any = await (await request(banksoal, `/${editId}`, 'GET', 'owner-fresh')).json();
       expect(reloaded.data.content.pg[0]).toMatchObject({ soal: 'After', gambar: { assetId: secondData.data.id } });
 
@@ -98,6 +105,27 @@ describe.skipIf(!enabled)('assessment package routes on isolated Wrangler D1', (
       const winningRefs = JSON.parse(winningContent).pg.flatMap((q: any) => q.gambar?.assetId ? [q.gambar.assetId] : []).sort();
       const associations = (await db.prepare('SELECT asset_id FROM bank_soal_assets WHERE bank_soal_id=?').bind(editId).all<{ asset_id: string }>()).results.map((row: { asset_id: string }) => row.asset_id).sort();
       expect(associations).toEqual(winningRefs);
+
+      // Exercise the generation boundary as well as direct package writes: an
+      // inferred SVG must retain the spec that durable normalization requires.
+      const inferred: any = {
+        no: 1, soal: 'Air laut mengalami pemanasan oleh sinar matahari dan berubah menjadi uap air yang naik ke atmosfer. Proses siklus air ini disebut ....',
+        opsi: { A: 'presipitasi', B: 'evaporasi', C: 'kondensasi', D: 'infiltrasi' }, kunci: 'B', level: 'L1',
+      };
+      await resolveQuestionVisualStimulus(inferred, 'IPAS', 'Siklus air', null);
+      const generated: any = { pg: [inferred] };
+      await runAssessmentQualityGate({ generateJSON: async () => ({ verifications: [] }) } as any,
+        generated, { mataPelajaran: 'IPAS', topik: 'Siklus air', jenjangKelas: 'Kelas 5' });
+      await saveAssessmentTelemetryAndBankSoal(db, { id: 1, nama: 'Owner' },
+        { mataPelajaran: 'IPAS', topik: 'Siklus air', jenjangKelas: 'Kelas 5', jumlahPG: 1 }, generated);
+      expect(generated._persistence).toMatchObject({ saveStatus: 'saved', imageWarnings: [] });
+      const generatedId = generated._persistence.packageId;
+      const generatedDetail = await request(banksoal, `/${generatedId}`, 'GET', 'owner-fresh');
+      const generatedJson: any = await generatedDetail.json();
+      expect(generatedDetail.status).toBe(200);
+      expect(generatedJson.data.content.pg[0].visual_stimulus).toMatchObject({ type: 'siklus_air', params: { pointer: 'evaporasi' } });
+      expect(generatedJson.data.content.pg[0].gambar).toMatchObject({ type: 'svg', svg: expect.stringContaining('<svg') });
+      expect(generatedJson.data.content.pg[0].gambar.imageUnavailable).toBeUndefined();
     } finally {
       try { await proxy?.dispose(); }
       finally { await rm(root, { recursive: true, force: true }); }

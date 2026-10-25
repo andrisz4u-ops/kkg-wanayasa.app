@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Assessment Quality Gate & AI Verifier Engine
  * Standar Penulisan Soal Puspendik Kemendikbudristek & BSKAP No. 046 Tahun 2025
  * 
@@ -9,7 +9,7 @@
  */
 
 import { AIService } from '../services/ai';
-import { generateVisualStimulus, detectStimulusFromSoalText } from './visual-engine';
+import { generateVisualStimulus, detectStimulusFromSoalText, isKnownVisualType, VISUAL_RENDERER_REGISTRY } from './visual-engine';
 
 export interface QuestionAuditDetail {
     status: 'verified' | 'repaired' | 'flagged';
@@ -44,6 +44,96 @@ export interface HeuristicIssue {
  */
 function normalizeText(text: string): string {
     return text.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function isRecord(value: any): value is Record<string, any> {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function renderKnownVisual(spec: any) {
+    if (!isRecord(spec) || typeof spec.type !== 'string' || !isKnownVisualType(spec.type) ||
+        (spec.params != null && !isRecord(spec.params))) return null;
+    try {
+        return generateVisualStimulus({ ...spec, type: spec.type });
+    } catch {
+        return null;
+    }
+}
+
+function isImageUnavailable(item: any): boolean {
+    return item.imageUnavailable === true || item.gambar?.imageUnavailable === true;
+}
+
+function hasUsableVisual(item: any): boolean {
+    if (isImageUnavailable(item)) return false;
+    const image = item.gambar;
+    const sources = typeof image === 'string' ? [image] : [image?.url, image?.dataUri, image?.src, image?.data, image?.gambar];
+    const hasSource = sources.some(source => typeof source === 'string' &&
+        /^(?:https?:\/\/\S+|\/(?!\/)\S+|blob:\S+|data:image\/(?:png|jpe?g|gif|webp|svg\+xml)[;,]\S+)/i.test(source.trim()));
+    const hasSvg = [item.svg, image?.svg].some(svg => typeof svg === 'string' && /<svg\b[^>]*>[\s\S]*<\/svg\s*>/i.test(svg));
+    return hasSource || hasSvg || !!renderKnownVisual(item.visual_stimulus)?.svg;
+}
+
+const FIGURE_REFERENCE_PATTERN = /\b(?:perhatikan|amatilah|lihat(?:lah)?|cermati|berdasarkan)\b[\s\S]{0,80}?\b(?:gambar|foto|diagram|grafik|bagan|ilustrasi)\b|\b(?:gambar|foto|diagram|grafik|bagan|ilustrasi)\s+(?:berikut|di\s+bawah|di\s+samping|tersebut)\b|\b(?:tanda\s+panah|panah\s+menunjuk)\b/i;
+
+function requiresVisual(item: any): boolean {
+    return item.imageRequired === true || item.visual_required === true || FIGURE_REFERENCE_PATTERN.test(String(item.soal || ''));
+}
+
+function equalValues(left: any, right: any): boolean {
+    if (left === right) return true;
+    if (!left || !right || typeof left !== 'object' || typeof right !== 'object' || Array.isArray(left) !== Array.isArray(right)) return false;
+    const keys = Object.keys(left);
+    return keys.length === Object.keys(right).length && keys.every(key =>
+        Object.prototype.hasOwnProperty.call(right, key) && equalValues(left[key], right[key]));
+}
+
+function changedQuestionFields(original: any, healed: any): string[] {
+    return [...new Set([...Object.keys(original), ...Object.keys(healed)])]
+        .filter(key => key !== 'audit' && !equalValues(original[key], healed[key]));
+}
+
+const MEANINGFUL_REPAIR_FIELDS = new Set(['soal', 'opsi', 'kunci', 'gambar', 'visual_stimulus',
+    'gambar_keyword', 'gambar_prompt_en', 'svg', 'imageUnavailable', 'imageRequired', 'visual_required']);
+
+function meaningfulRepairFields(fields: string[]): string[] {
+    return fields.filter(field => MEANINGFUL_REPAIR_FIELDS.has(field));
+}
+
+/** Accepted stem repairs must keep the known SVG and its renderer specification together. */
+function reconcileRepairedVisual(item: any, original: any): void {
+    const spec = item.visual_stimulus;
+    if (item.soal === original.soal || isImageUnavailable(item) || !renderKnownVisual(spec) ||
+        (item.gambar && item.gambar.type !== 'svg')) return;
+
+    const detected = detectStimulusFromSoalText(String(item.soal || ''), '');
+    if (!detected) return;
+    const currentRenderer = VISUAL_RENDERER_REGISTRY[spec.type.toLowerCase()];
+    const detectedRenderer = VISUAL_RENDERER_REGISTRY[detected.type.toLowerCase()];
+    if (currentRenderer.render !== detectedRenderer?.render) {
+        delete item.visual_stimulus;
+        delete item.svg;
+        item.gambar = { imageUnavailable: true, imageUnavailableReason: 'required_diagram_missing' };
+        return;
+    }
+
+    const numbers = new Set((String(item.soal).match(/\d+(?:[.,]\d+)?/g) || []).map(value => Number(value.replace(',', '.'))));
+    const params = { ...spec.params };
+    for (const [key, value] of Object.entries(detected.params || {})) {
+        if (typeof value === 'number' && numbers.has(value)) params[key] = value;
+    }
+    if (equalValues(params, spec.params || {})) return;
+    const reconciled = { ...spec, params };
+    const rendered = renderKnownVisual(reconciled);
+    if (!rendered) {
+        delete item.visual_stimulus;
+        delete item.svg;
+        item.gambar = { imageUnavailable: true, imageUnavailableReason: 'required_diagram_missing' };
+        return;
+    }
+    item.visual_stimulus = reconciled;
+    item.gambar = { url: rendered.dataUri, svg: rendered.svg, credit: rendered.credit, title: rendered.title, type: 'svg' };
+    delete item.svg;
 }
 
 /**
@@ -192,7 +282,6 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
             .replace(/[ \t]+/g, ' ')
             .trim();
 
-        const hasVisual = !!(healed.gambar || (healed.visual_stimulus && healed.visual_stimulus.type));
         const hasTable = /\|[\s\S]*?\|[\s\S]*?\|/.test(healed.soal);
 
         // Tabel Markdown sudah menjadi stimulus; permintaan gambar tambahan dibuang.
@@ -200,23 +289,11 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
             delete healed.visual_stimulus;
             delete healed.gambar_keyword;
             delete healed.gambar_prompt_en;
-        }
-
-        // Jika soal bilang "perhatikan gambar" padahal tidak ada gambar
-        if (!hasVisual && /^(?:perhatikan|amatilah)\s+(?:gambar|foto|bagan|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i.test(healed.soal)) {
-            issues.push({
-                type: 'ORPHAN_STIMULUS',
-                field: 'soal',
-                message: 'Teks soal merujuk pada gambar, tetapi tidak ada stimulus visual yang dilampirkan',
-                autoFixable: true
-            });
-            // Auto-heal: bersihkan pembuka
-            healed.soal = healed.soal
-                .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|bagan|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                .trim();
-            if (healed.soal.length > 0) {
-                healed.soal = healed.soal.charAt(0).toUpperCase() + healed.soal.slice(1);
-            }
+            delete healed.gambar;
+            delete healed.svg;
+            delete healed.imageUnavailable;
+            delete healed.visual_required;
+            if (healed.imageRequired === true) healed.imageRequired = false;
         }
 
         // Jika soal bilang "perhatikan tabel" padahal tidak ada tabel
@@ -225,14 +302,8 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
                 type: 'ORPHAN_STIMULUS',
                 field: 'soal',
                 message: 'Teks soal merujuk pada tabel, namun tabel tidak ditemukan',
-                autoFixable: true
+                autoFixable: false
             });
-            healed.soal = healed.soal
-                .replace(/^(?:perhatikan|amatilah)\s+(?:tabel|data\s+tabel)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                .trim();
-            if (healed.soal.length > 0) {
-                healed.soal = healed.soal.charAt(0).toUpperCase() + healed.soal.slice(1);
-            }
         }
     }
 
@@ -243,7 +314,7 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
         const urlLower = (healed.gambar.url || '').toLowerCase();
 
         // 7a. Blocklist Andrey Sizov / Cyrillic textbook pages / generic circuit stock photo
-        const isAndreySizovOrRussian = creditLower.includes('андрей') || creditLower.includes('сизов') || 
+        const isAndreySizovOrRussian = creditLower.includes('Ð°Ð½Ð´Ñ€ÐµÐ¹') || creditLower.includes('ÑÐ¸Ð·Ð¾Ð²') || 
                                        creditLower.includes('andrey sizov') || creditLower.includes('asizov') || 
                                        urlLower.includes('1532094349884');
         const isGenericCircuitStock = (urlLower.includes('circuit') || creditLower.includes('circuit')) && 
@@ -251,16 +322,16 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
 
         const requiresPrecisionDiagram = /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(textLower);
 
-        if (requiresPrecisionDiagram || isAndreySizovOrRussian || isGenericCircuitStock) {
+        if ((healed.gambar.type === 'photo' && requiresPrecisionDiagram) || isAndreySizovOrRussian || isGenericCircuitStock) {
             // Prioritas 1: Cek apakah bisa diselamatkan dengan SVG generator otomatis menggunakan fullContext (soal + opsi)
             let fullContext = (item.soal || '') + ' ' + (healed.soal || '');
             if (healed.opsi && typeof healed.opsi === 'object') {
                 fullContext += ' ' + Object.entries(healed.opsi).map(([k, v]) => `${k}. ${v}`).join(' ');
             }
 
-            const detectedSvg = detectStimulusFromSoalText(fullContext, '');
+            const detectedSvg = detectStimulusFromSoalText(healed.soal || '', '') || detectStimulusFromSoalText(fullContext, '');
             if (detectedSvg && detectedSvg.type) {
-                const svgRes = generateVisualStimulus(detectedSvg);
+                const svgRes = renderKnownVisual(detectedSvg);
                 if (svgRes) {
                     healed.gambar = {
                         url: svgRes.dataUri,
@@ -279,10 +350,6 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
                 } else {
                     delete healed.gambar;
                     delete healed.visual_stimulus;
-                    healed.soal = healed.soal.replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|bagan|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '').trim();
-                    if (healed.soal.length > 0) {
-                        healed.soal = healed.soal.charAt(0).toUpperCase() + healed.soal.slice(1);
-                    }
                     issues.push({
                         type: 'MISMATCHED_IMAGE',
                         field: 'gambar',
@@ -293,10 +360,6 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
             } else {
                 delete healed.gambar;
                 delete healed.visual_stimulus;
-                healed.soal = healed.soal.replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|bagan|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '').trim();
-                if (healed.soal.length > 0) {
-                    healed.soal = healed.soal.charAt(0).toUpperCase() + healed.soal.slice(1);
-                }
 
                 const reasonMsg = isAndreySizovOrRussian
                     ? 'Foto stok generik buku Rusia/sirkuit (Andrey Sizov) dihapus karena tidak relevan dengan kurikulum dan membingungkan murid'
@@ -310,6 +373,16 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
                 });
             }
         }
+    }
+
+    // Missing figures remain a content failure; deleting their references cannot repair them.
+    if (isImageUnavailable(healed) || (!hasUsableVisual(healed) && requiresVisual(healed))) {
+        issues.push({
+            type: 'ORPHAN_STIMULUS',
+            field: 'gambar',
+            message: 'Stimulus visual yang diperlukan tidak tersedia; pulihkan gambar sebelum butir diverifikasi',
+            autoFixable: false
+        });
     }
 
     return {
@@ -340,7 +413,10 @@ export function buildAuditPrompt(
         kunci: q.kunci,
         level: q.level || 'L1',
         indikator: q.indikator || '',
-        stimulus_visual: q.gambar?.desc || q.gambar_keyword || (q.svg ? 'Diagram SVG terlampir' : (q.gambar ? 'Gambar stimulus terlampir' : undefined))
+        stimulus_visual_available: hasUsableVisual(q),
+        stimulus_visual: hasUsableVisual(q)
+            ? (q.gambar?.desc || q.gambar_keyword || 'Sumber gambar atau spesifikasi diagram tersedia')
+            : (isImageUnavailable(q) || requiresVisual(q) ? 'Stimulus visual tidak tersedia; perlu dipulihkan sebelum verifikasi' : undefined)
     }));
 
     return `
@@ -372,9 +448,9 @@ STANDAR AUDIT MUTU (PUSPENDIK):
    - Kosakata dan tingkat kesulitan kalimat harus ramah anak sesuai ${context.jenjangKelas}.
 
 5. STIMULUS GAMBAR / DIAGRAM VISUAL (SANGAT PENTING):
-   - Butir soal dengan atribut "stimulus_visual" telah dilengkapi gambar ilustrasi / foto / diagram SVG otomatis oleh sistem pada lembar soal.
-   - DILARANG KERAS menolak soal atau mengganti teks soal dengan komplain seperti "soal tidak dapat diverifikasi tanpa gambar", "perlu gambar", atau "tidak lengkap"!
-   - Anggaplah gambar stimulus yang tertera di "stimulus_visual" sudah tampil sempurna di hadapan murid. Verifikasi bahwa pertanyaan dan kuncinya selaras dengan materi tersebut.
+    - "stimulus_visual_available" menyatakan apakah sumber gambar atau spesifikasi renderer diagram tersedia. Deskripsi dan kata kunci saja tidak membuktikan ketersediaan gambar.
+    - Jika stimulus visual yang diperlukan tidak tersedia, laporkan pada "notes" dan tetapkan "key_verified": false. Gambar tersebut perlu dipulihkan sebelum soal dapat dinyatakan lolos audit.
+    - Pertahankan referensi gambar/tabel yang diperlukan dalam teks soal; jangan menghapusnya untuk menyembunyikan stimulus yang hilang. Verifikasi keselarasan materi hanya sejauh informasi yang tersedia.
 
 DAFTAR BUTIR SOAL YANG DIAUDIT:
 ${JSON.stringify(itemsFormatted, null, 2)}
@@ -438,7 +514,7 @@ export function applyVerificationRepairs(
         if (v) {
             // Terapkan koreksi kunci jika disarankan
             if (v.corrected_kunci && typeof v.corrected_kunci === 'string' && copy.opsi && copy.opsi[v.corrected_kunci]) {
-                if (copy.kunci !== v.corrected_kunci) {
+                if (String(copy.kunci || '').trim().toUpperCase() !== v.corrected_kunci) {
                     copy.kunci = v.corrected_kunci;
                     repairedFields.push('kunci');
                 }
@@ -449,8 +525,10 @@ export function applyVerificationRepairs(
                 const trimmed = v.repaired_soal.trim();
                 const isMetaComplaint = /(?:tidak dapat diverifikasi|tanpa gambar|perlu disertai gambar|gambar tidak ditemukan|tidak ada gambar|tidak dapat dijawab tanpa|deskripsi verbal yang jelas|kurang informasi gambar)/i.test(trimmed);
                 if (!isMetaComplaint) {
-                    copy.soal = trimmed;
-                    repairedFields.push('soal');
+                    if (trimmed !== String(copy.soal || '').trim()) {
+                        copy.soal = trimmed;
+                        repairedFields.push('soal');
+                    }
                 } else {
                     console.warn(`[QualityGate] Ignored meta-rejection in repaired_soal for Q#${copy.no || idx + 1}:`, trimmed);
                 }
@@ -458,21 +536,42 @@ export function applyVerificationRepairs(
 
             // Terapkan koreksi opsi jika ada
             if (v.repaired_opsi && typeof v.repaired_opsi === 'object' && Object.keys(v.repaired_opsi).length >= 3) {
-                copy.opsi = { ...copy.opsi, ...v.repaired_opsi };
-                repairedFields.push('opsi');
+                const merged = { ...copy.opsi, ...v.repaired_opsi };
+                if (!equalValues(merged, copy.opsi || {})) {
+                    copy.opsi = merged;
+                    repairedFields.push('opsi');
+                }
             }
-
-            const isRepaired = repairedFields.length > 0 || v.verdict === 'REPAIR';
-            if (isRepaired) repairedCount++;
 
             const hasCompleteVerifierChecks = (v.verdict === 'PASS' || v.verdict === 'REPAIR') &&
                 v.key_verified === true && v.kaidah_puspendik === true &&
                 v.hots_valid === true && v.distraktor_homogen === true &&
                 typeof v.quality_score === 'number' && Number.isFinite(v.quality_score);
-            const postRepairValidation = validateQuestionHeuristics(copy, jenjangKelas);
-            const finalValidation = validateQuestionHeuristics(postRepairValidation.healedItem, jenjangKelas);
-            Object.assign(copy, finalValidation.healedItem);
-            const isVerified = hasCompleteVerifierChecks && finalValidation.issues.length === 0;
+
+            // The healed item is authoritative: a field it deleted must not be
+            // restored by merging into the stale copy.
+            const firstPass = validateQuestionHeuristics(copy, jenjangKelas).healedItem;
+            const finalValidation = validateQuestionHeuristics(firstPass, jenjangKelas);
+            const healed = finalValidation.healedItem;
+
+            for (const field of changedQuestionFields(copy, healed)) {
+                if (!repairedFields.includes(field)) repairedFields.push(field);
+            }
+
+            const beforeReconcile = { ...healed };
+            reconcileRepairedVisual(healed, item);
+            for (const field of changedQuestionFields(beforeReconcile, healed)) {
+                if (!repairedFields.includes(field)) repairedFields.push(field);
+            }
+
+            const postRepairValidation = validateQuestionHeuristics(healed, jenjangKelas);
+            const isBlocked = postRepairValidation.issues.some(issue => !issue.autoFixable)
+                || isImageUnavailable(postRepairValidation.healedItem)
+                || (!hasUsableVisual(postRepairValidation.healedItem) && requiresVisual(postRepairValidation.healedItem));
+            const isVerified = hasCompleteVerifierChecks && !isBlocked;
+            const meaningful = meaningfulRepairFields(repairedFields);
+            const isRepaired = meaningful.length > 0;
+            if (isRepaired) repairedCount++;
 
             // Suntikkan audit metadata
             const auditDetail: QuestionAuditDetail = {
@@ -485,10 +584,11 @@ export function applyVerificationRepairs(
                 notes: isVerified
                     ? (v.notes || (isRepaired ? 'Diselaraskan secara otomatis oleh Quality Gate' : 'Lolos uji mutu Puspendik'))
                     : `${v.notes || 'Verifikasi tidak lengkap atau pemeriksaan deterministik gagal.'} Perlu tinjauan guru.`,
-                repaired_fields: repairedFields.length > 0 ? repairedFields : undefined
+                repaired_fields: meaningful.length > 0 ? meaningful : undefined
             };
 
-            copy.audit = auditDetail;
+            healed.audit = auditDetail;
+            return healed;
         } else {
             // No verifier row means no AI checks have been confirmed.
             copy.audit = {
@@ -550,70 +650,17 @@ export async function runAssessmentQualityGate(
         await options.onProgress('Menjalankan inspeksi heuristik kaidah baku Puspendik...', 86);
     }
 
-    // Tier 1: Deterministic Heuristic Gate & Packet-Wide Deduplication
+    // Tier 1: Deterministic Heuristic Gate. Image diversity belongs to the route
+    // resolver; the audit must not delete a required figure or rewrite its stem.
     const preHealedPG: any[] = [];
+    const heuristicFields: string[][] = [];
     let heuristicRepairs = 0;
-    const seenCanonicalUrls = new Set<string>();
-    const seenSvgSignatures = new Set<string>();
 
     for (const item of pgItems) {
         const { healedItem, issues } = validateQuestionHeuristics(item, context.jenjangKelas);
-
-        // Packet-Wide Deduplication Guard: JANGAN sampai 1 gambar dipakai berulang kali dalam 1 paket soal
-        if (healedItem.gambar && healedItem.gambar.url) {
-            const rawUrl = String(healedItem.gambar.url).trim();
-            const canonicalUrl = rawUrl.split('?')[0];
-
-            if (seenCanonicalUrls.has(canonicalUrl) || seenCanonicalUrls.has(rawUrl)) {
-                delete healedItem.gambar;
-                delete healedItem.visual_stimulus;
-                delete healedItem.gambar_keyword;
-                delete healedItem.gambar_prompt_en;
-
-                healedItem.soal = healedItem.soal
-                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                    .replace(/^gambar\s+menunjukkan[^\n.!?]*[.!?]\s*/i, '')
-                    .trim();
-                if (healedItem.soal.length > 0) {
-                    healedItem.soal = healedItem.soal.charAt(0).toUpperCase() + healedItem.soal.slice(1);
-                }
-
-                issues.push({
-                    type: 'MISMATCHED_IMAGE',
-                    field: 'gambar',
-                    message: 'Gambar duplikat dihapus dari soal ini untuk memastikan variasi stimulus unik di setiap butir soal',
-                    autoFixable: true
-                });
-            } else {
-                seenCanonicalUrls.add(canonicalUrl);
-                seenCanonicalUrls.add(rawUrl);
-            }
-        }
-
-        if (healedItem.visual_stimulus && healedItem.visual_stimulus.type) {
-            const sig = `${healedItem.visual_stimulus.type}:${JSON.stringify(healedItem.visual_stimulus.params || {})}`;
-            if (seenSvgSignatures.has(sig)) {
-                const svgType = healedItem.visual_stimulus.type;
-                delete healedItem.gambar;
-                delete healedItem.visual_stimulus;
-                healedItem.soal = healedItem.soal
-                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                    .trim();
-                if (healedItem.soal.length > 0) {
-                    healedItem.soal = healedItem.soal.charAt(0).toUpperCase() + healedItem.soal.slice(1);
-                }
-                issues.push({
-                    type: 'MISMATCHED_IMAGE',
-                    field: 'visual_stimulus',
-                    message: `Diagram SVG kembar (${svgType}) dihapus agar stimulus tidak berulang`,
-                    autoFixable: true
-                });
-            } else {
-                seenSvgSignatures.add(sig);
-            }
-        }
-
-        if (issues.length > 0) heuristicRepairs++;
+        const changed = meaningfulRepairFields(changedQuestionFields(item, healedItem));
+        if (changed.length > 0) heuristicRepairs++;
+        heuristicFields.push(changed);
         preHealedPG.push(healedItem);
     }
 
@@ -652,25 +699,15 @@ export async function runAssessmentQualityGate(
 
     const { healedItems, repairedCount } = applyVerificationRepairs(preHealedPG, verifications, context.jenjangKelas);
 
-    // Final Post-Repair Safety Sweep: Garansi 100% tidak ada duplikasi gambar di seluruh paket soal
-    const finalSeenUrls = new Set<string>();
-    for (const q of healedItems) {
-        if (q.gambar && q.gambar.url) {
-            const canonicalUrl = String(q.gambar.url).trim().split('?')[0];
-            if (finalSeenUrls.has(canonicalUrl)) {
-                delete q.gambar;
-                delete q.visual_stimulus;
-                q.soal = q.soal
-                    .replace(/^(?:perhatikan|amatilah)\s+(?:gambar|foto|diagram|ilustrasi)\s+(?:berikut|di\s+bawah\s+ini)[\s!.,:]*/i, '')
-                    .trim();
-                if (q.soal.length > 0) {
-                    q.soal = q.soal.charAt(0).toUpperCase() + q.soal.slice(1);
-                }
-            } else {
-                finalSeenUrls.add(canonicalUrl);
-            }
-        }
-    }
+    // Heuristic repairs happen before the verifier and must remain visible in the
+    // final certificate instead of being silently folded into the pre-audit state.
+    healedItems.forEach((item: any, index: number) => {
+        const extra = heuristicFields[index] || [];
+        if (!extra.length || !item?.audit) return;
+        const fields = [...new Set([...(item.audit.repaired_fields || []), ...extra])];
+        item.audit.repaired_fields = fields;
+        if (item.audit.status === 'verified') item.audit.status = 'repaired';
+    });
 
     // Hard gate: butir PG dengan opsi kosong/duplikat atau kunci hilang tidak boleh
     // masuk ke paket. Audit sebelumnya hanya memberi flag tanpa menahan butir rusak.
@@ -697,7 +734,8 @@ export async function runAssessmentQualityGate(
     if (gateDropped.length) finalData._qualityGateDropped = gateDropped;
 
     // Update summary
-    auditSummary.repaired_count = repairedCount + heuristicRepairs;
+    // Count each question once, even when heuristic cleanup and verifier repairs both apply.
+    auditSummary.repaired_count = healedItems.filter((item: any) => (item?.audit?.repaired_fields || []).length > 0).length;
     auditSummary.passed_count = healedItems.filter((item: any) => item.audit?.status === 'verified').length;
     auditSummary.flagged_count = healedItems.filter((item: any) => item.audit?.status === 'flagged').length;
     auditSummary.overall_quality_score = totalItems

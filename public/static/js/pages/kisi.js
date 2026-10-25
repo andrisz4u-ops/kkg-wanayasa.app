@@ -1025,12 +1025,18 @@ let _kisiBeforePrintBound = false;
 const assessmentPackageSync = createAssessmentPackageSync({
   ownerProvider: () => state.user?.id ?? null,
   onStatus: updateAssessmentSaveState,
-  onSaved: (context) => {
+  onSaved: (context, draft) => {
     if (assessmentPackageSync.context?.token !== context.token) return;
     if (context.visibility === 'shared') {
       context.visibility = 'private-reapproval';
       assessmentPackageSync.context.visibility = 'private-reapproval';
       assessmentPackageSync.setStatus('saved');
+    }
+    // The server may canonicalize image state (drop stale flags, rewrite asset URLs).
+    // Adopt it in place so the next export matches the saved revision exactly.
+    if (draft?.serverCanonical && _lastGeneratedData) {
+      for (const key of Object.keys(_lastGeneratedData)) delete _lastGeneratedData[key];
+      Object.assign(_lastGeneratedData, draft.content);
     }
     if (_lastGeneratedData && assessmentPackageSync.context?.token === context.token) {
       _lastGeneratedData._persistence = {
@@ -1261,9 +1267,37 @@ async function createAssessmentDocx(data, formData, { active = data === _lastGen
   return blob;
 }
 
-async function makeDurableQuestionImage(url, { svg = '', existing = null, title = '', credit = '', assetId = createAssessmentAssetId() } = {}) {
+// Compare displayed sources without changing the persisted descriptor or granting
+// trust to newly supplied SVG bytes. Only known SVG URI encoding aliases collapse.
+function questionImageSourceIdentity(image) {
+  const source = resolveRenderableImageSrc(image);
+  const svgData = source.match(/^data:image\/svg\+xml(?:;charset=utf-8)?,([\s\S]*)$/i);
+  if (svgData) {
+    try { return `data:image/svg+xml,${decodeURIComponent(svgData[1])}`; } catch {}
+  }
+  return source;
+}
+
+function clearQuestionImageFailure(question) {
+  delete question.imageUnavailable;
+  delete question.imageUnavailableReason;
+  delete question.imageWarningReason;
+}
+
+function removeQuestionImage(question) {
+  for (const key of ['gambar', 'visual_stimulus', 'svg', 'imageRequired', 'visual_required', 'gambar_keyword', 'image_keyword']) {
+    delete question[key];
+  }
+  clearQuestionImageFailure(question);
+}
+
+async function makeDurableQuestionImage(url, { svg = '', existing = null, visualStimulus = null, title = '', credit = '', assetId = createAssessmentAssetId() } = {}) {
   if (!url) return null;
-  if (existing?.url === url && (existing.assetId || existing.svg)) return { ...existing };
+  const hasVisualSpec = visualStimulus?.type && visualStimulus.type !== 'none';
+  const existingSvg = existing?.svg || /^data:image\/svg\+xml[;,]/i.test(resolveRenderableImageSrc(existing));
+  if ((existing?.assetId || (hasVisualSpec && existingSvg)) && questionImageSourceIdentity(existing) === questionImageSourceIdentity(url)) {
+    return typeof existing === 'string' ? existing : { ...existing };
+  }
   if (svg) {
     return { url, svg, type: 'svg', title: title || existing?.title || 'Diagram', credit: credit || existing?.credit || 'Examplate Visual Engine', deskripsi: existing?.deskripsi || title || 'Diagram', params: existing?.params };
   }
@@ -1273,16 +1307,11 @@ async function makeDurableQuestionImage(url, { svg = '', existing = null, title 
     asset = await assessmentPackageSync.uploadImage(blob, { assetId, name: title });
   } else if (/^https:\/\//i.test(url)) {
     asset = await assessmentPackageSync.uploadImageUrl(url, { assetId, name: title });
-  } else if (existing?.assetId) {
-    asset = existing;
   } else {
     throw new Error('Gambar ini belum memiliki salinan permanen. Unggah ulang file asli atau pilih diagram dari galeri.');
   }
   return {
-    ...(existing || {}),
     ...asset,
-    svg: undefined,
-    params: undefined,
     type: 'photo',
     title: title || existing?.title || 'Gambar Ilustrasi',
     credit: credit || existing?.credit || 'Upload Manual',
@@ -2909,9 +2938,7 @@ function renderResult(data, formData, packageOptions = {}) {
       else if (type === 'uraian') targetQ = data.uraian?.[qIdx];
 
       if (targetQ) {
-        delete targetQ.gambar;
-        delete targetQ.visual_stimulus;
-        delete targetQ.imageUnavailable;
+        removeQuestionImage(targetQ);
         commitAssessmentEdit(data, formData);
         renderResult(data, formData);
         showToast(`Gambar pada nomor ${targetQ.no} berhasil dihapus.`, 'info');
@@ -3148,6 +3175,8 @@ function openSoalEditor(type, index, data, formData) {
 
   // Gambar state & event bindings in modal editor
   let modalSelectedImageUrl = currentGambarUrl;
+  let imageSelectionChanged = false;
+  let imagePreviewVersion = 0;
   let pendingUploadAssetId = createAssessmentAssetId();
   const imgPreviewBox = overlay.querySelector('#editor-image-preview-box');
   const imgThumb = overlay.querySelector('#editor-img-thumb');
@@ -3157,6 +3186,8 @@ function openSoalEditor(type, index, data, formData) {
 
   const updateModalImagePreview = (url) => {
     modalSelectedImageUrl = url;
+    imageSelectionChanged = true;
+    imagePreviewVersion++;
     if (url) {
       imgThumb.src = url;
       imgPreviewBox.style.display = 'flex';
@@ -3177,8 +3208,10 @@ function openSoalEditor(type, index, data, formData) {
         showToast('Ukuran gambar maksimal 1.5 MiB.', 'error');
         return;
       }
+      const version = ++imagePreviewVersion;
       const reader = new FileReader();
       reader.onload = (re) => {
+        if (!overlay.isConnected || version !== imagePreviewVersion) return;
         updateModalImagePreview(re.target.result);
         pendingUploadAssetId = createAssessmentAssetId();
         if (urlInput) urlInput.value = '';
@@ -3229,6 +3262,7 @@ function openSoalEditor(type, index, data, formData) {
       try {
         durableImage = await makeDurableQuestionImage(modalSelectedImageUrl, {
           existing: q.gambar,
+          visualStimulus: q.visual_stimulus,
           title: fileUpload?.files?.[0]?.name || q.gambar?.title,
           assetId: pendingUploadAssetId || undefined,
       });
@@ -3255,11 +3289,13 @@ function openSoalEditor(type, index, data, formData) {
     // Update gambar
     if (durableImage) {
       q.gambar = durableImage;
-      delete q.imageUnavailable;
-    } else {
-      delete q.gambar;
-      delete q.visual_stimulus;
-      delete q.imageUnavailable;
+      if (imageSelectionChanged) {
+        clearQuestionImageFailure(q);
+        delete q.svg;
+        if (!durableImage.svg) delete q.visual_stimulus;
+      }
+    } else if (imageSelectionChanged) {
+      removeQuestionImage(q);
     }
 
     if (isPG) {
@@ -3308,8 +3344,10 @@ function openChangeImageModal(type, qIdx, data, formData) {
   if (!q) return;
 
   let selectedImageUrl = resolveRenderableImageSrc(q.gambar);
-  let selectedSvg = q.gambar?.svg || '';
+  let selectedSvg = q.visual_stimulus?.type ? q.gambar?.svg || '' : '';
   let selectedTitle = q.gambar?.title || '';
+  let selectedVisualStimulus = q.visual_stimulus;
+  let imageSelectionChanged = false;
   let pendingUploadAssetId = createAssessmentAssetId();
 
   const overlay = document.createElement('div');
@@ -3390,6 +3428,14 @@ function openChangeImageModal(type, qIdx, data, formData) {
   let currentActiveSvgType = '';
   let currentActiveParams = {};
   let debounceTimer = null;
+  let previewVersion = 0;
+
+  const invalidatePreview = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+    return ++previewVersion;
+  };
+  const previewIsCurrent = version => version === previewVersion && overlay.isConnected && (!activeToken || assessmentPackageSync.current(activeToken));
 
   // Kamus definisi kontrol parameter per diagram
   const paramDefs = {
@@ -3521,6 +3567,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
 
   // Fungsi render form kontrol parameter on-the-fly
   const renderParamControls = (type, existingParams = {}) => {
+    invalidatePreview();
     currentActiveSvgType = type;
     const defs = paramDefs[type];
     if (!defs || defs.length === 0) {
@@ -3575,28 +3622,17 @@ function openChangeImageModal(type, qIdx, data, formData) {
       }
     });
 
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(async () => {
-      if (!currentActiveSvgType) return;
-      try {
-        const res = await api('/kisi/visual-render', {
-          method: 'POST',
-          body: { type: currentActiveSvgType, params: currentActiveParams }
-        });
-        if (res?.data?.dataUri) {
-          selectedImageUrl = res.data.dataUri;
-          selectedSvg = res.data.svg;
-          selectedTitle = res.data.title;
-          updatePreview(selectedImageUrl);
-        }
-      } catch (err) {
-        console.warn('Live render tweak error:', err);
-      }
+    const version = invalidatePreview();
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      renderSvgPreview(version);
     }, 180);
   };
 
   // Load SVG catalog from API
+  const catalogVersion = previewVersion;
   api('/kisi/visual-catalog').then(res => {
+    if (!overlay.isConnected) return;
     if (res?.data && Array.isArray(res.data)) {
       const categories = {};
       res.data.forEach(item => {
@@ -3614,7 +3650,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
       svgSelect.innerHTML = html;
 
       // Jika soal sudah memiliki SVG / tipe stimulus sebelumnya, aktifkan panel kontrol
-      if (q.visual_stimulus?.type) {
+      if (previewVersion === catalogVersion && !imageSelectionChanged && q.visual_stimulus?.type) {
         svgSelect.value = q.visual_stimulus.type;
         renderParamControls(q.visual_stimulus.type, q.visual_stimulus.params || {});
       }
@@ -3626,7 +3662,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
   const updatePreview = (url) => {
     selectedImageUrl = resolveRenderableImageSrc(url);
     if (url) {
-      previewImg.src = url;
+      previewImg.src = selectedImageUrl;
       previewImg.style.display = 'block';
       emptyText.style.display = 'none';
     } else {
@@ -3636,14 +3672,40 @@ function openChangeImageModal(type, qIdx, data, formData) {
     }
   };
 
+  const renderSvgPreview = async (version, notify = false) => {
+    if (!currentActiveSvgType || !previewIsCurrent(version)) return;
+    // Bind the accepted image to exactly the specification sent for this render.
+    const spec = { type: currentActiveSvgType, params: { ...currentActiveParams } };
+    try {
+      const res = await api('/kisi/visual-render', { method: 'POST', body: spec });
+      if (!previewIsCurrent(version)) return;
+      if (res?.data?.dataUri && res.data.svg) {
+        selectedSvg = res.data.svg;
+        selectedTitle = res.data.title;
+        selectedVisualStimulus = spec;
+        imageSelectionChanged = true;
+        updatePreview(res.data.dataUri);
+        urlInput.value = '';
+        fileInput.value = '';
+        if (notify) showToast(`Diagram ${res.data.title} berhasil dipasang.`, 'success');
+      }
+    } catch (err) {
+      if (!previewIsCurrent(version)) return;
+      if (notify) showToast('Gagal merender diagram: ' + err.message, 'error');
+      else console.warn('Live render tweak error:', err);
+    }
+  };
+
+  const resetSvgSelection = () => {
+    renderParamControls('');
+    svgSelect.value = '';
+    selectedSvg = '';
+    selectedVisualStimulus = null;
+  };
+
   // Saat dropdown SVG berubah, tampilkan panel parameter yang sesuai
   svgSelect.addEventListener('change', () => {
-    const type = svgSelect.value;
-    if (type) {
-      renderParamControls(type);
-    } else {
-      paramPanel.style.display = 'none';
-    }
+    renderParamControls(svgSelect.value);
   });
 
   // SVG apply
@@ -3653,24 +3715,9 @@ function openChangeImageModal(type, qIdx, data, formData) {
       showToast('Pilih salah satu template diagram SVG terlebih dahulu.', 'error');
       return;
     }
-    try {
-      showToast('Merender diagram SVG...', 'info');
-      const res = await api('/kisi/visual-render', {
-        method: 'POST',
-        body: { type }
-      });
-      if (res?.data?.dataUri) {
-        selectedImageUrl = res.data.dataUri;
-        selectedSvg = res.data.svg;
-        selectedTitle = res.data.title;
-        updatePreview(selectedImageUrl);
-        urlInput.value = '';
-        fileInput.value = '';
-        showToast(`Diagram ${res.data.title} berhasil dipasang.`, 'success');
-      }
-    } catch (err) {
-      showToast('Gagal merender diagram: ' + err.message, 'error');
-    }
+    if (currentActiveSvgType !== type) renderParamControls(type);
+    showToast('Merender diagram SVG...', 'info');
+    await renderSvgPreview(invalidatePreview(), true);
   });
 
   // File input change
@@ -3681,11 +3728,14 @@ function openChangeImageModal(type, qIdx, data, formData) {
         showToast('Ukuran gambar maksimal 1.5 MiB.', 'error');
         return;
       }
+      resetSvgSelection();
+      const version = previewVersion;
       const reader = new FileReader();
       reader.onload = (re) => {
+        if (!previewIsCurrent(version)) return;
         pendingUploadAssetId = createAssessmentAssetId();
-        selectedSvg = '';
         selectedTitle = file.name;
+        imageSelectionChanged = true;
         updatePreview(re.target.result);
         urlInput.value = '';
         showToast('Gambar dari komputer berhasil dipilih.', 'info');
@@ -3701,8 +3751,9 @@ function openChangeImageModal(type, qIdx, data, formData) {
       showToast('Masukkan link gambar yang valid.', 'error');
       return;
     }
-    selectedSvg = '';
+    resetSvgSelection();
     selectedTitle = 'Gambar Internet';
+    imageSelectionChanged = true;
     pendingUploadAssetId = createAssessmentAssetId();
     updatePreview(url);
     fileInput.value = '';
@@ -3711,8 +3762,9 @@ function openChangeImageModal(type, qIdx, data, formData) {
 
   // Remove image
   overlay.querySelector('#modal-btn-remove-this-img').addEventListener('click', () => {
-    selectedSvg = '';
+    resetSvgSelection();
     selectedTitle = '';
+    imageSelectionChanged = true;
     pendingUploadAssetId = null;
     updatePreview('');
     urlInput.value = '';
@@ -3720,15 +3772,21 @@ function openChangeImageModal(type, qIdx, data, formData) {
     showToast('Gambar dilepas dari pratinjau.', 'info');
   });
 
+  const closeImageModal = () => {
+    invalidatePreview();
+    overlay.remove();
+    document.removeEventListener('keydown', escImgHandler);
+  };
+
   // Cancel
-  overlay.querySelector('.btn-editor-cancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('.btn-editor-cancel').addEventListener('click', closeImageModal);
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeImageModal();
   });
 
   // Escape
   const escImgHandler = (e) => {
-    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escImgHandler); }
+    if (e.key === 'Escape') closeImageModal();
   };
   document.addEventListener('keydown', escImgHandler);
 
@@ -3740,6 +3798,7 @@ function openChangeImageModal(type, qIdx, data, formData) {
         durableImage = await makeDurableQuestionImage(selectedImageUrl, {
           svg: selectedSvg,
           existing: q.gambar,
+          visualStimulus: q.visual_stimulus,
           title: selectedTitle,
           credit: selectedSvg ? 'Examplate Visual Engine' : 'Upload Manual',
           assetId: pendingUploadAssetId || undefined,
@@ -3750,22 +3809,20 @@ function openChangeImageModal(type, qIdx, data, formData) {
         return;
       }
     }
-    if (selectedImageUrl) {
-      q.gambar = { ...durableImage, params: currentActiveSvgType ? { ...currentActiveParams } : durableImage?.params };
-      delete q.imageUnavailable;
-      if (currentActiveSvgType) {
-        q.visual_stimulus = {
-          type: currentActiveSvgType,
-          params: { ...currentActiveParams }
-        };
-      } else if (!selectedSvg) delete q.visual_stimulus;
-    } else {
-      delete q.gambar;
-      delete q.visual_stimulus;
-      delete q.imageUnavailable;
+    if (durableImage) {
+      q.gambar = durableImage;
+      if (imageSelectionChanged) {
+        clearQuestionImageFailure(q);
+        delete q.svg;
+        if (selectedSvg && selectedVisualStimulus) {
+          q.gambar.params = { ...selectedVisualStimulus.params };
+          q.visual_stimulus = selectedVisualStimulus;
+        } else delete q.visual_stimulus;
+      }
+    } else if (imageSelectionChanged) {
+      removeQuestionImage(q);
     }
-    overlay.remove();
-    document.removeEventListener('keydown', escImgHandler);
+    closeImageModal();
     commitAssessmentEdit(data, formData);
     renderResult(data, formData);
     showToast(selectedImageUrl ? `Stimulus pada soal nomor ${q.no} berhasil diperbarui.` : `Gambar pada nomor ${q.no} berhasil dihapus.`, 'success');

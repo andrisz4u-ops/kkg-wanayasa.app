@@ -478,7 +478,8 @@ banksoal.put('/:id', async (c) => {
         }
         if (body.is_public !== undefined && body.is_public !== Boolean(visibility.is_public)) return Errors.validation(c, 'Ubah niat berbagi melalui endpoint share khusus');
         const saved = await saveOwnedAssessmentPackage(c.env.DB, { ownerId: user.id, packageId: id, baseRevision: body.baseRevision, content: body.content });
-        return successResponse(c, { packageId: saved.packageId, revision: saved.revision, saveStatus: saved.saveStatus, imageWarnings: saved.imageWarnings });
+        const canonical = normalizeAssetUrls(saved.content, saved.packageId);
+        return successResponse(c, { packageId: saved.packageId, revision: saved.revision, saveStatus: saved.saveStatus, content: canonical.content, imageWarnings: [...saved.imageWarnings, ...canonical.warnings] });
     } catch (error: any) {
         return packageInputError(c, error);
     }
@@ -586,7 +587,7 @@ banksoal.post('/', async (c) => {
             },
         });
         const imageUrls = normalizeAssetUrls(created.content, created.packageId);
-        return successResponse(c, { id: created.packageId, packageId: created.packageId, revision: created.revision, saved: true, saveStatus: created.saveStatus, ...created.visibility, _persistence: { packageId: created.packageId, revision: created.revision, saveStatus: 'saved', imageWarnings: imageUrls.warnings } });
+        return successResponse(c, { id: created.packageId, packageId: created.packageId, revision: created.revision, saved: true, saveStatus: created.saveStatus, content: imageUrls.content, imageWarnings: imageUrls.warnings, ...created.visibility, _persistence: { packageId: created.packageId, revision: created.revision, saveStatus: 'saved', imageWarnings: imageUrls.warnings } });
     } catch (e: any) {
         return packageInputError(c, e);
     }

@@ -2,7 +2,7 @@ import { TrustedImageIngestError, fetchTrustedAssessmentImage, readOwnedAssessme
 import type { AssessmentAssetMetadata, AssessmentAssetStage, StagedAssessmentAsset } from './assessment-assets';
 import { questionItems } from './assessment-packages';
 import { generateVisualStimulus } from './visual-engine';
-import { getVisualCatalog } from './visuals/catalog';
+import { validatedAssessmentVisualSpec, type AssessmentVisualSpec } from './assessment-visual-spec';
 
 export const ASSESSMENT_PACKAGE_IMAGE_MAX_REFERENCES = 8;
 export const ASSESSMENT_PACKAGE_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
@@ -66,50 +66,7 @@ function canonicalAssetImage(image: unknown, metadata: AssessmentAssetMetadata) 
   };
 }
 
-const visualCatalog = new Map(getVisualCatalog().map(item => [item.id, item.sampleParams]));
-
-/** Keep only known renderer kinds, sample-schema keys, and bounded primitive values. */
-function sanitizeBySample(value: unknown, sample: unknown, depth = 0): any {
-  if (depth > 5) return undefined;
-  if (Array.isArray(sample)) {
-    if (!Array.isArray(value) || value.length > 64) return undefined;
-    const sampleItem = sample[0];
-    const result = value.map(item => sanitizeBySample(item, sampleItem, depth + 1));
-    return result.some(item => item === undefined) ? undefined : result;
-  }
-  if (record(sample)) {
-    if (!record(value)) return undefined;
-    const result: Record<string, any> = {};
-    for (const [key, child] of Object.entries(value)) {
-      if (!Object.prototype.hasOwnProperty.call(sample, key) || /(?:url|uri|svg|script|href|src|html|xml|image|gambar|onload)/i.test(key)) continue;
-      const clean = sanitizeBySample(child, sample[key], depth + 1);
-      if (clean !== undefined) result[key] = clean;
-    }
-    return result;
-  }
-  if (typeof sample === 'number') {
-    return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : undefined;
-  }
-  if (typeof sample === 'boolean') return typeof value === 'boolean' ? value : undefined;
-  if (typeof sample === 'string') {
-    return safeText(value, 120);
-  }
-  return undefined;
-}
-
-function validatedVisualSpec(value: unknown): { type: string; params: Record<string, any>; caption?: string } | null {
-  if (!record(value) || typeof value.type !== 'string') return null;
-  const sample = visualCatalog.get(value.type);
-  if (!sample) return null;
-  const params = sanitizeBySample(record(value.params) ? value.params : {}, sample);
-  if (!record(params)) return null;
-  const caption = safeText(value.caption, 120);
-  const spec = { type: value.type, params, ...(caption ? { caption } : {}) };
-  if (JSON.stringify(spec).length > 8_192) return null;
-  return spec;
-}
-
-function trustedSvg(question: Record<string, any>, image: Record<string, any>, spec: NonNullable<ReturnType<typeof validatedVisualSpec>>) {
+function trustedSvg(question: Record<string, any>, image: Record<string, any>, spec: AssessmentVisualSpec) {
   const rendered = generateVisualStimulus(spec);
   if (!rendered?.svg || !rendered.dataUri) return false;
   question.gambar = {
@@ -201,7 +158,7 @@ export async function normalizeAssessmentImages(
     }
 
     const rawVisualSpec = item.visual_stimulus;
-    const spec = rawVisualSpec == null ? null : validatedVisualSpec(rawVisualSpec);
+    const spec = rawVisualSpec == null ? null : validatedAssessmentVisualSpec(rawVisualSpec);
     if (spec) {
       item.visual_stimulus = spec;
       const hasSvgSource = /svg/i.test(String(image.type || '')) || /data:image\/svg|<svg/i.test(String(image.url || image.gambar || image.dataUri || '')) || typeof image.svg === 'string';

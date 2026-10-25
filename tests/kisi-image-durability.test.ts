@@ -244,6 +244,24 @@ describe('kisi assessment image durability', () => {
     db.close();
   });
 
+  it('reconciles a verified certificate when durability loses a required image', async () => {
+    const db = database();
+    globalThis.fetch = vi.fn(async () => new Response('missing', { status: 404 })) as any;
+    const audit = { status: 'verified', quality_score: 98, key_verified: true, kaidah_puspendik: true, hots_valid: true, distraktor_homogen: true };
+    const data: any = {
+      pg: [{ no: 1, soal: 'Perhatikan gambar berikut! Tentukan bagian X.', imageRequired: true,
+        opsi: { A: 'Satu', B: 'Dua', C: 'Tiga', D: 'Empat' }, kunci: 'A',
+        gambar: { url: 'https://upload.wikimedia.org/required-missing.png' }, audit: { ...audit } }],
+      _audit: { total_reviewed: 1, passed_count: 1, repaired_count: 0, flagged_count: 0, overall_quality_score: 98 },
+    };
+    await saveAssessmentTelemetryAndBankSoal(db as any, { id: ownerId, nama: 'Owner' },
+      { mataPelajaran: 'IPAS', topik: 'Organ', jenjangKelas: '5' }, data);
+    expect(data.pg[0].gambar).toMatchObject({ imageUnavailable: true });
+    expect(data.pg[0].audit).toMatchObject({ status: 'flagged', quality_score: 0, key_verified: false });
+    expect(data._audit).toMatchObject({ passed_count: 0, flagged_count: 1, overall_quality_score: 0 });
+    db.close();
+  });
+
   it('attaches server-owned failure metadata when package persistence is not configured', async () => {
     const data: any = { pg: [{ no: 1, soal: 'Perhatikan gambar', imageRequired: true }], _persistence: { packageId: 77, revision: 42, saveStatus: 'saved' } };
     const result = await finalizeAssessmentPackage(data, { resolvedCP: 'CP', topik: 'Topik', totalPG: 1 });

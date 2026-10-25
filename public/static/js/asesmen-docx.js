@@ -141,18 +141,22 @@ export function assessmentImageDisplaySize(image, maxW_cm = IMAGE_MAX_WIDTH_CM, 
   return { width: Math.round(width * scale), height: Math.round(height * scale) };
 }
 
-function makeAssessmentImageParagraph(image, maxW_cm = IMAGE_MAX_WIDTH_CM, maxH_cm = IMAGE_MAX_HEIGHT_CM, align = window.docx.AlignmentType.CENTER) {
+function makeAssessmentImageParagraph(image, maxW_cm = IMAGE_MAX_WIDTH_CM, maxH_cm = IMAGE_MAX_HEIGHT_CM, align = window.docx.AlignmentType.LEFT, indentLeft = QUESTION_INDENT) {
   const size = assessmentImageDisplaySize(image, maxW_cm, maxH_cm);
-  return new window.docx.Paragraph({
+  const paraOpts = {
     alignment: align,
     keepNext: true,
-    spacing: { before: PT(2), after: PT(2) },
+    spacing: { before: PT(3), after: PT(4) },
     children: [new window.docx.ImageRun({
       data: image.buffer,
       transformation: size,
       type: image.type,
     })],
-  });
+  };
+  if (indentLeft && indentLeft > 0) {
+    paraOpts.indent = { left: indentLeft };
+  }
+  return new window.docx.Paragraph(paraOpts);
 }
 
 // ============================================================
@@ -1041,7 +1045,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
         const isUltraWide = imgData.width > 0 && imgData.height > 0 && (imgData.width / imgData.height >= 2.5);
         const maxW = isUltraWide ? 14 : 8.0;
         const maxH = isUltraWide ? 3.2 : 4.2;
-        children.push(makeAssessmentImageParagraph(imgData, maxW, maxH, AlignmentType.CENTER));
+        children.push(makeAssessmentImageParagraph(imgData, maxW, maxH, AlignmentType.LEFT, INDENT_LEFT));
         children.push(...makeOpsiParagraphs(opts, colLayout, INDENT_LEFT, PAGE_TEXT_WIDTH, 12));
       } else {
         children.push(...buildSoalDocxChildren(`${q.no}.`, q.soal, { left: INDENT_LEFT, hanging: HANGING }));
@@ -1217,7 +1221,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
           const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
           const maxW = isUltraWide ? 14 : 8.0;
           const maxH = isUltraWide ? 3.2 : 4.2;
-          children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.CENTER));
+          children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.LEFT, CM(0.6)));
         }
       }
     }
@@ -1234,7 +1238,7 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
         const isUltraWide = image.width > 0 && image.height > 0 && (image.width / image.height >= 2.5);
         const maxW = isUltraWide ? 14 : 8.0;
         const maxH = isUltraWide ? 3.2 : 4.2;
-        children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.CENTER));
+        children.push(makeAssessmentImageParagraph(image, maxW, maxH, AlignmentType.LEFT, CM(0.6)));
       }
     }
   }

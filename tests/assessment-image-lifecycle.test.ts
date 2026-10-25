@@ -97,15 +97,22 @@ describe('assessment image lifecycle contracts', () => {
     expect(normalized.warnings).toEqual([]);
   });
 
-  it('retains a genuine required-image failure rather than hiding it when generation is disabled', async () => {
-    const pg = await enrichAndNormalizePG([{ no: 1, soal: 'Perhatikan gambar berikut! Tentukan bagian X.',
-      imageRequired: true, visual_stimulus: { type: 'balok', params: {} } }], {
+  it.each(['imageRequired', 'visual_required'])('retains an explicit %s failure through persistence when generation is disabled', async (requiredFlag) => {
+    const soal = 'Perhatikan gambar berikut! Tentukan bagian X.';
+    const pg = await enrichAndNormalizePG([{ no: 1, soal,
+      [requiredFlag]: true, visual_stimulus: { type: 'balok', params: {} } }], {
       mataPelajaran: 'IPAS', topik: 'Organ', isGambarEnabled: false, unsplash: null, exactImageCount: 0,
     });
     const normalized = await normalizeAssessmentImages({} as D1Database, 1, { pg });
+    expect(normalized.content.pg[0].soal).toBe(soal);
+    expect(normalized.content.pg[0][requiredFlag]).toBe(true);
     expect(normalized.content.pg[0].visual_stimulus).toBeUndefined();
     expect(normalized.content.pg[0].gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'image_generation_disabled' });
     expect(normalized.warnings).toEqual([{ questionNo: 1, reason: 'image_generation_disabled' }]);
+    const prepared = preparePackageContent(normalized.content);
+    const reloaded = normalizeAssetUrls(JSON.parse(prepared.json), 217);
+    expect(reloaded.content.pg[0].gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'image_generation_disabled' });
+    expect(reloaded.content.pg[0].visual_stimulus).toBeUndefined();
   });
 
   it('keeps all catalog renderers usable after repeated durable normalization and package reload', async () => {

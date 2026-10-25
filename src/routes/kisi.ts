@@ -1759,7 +1759,10 @@ function markQuestionImageUnavailable(question: any, reason = 'image_unavailable
 }
 
 export function skipGeneratedQuestionImage(question: any, reason: string) {
-    if (reason === 'image_not_selected' || reason === 'image_generation_disabled') {
+    const explicitlyRequired = question.imageRequired === true || question.visual_required === true;
+    // Quota exclusions may be healed into text-only questions. Disabling image
+    // generation must not erase an explicit requirement or hide its failure.
+    if (reason === 'image_not_selected' || (reason === 'image_generation_disabled' && !explicitlyRequired)) {
         healUnselectedVisualQuestion(question);
         delete question.visual_stimulus;
         delete question.gambar_keyword;
@@ -1773,8 +1776,7 @@ export function skipGeneratedQuestionImage(question: any, reason: string) {
         return;
     }
 
-    const required = question.imageRequired === true || question.visual_required === true
-        || questionNeedsDiagram(question.soal);
+    const required = explicitlyRequired || questionNeedsDiagram(question.soal);
     // A skipped renderer spec must not later resurrect the image in persistence.
     delete question.visual_stimulus;
     delete question.gambar_keyword;

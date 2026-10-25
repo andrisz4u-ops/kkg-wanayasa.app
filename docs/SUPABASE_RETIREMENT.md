@@ -63,3 +63,14 @@ historis; pencabutan kredensial yang pernah terekspos tetap dilakukan di penyedi
   tersebut tersendiri. Implementasi gambar asesmen tidak diubah dalam pekerjaan
   ini; belum dilakukan pembandingan terhadap checkout baseline.
 - Hasil build belum di-deploy dan smoke test produksi belum dijalankan.
+
+### Tindak lanjut bug gambar wajib
+
+Penanganan `image_generation_disabled` kini mempertahankan penanda kegagalan
+untuk butir dengan `imageRequired=true` atau `visual_required=true`, termasuk
+setelah normalisasi, penyimpanan, dan pembacaan ulang paket. Gambar opsional dan
+pengecualian kuota tetap mengikuti perilaku text-only sebelumnya.
+
+Verifikasi ulang setelah perbaikan: `npm test -- --reporter=dot` menghasilkan
+1.324 tes lulus tanpa kegagalan; 1 tes integrasi yang dilewati pada perintah ini
+lulus melalui `npm run test:integration`. Typecheck dan build juga lulus.

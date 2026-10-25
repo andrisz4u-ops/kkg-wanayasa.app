@@ -157,6 +157,9 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
   const orgName = htmlText(profile.nama_kkg || 'Untuk guru SD Indonesia');
   const appUrl = htmlText(profile.app_url || profile.website_kkg || '');
   const contact = htmlText(profile.email_kkg || '');
+  const contactLink = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email_kkg || '')
+    ? `<a href="mailto:${contact}">${contact}</a>`
+    : '<span>Kontak pengurus belum dikonfigurasi</span>';
   const bootProfile = JSON.stringify(profile).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
@@ -631,7 +634,7 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
           </div>
         </div>
         <p style="font-size:0.875rem; line-height:1.6; color:#4b5563; margin:0;">
-           Baca <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi <a href="mailto:${contact}">${contact || 'pengurus KKG'}</a>.
+           Baca <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi ${contactLink}.
         </p>
       </div>
     </div>
@@ -684,7 +687,7 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a>. Jika ada pertanyaan tentang data Anda, hubungi <a href="mailto:${contact}">${contact || 'pengurus KKG'}</a>.</p>
+             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a>. Jika ada pertanyaan tentang data Anda, hubungi ${contactLink}.</p>
           </div>
         </div>
 
@@ -714,7 +717,7 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Untuk mengetahui ketentuan layanan yang berlaku, hubungi <a href="mailto:${contact}">pengurus ${orgName}</a>.</p>
+             <p>Untuk mengetahui ketentuan layanan yang berlaku pada ${orgName}, hubungi ${contactLink}.</p>
           </div>
         </div>
 
@@ -724,7 +727,7 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-            <p>Panduan penggunaan dan bantuan layanan tersedia melalui pengurus ${orgName}: ${contact}.</p>
+            <p>Panduan penggunaan dan bantuan layanan tersedia melalui pengurus ${orgName}: ${contactLink}.</p>
           </div>
         </div>
       </div>
@@ -771,12 +774,12 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
       </div>
       <div class="foot-col">
          <h3>Bantuan</h3>
-        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:${contact}">Hubungi Pengurus</a></li><li><a href="#faq">Panduan penggunaan</a></li></ul>
+        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li>${contactLink}</li><li><a href="#faq">Panduan penggunaan</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
        <span>© ${new Date().getFullYear()} ${appName} · ${orgName}</span>
-      <div class="links"><a href="/terms" onclick="window.navigate && window.navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a><a href="mailto:${contact}">Bantuan</a></div>
+      <div class="links"><a href="/terms" onclick="window.navigate && window.navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="window.navigate && window.navigate('privacy-policy'); return false;">Kebijakan Privasi</a>${contactLink}</div>
     </div>
   </div>
 </footer>

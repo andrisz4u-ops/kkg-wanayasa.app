@@ -17,6 +17,7 @@ import { generateKaldikExcelBuffer } from '../lib/kaldik-excel-generator';
 import { replacePesertaDidik } from './analisis-cp';
 import { type AppBindings, type AppVariables } from '../types/env';
 import { requireAIAdmission } from '../lib/ai-admission';
+import { getOrganizationSettings } from '../lib/organization';
 
 const programSekolah = new Hono<{ Bindings: AppBindings; Variables: AppVariables & { sessionId: string | undefined } }>();
 
@@ -1923,26 +1924,23 @@ programSekolah.post('/kaldik-excel', async (c) => {
     const data = body.data || body || {};
 
     // 1. Ambil target nama sekolah dari payload atau user profile
-    const targetSekolahName = data.metadata?.nama_sekolah || user?.sekolah || 'SD NEGERI 1 WANAYASA';
+    const profile = await getOrganizationSettings(c.env.DB);
+    const targetSekolahName = String(data.metadata?.nama_sekolah || user?.sekolah_nama || user?.sekolah || '').trim();
+    if (!targetSekolahName) return Errors.validation(c, 'Pilih sekolah atau lengkapi nama sekolah pada profil sebelum mengunduh kalender.');
     let sekolahInfo: any = null;
     if (c.env?.DB && targetSekolahName) {
       sekolahInfo = await c.env.DB.prepare(
         'SELECT nama, npsn, alamat, kepala_sekolah, nip_kepala_sekolah, tipe FROM sekolah WHERE nama = ? LIMIT 1'
-      ).bind(targetSekolahName).first().catch(() => null);
+      ).bind(targetSekolahName).first();
     }
 
     // 2. Ambil settings instansi, kabupaten & kecamatan jika ada di database
-    let settingsMap: Record<string, string> = {};
-    if (c.env?.DB) {
-      const settingsRows: any = await c.env.DB.prepare('SELECT key, value FROM settings').all().catch(() => ({ results: [] }));
-      (settingsRows.results || []).forEach((r: any) => {
-        settingsMap[r.key] = r.value;
-      });
-    }
-
-    const kab = settingsMap.kabupaten || 'Purwakarta';
-    const kec = settingsMap.kecamatan || '';
-    const instansi = settingsMap.nama_instansi || 'DINAS PENDIDIKAN';
+    const kab = profile.kabupaten || '';
+    const kec = profile.kecamatan || '';
+    const instansi = profile.nama_instansi || 'DINAS PENDIDIKAN';
+    // School-specific signer data must come from the selected school. The
+    // logged-in user's headmaster may belong to a different school.
+    const userMatchesSchool = [user?.sekolah_nama, user?.sekolah].includes(targetSekolahName);
 
     // 3. Gabungkan metadata lengkap untuk KOP Surat resmi masing-masing sekolah
     const enrichedData = {
@@ -1952,14 +1950,14 @@ programSekolah.post('/kaldik-excel', async (c) => {
         nama_sekolah: targetSekolahName,
         npsn: data.metadata?.npsn || sekolahInfo?.npsn || '',
         alamat_sekolah: data.metadata?.alamat_sekolah || sekolahInfo?.alamat || `Kecamatan ${kec}, Kabupaten ${kab}`,
-        kepala_sekolah: data.metadata?.kepala_sekolah || sekolahInfo?.kepala_sekolah || user?.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.',
-        nip_kepala_sekolah: data.metadata?.nip_kepala_sekolah || sekolahInfo?.nip_kepala_sekolah || user?.nip_kepala_sekolah || '19760314 200501 2 006',
+        kepala_sekolah: data.metadata?.kepala_sekolah || sekolahInfo?.kepala_sekolah || (userMatchesSchool ? user?.kepala_sekolah : '') || '',
+        nip_kepala_sekolah: data.metadata?.nip_kepala_sekolah || sekolahInfo?.nip_kepala_sekolah || (userMatchesSchool ? user?.nip_kepala_sekolah : '') || '',
         penyusun: data.metadata?.penyusun || user?.nama || 'Tim Pengembang Kurikulum',
         nip_penyusun: data.metadata?.nip_penyusun || user?.nip || '-',
         kabupaten: kab,
         kecamatan: kec,
         instansi: instansi,
-        tahun_ajaran: data.metadata?.tahun_ajaran || '2026/2027',
+        tahun_ajaran: data.metadata?.tahun_ajaran || profile.tahun_ajaran || '2026/2027',
       }
     };
 

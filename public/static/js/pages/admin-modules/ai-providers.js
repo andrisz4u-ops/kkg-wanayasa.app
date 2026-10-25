@@ -1,6 +1,7 @@
 import { state } from '../../state.js';
 import { api } from '../../api.js';
 import { escapeHtml } from '../../utils.js';
+import { organizationIdentity } from '../../organization.js';
 import { openAdminModal, closeAdminModal, showUndoActionBar, setBusyButton } from './shared-state.js';
 
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
@@ -822,9 +823,10 @@ window.applyExtraHeaderTemplate = function applyExtraHeaderTemplate(templateKey)
   const el = document.getElementById('aip-extra_headers');
   if (!el) return;
   if (templateKey === 'openrouter') {
+    const organization = organizationIdentity(state.settings);
     el.value = JSON.stringify({
-      "HTTP-Referer": "https://kkg-wanayasa.app",
-      "X-Title": "KKG Wanayasa App"
+      ...(organization.website ? { 'HTTP-Referer': organization.website } : {}),
+      'X-Title': organization.appName
     }, null, 2);
     moduleToast('Header', 'Template OpenRouter/xKiro diterapkan', 'info');
   } else if (templateKey === 'anthropic') {

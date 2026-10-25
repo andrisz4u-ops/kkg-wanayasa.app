@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { state } from '../state.js';
 import { navigate } from '../router.js';
 import { formatDateTime, formatDate, escapeHtml } from '../utils.js';
+import { organizationIdentity, renderOrganizationContact } from '../organization.js';
 
 // Global toggle for switching between Educator Dashboard and Public Landing
 window.togglePublicLanding = function () {
@@ -91,6 +92,10 @@ window.toggleLandingFaq = function (index) {
  */
 
 async function renderPublicHome() {
+  const organization = organizationIdentity(state.settings);
+  const appName = escapeHtml(organization.appName);
+  const orgName = escapeHtml(organization.name);
+  const contact = renderOrganizationContact(organization);
   // Ensure scoped class on body
   if (typeof document !== 'undefined') {
     document.body.classList.add('rk-landing');
@@ -106,11 +111,11 @@ async function renderPublicHome() {
       <!-- ================= HEADER ================= -->
 <header class="site-head" id="top">
   <div class="wrap head-in">
-    <a class="brand" href="#beranda" aria-label="RuangKKG — beranda">
+    <a class="brand" href="#beranda" aria-label="${appName} — beranda">
       <span class="mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H9.6L4 20.5Z"/><path d="M9.5 9.5l2 2 3.8-3.8"/></svg>
       </span>
-      <span class="word">RuangKKG<small>Untuk guru SD Indonesia</small></span>
+      <span class="word">${appName}<small>${orgName}</small></span>
     </a>
     <nav class="nav" aria-label="Navigasi utama">
       <a href="#fitur">Modul AI</a>
@@ -508,7 +513,7 @@ async function renderPublicHome() {
           </div>
         </div>
         <p style="font-size:0.875rem; line-height:1.6; color:#4b5563; margin:0;">
-           Baca <a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi <a href="mailto:admin@ruangkkg.my.id">admin@ruangkkg.my.id</a>.
+           Baca <a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi</a> untuk informasi pengelolaan data. Untuk bertanya tentang layanan, hubungi ${contact}.
         </p>
       </div>
     </div>
@@ -561,7 +566,7 @@ async function renderPublicHome() {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi RuangKKG</a>. Jika ada pertanyaan tentang data Anda, hubungi <a href="mailto:admin@ruangkkg.my.id">admin@ruangkkg.my.id</a>.</p>
+             <p>Informasi tentang data akun dan dokumen yang Anda simpan tersedia dalam <a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi</a>. Jika ada pertanyaan tentang data Anda, hubungi ${contact}.</p>
           </div>
         </div>
 
@@ -591,7 +596,7 @@ async function renderPublicHome() {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-             <p>Untuk mengetahui paket, biaya, dan cara pembayaran yang berlaku, hubungi <a href="mailto:admin@ruangkkg.my.id?subject=Informasi%20paket%20RuangKKG">tim RuangKKG melalui email</a> sebelum memilih layanan.</p>
+             <p>Untuk mengetahui ketentuan layanan yang berlaku pada ${orgName}, hubungi ${contact}.</p>
           </div>
         </div>
 
@@ -601,7 +606,7 @@ async function renderPublicHome() {
             <span class="fx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </button>
           <div class="faq-a">
-            <p><b>Tersedia panduan lengkap dan layanan bantuan ramah.</b> Kami menyediakan panduan video langkah demi langkah dalam bahasa Indonesia, contoh template terverifikasi, serta layanan bantuan pelanggan responsif melalui email support@ruangkkg.my.id.</p>
+            <p>Panduan penggunaan dan bantuan layanan tersedia melalui pengurus ${orgName}: ${contact}.</p>
           </div>
         </div>
       </div>
@@ -632,9 +637,9 @@ async function renderPublicHome() {
   <div class="wrap">
     <div class="foot-grid">
       <div class="foot-brand">
-        <a class="brand" href="#beranda" aria-label="RuangKKG — beranda">
+        <a class="brand" href="#beranda" aria-label="${appName} — beranda">
           <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H9.6L4 20.5Z"/><path d="M9.5 9.5l2 2 3.8-3.8"/></svg></span>
-          <span class="word">RuangKKG</span>
+          <span class="word">${appName}</span>
         </a>
          <p>Ruang kerja guru SD dan KKG: analisis CP, RPP, asesmen, slide, dan game edukasi dalam satu alur.</p>
       </div>
@@ -648,12 +653,12 @@ async function renderPublicHome() {
       </div>
       <div class="foot-col">
         <h3>Bantuan</h3>
-        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li><a href="mailto:admin@ruangkkg.my.id?subject=Bantuan%20RuangKKG">Hubungi CS</a></li><li><a href="#faq">Panduan penggunaan</a></li></ul>
+        <ul><li><a href="#faq">Pusat Bantuan (FAQ)</a></li><li>${contact}</li><li><a href="#faq">Panduan penggunaan</a></li></ul>
       </div>
     </div>
     <div class="foot-bottom">
-       <span>© 2026 RuangKKG · ruangkkg.my.id — Dibuat di Indonesia untuk guru SD.</span>
-      <div class="links"><a href="/terms" onclick="navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi</a><a href="mailto:support@ruangkkg.my.id">Bantuan CS</a></div>
+       <span>© ${new Date().getFullYear()} ${appName} · ${orgName}</span>
+      <div class="links"><a href="/terms" onclick="navigate('terms'); return false;">Syarat &amp; Ketentuan</a><a href="/privacy-policy" onclick="navigate('privacy-policy'); return false;">Kebijakan Privasi</a>${contact}</div>
     </div>
   </div>
 </footer>

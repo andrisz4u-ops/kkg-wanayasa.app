@@ -1,11 +1,11 @@
-import { DEFAULT_TENANT, DEFAULT_TENANT_ID } from './tenant';
+import { DEFAULT_TENANT, DEFAULT_TENANT_ID, isMissingOrganizationTable } from './tenant';
 
 // One organization per deployment. Settings are the canonical editable profile;
 // the legacy tenant row supplies backward-compatible defaults only.
 export const PUBLIC_ORGANIZATION_KEYS = [
     'nama_kkg', 'nama_organisasi', 'gugus', 'jenjang', 'alamat_sekretariat',
     'logo_url', 'kop_surat_url', 'kecamatan', 'kabupaten', 'provinsi', 'kode_pos',
-    'tahun_ajaran', 'nama_sekolah_induk', 'npsn_sekolah_induk',
+    'tahun_ajaran', 'nama_sekolah_induk', 'npsn_sekolah_induk', 'nama_instansi',
     'nama_ketua', 'nip_ketua', 'nama_sekretaris', 'nama_bendahara',
     'email_kkg', 'telepon_kkg', 'website_kkg', 'app_name', 'app_url', 'region_profile', 'installation_slug',
     'hero_title', 'hero_deskripsi', 'visi', 'misi', 'visi_misi',
@@ -18,7 +18,9 @@ export async function getOrganizationSettings(db: D1Database, baseTenant?: any):
     if (!baseTenant) {
         try {
             tenant = await db.prepare('SELECT * FROM tenants WHERE id = ?').bind(DEFAULT_TENANT_ID).first() || tenant;
-        } catch { /* Older databases may not yet have the tenant metadata table. */ }
+        } catch (error) {
+            if (!isMissingOrganizationTable(error, 'tenants')) throw error;
+        }
     }
     const defaults: Record<string, string> = {
         nama_kkg: tenant.nama || 'KKG', nama_organisasi: tenant.nama || 'KKG',
@@ -34,8 +36,15 @@ export async function getOrganizationSettings(db: D1Database, baseTenant?: any):
         const rows = await db.prepare(`SELECT key, value FROM settings WHERE key IN (${PUBLIC_ORGANIZATION_KEYS.map(() => '?').join(',')})`)
             .bind(...PUBLIC_ORGANIZATION_KEYS).all<{ key: string; value: string }>();
         results = rows.results || [];
-    } catch { /* Settings may not exist yet during partial migrations/tests. */ }
+    } catch (error) {
+        // Missing schema may use neutral defaults. An unavailable database must
+        // surface as a service error, never silently impersonate another gugus.
+        if (!isMissingOrganizationTable(error, 'settings')) throw error;
+    }
     for (const row of results) defaults[row.key] = row.value;
+    if (!results.some(row => row.key === 'region_profile')) {
+        defaults.region_profile = defaults.kabupaten.trim().toLowerCase() === 'purwakarta' ? 'purwakarta' : 'custom';
+    }
     if (!results.some(row => row.key === 'nama_kkg') && results.some(row => row.key === 'nama_organisasi')) {
         defaults.nama_kkg = defaults.nama_organisasi;
     }
@@ -51,7 +60,7 @@ export async function usesPurwakartaContent(db: D1Database): Promise<boolean> {
 
 export async function getDocumentOrganizationSettings(db: D1Database, storage?: R2Bucket): Promise<Record<string, any>> {
     const profile: Record<string, any> = await getOrganizationSettings(db);
-    profile.legacy_logo_assets = !profile.installation_slug;
+    profile.legacy_logo_assets = !profile.installation_slug && Boolean(profile.kecamatan);
     // Uploaded local logos are read directly from this installation's R2 binding.
     // Do not fetch arbitrary external URLs while generating a document.
     const path = String(profile.logo_url || '').replace(/^https?:\/\/[^/]+/, '');

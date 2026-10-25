@@ -25,16 +25,21 @@ export const DEFAULT_TENANT_ID = 'kkg-gugus-3-wanayasa';
 
 export const DEFAULT_TENANT: TenantConfig = {
   id: DEFAULT_TENANT_ID,
-  nama: 'KKG Gugus 3 Wanayasa',
+  nama: 'KKG',
   jenjang: 'SD',
-  kecamatan: 'Wanayasa',
-  kabupaten: 'Purwakarta',
-  provinsi: 'Jawa Barat',
-  alamat_sekretariat: 'SDN 1 Wanayasa, Kec. Wanayasa, Kab. Purwakarta',
-  email: 'admin@kkg-wanayasa.id',
+  kecamatan: '',
+  kabupaten: '',
+  provinsi: '',
+  alamat_sekretariat: '',
+  email: '',
   is_active: 1,
   max_users: 500,
 };
+
+export function isMissingOrganizationTable(error: unknown, table: 'settings' | 'tenants'): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return new RegExp(`no such table:\\s*(?:main\\.)?${table}(?:\\b|$)`, 'i').test(message);
+}
 
 /** @deprecated Profiles are read from the current database, never globally cached. */
 export function invalidateTenantCache(_tenantId?: string): void {}
@@ -71,8 +76,8 @@ export async function getTenantConfig(db?: D1Database, tenantId: string = DEFAUL
       if (row) {
         config = row as unknown as TenantConfig;
       }
-    } catch (_) {
-      // Fallback gracefully if table not yet initialized
+    } catch (error) {
+      if (!isMissingOrganizationTable(error, 'tenants')) throw error;
     }
   }
   if (db && tenantId === DEFAULT_TENANT_ID) {

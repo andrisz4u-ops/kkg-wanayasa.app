@@ -84,15 +84,22 @@ export function renderProgramCanvas(data, activeTab = 'all') {
 // ============================================================================
 // KHUSUS KALENDER PENDIDIKAN: FORMAT SPREADSHEET EXCEL (.XLSX) TANPA BAB I-V
 // ============================================================================
+function escapeKaldikIdentity(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
 function renderKaldikExcelCanvas(data, activeTab = 'all') {
   const meta = data.metadata || {};
-  const namaSekolah = meta.nama_sekolah || 'SD NEGERI 1 WANAYASA';
-  const kota = meta.kota || 'Purwakarta';
-  const tahunAjaran = meta.tahun_ajaran || '2026/2027';
-  const npsn = meta.npsn || '20205869';
-  const alamat = meta.alamat_sekolah || meta.alamat || `Kecamatan Wanayasa, Kabupaten ${kota}`;
-  const kepalaSekolah = meta.kepala_sekolah || 'Hj. Nenden Laila, M.Pd.';
-  const nipKs = meta.nip_kepala_sekolah || '19760314 200501 2 006';
+  const namaSekolah = escapeKaldikIdentity(meta.nama_sekolah || '[Nama sekolah belum diisi]');
+  const kotaValue = meta.kabupaten || meta.kota || 'Purwakarta';
+  const kota = escapeKaldikIdentity(kotaValue);
+  const tahunAjaran = escapeKaldikIdentity(meta.tahun_ajaran || '2026/2027');
+  const npsn = escapeKaldikIdentity(meta.npsn || '—');
+  const alamat = escapeKaldikIdentity(meta.alamat_sekolah || meta.alamat || [meta.kecamatan ? `Kecamatan ${meta.kecamatan}` : '', kotaValue ? `Kabupaten ${kotaValue}` : ''].filter(Boolean).join(', '));
+  const kepalaSekolah = escapeKaldikIdentity(meta.kepala_sekolah || '[Nama kepala sekolah belum diisi]');
+  const nipKs = escapeKaldikIdentity(meta.nip_kepala_sekolah || '—');
+  const missingFields = [['nama_sekolah', 'nama sekolah'], ['npsn', 'NPSN'], ['kepala_sekolah', 'nama kepala sekolah'], ['nip_kepala_sekolah', 'NIP kepala sekolah']]
+    .filter(([key]) => !String(meta[key] || '').trim()).map(([, label]) => label);
 
   const agendaGasal = [
     { no: 1, tanggal: '13 - 15 Juli 2026', uraian: 'Hari Pertama Masuk Sekolah & Masa Pengenalan Lingkungan Sekolah (MPLS)' },
@@ -162,6 +169,8 @@ function renderKaldikExcelCanvas(data, activeTab = 'all') {
           <h2 class="text-lg sm:text-xl font-black uppercase tracking-wide text-slate-900 mt-1 leading-snug">${namaSekolah}</h2>
           <p class="text-[11px] sm:text-xs text-slate-600 mt-0.5">${alamat} • NPSN: ${npsn}</p>
         </div>
+
+        ${missingFields.length ? `<p role="status" class="no-print mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">Data belum lengkap: ${missingFields.join(', ')}. Lengkapi atau isi tanda — bila tidak berlaku, lalu tinjau sebelum digunakan sebagai dokumen resmi.</p>` : ''}
 
         <!-- JUDUL KALENDER PENDIDIKAN -->
         <div class="text-center mb-8">

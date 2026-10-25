@@ -397,7 +397,7 @@ window.copyVerifyLink = function (tokenHash) {
 /**
  * Generator HTML Cetak Kertas 2 Halaman
  */
-function buildSertifikatPaperHTML(data) {
+export function buildSertifikatPaperHTML(data) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.verify_url)}`;
 
   return `
@@ -452,10 +452,10 @@ function buildSertifikatPaperHTML(data) {
         </div>
 
         <h3 class="text-xs sm:text-sm font-semibold tracking-widest uppercase text-slate-600">
-          PEMERINTAH KABUPATEN PURWAKARTA · DINAS PENDIDIKAN
+          PEMERINTAH KABUPATEN ${escapeHtml(state.settings?.kabupaten || '—')} · DINAS PENDIDIKAN
         </h3>
         <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-800">
-          KELOMPOK KERJA GURU (KKG) GUGUS 3 KECAMATAN WANAYASA
+          ${escapeHtml(state.settings?.nama_kkg || 'Kelompok Kerja Guru (KKG)')}
         </h2>
         <p class="text-[11px] text-slate-500">
           Sekretariat: ${escapeHtml(state.settings?.alamat_sekretariat || '')} · ${escapeHtml(state.settings?.app_url || state.settings?.website_kkg || '')}
@@ -512,9 +512,9 @@ function buildSertifikatPaperHTML(data) {
             <div class="relative h-20 w-44 flex items-center justify-center my-1">
               <!-- Stempel Digital Bundar -->
               <div class="absolute inset-0 border-2 border-dashed border-[#1e40af]/60 rounded-full flex flex-col items-center justify-center rotate-[-12deg] text-[9px] font-bold text-[#1e40af]/80 uppercase pointer-events-none p-1">
-                <span>KKG GUGUS 3</span>
-                <span class="text-[7px]">WANAYASA</span>
-                <span class="text-[7px]">PURWAKARTA</span>
+                <span>${escapeHtml(state.settings?.gugus ? `KKG GUGUS ${state.settings.gugus}` : state.settings?.nama_kkg || 'KKG')}</span>
+                <span class="text-[7px]">${escapeHtml(state.settings?.kecamatan || '—')}</span>
+                <span class="text-[7px]">${escapeHtml(state.settings?.kabupaten || '—')}</span>
               </div>
               <span class="font-serif italic text-lg text-slate-700 tracking-wider">
                 ${escapeHtml(data.ttd_ketua_nama || 'Ketua KKG')}

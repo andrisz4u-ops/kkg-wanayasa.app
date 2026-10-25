@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { escapeHtml, avatar, badge } from './utils.js';
 import { renderNotificationBell } from './notifications.js';
+import { organizationIdentity, renderOrganizationContact } from './organization.js';
 
 export { avatar, badge };
 
@@ -140,6 +141,7 @@ export function toggleMobileMenu() {
  * Render footer
  */
 export function renderFooter() {
+  const organization = organizationIdentity(state.settings);
   return `
     <footer class="bg-white border-t border-slate-100 mt-auto">
       <div class="max-w-7xl mx-auto px-6 md:px-10 lg:px-16 py-12">
@@ -150,8 +152,8 @@ export function renderFooter() {
                 <i class="fas fa-graduation-cap text-sm"></i>
               </div>
               <div>
-                <div class="font-display font-extrabold text-slate-900 tracking-tight">RuangKKG Digital</div>
-                <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">Platform AI EdTech SaaS Pendidik Indonesia</div>
+                <div class="font-display font-extrabold text-slate-900 tracking-tight">${escapeHtml(organization.appName)}</div>
+                <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold">${escapeHtml(organization.name)}</div>
               </div>
             </div>
             <p class="text-slate-500 text-sm leading-relaxed max-w-md">
@@ -162,11 +164,11 @@ export function renderFooter() {
           <div class="md:text-right">
             <ul class="space-y-3 text-sm text-slate-500">
               <li class="flex md:justify-end items-start gap-3">
-                <span>Purwakarta, Jawa Barat, Indonesia</span>
+                <span>${escapeHtml(organization.address || organization.location || 'Alamat belum diisi')}</span>
                 <i class="fas fa-map-marker-alt mt-1 text-teal-500"></i>
               </li>
               <li class="flex md:justify-end items-center gap-3">
-                <a href="mailto:admin@ruangkkg.my.id" class="hover:text-teal-600 transition-colors font-medium">admin@ruangkkg.my.id</a>
+                ${renderOrganizationContact(organization, 'hover:text-teal-600 transition-colors font-medium')}
                 <i class="fas fa-envelope text-teal-500"></i>
               </li>
             </ul>
@@ -174,7 +176,7 @@ export function renderFooter() {
         </div>
 
         <div class="border-t border-slate-100 mt-10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-400">
-          <p>&copy; ${new Date().getFullYear()} RuangKKG Digital. Hak Cipta Dilindungi.</p>
+          <p>&copy; ${new Date().getFullYear()} ${escapeHtml(organization.appName)} · ${escapeHtml(organization.name)}</p>
           <div class="flex items-center gap-1 mt-3 md:mt-0">
              <span>Dibuat dengan</span>
              <i class="fas fa-heart text-teal-500 animate-pulse text-[10px]"></i>

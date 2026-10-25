@@ -130,6 +130,23 @@ secara eksplisit memilih konfigurasi `.installations/<slug>/wrangler.json`.
   terbaru saat pratinjau/pemakaian. Template kustom lama yang menulis nama gugus
   langsung di isi surat tetap perlu diedit oleh pengelola.
 
+### Data belum lengkap dan kegagalan profil
+
+- Header serta stempel sertifikat cetak membaca nama gugus, nomor gugus,
+  kecamatan dan kabupaten dari profil instalasi, termasuk setelah navigasi SPA.
+- Pratinjau kalender menandai identitas sekolah/pengesah yang belum diisi. Tidak
+  ada penggantian otomatis dengan sekolah, NPSN, kepala sekolah atau NIP contoh.
+  Isi tanda — secara eksplisit untuk data yang memang tidak berlaku.
+- Ekspor kalender memerlukan nama sekolah yang dipilih. Data pengesah berasal
+  dari payload/sekolah tersebut; kepala sekolah akun login hanya dipakai bila
+  nama sekolahnya cocok, bukan untuk mengisi sekolah lain.
+- Halaman beranda JavaScript, footer, kontak kebijakan dan template header
+  provider AI mengikuti profil/domain instalasi. Kontak kosong ditampilkan sebagai
+  belum dikonfigurasi, bukan diarahkan ke email layanan lain.
+- Tanpa tabel profil, fallback hanya identitas netral `KKG`. Profil Wanayasa
+  yang benar-benar tersimpan dalam database lama tetap dipakai. Gangguan query
+  database diteruskan sebagai error layanan; tidak dianggap sebagai profil kosong.
+
 ## 5. Batas wilayah
 
 `region_profile: "purwakarta"` hanya untuk Kabupaten Purwakarta. Template lokal
@@ -152,6 +169,9 @@ Tes `tests/installation-profile.test.ts` memakai dua database terpisah untuk
 memastikan nama tidak bocor antar-instalasi, profil admin/tenant konsisten,
 bootstrap tidak menimpa database aktif, password kompatibel dengan login,
 metadata HTML/PWA sesuai, dan dokumen tidak membawa nama Wanayasa.
+Tes `tests/organization-output.test.ts` memeriksa renderer sertifikat cetak,
+stempel, beranda SPA, halaman kebijakan/footer dan kalender dengan profil
+Pasawahan serta Sukasari, termasuk saat identitas atau kontak belum lengkap.
 
 Sebelum go-live, lakukan smoke test pada staging: login admin, pendaftaran dan
 approval guru, daftar sekolah, unggah/baca berkas dari bucket yang tepat, surat,

@@ -7,9 +7,12 @@
  */
 
 import { escapeHtml } from '../utils.js';
+import { state } from '../state.js';
+import { organizationIdentity, renderOrganizationContact } from '../organization.js';
 
 export async function renderPrivacyPolicy() {
   window.scrollTo(0, 0);
+  const organization = organizationIdentity(state.settings);
   return `
     <div class="min-h-screen bg-slate-50 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-slate-800">
       <div class="max-w-4xl mx-auto">
@@ -50,7 +53,7 @@ export async function renderPrivacyPolicy() {
                 <span class="text-teal-600">1.</span> Pendahuluan &amp; Komitmen Kami
               </h2>
               <p>
-                Selamat datang di <strong>RuangKKG Digital</strong> (dikelola melalui portal resmi <a href="https://ruangkkg.my.id" class="text-teal-600 underline font-semibold">https://ruangkkg.my.id</a>). Kami berkomitmen tinggi untuk melindungi hak privasi dan data pribadi setiap pengguna, yang meliputi pendidik, staf kependidikan, pengawas sekolah, dan pemangku kepentingan pendidikan di Indonesia.
+                Selamat datang di <strong>${escapeHtml(organization.appName)}</strong>, dikelola oleh <strong>${escapeHtml(organization.name)}</strong>${organization.website ? ` melalui portal <a href="${escapeHtml(organization.website)}" class="text-teal-600 underline font-semibold">${escapeHtml(organization.website)}</a>` : ''}. Kami berkomitmen untuk melindungi data pribadi pengguna layanan ini.
               </p>
               <p class="mt-2">
                 Kebijakan Privasi ini disusun berdasarkan ketentuan <strong>Undang-Undang Republik Indonesia Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP)</strong> serta standar keamanan komputasi awan bertaraf internasional.
@@ -65,7 +68,7 @@ export async function renderPrivacyPolicy() {
               <p>Kami hanya mengumpulkan data yang diperlukan untuk penyelenggaraan layanan platform EdTech SaaS kami:</p>
               <ul class="list-disc pl-6 mt-3 space-y-2 text-slate-700">
                 <li><strong>Data Identitas &amp; Kedinasan:</strong> Nama lengkap, gelar, NIP/NUPTK (opsional untuk kebutuhan kop surat), pangkat/golongan, dan unit kerja (satuan pendidikan).</li>
-                <li><strong>Data Kontak &amp; Akun:</strong> Alamat email aktif, nomor WhatsApp/telepon (untuk keperluan verifikasi dan notifikasi kedinasan), dan kata sandi yang dienkripsi secara satu arah (hash bcrypt).</li>
+                <li><strong>Data Kontak &amp; Akun:</strong> Alamat email aktif, nomor WhatsApp/telepon (untuk keperluan verifikasi dan notifikasi kedinasan), dan kata sandi yang disimpan sebagai hash PBKDF2 dengan salt.</li>
                 <li><strong>Data Masukan Pembelajaran:</strong> Topik materi ajar, pilihan capaian pembelajaran (CP), tujuan pembelajaran (TP), dan parameter modul ajar yang dimasukkan ke dalam AI Generator.</li>
                 <li><strong>Data Teknis Log:</strong> Alamat protokol internet (IP Address), jenis peramban (browser), dan cap waktu akses untuk keperluan keamanan dan pencegahan serangan siber.</li>
               </ul>
@@ -141,20 +144,17 @@ export async function renderPrivacyPolicy() {
             <!-- 7. Kontak Petugas Pelindungan Data -->
             <section class="border-t border-slate-200 pt-8 mt-8">
               <h2 class="text-xl font-bold text-slate-900 mb-2">
-                7. Hubungi Petugas Pelindungan Data (DPO)
+                7. Kontak Pengelola Data
               </h2>
               <p class="text-sm text-slate-600 mb-4">
                 Apabila Anda memiliki pertanyaan, keberatan, atau ingin menggunakan hak Anda terkait pelindungan data pribadi, silakan hubungi tim kepatuhan data kami:
               </p>
               <div class="p-5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h4 class="font-bold text-white text-base">RuangKKG Digital &bull; Tim Kepatuhan Data</h4>
-                  <p class="text-slate-400 text-xs mt-0.5">Purwakarta, Jawa Barat &bull; Republik Indonesia</p>
+                  <h4 class="font-bold text-white text-base">${escapeHtml(organization.name)} &bull; Pengelola Data</h4>
+                  <p class="text-slate-400 text-xs mt-0.5">${escapeHtml(organization.location || 'Lokasi belum diisi')}</p>
                 </div>
-                <a href="mailto:admin@ruangkkg.my.id" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2">
-                  <i class="fas fa-envelope"></i>
-                  <span>admin@ruangkkg.my.id</span>
-                </a>
+                ${renderOrganizationContact(organization, 'px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2')}
               </div>
             </section>
           </div>
@@ -162,7 +162,7 @@ export async function renderPrivacyPolicy() {
 
         <!-- Footer Bottom Links -->
         <div class="mt-8 text-center text-xs text-slate-500">
-          <p>&copy; ${new Date().getFullYear()} RuangKKG Digital. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>&copy; ${new Date().getFullYear()} ${escapeHtml(organization.appName)} · ${escapeHtml(organization.name)}</p>
           <div class="mt-2 flex items-center justify-center gap-4">
             <button onclick="navigate('terms')" class="text-teal-700 hover:underline font-semibold cursor-pointer">Syarat &amp; Ketentuan Layanan</button>
             <span>&bull;</span>
@@ -176,6 +176,7 @@ export async function renderPrivacyPolicy() {
 
 export async function renderTermsOfService() {
   window.scrollTo(0, 0);
+  const organization = organizationIdentity(state.settings);
   return `
     <div class="min-h-screen bg-slate-50 py-12 md:py-16 px-4 sm:px-6 lg:px-8 text-slate-800">
       <div class="max-w-4xl mx-auto">
@@ -298,12 +299,9 @@ export async function renderTermsOfService() {
               <div class="p-5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h4 class="font-bold text-white text-base">Pertanyaan Hukum &amp; Kemitraan SaaS</h4>
-                  <p class="text-slate-400 text-xs mt-0.5">RuangKKG Digital &bull; Purwakarta, Jawa Barat, Indonesia</p>
+                  <p class="text-slate-400 text-xs mt-0.5">${escapeHtml(organization.name)} &bull; ${escapeHtml(organization.location || 'Lokasi belum diisi')}</p>
                 </div>
-                <a href="mailto:admin@ruangkkg.my.id" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2">
-                  <i class="fas fa-envelope"></i>
-                  <span>admin@ruangkkg.my.id</span>
-                </a>
+                ${renderOrganizationContact(organization, 'px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2')}
               </div>
             </section>
           </div>
@@ -311,7 +309,7 @@ export async function renderTermsOfService() {
 
         <!-- Footer Bottom Links -->
         <div class="mt-8 text-center text-xs text-slate-500">
-          <p>&copy; ${new Date().getFullYear()} RuangKKG Digital. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>&copy; ${new Date().getFullYear()} ${escapeHtml(organization.appName)} · ${escapeHtml(organization.name)}</p>
           <div class="mt-2 flex items-center justify-center gap-4">
             <button onclick="navigate('privacy-policy')" class="text-teal-700 hover:underline font-semibold cursor-pointer">Kebijakan Privasi</button>
             <span>&bull;</span>

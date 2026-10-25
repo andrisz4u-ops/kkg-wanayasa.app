@@ -14,6 +14,31 @@ const evaporationQuestion = () => ({
 });
 
 describe('assessment image lifecycle contracts', () => {
+  it('keeps a shared fraction SVG on distinct questions through packet checks and save/reload', async () => {
+    const spec = { type: 'pecahan_lingkaran', params: { pembilang: 3, penyebut: 4 } };
+    const first = 'Pecahan yang sesuai untuk bagian yang diarsir pada diagram adalah ....';
+    const second = 'Pecahan yang sesuai untuk bagian yang tidak diarsir pada diagram adalah ....';
+    const pg = await enrichAndNormalizePG([
+      { no: 1, soal: first, visual_stimulus: structuredClone(spec) },
+      { no: 2, soal: second, visual_stimulus: structuredClone(spec) },
+      { no: 3, soal: first, visual_stimulus: structuredClone(spec) },
+    ], { mataPelajaran: 'Matematika', topik: 'Pecahan', isGambarEnabled: true, unsplash: null, exactImageCount: 2 });
+    expect(pg).toHaveLength(2);
+    expect(pg.map((q: any) => q.soal)).toEqual([first, second]);
+    expect(pg[0].gambar.type).toBe('svg');
+    expect(pg[1].gambar.type).toBe('svg');
+    expect(pg[1].gambar.svg).toEqual(pg[0].gambar.svg);
+    const durable = await normalizeAssessmentImages({} as D1Database, 1, { pg });
+    expect(durable.warnings).toEqual([]);
+    const prepared = preparePackageContent(durable.content);
+    const reloaded = normalizeAssetUrls(JSON.parse(prepared.json), 217);
+    expect(reloaded.warnings).toEqual([]);
+    for (const q of reloaded.content.pg) {
+      expect(q.gambar.svg).toContain('<svg');
+      expect(q.gambar.imageUnavailable).toBeUndefined();
+    }
+  });
+
   it('distinguishes circuit switch states without depending on parameter insertion order', () => {
     const closed = { type: 'rangkaian_listrik', params: { s1: true, s2: false, label: 'X' } };
     const reordered = { type: 'rangkaian_listrik', params: { label: 'X', s2: false, s1: true } };

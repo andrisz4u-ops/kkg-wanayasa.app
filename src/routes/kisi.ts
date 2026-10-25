@@ -653,7 +653,7 @@ export const buildStimulusSignature = (cfg: { type: string; params?: Record<stri
 };
 
 // Helper: selesaikan visual stimulus untuk butir soal (SVG Parametrik vs Wikimedia Commons vs Fallback)
-// Dilengkapi DIVERSITY GUARD agar tidak pernah muncul 2 gambar/chart/SVG kembar dalam 1 paket ujian
+// SVG boleh dipakai ulang untuk butir berbeda; kesesuaian stimulus tetap diperiksa.
 export const resolveQuestionVisualStimulus = async (
     q: any,
     mataPelajaran: string,
@@ -749,287 +749,8 @@ export const resolveQuestionVisualStimulus = async (
         visualCfg = reconcileStimulusWithSoalText(visualCfg, String(q.soal || ''), mataPelajaran) || visualCfg;
     }
 
-    // 3. DIVERSITY GUARD: Cek apakah stimulus ini berpotensi kembar dengan soal sebelumnya
-    // SKIP jika forcePhotoOnly
-    let providerImageFallback = false;
-    let providerVisualSpec: typeof visualCfg = null;
-    const isProviderFallbackSubject = /ipas|\bipa\b/i.test(String(mataPelajaran || ''));
-    if (!forcePhotoOnly && visualCfg && visualCfg.type && usedStimulusSignatures) {
-        const signature = buildStimulusSignature(visualCfg);
-
-        if (usedStimulusSignatures.has(signature)) {
-            const originalType = visualCfg.type;
-            const originalSig = signature;
-            // Deteksi tabrakan! Cari sub-diagram alternatif yang lebih spesifik
-            const text = String(q.soal || '').toLowerCase();
-            const isMath = /matematika/i.test(String(mataPelajaran || ''));
-            if (isMath) {
-                // Matematika 100% SVG Dinamik Total: Dilarang mengubah bangun geometri ke bangun lain
-                // (misal kubus diubah jadi balok) dan DILARANG memanggil provider foto AI.
-                visualCfg = null;
-                providerImageFallback = false;
-            } else if (isProviderFallbackSubject) {
-                // Do not change the scientific target or shape merely to obtain
-                // a different SVG. The AI image must illustrate the same task.
-                providerVisualSpec = visualCfg;
-                providerImageFallback = true;
-                visualCfg = null;
-            } else if (visualCfg.type === 'organ_pencernaan') {
-                if (text.includes('vili') || text.includes('jonjot') || text.includes('penyerapan') || text.includes('lipatan')) {
-                    visualCfg = { type: 'vili_usus', params: { pointer: 'vili', label: 'X' } };
-                } else if (text.includes('gigi') || text.includes('kunyah') || text.includes('robek') || text.includes('potong')) {
-                    visualCfg = { type: 'struktur_gigi', params: { pointer: 'taring', label: 'X' } };
-                } else if (text.includes('enzim') || text.includes('pepsin') || text.includes('asam') || text.includes('kardia')) {
-                    visualCfg = { type: 'lambung_detail', params: { pointer: 'rugae', label: 'X' } };
-                } else {
-                    // Coba alihkan ke organ lain yang belum dipakai
-                    const organList = ['usus halus', 'kerongkongan', 'hati', 'usus besar', 'mulut', 'anus'];
-                    let foundAlternate = false;
-                    for (const organ of organList) {
-                        const altSig = `organ_pencernaan:ptr=${organ}`;
-                        if (!usedStimulusSignatures.has(altSig)) {
-                            visualCfg = { type: 'organ_pencernaan', params: { pointer: organ, label: 'X' } };
-                            foundAlternate = true;
-                            break;
-                        }
-                    }
-                    if (!foundAlternate) {
-                        visualCfg = null;
-                    }
-                }
-            } else if (visualCfg.type === 'organ_pernapasan') {
-                if (text.includes('alveolus') || text.includes('gas') || text.includes('oksigen') || text.includes('kapiler')) {
-                    visualCfg = { type: 'alveolus', params: { pointer: 'alveolus', label: 'X' } };
-                } else {
-                    const organNapas = ['hidung', 'trakea', 'bronkus', 'paru-paru', 'diafragma'];
-                    let foundAlt = false;
-                    for (const org of organNapas) {
-                        const altSig = `organ_pernapasan:ptr=${org}`;
-                        if (!usedStimulusSignatures.has(altSig)) {
-                            visualCfg = { type: 'organ_pernapasan', params: { pointer: org, label: 'X' } };
-                            foundAlt = true;
-                            break;
-                        }
-                    }
-                    if (!foundAlt) visualCfg = null;
-                }
-            } else if (visualCfg.type === 'siklus_air') {
-                const phases = ['evaporasi', 'kondensasi', 'presipitasi', 'infiltrasi'];
-                let foundAlt = false;
-                for (const phase of phases) {
-                    const altSig = `siklus_air:ptr=${phase}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'siklus_air', params: { pointer: phase, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'metamorfosis') {
-                const stages = ['telur', 'ulat', 'kepompong', 'kupu-kupu'];
-                let foundAlt = false;
-                for (const stage of stages) {
-                    const altSig = `metamorfosis:ptr=${stage}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'metamorfosis', params: { pointer: stage, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'bagian_bunga') {
-                const parts = ['putik', 'benang sari', 'mahkota', 'kelopak', 'bakal biji'];
-                let foundAlt = false;
-                for (const part of parts) {
-                    const altSig = `bagian_bunga:ptr=${part}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'bagian_bunga', params: { pointer: part, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'rantai_makanan') {
-                const roles = ['produsen', 'konsumen1', 'konsumen2', 'konsumen3', 'pengurai'];
-                let foundAlt = false;
-                for (const role of roles) {
-                    const altSig = `rantai_makanan:ptr=${role}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'rantai_makanan', params: { pointer: role, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'peta_indonesia') {
-                const islands = ['sumatra', 'kalimantan', 'sulawesi', 'papua', 'maluku', 'bali_nusra', 'jawa'];
-                const offset = typeof q.no === 'number' ? q.no : 0;
-                let foundAlt = false;
-                for (let i = 0; i < islands.length; i++) {
-                    const isl = islands[(i + offset) % islands.length];
-                    const altSig = `peta_indonesia:ptr=${isl}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'peta_indonesia', params: { pointer: isl, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'tata_surya') {
-                const planets = ['bumi', 'mars', 'saturnus', 'yupiter', 'merkurius', 'venus', 'uranus', 'neptunus'];
-                let foundAlt = false;
-                for (const pl of planets) {
-                    const altSig = `tata_surya:ptr=${pl}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'tata_surya', params: { pointer: pl, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'perubahan_wujud') {
-                const processes = ['1', '2', '3', '4', '5', '6'];
-                let foundAlt = false;
-                for (const proc of processes) {
-                    const altSig = `perubahan_wujud:ptr=${proc}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'perubahan_wujud', params: { pointer: proc, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'perisai_pancasila') {
-                const silas = [1, 2, 3, 4, 5];
-                let foundAlt = false;
-                for (const s of silas) {
-                    const altSig = `perisai_pancasila:sila=${s}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'perisai_pancasila', params: { sila: s, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'rangkaian_listrik') {
-                const models = ['seri', 'paralel', 'campuran'];
-                let foundAlt = false;
-                for (const m of models) {
-                    const altSig = `rangkaian_listrik:mod=${m}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'rangkaian_listrik', params: { model: m, s1: true, s2: false, pointer: 'L1', label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'mistar') {
-                const objects = ['pensil', 'penghapus', 'paku'];
-                let foundAlt = false;
-                for (const obj of objects) {
-                    const altSig = `mistar:obj=${obj}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'mistar', params: { start: 2.0, end: 7.5, objectType: obj, label: 'Panjang = ... cm' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (visualCfg.type === 'magnet') {
-                const altInteraksi = visualCfg.params?.interaksi === 'tolak' ? 'tarik' : 'tolak';
-                const altSig = `magnet:int=${altInteraksi}`;
-                if (!usedStimulusSignatures.has(altSig)) {
-                    visualCfg = { type: 'magnet', params: { interaksi: altInteraksi, pointer: 'kanan2', label: 'X' } };
-                } else {
-                    visualCfg = null;
-                }
-            } else if (visualCfg.type === 'sifat_cahaya') {
-                const altPeristiwa = visualCfg.params?.peristiwa === 'pemantulan' ? 'pembiasan' : 'pemantulan';
-                const altSig = `sifat_cahaya:prst=${altPeristiwa}`;
-                if (!usedStimulusSignatures.has(altSig)) {
-                    visualCfg = { type: 'sifat_cahaya', params: { peristiwa: altPeristiwa, pointer: 'X', label: 'X' } };
-                } else {
-                    visualCfg = null;
-                }
-            } else if (visualCfg.type === 'busur_derajat') {
-                const altDegs = [30, 45, 60, 90, 120, 135];
-                let foundAlt = false;
-                for (const deg of altDegs) {
-                    const altSig = `busur_derajat:deg=${deg}`;
-                    if (!usedStimulusSignatures.has(altSig)) {
-                        visualCfg = { type: 'busur_derajat', params: { derajat: deg, label: 'X' } };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (['diagram_batang', 'diagram_garis', 'diagram_lingkaran'].includes(visualCfg.type)) {
-                // Chart collision: coba alihkan ke tipe chart berbeda yang belum dipakai
-                const chartTypes = ['diagram_batang', 'diagram_garis', 'diagram_lingkaran'];
-                let foundAlt = false;
-                for (const altChart of chartTypes) {
-                    if (altChart === visualCfg.type) continue;
-                    // Cek apakah chart tipe ini sudah pernah dipakai (minimal cek tipe dasar)
-                    const anyUsed = Array.from(usedStimulusSignatures).some(s => s.startsWith(altChart));
-                    if (!anyUsed) {
-                        visualCfg = { ...visualCfg, type: altChart };
-                        foundAlt = true;
-                        break;
-                    }
-                }
-                if (!foundAlt) visualCfg = null;
-            } else if (['jaring_kubus', 'jaring_balok', 'segitiga_sama_sisi', 'segitiga_sama_kaki', 'segitiga_siku', 'persegi_panjang', 'jajar_genjang', 'belah_ketupat', 'layang_layang', 'trapesium', 'balok', 'kubus', 'tabung', 'kerucut', 'bola', 'prisma', 'limas', 'pecahan_lingkaran', 'pecahan_persegi', 'pictogram'].includes(visualCfg.type)) {
-                // Math shape collision: divert to related shape if not yet used in current exam packet
-                const geomAlternatives: Record<string, string[]> = {
-                    jaring_kubus: ['jaring_balok'],
-                    jaring_balok: ['jaring_kubus'],
-                    segitiga_sama_sisi: ['segitiga_sama_kaki', 'segitiga_siku'],
-                    segitiga_sama_kaki: ['segitiga_sama_sisi', 'segitiga_siku'],
-                    segitiga_siku: ['segitiga_sama_kaki', 'segitiga_sama_sisi'],
-                    persegi_panjang: ['jajar_genjang', 'trapesium'],
-                    jajar_genjang: ['trapesium', 'belah_ketupat'],
-                    belah_ketupat: ['layang_layang', 'jajar_genjang'],
-                    layang_layang: ['belah_ketupat'],
-                    trapesium: ['jajar_genjang', 'persegi_panjang'],
-                    balok: ['kubus', 'prisma'],
-                    kubus: ['balok', 'prisma'],
-                    tabung: ['kerucut', 'bola'],
-                    kerucut: ['tabung'],
-                    bola: ['tabung', 'kerucut'],
-                    prisma: ['limas', 'balok'],
-                    limas: ['prisma', 'kubus'],
-                    pecahan_lingkaran: ['pecahan_persegi'],
-                    pecahan_persegi: ['pecahan_lingkaran'],
-                    pictogram: ['diagram_batang', 'diagram_lingkaran']
-                };
-                const alts = geomAlternatives[visualCfg.type] || [];
-                let foundGeomAlt = false;
-                for (const altType of alts) {
-                    const anyUsed = Array.from(usedStimulusSignatures).some(s => s.startsWith(altType));
-                    if (!anyUsed) {
-                        visualCfg = { ...visualCfg, type: altType };
-                        foundGeomAlt = true;
-                        break;
-                    }
-                }
-                if (!foundGeomAlt) visualCfg = null;
-            } else {
-                // Untuk bangun yang tidak memiliki alternatif, alihkan ke foto
-                visualCfg = null;
-            }
-            // Audit trail: log diversifikasi stimulus
-            const newType = visualCfg?.type || 'photo-fallback';
-            const newPointer = visualCfg?.params?.pointer || '';
-            console.log(`[DiversityGuard] Soal ${q.no || '?'}: Collision "${originalSig}" â†’ diverted to "${newType}${newPointer ? ':' + newPointer : ''}"`);
-
-            // Matematika/IPAS: diagram kembar diganti gambar dari provider (foto/AI),
-            // bukan diulang atau dikosongkan. Mapel lain tetap memakai perilaku lama.
-            if (!visualCfg && isProviderFallbackSubject) {
-                providerImageFallback = true;
-                console.log(`[DiversityGuard] Soal ${q.no || '?'}: duplicate "${originalSig}" â†’ provider image fallback`);
-            }
-        }
-    }
+    // SVGs may be shared by different questions. Never alter the diagram's
+    // subject, parameters, or rendering solely because its signature was used.
 
     // 4. Jika visualCfg terdeteksi dan didukung oleh VisualEngine (SKIP jika forcePhotoOnly)
     if (!forcePhotoOnly && visualCfg && visualCfg.type) {
@@ -1070,12 +791,12 @@ export const resolveQuestionVisualStimulus = async (
         return;
     }
 
-    // 6. Jika bukan SVG parametrik atau dialihkan oleh Diversity Guard (Mapel Non-Matematika), cari gambar otentik (Wikipedia / Unsplash)
+    // 6. Jika bukan SVG parametrik (Mapel Non-Matematika), cari gambar otentik.
     if (unsplash) {
         const soalTextLower = String(q.soal || '').toLowerCase();
         // Guard: Soal yang membutuhkan stimulus diagram/skema presisi berlabel (tanda panah, huruf X, pola urutan, alur)
         // Ketika forcePhotoOnly, skip guard ini â€” cari foto topik umum sebagai pelengkap visual
-        const requiresDiagram = !forcePhotoOnly && !providerImageFallback && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
+        const requiresDiagram = !forcePhotoOnly && /tanda\s+panah|panah\s+menunjuk|huruf\s+[a-z]|bagian\s+[a-z]|tanda\s+[a-z]|pola\s+warna|pola\s+bilangan|pola\s+gambar|diagram\s+alur|pohon\s+faktor|skema\s+alur|bernomor|tanda\s+tanya|\(\?\)|kotak\s+(?:kosong|berikut)|urutan\s+(?:gambar|pola)|simbol\s+sila|lambang\s+sila/i.test(soalTextLower);
 
         if (requiresDiagram) {
             markQuestionImageUnavailable(q, 'required_diagram_missing');
@@ -1111,10 +832,6 @@ export const resolveQuestionVisualStimulus = async (
             if (!searchKeyword) {
                 searchKeyword = topik || '';
             }
-        } else if (providerImageFallback) {
-            // Diagram kembar pada Matematika/IPAS: cari gambar pengganti dari provider
-            // memakai kata kunci visual soal, bukan kunci jawaban numerik.
-            searchKeyword = String(q.gambar_keyword || topik || '').trim();
         } else {
             searchKeyword = (q.gambar_keyword || visualCfg?.keyword || '').trim();
             if (!searchKeyword || genericBlocklist.has(searchKeyword.toLowerCase())) {
@@ -1140,12 +857,7 @@ export const resolveQuestionVisualStimulus = async (
 
         console.log(`[PhotoSlot] Soal ${q.no || '?'}: Mencari foto "${searchKeyword}" (forcePhotoOnly=${forcePhotoOnly})`);
 
-        const promptEn = providerImageFallback
-            ? `Create a clear educational diagram for this exact question: ${String(q.soal || '').slice(0, 3000)}. `
-                + `Diagram specification: ${JSON.stringify(providerVisualSpec || {}).slice(0, 8192)}. `
-                + 'Preserve all stated measurements, units, arrows and requested labels. '
-                + 'Do not print the correct answer, solution, answer options or explanatory answer captions. Clean white background.'
-            : q.gambar_prompt_en || bracketHint || `${searchKeyword}, educational textbook illustration, clean white background, 2D art`;
+        const promptEn = q.gambar_prompt_en || bracketHint || `${searchKeyword}, educational textbook illustration, clean white background, 2D art`;
         const subjectContext = `${mataPelajaran} ${topik}`;
 
         try {
@@ -1182,7 +894,7 @@ export const resolveQuestionVisualStimulus = async (
             markQuestionImageUnavailable(q, 'image_search_unavailable');
             delete q.visual_stimulus;
         }
-    } else if (providerImageFallback || (questionNeedsDiagram(q.soal) && !hasMarkdownTable(q.soal))) {
+    } else if (questionNeedsDiagram(q.soal) && !hasMarkdownTable(q.soal)) {
         markQuestionImageUnavailable(q, 'required_diagram_missing');
         delete q.visual_stimulus;
     }
@@ -1427,7 +1139,7 @@ export const buildAssessmentPrompt = (params: {
             if (isMath) {
                 gambarRule = `\n                7. ATURAN GAMBAR MATEMATIKA (KUNCI TEPAT ${exactImages} BUTIR SOAL BERGAMBAR - 100% DIAGRAM SVG PARAMETRIK PRESISI): Fitur ilustrasi gambar AKTIF (${adaptiveQuota.categoryLabel}). Khusus mata pelajaran Matematika, seluruh ${exactImages} butir soal bergambar WAJIB 100% menggunakan DIAGRAM SVG PRESISI ("visual_stimulus").
             - DILARANG KERAS MENGGUNAKAN FOTO GENERATOR AI: Atribut JSON "gambar_keyword" dan "gambar_prompt_en" WAJIB diisi string kosong/null. Generator AI tidak memahami sudut dan skala geometri sehingga DILARANG.
-            - PERENCANAAN VARIASI VISUAL: Setiap butir diagram SVG WAJIB unik dan berbeda satu sama lain. DILARANG membuat 2 diagram bertipe sama dalam satu paket ujian!
+            - PERENCANAAN VISUAL: SVG dengan tipe dan parameter yang sama BOLEH dipakai pada beberapa butir, selama pertanyaan berbeda dan diagram sesuai dengan setiap soal. Jangan mengubah angka, bentuk, atau label hanya untuk membedakan gambar.
             - PADA ${exactImages} BUTIR SOAL BERGAMBAR TERSEBUT:
               * ${getSubjectImagePromptGuideline(mataPelajaran)}
             - SISA ${count - exactImages} BUTIR SOAL LAINNYA WAJIB TEKS MURNI: atribut "visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "".
@@ -1440,7 +1152,7 @@ export const buildAssessmentPrompt = (params: {
             - TEPAT ${svgSlots} BUTIR DIAGRAM SVG PRESISI: Atribut JSON "visual_stimulus" terisi spesifikasi tipe diagram, atribut "gambar_keyword" dan "gambar_prompt_en" WAJIB string kosong/null.
             - TEPAT ${photoSlots} BUTIR GAMBAR FOTO OBJEK KONKRET / FENOMENA ALAM NYATA GENERATOR AI (Z-Image-Turbo / Unsplash): Atribut JSON "gambar_keyword" (1-3 kata ringkas) dan "gambar_prompt_en" (15-25 kata deskriptif) terisi, atribut "visual_stimulus" WAJIB diisi null.
             - PERENCANAAN VARIASI VISUAL:
-              * Setiap butir soal bergambar WAJIB unik dan berbeda satu sama lain. DILARANG membuat 2 diagram bertipe sama dalam satu paket ujian!
+              * Pertanyaan pada setiap butir WAJIB berbeda. Diagram SVG boleh sama apabila sesuai dengan masing-masing pertanyaan; tidak wajib membuat tipe diagram berbeda.
               * Contoh Pembagian BENAR (${exactImages} butir bergambar):
                 - Butir Diagram SVG (${svgSlots} butir): atribut JSON "visual_stimulus": { "type": "siklus_air", "params": { "pointer": "kondensasi", "label": "X" } }
                 - Butir Foto Generator AI (${photoSlots} butir): atribut JSON "gambar_keyword": "Embun di daun", "gambar_prompt_en": "close up of fresh water morning dew drops on green plant leaves, educational photo"
@@ -2109,12 +1821,12 @@ export async function enrichAndNormalizePG(
         }
 
         // =========================================================================
-        // ENFORCE STRICT ZERO-DUPLICATE & IRRELEVANCY POLICY ACROSS THE ENTIRE PACKET
+        // Keep the photo URL policy; SVG reuse is valid across distinct questions.
         // =========================================================================
         const seenCanonicalUrls = new Set<string>();
-        const seenSvgSignatures = new Set<string>();
 
         for (const q of deduped) {
+            if (q.gambar?.type === 'svg') continue;
             if (q.gambar && q.gambar.url) {
                 const rawUrl = String(q.gambar.url).trim();
                 const canonicalUrl = rawUrl.split('?')[0];
@@ -2128,17 +1840,6 @@ export async function enrichAndNormalizePG(
                 } else {
                     seenCanonicalUrls.add(canonicalUrl);
                     seenCanonicalUrls.add(rawUrl);
-                }
-            }
-
-            if (q.visual_stimulus && q.visual_stimulus.type) {
-                const sig = buildStimulusSignature(q.visual_stimulus);
-                if (seenSvgSignatures.has(sig)) {
-                    console.warn(`[PacketDiversityGuard] Question #${q.no}: Duplicate SVG signature stripped (${sig}).`);
-                    markQuestionImageUnavailable(q, 'duplicate_visual_rejected');
-                    delete q.visual_stimulus;
-                } else {
-                    seenSvgSignatures.add(sig);
                 }
             }
 

@@ -257,21 +257,22 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(q7.gambar.svg).not.toEqual(q1.gambar.svg);
         });
 
-        it('should prevent exact duplicate diagrams when two questions have identical organ focus', async () => {
+        it('should reuse a diagram for different questions with the same organ focus', async () => {
             const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
             const usedStimulusSignatures = new Set<string>();
 
-            const qA: any = { no: 1, soal: 'Perhatikan gambar sistem pencernaan berikut! Organ lambung bertanda X...' };
+            const qA: any = { no: 1, soal: 'Perhatikan gambar sistem pencernaan berikut! Apa fungsi organ lambung bertanda X?' };
             await resolveQuestionVisualStimulus(qA, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
 
-            const qB: any = { no: 5, soal: 'Perhatikan gambar sistem pencernaan berikut! Organ lambung bertanda X...' };
+            const qB: any = { no: 5, soal: 'Perhatikan gambar sistem pencernaan berikut! Sebutkan nama organ lambung bertanda X.' };
             await resolveQuestionVisualStimulus(qB, 'IPAS', 'Sistem Pencernaan', null, usedStimulusSignatures);
 
-            // Both questions must not have the exact same SVG
-            expect(qA.gambar.svg).not.toEqual(qB.gambar?.svg);
+            expect(qA.gambar.type).toBe('svg');
+            expect(qB.gambar.type).toBe('svg');
+            expect(qB.gambar.svg).toEqual(qA.gambar.svg);
         });
 
-        it('should prevent exact duplicate math shapes when two questions have identical shape focus', async () => {
+        it('should keep the same math shape for different questions instead of suppressing it', async () => {
             const { resolveQuestionVisualStimulus } = await import('../src/routes/kisi');
             const usedStimulusSignatures = new Set<string>();
 
@@ -280,13 +281,11 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(qA.gambar?.type).toBe('svg');
             expect(qA.gambar?.title).toContain('Jaring-jaring Kubus');
 
-            const qB: any = { no: 2, soal: 'Perhatikan jaring-jaring kubus dengan rusuk 5 cm berikut!' };
+            const qB: any = { no: 2, soal: 'Perhatikan jaring-jaring kubus dengan rusuk 5 cm berikut! Berapa volume kubusnya?' };
             await resolveQuestionVisualStimulus(qB, 'Matematika', 'Bangun Ruang', null, usedStimulusSignatures);
-            // Without an AI image provider a cube must not silently turn into a
-            // cuboid. Keep the missing required-image state explicit instead.
-            expect(qB.gambar?.svg).toBeUndefined();
-            expect(qB.gambar?.imageUnavailable).toBe(true);
-            expect(qB.gambar?.imageUnavailableReason).toBe('required_diagram_missing');
+            expect(qB.gambar?.type).toBe('svg');
+            expect(qB.gambar?.svg).toEqual(qA.gambar.svg);
+            expect(qB.gambar?.imageUnavailable).toBeUndefined();
         });
 
         it('should provide full visual catalog with 200 distinct templates', async () => {
@@ -832,4 +831,3 @@ describe('Visual Quota Allocation & Split Contract (10 PG -> 1 SVG + 1 Photo)', 
         });
     });
 });
-

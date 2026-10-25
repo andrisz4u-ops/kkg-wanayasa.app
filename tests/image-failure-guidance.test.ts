@@ -67,12 +67,12 @@ describe('duplicate SVG handling', () => {
     };
     await resolveQuestionVisualStimulus(question, 'Matematika', 'Luas Lingkaran', providerImage as any, usedSignatures(), new Set(), new Set(), false);
     expect(providerImage.searchImage).not.toHaveBeenCalled();
-    expect(question.gambar?.type).not.toBe('ai');
-    expect(question.gambar?.imageUnavailable).toBe(true);
-    expect(question.gambar?.imageUnavailableReason).toBe('required_diagram_missing');
+    expect(question.gambar?.type).toBe('svg');
+    expect(question.gambar?.svg).toContain('<svg');
+    expect(question.gambar?.imageUnavailable).toBeUndefined();
   });
 
-  it('replaces a duplicated SVG with a provider image for IPAS', async () => {
+  it('reuses a duplicated SVG for IPAS without calling a photo provider', async () => {
     const diagram = { type: 'organ_pencernaan', params: { pointer: 'lambung', label: 'X' } };
     const question: any = {
       no: 4,
@@ -84,19 +84,21 @@ describe('duplicate SVG handling', () => {
       question, 'IPAS', 'Organ Pencernaan', providerImage as any,
       new Set([buildStimulusSignature(diagram)]), new Set(), new Set(), false,
     );
-    expect(question.gambar.type).toBe('ai');
-    expect(question.gambar.svg).toBeFalsy();
+    expect(question.gambar.type).toBe('svg');
+    expect(question.gambar.svg).toContain('<svg');
+    expect(providerImage.searchImage).not.toHaveBeenCalled();
   });
 
-  it('marks a required diagram missing when no provider is available', async () => {
+  it('renders a repeated required diagram without a provider', async () => {
     const question: any = {
       no: 5,
       soal: 'Perhatikan gambar lingkaran berikut! Luas lingkaran tersebut adalah ...',
       visual_stimulus: circle,
     };
     await resolveQuestionVisualStimulus(question, 'Matematika', 'Luas Lingkaran', null, usedSignatures(), new Set(), new Set(), false);
-    expect(question.gambar).toMatchObject({ imageUnavailable: true, imageUnavailableReason: 'required_diagram_missing' });
-    expect(question.gambar.svg).toBeFalsy();
+    expect(question.gambar.type).toBe('svg');
+    expect(question.gambar.svg).toContain('<svg');
+    expect(question.gambar.imageUnavailable).toBeUndefined();
   });
 
   it('does not use the provider fallback outside Matematika and IPAS', async () => {
@@ -130,14 +132,15 @@ describe('duplicate SVG handling', () => {
     expect(question.imageUnavailable).toBeUndefined();
   });
 
-  it('still removes a decorative duplicate diagram without a provider', async () => {
+  it('keeps a repeated optional SVG without a provider', async () => {
     const question: any = {
       no: 7,
       soal: 'Hitung keliling lingkaran yang berjari-jari 14 cm.',
       visual_stimulus: circle,
     };
     await resolveQuestionVisualStimulus(question, 'Matematika', 'Keliling Lingkaran', null, usedSignatures(), new Set(), new Set(), false);
-    expect(question.gambar?.svg).toBeFalsy();
+    expect(question.gambar?.type).toBe('svg');
+    expect(question.gambar?.svg).toContain('<svg');
   });
 });
 
@@ -228,4 +231,3 @@ describe('healUnselectedVisualQuestion & skipGeneratedQuestionImage', () => {
     expect(q.imageUnavailable).toBeUndefined();
   });
 });
-

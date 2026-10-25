@@ -36,20 +36,25 @@ async function parseBoundedMultipart(request: Request): Promise<FormData> {
 
     const chunks: Uint8Array[] = [];
     let total = 0;
+    let exceeded = false;
     try {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             total += value.byteLength;
+            // Do not cancel the in-process request stream: Node 24.21's undici
+            // producer may enqueue after cancellation and raise an unhandled
+            // ERR_INVALID_STATE. Drain without retaining oversized chunks.
             if (total > maxBytes) {
-                await reader.cancel();
-                throw new RangeError('Multipart request exceeds size limit');
+                exceeded = true;
+                continue;
             }
             chunks.push(value);
         }
     } finally {
         reader.releaseLock();
     }
+    if (exceeded) throw new RangeError('Multipart request exceeds size limit');
 
     const bytes = new Uint8Array(total);
     let offset = 0;

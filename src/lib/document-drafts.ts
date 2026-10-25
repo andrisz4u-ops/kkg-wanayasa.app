@@ -19,14 +19,17 @@ export async function readBoundedJson(request: Request): Promise<BoundedJsonResu
 
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
+  let exceeded = false;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       totalBytes += value.byteLength;
+      // Node 24.21 undici may enqueue after cancellation; drain oversized bytes
+      // instead of cancelling the in-process request stream.
       if (totalBytes > DOCUMENT_DRAFT_BODY_LIMIT_BYTES) {
-        await reader.cancel();
-        return { ok: false, reason: 'too_large' };
+        exceeded = true;
+        continue;
       }
       chunks.push(value);
     }
@@ -35,6 +38,7 @@ export async function readBoundedJson(request: Request): Promise<BoundedJsonResu
   } finally {
     reader.releaseLock();
   }
+  if (exceeded) return { ok: false, reason: 'too_large' };
 
   const bytes = new Uint8Array(totalBytes);
   let offset = 0;

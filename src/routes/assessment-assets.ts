@@ -19,16 +19,19 @@ assets.post('/', async (c) => {
   if (rawId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawId)) return Errors.validation(c, 'ID aset tidak valid.');
   const reader = c.req.raw.body?.getReader();
   if (!reader) return Errors.validation(c, 'Isi gambar wajib diisi.');
-  const chunks: Uint8Array[] = []; let total = 0;
+  const chunks: Uint8Array[] = []; let total = 0; let exceeded = false;
   try {
     while (true) {
       const { done, value } = await reader.read(); if (done) break;
       total += value.byteLength;
-      if (total > ASSESSMENT_ASSET_MAX_BYTES) { await reader.cancel(); return Errors.validation(c, 'Ukuran gambar melebihi 1,5 MiB.'); }
+      // Node 24.21 undici may enqueue after cancellation; drain oversized bytes
+      // instead of cancelling the in-process request stream.
+      if (total > ASSESSMENT_ASSET_MAX_BYTES) { exceeded = true; continue; }
       chunks.push(value);
     }
-  } catch { try { await reader.cancel(); } catch { /* best-effort upload reader cleanup */ } return Errors.validation(c, 'Isi gambar tidak dapat dibaca.'); }
+  } catch { return Errors.validation(c, 'Isi gambar tidak dapat dibaca.'); }
   finally { try { reader.releaseLock(); } catch { /* reader may already be released */ } }
+  if (exceeded) return Errors.validation(c, 'Ukuran gambar melebihi 1,5 MiB.');
   const bytes = new Uint8Array(total); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   try {

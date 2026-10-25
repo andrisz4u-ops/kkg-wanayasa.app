@@ -554,7 +554,7 @@ export const getSubjectImagePromptGuideline = (mapel: string): string => {
           * "gambar_prompt_en": "clean botanical photograph of [plant/organic farming method], isolated on white background, sharp agricultural education photo"`;
     }
     return `PANDUAN VISUAL MAPEL SAINS / IPAS:
-      * SANGAT PENTING: DILARANG KERAS menggunakan jenis gambar/diagram yang sama pada lebih dari 1 butir soal dalam satu paket ujian! Variasikan fokus stimulus antar butir soal (misal: butir 1 organ lambung, butir 2 penampang vili usus halus atau jenis gigi).
+      * SANGAT PENTING: DILARANG KERAS menggunakan jenis gambar/diagram yang sama pada lebih dari 1 butir soal dalam satu paket ujian! Gunakan visual_stimulus diagram berlabel huruf X HANYA pada butir soal yang memang dialokasikan untuk diagram SVG (maksimal 1 butir). Butir-butir soal lainnya WAJIB menggunakan "visual_stimulus": null dan DILARANG menyebutkan "huruf X"!
       * Untuk diagram berlabel tanda huruf [X], gunakan "visual_stimulus":
         - Sistem Pencernaan Makro: { "type": "organ_pencernaan", "params": { "pointer": "lambung" (atau mulut/kerongkongan/usus halus/usus besar/hati/anus), "label": "X" } }
         - Vili Usus Halus (Mikroskopis Penyerapan): { "type": "vili_usus", "params": { "pointer": "vili" (atau kapiler/lakteal/epitel), "label": "X" } }
@@ -1414,6 +1414,8 @@ export const buildAssessmentPrompt = (params: {
             - LARANGAN MUTLAK PADA SISA ${count - exactImages} BUTIR SOAL LAINNYA (WAJIB TEKS MURNI TANPA GAMBAR):
               * Sisa ${count - exactImages} butir soal lainnya WAJIB BERUPA TEKS MURNI: atribut "visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "".
               * DILARANG KERAS menyertakan frasa "Perhatikan gambar...", "Perhatikan diagram...", atau sejenisnya di dalam teks naskah soal pada butir-butir teks murni tersebut!
+              * DILARANG KERAS menanyakan tanda huruf seperti "huruf X", "bagian X", atau "panah X" pada butir-butir teks murni! Huruf X HANYA boleh ada pada ${svgSlots} butir diagram SVG presisi.
+              * Pada ${count - exactImages} butir teks murni, rumuskan pertanyaan langsung secara konseptual (contoh: "Organ lambung pada sistem pencernaan berfungsi untuk...", BUKAN "Bagian yang ditunjuk oleh huruf X berfungsi untuk...").
               * DILARANG KERAS menuliskan teks "visual_stimulus {...}" di dalam teks naskah soal ("soal").`;
         } else {
             gambarRule = `\n                7. GAMBAR: Dilarang menyertakan gambar ("visual_stimulus": null, "gambar_keyword": "", "gambar_prompt_en": "" untuk semua soal).`;
@@ -1522,6 +1524,193 @@ export function questionNeedsDiagram(soal: unknown): boolean {
     return DIAGRAM_REFERENCE_PATTERN.test(String(soal || ''));
 }
 
+export const POINTER_ENTITY_NAMES: Record<string, string> = {
+    // Pencernaan & Detail Organ
+    lambung: 'organ lambung',
+    rugae: 'dinding lambung (rugae)',
+    kardia: 'bagian kardia lambung',
+    fundus: 'bagian fundus lambung',
+    pilorus: 'bagian pilorus lambung',
+    mulut: 'organ mulut',
+    kerongkongan: 'kerongkongan (esofagus)',
+    'usus halus': 'usus halus',
+    'usus besar': 'usus besar',
+    hati: 'organ hati',
+    pankreas: 'organ pankreas',
+    empedu: 'kantong empedu',
+    anus: 'anus',
+    // Vili usus
+    vili: 'vili (jonjot usus halus)',
+    kapiler: 'pembuluh kapiler',
+    lakteal: 'pembuluh lakteal',
+    epitel: 'sel epitel usus',
+    // Gigi
+    seri: 'gigi seri',
+    taring: 'gigi taring',
+    geraham: 'gigi geraham',
+    'geraham depan': 'gigi geraham depan',
+    'geraham belakang': 'gigi geraham belakang',
+    // Pernapasan
+    trakea: 'trakea (tenggorokan)',
+    hidung: 'rongga hidung',
+    bronkus: 'bronkus',
+    bronkiolus: 'bronkiolus',
+    alveolus: 'alveolus',
+    diafragma: 'otot diafragma',
+    'paru-paru': 'paru-paru',
+    laring: 'laring',
+    faring: 'faring',
+    // Siklus air
+    evaporasi: 'proses evaporasi (penguapan)',
+    transpirasi: 'proses transpirasi',
+    kondensasi: 'proses kondensasi (pengembunan)',
+    presipitasi: 'proses presipitasi (hujan)',
+    infiltrasi: 'proses infiltrasi (penyerapan air)',
+    // Metamorfosis
+    telur: 'tahap telur',
+    ulat: 'tahap larva (ulat)',
+    kepompong: 'tahap pupa (kepompong)',
+    'kupu-kupu': 'tahap kupu-kupu dewasa',
+    // Bagian bunga
+    putik: 'putik bunga',
+    'benang sari': 'benang sari bunga',
+    mahkota: 'mahkota bunga',
+    kelopak: 'kelopak bunga',
+    'bakal biji': 'bakal biji bunga',
+    // Rantai makanan
+    produsen: 'organisme produsen',
+    konsumen1: 'konsumen tingkat I',
+    konsumen2: 'konsumen tingkat II',
+    konsumen3: 'konsumen tingkat III',
+    pengurai: 'pengurai (dekomposer)',
+    // Peta Indonesia
+    sulawesi: 'Pulau Sulawesi',
+    sumatra: 'Pulau Sumatra',
+    kalimantan: 'Pulau Kalimantan',
+    papua: 'Pulau Papua',
+    maluku: 'Kepulauan Maluku',
+    bali_nusra: 'Kepulauan Bali dan Nusa Tenggara',
+    jawa: 'Pulau Jawa',
+    // Tata surya
+    bumi: 'Planet Bumi',
+    merkurius: 'Planet Merkurius',
+    venus: 'Planet Venus',
+    mars: 'Planet Mars',
+    yupiter: 'Planet Yupiter',
+    saturnus: 'Planet Saturnus',
+    uranus: 'Planet Uranus',
+    neptunus: 'Planet Neptunus',
+    // Perisai Pancasila
+    '1': 'Simbol Bintang (Sila ke-1)',
+    '2': 'Simbol Rantai (Sila ke-2)',
+    '3': 'Simbol Pohon Beringin (Sila ke-3)',
+    '4': 'Simbol Kepala Banteng (Sila ke-4)',
+    '5': 'Simbol Padi dan Kapas (Sila ke-5)',
+};
+
+export const ENTITY_CLUES: Record<string, string> = {
+    lambung: 'Organ pencernaan yang memproduksi asam klorida (HCl) dan enzim pepsin untuk mencerna protein',
+    'usus halus': 'Saluran pencernaan tempat terjadinya penyerapan sari-sari makanan ke dalam pembuluh darah',
+    'usus besar': 'Saluran pencernaan yang berfungsi menyerap air dan membusukkan sisa makanan',
+    hati: 'Organ tubuh yang menghasilkan cairan empedu untuk membantu pencernaan lemak',
+    mulut: 'Bagian awal saluran pencernaan tempat terjadinya pencernaan mekanik dan kimiawi oleh enzim ptialin',
+    kerongkongan: 'Saluran pencernaan yang melakukan gerakan peristaltik untuk mendorong makanan ke lambung',
+    anus: 'Bagian akhir dari saluran pencernaan yang berfungsi mengeluarkan sisa makanan (feses)',
+    seri: 'Gigi pada manusia yang berbentuk pahat dan berfungsi untuk memotong makanan',
+    taring: 'Gigi pada manusia yang berbentuk runcing dan berfungsi untuk merobek makanan',
+    geraham: 'Gigi pada manusia yang memiliki permukaan lebar dan bergelombang untuk mengunyah makanan',
+    trakea: 'Saluran pernapasan berbentuk pipa yang tersusun dari cincin tulang rawan dan memiliki silia penyaring debu',
+    bronkus: 'Percabangan saluran pernapasan yang menghubungkan trakea dengan paru-paru kanan dan kiri',
+    alveolus: 'Gelembung-gelembung halus di dalam paru-paru tempat terjadinya pertukaran oksigen dan karbon dioksida',
+    diafragma: 'Otot utama pernapasan yang membatasi rongga dada dan rongga perut',
+    evaporasi: 'Peristiwa penguapan air dari permukaan bumi ke atmosfer karena panas matahari',
+    kondensasi: 'Peristiwa pengembunan uap air menjadi titik-titik air pembentuk awan di atmosfer',
+    presipitasi: 'Peristiwa jatuhnya titik-titik air dari atmosfer ke bumi dalam bentuk hujan',
+    sulawesi: 'Pulau di Indonesia yang berbentuk menyerupai huruf K dan memiliki fauna endemik anoa serta babirusa',
+    papua: 'Pulau di Indonesia yang memiliki puncak bersalju Jayawijaya dan fauna endemik burung cendrawasih',
+    sumatra: 'Pulau di Indonesia yang memiliki fauna endemik harimau sumatra dan bunga Rafflesia arnoldii',
+    kalimantan: 'Pulau di Indonesia yang terkenal dengan julukan Pulau Seribu Sungai dan habitat orangutan',
+    jawa: 'Pulau di Indonesia yang memiliki kepadatan penduduk tertinggi dan habitat badak bercula satu',
+};
+
+export function healUnselectedVisualQuestion(question: any): void {
+    if (!question || typeof question.soal !== 'string') return;
+
+    const rawPointer = String(question.visual_stimulus?.params?.pointer || '').toLowerCase().trim();
+    let targetEntity = '';
+    if (rawPointer && POINTER_ENTITY_NAMES[rawPointer]) {
+        targetEntity = POINTER_ENTITY_NAMES[rawPointer];
+    } else if (rawPointer) {
+        targetEntity = rawPointer;
+    } else if (question.gambar_keyword && typeof question.gambar_keyword === 'string') {
+        targetEntity = question.gambar_keyword.trim();
+    }
+
+    if (!targetEntity && typeof question.soal === 'string') {
+        const topicMatch = question.soal.match(/(?:gambar|diagram|foto|skema|ilustrasi)\s+(?:penampang|struktur|bagian|organ|sistem)?\s*([a-zA-Z\s]{3,30}?)\s+(?:berikut|di\s+bawah|di\s+samping)[!.,]/i);
+        if (topicMatch && topicMatch[1]) {
+            targetEntity = topicMatch[1].trim();
+        }
+    }
+
+    let text = question.soal
+        .replace(/^(?:Perhatikan|Amatilah|Lihatlah|Cermati|Berdasarkan)\s+(?:gambar|diagram|foto|bagan|skema|ilustrasi|grafik)[^!.,\n]*[!.,]?\s*/i, '')
+        .replace(/^(?:Gambar|Diagram|Foto|Bagan|Skema|Ilustrasi|Grafik)\s+(?:berikut|di\s+bawah|di\s+samping)[^!.,\n]*[!.,]?\s*/i, '')
+        .trim();
+
+    const pointerRegex = /(?:bagian|organ|struktur|gigi|proses|tahap|komponen|lapisan|wilayah|pulau|planet|hewan|tumbuhan)?\s*(?:yang\s+ditunjuk(?:\s+oleh)?\s+(?:tanda\s+panah|huruf\s+[a-dx]|tanda\s+x)|bertanda\s+[a-dx]|bernomor\s+\d+)/gi;
+
+    let inOptions = false;
+    if (question.opsi && typeof question.opsi === 'object') {
+        const candidates = [rawPointer, targetEntity].filter(Boolean).map(s => s.toLowerCase());
+        for (const key of ['A', 'B', 'C', 'D']) {
+            const opt = String(question.opsi[key] || '').toLowerCase().trim();
+            for (const cand of candidates) {
+                if (opt && (opt === cand || opt.includes(cand) || cand.includes(opt))) {
+                    inOptions = true;
+                    break;
+                }
+            }
+            if (inOptions) break;
+        }
+    }
+
+    if (inOptions && rawPointer && ENTITY_CLUES[rawPointer]) {
+        text = text.replace(pointerRegex, ENTITY_CLUES[rawPointer]);
+    } else if (targetEntity) {
+        text = text.replace(pointerRegex, (match: string) => {
+            const m = match.toLowerCase();
+            if (m.startsWith('gigi') && !targetEntity.toLowerCase().startsWith('gigi')) {
+                return `Gigi ${targetEntity}`;
+            }
+            if (m.startsWith('organ') && !targetEntity.toLowerCase().startsWith('organ')) {
+                return `Organ ${targetEntity}`;
+            }
+            if (m.startsWith('proses') && !targetEntity.toLowerCase().startsWith('proses')) {
+                return `Proses ${targetEntity}`;
+            }
+            if (m.startsWith('bagian') && !targetEntity.toLowerCase().startsWith('bagian')) {
+                return `Bagian ${targetEntity}`;
+            }
+            return targetEntity;
+        });
+        text = text.replace(/\b(?:organ|bagian|tahap|proses|lapisan)\s+[a-dx]\b/gi, targetEntity);
+    } else {
+        text = text.replace(pointerRegex, 'bagian/organ tersebut');
+        text = text.replace(/\b(?:organ|bagian|tahap|proses|lapisan)\s+[a-dx]\b/gi, 'bagian/organ tersebut');
+    }
+
+    text = text
+        .replace(/\b(?:pada\s+gambar|pada\s+diagram|pada\s+grafik|pada\s+skema|di\s+bawah|di\s+samping)\b/gi, '')
+        .replace(/\s*\([a-dxX]\)/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    if (text.length > 5) {
+        question.soal = text.charAt(0).toUpperCase() + text.slice(1);
+    }
+}
+
 function markQuestionImageUnavailable(question: any, reason = 'image_unavailable') {
     const current = question?.gambar && typeof question.gambar === 'object' ? question.gambar : {};
     const image: Record<string, any> = {};
@@ -1533,15 +1722,19 @@ function markQuestionImageUnavailable(question: any, reason = 'image_unavailable
     question.gambar = image;
 }
 
-function skipGeneratedQuestionImage(question: any, reason: string) {
-    if (reason === 'image_not_selected' && typeof question.soal === 'string') {
-        const cleaned = question.soal
-            .replace(/^(?:Perhatikan|Amatilah|Lihatlah|Cermati|Berdasarkan)\s+(?:gambar|diagram|foto|bagan|skema|ilustrasi)[^!.\n]*[!.]\s*/i, '')
-            .trim();
-        const stillNeedsFigure = /\b(?:tanda\s+panah|panah\s+menunjuk|huruf\s+[a-dx]|tanda\s+x|bagian\s+[a-z]|bernomor|tanda\s+tanya|\(\?\)|pada\s+gambar|pada\s+diagram)\b/i.test(cleaned);
-        if (cleaned.length > 10 && !stillNeedsFigure) {
-            question.soal = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-        }
+export function skipGeneratedQuestionImage(question: any, reason: string) {
+    if (reason === 'image_not_selected' || reason === 'image_generation_disabled') {
+        healUnselectedVisualQuestion(question);
+        delete question.visual_stimulus;
+        delete question.gambar_keyword;
+        delete question.gambar_prompt_en;
+        delete question.svg;
+        delete question.imageUnavailable;
+        delete question.imageUnavailableReason;
+        delete question.gambar;
+        question.imageRequired = false;
+        question.visual_required = false;
+        return;
     }
 
     const required = question.imageRequired === true || question.visual_required === true
@@ -1746,6 +1939,8 @@ export async function enrichAndNormalizePG(
         if (q.imageRequired === true) q.imageRequired = false;
     }
 
+    const targetSelected = new Set<any>();
+
     // Enforce exact image count jika visual stimulus aktif
     // SPLIT STRATEGY: Bagi kuota 50/50 antara SVG Dinamik dan Foto AI (Vultr/Wiki)
     // Contoh: 10 PG â†’ 2 visual = 1 SVG + 1 Foto, 15 PG â†’ 3 visual = 2 SVG + 1 Foto
@@ -1851,7 +2046,7 @@ export async function enrichAndNormalizePG(
 
         const svgSet = new Set(svgList);
         const photoSet = new Set(photoList);
-        const targetSelected = new Set([...svgSet, ...photoSet]);
+        for (const item of [...svgSet, ...photoSet]) targetSelected.add(item);
 
         console.log(`[VisualSplitter] Kuota: ${exactImageCount} total â†’ ${svgSet.size} SVG + ${photoSet.size} Foto`);
 
@@ -1919,7 +2114,10 @@ export async function enrichAndNormalizePG(
 
     // Butir yang menuntut gambar tetapi tidak mendapatkannya harus terlihat oleh guru
     // sebagai kegagalan eksplisit, bukan soal tanpa gambar yang membingungkan siswa.
+    // HANYA butir yang memang terpilih dalam kuota gambar (targetSelected) yang boleh ditandai jika gagal;
+    // butir non-kuota yang sudah dilewati tidak boleh ditandai eror.
     for (const q of deduped) {
+        if (!targetSelected.has(q)) continue;
         if (questionNeedsDiagram(q?.soal) && !hasMarkdownTable(q?.soal) && !q?.gambar && !q?.visual_stimulus) {
             markQuestionImageUnavailable(q, 'required_diagram_missing');
         }

@@ -1,5 +1,5 @@
-﻿import { describe, expect, it, vi } from 'vitest';
-import { buildStimulusSignature, hasMarkdownTable, questionNeedsDiagram, resolveQuestionVisualStimulus } from '../src/routes/kisi';
+import { describe, expect, it, vi } from 'vitest';
+import { buildStimulusSignature, hasMarkdownTable, questionNeedsDiagram, resolveQuestionVisualStimulus, healUnselectedVisualQuestion, skipGeneratedQuestionImage } from '../src/routes/kisi';
 import { describeImageFailure } from '../public/static/js/image-failure.js';
 
 describe('questionNeedsDiagram', () => {
@@ -157,3 +157,75 @@ describe('describeImageFailure', () => {
     expect(describeImageFailure({})).toBe('');
   });
 });
+
+describe('healUnselectedVisualQuestion & skipGeneratedQuestionImage', () => {
+  it('heals organ questions where options are functions and removes diagram demands', () => {
+    const q: any = {
+      no: 4,
+      soal: 'Perhatikan gambar penampang lambung berikut. Bagian yang ditunjuk oleh huruf X berfungsi untuk ....',
+      visual_stimulus: { type: 'lambung_detail', params: { pointer: 'rugae', label: 'X' } },
+      opsi: {
+        A: 'Menyerap sari-sari makanan',
+        B: 'Mengubah protein menjadi pepton',
+        C: 'Mengatur keluarnya makanan ke usus halus',
+        D: 'Menghasilkan lendir untuk melindungi dinding lambung',
+      },
+    };
+
+    skipGeneratedQuestionImage(q, 'image_not_selected');
+
+    expect(q.soal).toContain('dinding lambung (rugae)');
+    expect(q.soal).not.toContain('Perhatikan gambar');
+    expect(q.soal).not.toContain('huruf X');
+    expect(questionNeedsDiagram(q.soal)).toBe(false);
+    expect(q.gambar).toBeUndefined();
+    expect(q.visual_stimulus).toBeUndefined();
+    expect(q.imageUnavailable).toBeUndefined();
+    expect(q.imageRequired).toBe(false);
+  });
+
+  it('heals vili usus halus and gigi questions without generating imageUnavailable', () => {
+    const q8: any = {
+      no: 8,
+      soal: 'Perhatikan gambar penampang usus halus berikut. Bagian yang ditunjuk oleh huruf X memiliki fungsi untuk ....',
+      visual_stimulus: { type: 'vili_usus', params: { pointer: 'vili', label: 'X' } },
+      opsi: { A: 'Menyerap sari-sari makanan', B: 'Menghasilkan enzim' },
+    };
+    skipGeneratedQuestionImage(q8, 'image_not_selected');
+    expect(q8.soal).toContain('vili (jonjot usus halus)');
+    expect(questionNeedsDiagram(q8.soal)).toBe(false);
+    expect(q8.gambar).toBeUndefined();
+    expect(q8.imageUnavailable).toBeUndefined();
+
+    const q10: any = {
+      no: 10,
+      soal: 'Perhatikan gambar struktur gigi manusia berikut. Gigi yang ditunjuk oleh huruf X memiliki fungsi untuk ....',
+      visual_stimulus: { type: 'struktur_gigi', params: { pointer: 'seri', label: 'X' } },
+      opsi: { A: 'Memotong makanan', B: 'Merobek makanan' },
+    };
+    skipGeneratedQuestionImage(q10, 'image_not_selected');
+    expect(q10.soal).toContain('Gigi seri');
+    expect(questionNeedsDiagram(q10.soal)).toBe(false);
+    expect(q10.gambar).toBeUndefined();
+    expect(q10.imageUnavailable).toBeUndefined();
+  });
+
+  it('heals identification questions with conceptual clues when entity is in the options', () => {
+    const q: any = {
+      no: 3,
+      soal: 'Perhatikan diagram sistem pernapasan manusia berikut. Organ yang ditunjuk oleh huruf X adalah ....',
+      visual_stimulus: { type: 'organ_pernapasan', params: { pointer: 'trakea', label: 'X' } },
+      opsi: { A: 'Hidung', B: 'Trakea', C: 'Bronkus', D: 'Alveolus' },
+    };
+
+    skipGeneratedQuestionImage(q, 'image_not_selected');
+
+    // Should not say "Organ trakea adalah ...." which leaks the answer
+    expect(q.soal).toContain('Saluran pernapasan berbentuk pipa');
+    expect(q.soal).not.toContain('huruf X');
+    expect(questionNeedsDiagram(q.soal)).toBe(false);
+    expect(q.gambar).toBeUndefined();
+    expect(q.imageUnavailable).toBeUndefined();
+  });
+});
+

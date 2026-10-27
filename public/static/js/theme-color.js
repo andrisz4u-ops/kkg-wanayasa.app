@@ -205,6 +205,38 @@ export function applyThemeColor(themeKey = 'teal', persist = true) {
     .shadow-teal-500\\/5, .shadow-teal-500\\/10, .shadow-teal-500\\/20, .shadow-teal-500\\/25, .shadow-teal-500\\/30 {
       --tw-shadow-color: ${t.glow} !important;
     }
+
+    /* Workspace & Studio Organik Dynamic Theme Adaptation */
+    .workspace-shell.wk-organic-studio .wk-persistent-sidebar,
+    .workspace-shell.wk-organic-studio .wk-drawer {
+      background: linear-gradient(158deg, ${t.accent} 0%, ${t.dark} 52%, ${t.deepDark || t.dark} 100%) !important;
+      border-color: ${t.primary}33 !important;
+    }
+    .feature-workspace[data-studio-kind="generator"] .fs-heading,
+    .feature-workspace[data-studio-kind="control"] .fs-heading,
+    .wk-organic-studio.wk-paper-home .wk-green-dashboard .wk-welcome {
+      background: linear-gradient(118deg, ${t.accent}, ${t.dark}) !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
+    }
+    .wk-organic-studio .wk-persistent-link.wk-persistent-active,
+    .wk-organic-studio .wk-drawer .wk-nav-item.wk-nav-active {
+      color: ${t.dark} !important;
+      background: ${t.cardLight} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .wk-organic-studio :is(.wk-persistent-active, .wk-nav-active) > i {
+      color: ${t.primary} !important;
+      background: #ffffff !important;
+    }
+    .wk-organic-studio .wk-top-active::after,
+    .wk-top-active::after {
+      background: ${t.primary} !important;
+    }
+    .wk-organic-studio .wk-top-link.wk-top-active,
+    .wk-top-link.wk-top-active {
+      color: ${t.primary} !important;
+    }
   `;
 }
 

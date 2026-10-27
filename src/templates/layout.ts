@@ -16,6 +16,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#f0fdfa',
     cardLight: '#e0f2f1',
     accent: '#155e5e',
+    deepDark: '#0b3529',
     glow: 'rgba(38, 148, 148, 0.25)',
   },
   blue: {
@@ -26,6 +27,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#eff6ff',
     cardLight: '#dbeafe',
     accent: '#1e40af',
+    deepDark: '#0f172a',
     glow: 'rgba(37, 99, 235, 0.25)',
   },
   indigo: {
@@ -36,6 +38,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#eef2ff',
     cardLight: '#e0e7ff',
     accent: '#3730a3',
+    deepDark: '#1e1b4b',
     glow: 'rgba(79, 70, 229, 0.25)',
   },
   emerald: {
@@ -46,6 +49,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#ecfdf5',
     cardLight: '#d1fae5',
     accent: '#065f46',
+    deepDark: '#064e3b',
     glow: 'rgba(5, 150, 105, 0.25)',
   },
   amber: {
@@ -56,6 +60,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#fffbeb',
     cardLight: '#fef3c7',
     accent: '#92400e',
+    deepDark: '#451a03',
     glow: 'rgba(217, 119, 6, 0.25)',
   },
   rose: {
@@ -66,6 +71,7 @@ export const THEME_PRESETS: Record<string, {
     light: '#fff1f2',
     cardLight: '#ffe4e6',
     accent: '#9f1239',
+    deepDark: '#4c0519',
     glow: 'rgba(225, 29, 72, 0.25)',
   }
 };
@@ -141,6 +147,38 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     /* Shadows */
     .shadow-teal-500\\/5, .shadow-teal-500\\/10, .shadow-teal-500\\/20, .shadow-teal-500\\/25, .shadow-teal-500\\/30 {
       --tw-shadow-color: ${t.glow} !important;
+    }
+
+    /* Workspace & Studio Organik Dynamic Theme Adaptation */
+    .workspace-shell.wk-organic-studio .wk-persistent-sidebar,
+    .workspace-shell.wk-organic-studio .wk-drawer {
+      background: linear-gradient(158deg, ${t.accent} 0%, ${t.dark} 52%, ${t.deepDark || t.dark} 100%) !important;
+      border-color: ${t.primary}33 !important;
+    }
+    .feature-workspace[data-studio-kind="generator"] .fs-heading,
+    .feature-workspace[data-studio-kind="control"] .fs-heading,
+    .wk-organic-studio.wk-paper-home .wk-green-dashboard .wk-welcome {
+      background: linear-gradient(118deg, ${t.accent}, ${t.dark}) !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
+    }
+    .wk-organic-studio .wk-persistent-link.wk-persistent-active,
+    .wk-organic-studio .wk-drawer .wk-nav-item.wk-nav-active {
+      color: ${t.dark} !important;
+      background: ${t.cardLight} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .wk-organic-studio :is(.wk-persistent-active, .wk-nav-active) > i {
+      color: ${t.primary} !important;
+      background: #ffffff !important;
+    }
+    .wk-organic-studio .wk-top-active::after,
+    .wk-top-active::after {
+      background: ${t.primary} !important;
+    }
+    .wk-organic-studio .wk-top-link.wk-top-active,
+    .wk-top-link.wk-top-active {
+      color: ${t.primary} !important;
     }
   `;
 }

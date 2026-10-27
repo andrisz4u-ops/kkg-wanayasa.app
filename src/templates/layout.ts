@@ -88,22 +88,52 @@ export function getThemeCss(themeKey: string = 'teal'): string {
       --color-brand-primary: ${t.primary} !important;
       --color-brand-secondary: ${t.dark} !important;
       --color-brand-accent: ${t.primary} !important;
+      --theme-glow: ${t.glow} !important;
+      --mono-link: ${t.primary} !important;
+      --studio-action: ${t.primary} !important;
+      --studio-action-hover: ${t.dark} !important;
+      --studio-action-soft: ${t.cardLight} !important;
+      --os-leaf: ${t.primary} !important;
+      --os-forest: ${t.deepDark} !important;
+      --os-focus: ${t.primary} !important;
+    }
+    .workspace-shell.wk-paper-studio.wk-paper-home {
+      --mono-link: ${t.primary} !important;
+      --studio-action: ${t.primary} !important;
+      --studio-action-hover: ${t.dark} !important;
+      --studio-action-soft: ${t.cardLight} !important;
+    }
+    .feature-workspace {
+      --fw-accent: ${t.primary} !important;
+      --fw-dark: ${t.deepDark} !important;
+      --fw-soft: ${t.cardLight} !important;
+      --os-focus: ${t.primary} !important;
+      --page-accent: ${t.primary} !important;
+      --page-accent-2: ${t.accent} !important;
+      --page-soft: ${t.cardLight} !important;
+      --page-ink: ${t.deepDark} !important;
     }
     body {
       background-image:
         radial-gradient(ellipse 600px 400px at 85% 10%, ${t.glow}, transparent),
         radial-gradient(ellipse 500px 500px at 10% 80%, ${t.glow}, transparent) !important;
     }
-    /* Buttons */
+
+    /* Buttons & Interactive Elements */
     .btn-primary, button.bg-teal-500, a.bg-teal-500, .bg-teal-500, .bg-primary-500 {
       background-color: ${t.primary} !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
     }
     .btn-primary:hover, button.bg-teal-500:hover, a.bg-teal-500:hover, .hover\\:bg-teal-600:hover, .bg-teal-600, .bg-primary-600 {
       background-color: ${t.dark} !important;
+      border-color: ${t.dark} !important;
     }
     .hover\\:bg-teal-700:hover, .bg-teal-700 {
       background-color: ${t.accent} !important;
+      border-color: ${t.accent} !important;
     }
+
     /* Text colors */
     .text-teal-500, .text-teal-600, .text-teal-700, .text-primary-500, .text-primary-600 {
       color: ${t.primary} !important;
@@ -114,6 +144,7 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     .hover\\:text-teal-600:hover, .hover\\:text-teal-500:hover {
       color: ${t.dark} !important;
     }
+
     /* Borders */
     .border-teal-500, .border-teal-600, .border-b-teal-500, .focus\\:ring-teal-500:focus, .focus\\:border-teal-500:focus {
       border-color: ${t.primary} !important;
@@ -121,6 +152,7 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     .hover\\:border-teal-500:hover {
       border-color: ${t.primary} !important;
     }
+
     /* Light tints & badges */
     .bg-teal-50, .bg-teal-50\\/50, .bg-teal-500\\/5, .bg-teal-500\\/10 {
       background-color: ${t.light} !important;
@@ -131,6 +163,7 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     .border-teal-500\\/10, .border-teal-500\\/20, .border-teal-100 {
       border-color: ${t.cardLight} !important;
     }
+
     /* Gradients */
     .from-teal-500, .from-primary-500, .from-teal-600 {
       --tw-gradient-from: ${t.primary} var(--tw-gradient-from-position) !important;
@@ -144,15 +177,16 @@ export function getThemeCss(themeKey: string = 'teal'): string {
       --tw-gradient-to: rgb(0 0 0 / 0) var(--tw-gradient-to-position) !important;
       --tw-gradient-stops: var(--tw-gradient-from), ${t.primary} var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
     }
+
     /* Shadows */
     .shadow-teal-500\\/5, .shadow-teal-500\\/10, .shadow-teal-500\\/20, .shadow-teal-500\\/25, .shadow-teal-500\\/30 {
       --tw-shadow-color: ${t.glow} !important;
     }
 
-    /* Workspace & Studio Organik Dynamic Theme Adaptation */
+    /* Persistent Sidebar & Navigation */
     .workspace-shell.wk-organic-studio .wk-persistent-sidebar,
     .workspace-shell.wk-organic-studio .wk-drawer {
-      background: linear-gradient(158deg, ${t.accent} 0%, ${t.dark} 52%, ${t.deepDark || t.dark} 100%) !important;
+      background: linear-gradient(158deg, ${t.accent} 0%, ${t.dark} 52%, ${t.deepDark} 100%) !important;
       border-color: ${t.primary}33 !important;
     }
     .feature-workspace[data-studio-kind="generator"] .fs-heading,
@@ -179,6 +213,225 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     .wk-organic-studio .wk-top-link.wk-top-active,
     .wk-top-link.wk-top-active {
       color: ${t.primary} !important;
+    }
+
+    /* Beranda (Home Dashboard) Dynamic Overrides */
+    .wk-paper-studio.wk-paper-home .wk-studio-launch-primary {
+      background: linear-gradient(130deg, ${t.primary}, ${t.accent}) !important;
+      color: #ffffff !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-studio-launch-primary:hover {
+      background: linear-gradient(130deg, ${t.dark}, ${t.deepDark}) !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-studio-launch-cp {
+      background: ${t.cardLight} !important;
+      border: 1px solid ${t.primary}33 !important;
+      color: ${t.deepDark} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-studio-launch-cp .wk-studio-launch-icon {
+      color: ${t.primary} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-studio-launch-cp small {
+      color: ${t.accent}dd !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-support-tool-icon,
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-support-tool:hover {
+      color: ${t.primary} !important;
+    }
+    .wk-paper-studio .wk-paper-dashboard .wk-open-document,
+    .wk-open-document {
+      background: ${t.cardLight} !important;
+      color: ${t.accent} !important;
+      border: 1px solid ${t.primary}22 !important;
+    }
+    .wk-paper-studio .wk-paper-dashboard .wk-open-document:hover,
+    .wk-open-document:hover {
+      background: ${t.light} !important;
+      color: ${t.primary} !important;
+      border-color: ${t.primary} !important;
+    }
+    .wk-section-kicker {
+      color: ${t.primary} !important;
+    }
+
+    /* Admin Dashboard Panel Overrides */
+    #panel-dashboard > :first-child,
+    .ui-admin-actions {
+      background: linear-gradient(125deg, ${t.deepDark}, ${t.accent}) !important;
+      border-color: ${t.primary}44 !important;
+      color: #ffffff !important;
+    }
+    #panel-dashboard > :first-child p,
+    .ui-admin-actions p {
+      color: ${t.cardLight} !important;
+    }
+    #panel-dashboard > :first-child #dashboard-mode-label {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+    }
+    #panel-dashboard > :first-child .flex-wrap > button:not(:first-child) {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+    }
+    #panel-dashboard > :first-child .flex-wrap > button:not(:first-child):hover {
+      background: rgba(255, 255, 255, 0.22) !important;
+    }
+    #panel-dashboard > .grid:has(#total-guru) > div > div:first-child > span:first-child {
+      background: ${t.cardLight} !important;
+      color: ${t.primary} !important;
+      border-color: ${t.primary}33 !important;
+    }
+    #panel-dashboard > .grid:has(#total-guru) > div:hover {
+      border-color: ${t.primary}66 !important;
+    }
+    #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn).bg-primary-600 {
+      background-color: ${t.primary} !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
+    }
+    #panel-dashboard :is(#dash-period-7, #dash-period-30, #dash-period-90, #density-comfort-btn, #density-compact-btn).bg-primary-600:hover {
+      background-color: ${t.dark} !important;
+      border-color: ${t.dark} !important;
+    }
+    .feature-workspace [data-control-tab][aria-current="page"],
+    .control-context-link.is-active {
+      background: ${t.primary} !important;
+      border-color: ${t.dark} !important;
+      color: #ffffff !important;
+    }
+    .control-mode button[aria-pressed="true"],
+    .control-mode .fw-action[aria-pressed="true"] {
+      background: ${t.primary} !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
+    }
+
+    /* Primary Generate / Submit Action Buttons across workspaces */
+    .feature-workspace .fw-action:is(.rpp-generate-btn, .asesmen-generate-btn, #btn-submit-generate, #sg-btn-instant-flow, #generate-proker-btn, #btn-generate-program),
+    .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn,
+    .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action,
+    .feature-workspace[data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate,
+    .feature-workspace[data-feature-page="analisis-cp"][data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate,
+    .slide-classroom-studio button.ss-primary {
+      background: linear-gradient(110deg, ${t.accent}, ${t.primary}) !important;
+      border-color: ${t.dark} !important;
+      color: #ffffff !important;
+      box-shadow: 0 6px 18px ${t.glow} !important;
+    }
+    .feature-workspace .fw-action:is(.rpp-generate-btn, .asesmen-generate-btn, #btn-submit-generate, #sg-btn-instant-flow, #generate-proker-btn, #btn-generate-program):hover,
+    .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn:hover,
+    .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action:hover,
+    .feature-workspace[data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate:hover,
+    .slide-classroom-studio button.ss-primary:hover {
+      background: linear-gradient(110deg, ${t.dark}, ${t.deepDark}) !important;
+      border-color: ${t.deepDark} !important;
+    }
+
+    /* Chapter Semester Toggle Buttons (SMT 1 & SMT 2 in Analisis CP) */
+    .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem.bg-sky-500,
+    .feature-workspace #chapters-list-container .btn-toggle-sem.bg-sky-500 {
+      background: ${t.primary} !important;
+      border-color: ${t.dark} !important;
+      color: #ffffff !important;
+    }
+    .feature-workspace[data-composition="analisis-cp"] #chapters-list-container .fw-chapter-card .btn-toggle-sem.bg-purple-600,
+    .feature-workspace #chapters-list-container .btn-toggle-sem.bg-purple-600 {
+      background: ${t.accent} !important;
+      border-color: ${t.deepDark} !important;
+      color: #ffffff !important;
+    }
+
+    /* 8 Dimensi Profil Lulusan Chips (RPP) */
+    .feature-workspace[data-feature-page="rpp"] #profil-tags .rpp-tag,
+    #profil-tags .rpp-tag {
+      background: ${t.cardLight} !important;
+      border: 1px solid ${t.primary}44 !important;
+      color: ${t.accent} !important;
+    }
+    .feature-workspace[data-feature-page="rpp"] #profil-tags .rpp-tag:hover,
+    #profil-tags .rpp-tag:hover {
+      background: ${t.light} !important;
+      border-color: ${t.primary} !important;
+      color: ${t.primary} !important;
+    }
+    .feature-workspace[data-feature-page="rpp"] #profil-tags .rpp-tag.active,
+    #profil-tags .rpp-tag.active {
+      background: ${t.primary} !important;
+      border-color: ${t.dark} !important;
+      color: #ffffff !important;
+    }
+
+    /* Step Badges, Section Title Icons & Accents */
+    .feature-workspace .fw-heading-icon,
+    .fw-section-title > i,
+    .fw-section-title i {
+      color: ${t.primary} !important;
+    }
+    .feature-workspace .fw-badge,
+    .feature-workspace[data-feature-page] .fw-badge {
+      background-color: ${t.cardLight} !important;
+      color: ${t.accent} !important;
+      border-color: ${t.primary}44 !important;
+    }
+    .feature-workspace[data-feature-page] .fw-form-progress .fw-progress-steps > li.done .fw-step-count {
+      background: ${t.cardLight} !important;
+      color: ${t.accent} !important;
+      border-color: ${t.primary} !important;
+    }
+    .feature-workspace[data-feature-page] .fw-form-progress .fw-progress-fill {
+      background: linear-gradient(90deg, ${t.accent}, ${t.primary}) !important;
+    }
+
+    /* Active pills and toggles (PDF vs Teks, Cakupan 1 Tahun Penuh) */
+    .btn-cakupan-toggle.active,
+    .btn-source-toggle.active,
+    #tab-btn-pdf.active,
+    #tab-btn-pdf[class~="bg-white"],
+    .feature-workspace .fw-action:is(#tab-btn-pdf, #tab-btn-text)[class~="bg-white"] {
+      background: ${t.primary} !important;
+      border-color: ${t.dark} !important;
+      color: #ffffff !important;
+    }
+    #game-catalog-filter-chips button.bg-teal-500 {
+      background-color: ${t.primary} !important;
+      border-color: ${t.primary} !important;
+      color: #ffffff !important;
+    }
+    .ui-loading-card i {
+      color: ${t.primary} !important;
+    }
+
+    /* Focus Outlines */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    .feature-workspace .fw-field:focus {
+      outline-color: ${t.primary} !important;
+    }
+
+    /* Dark Mode Theme Support */
+    .dark .feature-workspace[data-feature-page="rpp"] #btn-generate-rpp.rpp-generate-btn,
+    .dark .feature-workspace[data-feature-page="kisi"] #asesmen-form .asesmen-action-footer > .asesmen-generate-btn.fw-action,
+    .dark .feature-workspace[data-feature-page="analisis-cp"][data-composition="analisis-cp"] .fw-cp-generate-action #btn-submit-generate {
+      background: linear-gradient(120deg, ${t.deepDark}, ${t.accent}) !important;
+      border-color: ${t.primary} !important;
+    }
+    .dark #panel-dashboard > :first-child {
+      background: linear-gradient(125deg, ${t.deepDark}, ${t.accent}) !important;
+      border-color: ${t.primary}44 !important;
+    }
+    .dark #panel-dashboard > .grid:has(#total-guru) > div > div:first-child > span:first-child {
+      background: ${t.deepDark} !important;
+      color: ${t.light} !important;
+      border-color: ${t.primary}44 !important;
+    }
+    .dark .wk-paper-studio.wk-paper-home .wk-studio-launch-cp {
+      background: ${t.deepDark} !important;
+      border-color: ${t.primary}44 !important;
+      color: ${t.light} !important;
     }
   `;
 }

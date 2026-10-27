@@ -1,0 +1,37 @@
+{
+  "slug": "kkg-kiarapedes",
+  "projectName": "kkg-kiarapedes",
+  "databaseName": "kkg-kiarapedes-db",
+  "databaseId": "11926f21-092b-4971-956e-c9bd467f56fc",
+  "bucketName": "kkg-kiarapedes-storage",
+  "organization": {
+    "nama_kkg": "KKG Kiarapedes",
+    "gugus": "1",
+    "kecamatan": "Kiarapedes",
+    "kabupaten": "Purwakarta",
+    "provinsi": "Jawa Barat",
+    "alamat_sekretariat": "SDN 1 Pusakamulya, Kec. Kiarapedes, Kab. Purwakarta",
+    "email_kkg": "deti@kkg-kiarapedes.com",
+    "website_kkg": "https://kkg-kiarapedes.pages.dev",
+    "app_name": "RuangKKG",
+    "app_url": "https://kkg-kiarapedes.pages.dev",
+    "region_profile": "purwakarta",
+    "tahun_ajaran": "2026/2027",
+    "nama_ketua": "Deti",
+    "theme_color": "emerald"
+  },
+  "admin": {
+    "nama": "Deti",
+    "email": "deti@kkg-kiarapedes.com"
+  },
+  "schools": [
+    { "nama": "SDN 1 Pusakamulya", "tipe": "negeri", "is_sekretariat": true },
+    { "nama": "SDN 2 Pusakamulya", "tipe": "negeri" },
+    { "nama": "SDN 3 Pusakamulya", "tipe": "negeri" },
+    { "nama": "SDN 1 Cibeber", "tipe": "negeri" },
+    { "nama": "SDN 2 Cibeber", "tipe": "negeri" },
+    { "nama": "SDN Sumbersari", "tipe": "negeri" },
+    { "nama": "SDN 1 Ciracas", "tipe": "negeri" }
+  ]
+}
+

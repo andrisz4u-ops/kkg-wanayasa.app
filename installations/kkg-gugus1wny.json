@@ -1,0 +1,37 @@
+{
+  "slug": "kkg-gugus1wny",
+  "projectName": "kkg-gugus1wny",
+  "databaseName": "kkg-gugus1wny-db",
+  "databaseId": "0a26cd88-d5fb-4c25-8a3d-441f728b90a9",
+  "bucketName": "kkg-gugus1wny-storage",
+  "organization": {
+    "nama_kkg": "KKG Gugus 1 Wanayasa",
+    "gugus": "1",
+    "kecamatan": "Wanayasa",
+    "kabupaten": "Purwakarta",
+    "provinsi": "Jawa Barat",
+    "alamat_sekretariat": "SDN 1 Wanayasa, Kec. Wanayasa, Kab. Purwakarta",
+    "email_kkg": "novan@ruangkkg.my.id",
+    "website_kkg": "https://kkg-gugus1wny.pages.dev",
+    "app_name": "RuangKKG",
+    "app_url": "https://kkg-gugus1wny.pages.dev",
+    "region_profile": "purwakarta",
+    "tahun_ajaran": "2026/2027",
+    "nama_ketua": "Novan",
+    "theme_color": "blue"
+  },
+  "admin": {
+    "nama": "Novan",
+    "email": "novan@ruangkkg.my.id"
+  },
+  "schools": [
+    { "nama": "SDN 1 Wanayasa", "tipe": "negeri", "is_sekretariat": true },
+    { "nama": "SDN 2 Wanayasa", "tipe": "negeri" },
+    { "nama": "SDN 1 Babakan", "tipe": "negeri" },
+    { "nama": "SDN 2 Babakan", "tipe": "negeri" },
+    { "nama": "SDN 1 Wanasari", "tipe": "negeri" },
+    { "nama": "SDN 2 Wanasari", "tipe": "negeri" },
+    { "nama": "SDS IT Al-Akhyar", "tipe": "swasta" }
+  ]
+}
+

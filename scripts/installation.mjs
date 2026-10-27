@@ -17,12 +17,20 @@ console.log(JSON.stringify({ action: values.action, project: config.projectName,
     target: values.remote ? 'REMOTE' : 'LOCAL' }, null, 2));
 
 function wrangler(args, json = false) {
-    const result = spawnSync(process.execPath, [resolve(root, 'node_modules/wrangler/bin/wrangler.js'), ...args, '--config', configPath], {
-        cwd: root, env: process.env, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
+    const isPages = args[0] === 'pages';
+    const cwd = isPages ? dirname(configPath) : root;
+    const finalArgs = isPages ? [...args] : [...args, '--config', configPath];
+    const result = spawnSync(process.execPath, [resolve(root, 'node_modules/wrangler/bin/wrangler.js'), ...finalArgs], {
+        cwd, env: process.env, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
     });
     // Never print a failed bootstrap command or SQL containing password hashes.
     if (result.status !== 0) throw new Error(`Wrangler ${args[0]} gagal; periksa target, akses Cloudflare dan status migrasi. Output SQL tidak ditampilkan.`);
-    if (json) return JSON.parse(result.stdout);
+    if (json) {
+        const jsonStart = result.stdout.search(/[{\[]/);
+        if (jsonStart === -1) throw new Error('Output tidak mengandung JSON valid');
+        const jsonEnd = Math.max(result.stdout.lastIndexOf('}'), result.stdout.lastIndexOf(']'));
+        return JSON.parse(result.stdout.slice(jsonStart, jsonEnd + 1));
+    }
     console.log(result.stdout);
 }
 if (values.action !== 'check') {

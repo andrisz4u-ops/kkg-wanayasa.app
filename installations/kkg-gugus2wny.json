@@ -1,0 +1,36 @@
+{
+  "slug": "kkg-gugus2wny",
+  "projectName": "kkg-gugus2wny",
+  "databaseName": "kkg-gugus2wny-db",
+  "databaseId": "fcd1fca8-5d8e-48fe-b8c4-f698f73853e2",
+  "bucketName": "kkg-gugus2wny-storage",
+  "organization": {
+    "nama_kkg": "KKG Gugus 2 Wanayasa",
+    "gugus": "2",
+    "kecamatan": "Wanayasa",
+    "kabupaten": "Purwakarta",
+    "provinsi": "Jawa Barat",
+    "alamat_sekretariat": "SDN 1 Taringgul Tonggoh, Kec. Wanayasa, Kab. Purwakarta",
+    "email_kkg": "endang@ruangkkg.my.id",
+    "website_kkg": "https://kkg-gugus2wny.pages.dev",
+    "app_name": "RuangKKG",
+    "app_url": "https://kkg-gugus2wny.pages.dev",
+    "region_profile": "purwakarta",
+    "tahun_ajaran": "2026/2027",
+    "nama_ketua": "Endang",
+    "theme_color": "indigo"
+  },
+  "admin": {
+    "nama": "Endang",
+    "email": "endang@ruangkkg.my.id"
+  },
+  "schools": [
+    { "nama": "SDN 1 Taringgul Tonggoh", "tipe": "negeri", "is_sekretariat": true },
+    { "nama": "SDN 2 Taringgul Tonggoh", "tipe": "negeri" },
+    { "nama": "SDN Taringgul Tengah", "tipe": "negeri" },
+    { "nama": "SDN Sukadami", "tipe": "negeri" },
+    { "nama": "SDN Legokhuni", "tipe": "negeri" },
+    { "nama": "SDN Ciawi", "tipe": "negeri" }
+  ]
+}
+

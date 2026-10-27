@@ -30,7 +30,8 @@
     "test:assessment-images:browser": "node ./scripts/check-assessment-image-browser.mjs",
     "deploy:fleet": "node ./scripts/fleet-deploy.mjs",
     "deploy:fleet:migrate": "node ./scripts/fleet-deploy.mjs --migrate",
-    "sync:curriculum": "node ./scripts/sync-curriculum.mjs"
+    "sync:curriculum": "node ./scripts/sync-curriculum.mjs",
+    "sync:ai": "node ./scripts/sync-ai-providers.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.986.0",

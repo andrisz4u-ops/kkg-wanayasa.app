@@ -6,6 +6,7 @@ export const THEME_PRESETS: Record<string, {
   light: string;
   cardLight: string;
   accent: string;
+  deepDark: string;
   glow: string;
 }> = {
   teal: {
@@ -32,47 +33,47 @@ export const THEME_PRESETS: Record<string, {
   },
   indigo: {
     id: 'indigo',
-    name: 'Indigo EduTech',
-    primary: '#4f46e5',
-    dark: '#4338ca',
-    light: '#eef2ff',
-    cardLight: '#e0e7ff',
-    accent: '#3730a3',
-    deepDark: '#1e1b4b',
-    glow: 'rgba(79, 70, 229, 0.25)',
+    name: 'Biru Safir Ningrat',
+    primary: '#2b4c6f',
+    dark: '#1f3852',
+    deepDark: '#0c1824',
+    light: '#f0f5fa',
+    cardLight: '#e2ecf5',
+    accent: '#16283b',
+    glow: 'rgba(43, 76, 111, 0.25)',
   },
   emerald: {
     id: 'emerald',
-    name: 'Hijau Zamrud (Madrasah)',
-    primary: '#059669',
-    dark: '#047857',
-    light: '#ecfdf5',
-    cardLight: '#d1fae5',
-    accent: '#065f46',
-    deepDark: '#064e3b',
-    glow: 'rgba(5, 150, 105, 0.25)',
+    name: 'Salem Muda (Apricot Blush)',
+    primary: '#c26d5c',
+    dark: '#9e493a',
+    deepDark: '#451c15',
+    light: '#fdf6f4',
+    cardLight: '#fbe6e1',
+    accent: '#853629',
+    glow: 'rgba(194, 109, 92, 0.25)',
   },
   amber: {
     id: 'amber',
-    name: 'Emas Nusantara (Terracotta)',
-    primary: '#d97706',
-    dark: '#b45309',
-    light: '#fffbeb',
-    cardLight: '#fef3c7',
-    accent: '#92400e',
-    deepDark: '#451a03',
-    glow: 'rgba(217, 119, 6, 0.25)',
+    name: 'Cokelat Cendana (Moka)',
+    primary: '#6d4c3d',
+    dark: '#553a2e',
+    deepDark: '#271913',
+    light: '#faf6f3',
+    cardLight: '#f0e7e1',
+    accent: '#3d281f',
+    glow: 'rgba(109, 76, 61, 0.25)',
   },
   rose: {
     id: 'rose',
-    name: 'Merah Marun (Crimson Royal)',
-    primary: '#e11d48',
-    dark: '#be123c',
-    light: '#fff1f2',
-    cardLight: '#ffe4e6',
-    accent: '#9f1239',
-    deepDark: '#4c0519',
-    glow: 'rgba(225, 29, 72, 0.25)',
+    name: 'Merah Marun (Burgundy)',
+    primary: '#6b1d34',
+    dark: '#521325',
+    deepDark: '#26050f',
+    light: '#fcf2f4',
+    cardLight: '#f7dde3',
+    accent: '#3b0b19',
+    glow: 'rgba(107, 29, 52, 0.25)',
   }
 };
 
@@ -213,6 +214,83 @@ export function getThemeCss(themeKey: string = 'teal'): string {
     .wk-organic-studio .wk-top-link.wk-top-active,
     .wk-top-link.wk-top-active {
       color: ${t.primary} !important;
+    }
+
+    /* Canvas & Studio Page Backgrounds */
+    .workspace-shell.wk-paper-studio,
+    .workspace-shell.wk-paper-studio.wk-paper-home {
+      --mono-canvas: ${t.light} !important;
+      --mono-soft: ${t.light} !important;
+      --mono-line: ${t.cardLight} !important;
+      --mono-link: ${t.primary} !important;
+      --studio-action: ${t.primary} !important;
+      --studio-action-hover: ${t.dark} !important;
+      --studio-action-soft: ${t.cardLight} !important;
+      background: ${t.light} !important;
+    }
+
+    /* Admin / Workspace Management Card on Home */
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-management,
+    .wk-management {
+      background: ${t.light} !important;
+      border: 1px solid ${t.cardLight} !important;
+    }
+    .wk-management .wk-eyebrow {
+      background: ${t.cardLight} !important;
+      color: ${t.accent} !important;
+    }
+    .wk-management .wk-management-links a,
+    .wk-management a {
+      color: ${t.primary} !important;
+    }
+    .wk-management .wk-management-links a:hover,
+    .wk-management a:hover {
+      color: ${t.dark} !important;
+    }
+    .wk-approval-summary i,
+    .wk-approval-summary svg {
+      color: ${t.primary} !important;
+    }
+
+    /* Community Access & Links on Home */
+    .wk-paper-studio.wk-paper-home .wk-studio-community-links button:hover {
+      background: ${t.cardLight} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-documents-empty {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-empty-file {
+      color: ${t.primary} !important;
+    }
+    .wk-announcement-list li button:hover strong {
+      color: ${t.primary} !important;
+    }
+    .wk-discussion-icon {
+      color: ${t.primary} !important;
+    }
+    .wk-discussion-list li button:hover strong {
+      color: ${t.primary} !important;
+    }
+
+    /* Admin Dashboard Metric Grids */
+    #panel-dashboard > .grid:has(#metric-new-users) > div {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    #panel-dashboard > .grid:has(#total-guru) > div:hover {
+      border-color: ${t.primary} !important;
+    }
+
+    /* AI Monitor & Slide Studio */
+    .ai-generation-notice, .ai-monitor {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .slide-classroom-studio {
+      --slide-accent: ${t.primary} !important;
+      --slide-soft: ${t.cardLight} !important;
+      --slide-line: ${t.cardLight} !important;
     }
 
     /* Beranda (Home Dashboard) Dynamic Overrides */

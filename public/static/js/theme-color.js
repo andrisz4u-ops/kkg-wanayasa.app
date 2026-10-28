@@ -34,59 +34,59 @@ export const THEME_PRESETS = {
   },
   indigo: {
     id: 'indigo',
-    name: 'Indigo EduTech',
-    tag: 'Digital & Cerdas',
-    desc: 'Nuansa teknologi digital modern, futuristik, dan transformatif.',
-    primary: '#4f46e5',
-    dark: '#4338ca',
-    light: '#eef2ff',
-    cardLight: '#e0e7ff',
-    accent: '#3730a3',
-    deepDark: '#1e1b4b',
-    glow: 'rgba(79, 70, 229, 0.25)',
-    swatch: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)'
+    name: 'Biru Safir Ningrat',
+    tag: 'Sejuk & Cerdas',
+    desc: 'Nuansa biru safir klasik yang teduh, intelek, dan nyaman di mata.',
+    primary: '#2b4c6f',
+    dark: '#1f3852',
+    light: '#f0f5fa',
+    cardLight: '#e2ecf5',
+    accent: '#16283b',
+    deepDark: '#0c1824',
+    glow: 'rgba(43, 76, 111, 0.25)',
+    swatch: 'linear-gradient(135deg, #2b4c6f 0%, #1f3852 100%)'
   },
   emerald: {
     id: 'emerald',
-    name: 'Hijau Zamrud (Madrasah)',
-    tag: 'Islami & Sejuk',
-    desc: 'Alami, sejuk, mencerminkan keteduhan dan nilai madrasah.',
-    primary: '#059669',
-    dark: '#047857',
-    light: '#ecfdf5',
-    cardLight: '#d1fae5',
-    accent: '#065f46',
-    deepDark: '#064e3b',
-    glow: 'rgba(5, 150, 105, 0.25)',
-    swatch: 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+    name: 'Salem Muda (Apricot Blush)',
+    tag: 'Lembut & Anggun',
+    desc: 'Nuansa salem muda yang hangat, sejuk, tenang, dan memancarkan keanggunan.',
+    primary: '#c26d5c',
+    dark: '#9e493a',
+    light: '#fdf6f4',
+    cardLight: '#fbe6e1',
+    accent: '#853629',
+    deepDark: '#451c15',
+    glow: 'rgba(194, 109, 92, 0.25)',
+    swatch: 'linear-gradient(135deg, #c26d5c 0%, #9e493a 100%)'
   },
   amber: {
     id: 'amber',
-    name: 'Emas Nusantara (Terracotta)',
-    tag: 'Hangat & Karismatik',
-    desc: 'Hangat, elegan, membangkitkan energi dan antusiasme belajar.',
-    primary: '#d97706',
-    dark: '#b45309',
-    light: '#fffbeb',
-    cardLight: '#fef3c7',
-    accent: '#92400e',
-    deepDark: '#451a03',
-    glow: 'rgba(217, 119, 6, 0.25)',
-    swatch: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
+    name: 'Cokelat Cendana (Moka)',
+    tag: 'Hangat & Klasik',
+    desc: 'Nuansa kayu cendana dan moka klasik yang teduh, berwibawa, dan bersahaja.',
+    primary: '#6d4c3d',
+    dark: '#553a2e',
+    light: '#faf6f3',
+    cardLight: '#f0e7e1',
+    accent: '#3d281f',
+    deepDark: '#271913',
+    glow: 'rgba(109, 76, 61, 0.25)',
+    swatch: 'linear-gradient(135deg, #6d4c3d 0%, #553a2e 100%)'
   },
   rose: {
     id: 'rose',
-    name: 'Merah Marun (Crimson Royal)',
-    tag: 'Tegas & Berani',
-    desc: 'Bermartabat, melambangkan dedikasi dan kepemimpinan pendidik.',
-    primary: '#e11d48',
-    dark: '#be123c',
-    light: '#fff1f2',
-    cardLight: '#ffe4e6',
-    accent: '#9f1239',
-    deepDark: '#4c0519',
-    glow: 'rgba(225, 29, 72, 0.25)',
-    swatch: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)'
+    name: 'Merah Marun (Burgundy)',
+    tag: 'Mewah & Berwibawa',
+    desc: 'Merah marun delima tua yang anggun, melambangkan dedikasi pendidik.',
+    primary: '#6b1d34',
+    dark: '#521325',
+    light: '#fcf2f4',
+    cardLight: '#f7dde3',
+    accent: '#3b0b19',
+    deepDark: '#26050f',
+    glow: 'rgba(107, 29, 52, 0.25)',
+    swatch: 'linear-gradient(135deg, #6b1d34 0%, #521325 100%)'
   }
 };
 
@@ -276,6 +276,83 @@ export function applyThemeColor(themeKey = 'teal', persist = true) {
     .wk-organic-studio .wk-top-link.wk-top-active,
     .wk-top-link.wk-top-active {
       color: ${t.primary} !important;
+    }
+
+    /* Canvas & Studio Page Backgrounds */
+    .workspace-shell.wk-paper-studio,
+    .workspace-shell.wk-paper-studio.wk-paper-home {
+      --mono-canvas: ${t.light} !important;
+      --mono-soft: ${t.light} !important;
+      --mono-line: ${t.cardLight} !important;
+      --mono-link: ${t.primary} !important;
+      --studio-action: ${t.primary} !important;
+      --studio-action-hover: ${t.dark} !important;
+      --studio-action-soft: ${t.cardLight} !important;
+      background: ${t.light} !important;
+    }
+
+    /* Admin / Workspace Management Card on Home */
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-management,
+    .wk-management {
+      background: ${t.light} !important;
+      border: 1px solid ${t.cardLight} !important;
+    }
+    .wk-management .wk-eyebrow {
+      background: ${t.cardLight} !important;
+      color: ${t.accent} !important;
+    }
+    .wk-management .wk-management-links a,
+    .wk-management a {
+      color: ${t.primary} !important;
+    }
+    .wk-management .wk-management-links a:hover,
+    .wk-management a:hover {
+      color: ${t.dark} !important;
+    }
+    .wk-approval-summary i,
+    .wk-approval-summary svg {
+      color: ${t.primary} !important;
+    }
+
+    /* Community Access & Links on Home */
+    .wk-paper-studio.wk-paper-home .wk-studio-community-links button:hover {
+      background: ${t.cardLight} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-documents-empty {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .wk-paper-studio.wk-paper-home .wk-green-dashboard .wk-empty-file {
+      color: ${t.primary} !important;
+    }
+    .wk-announcement-list li button:hover strong {
+      color: ${t.primary} !important;
+    }
+    .wk-discussion-icon {
+      color: ${t.primary} !important;
+    }
+    .wk-discussion-list li button:hover strong {
+      color: ${t.primary} !important;
+    }
+
+    /* Admin Dashboard Metric Grids */
+    #panel-dashboard > .grid:has(#metric-new-users) > div {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    #panel-dashboard > .grid:has(#total-guru) > div:hover {
+      border-color: ${t.primary} !important;
+    }
+
+    /* AI Monitor & Slide Studio */
+    .ai-generation-notice, .ai-monitor {
+      background: ${t.light} !important;
+      border-color: ${t.cardLight} !important;
+    }
+    .slide-classroom-studio {
+      --slide-accent: ${t.primary} !important;
+      --slide-soft: ${t.cardLight} !important;
+      --slide-line: ${t.cardLight} !important;
     }
 
     /* Beranda (Home Dashboard) Dynamic Overrides */

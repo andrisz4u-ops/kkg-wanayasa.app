@@ -32,24 +32,32 @@ export function buildScene(input, templateId, { aspectRatio = '16:9', index = 0,
   const line = (x, y, x2, y2, color = c.primary, thickness = 4) => nodes.push({ kind: 'line', x, y, x2, y2, color, thickness });
   const write = (value, x, y, w, h, size = 32, options = {}) => {
     if (!value) return;
-    let fitted = size, lines = wrapText(value, w - 6, fitted);
-    const minSize = options.minSize || Math.min(size, 26);
-    while (lines.length * fitted * 1.23 > h && fitted > minSize) { fitted -= 1; lines = wrapText(value, w - 6, fitted); }
-    if (lines.length * fitted * 1.23 > h) warnings.push(`Teks “${String(value).slice(0, 35)}” terlalu panjang untuk bidangnya.`);
+    let fitted = size;
+    const minSize = options.minSize || Math.min(size, 18);
+    let lineMultiplier = fitted <= 22 ? 1.18 : 1.23;
+    let lines = wrapText(value, w - 6, fitted);
+    while (lines.length * fitted * lineMultiplier > h && fitted > minSize) {
+      fitted -= 1;
+      lineMultiplier = fitted <= 22 ? 1.18 : 1.23;
+      lines = wrapText(value, w - 6, fitted);
+    }
+    if (lines.length * fitted * lineMultiplier > h) warnings.push(`Teks “${String(value).slice(0, 35)}” terlalu panjang untuk bidangnya.`);
     nodes.push({ kind: 'text', text: String(value), lines, x, y, w, h, size: fitted, font: options.heading ? theme.headingFont : theme.font, color: options.color || c.ink, bold: !!options.bold || !!options.heading, align: options.align || 'left', prop: options.prop });
   };
   const bulletList = (items, x, y, w, h, style = theme.body) => {
     if (!items.length) return;
-    const gap = 12, padding = style === 'tiles' ? 12 : 6;
+    const gap = items.length > 4 ? 8 : 12;
+    const padding = style === 'tiles' ? (items.length > 4 ? 8 : 12) : (items.length > 4 ? 4 : 6);
     const inset = style === 'editorial' ? 64 : style === 'tiles' ? 48 : 22;
     const textW = w - inset - (style === 'tiles' ? 16 : 8);
     const available = h - gap * (items.length - 1) - padding * 2 * items.length;
     let size = 34, heights;
     do {
-      heights = items.map(value => wrapText(value, textW - 6, size).length * size * 1.23);
-      if (heights.reduce((sum, value) => sum + value, 0) <= available || size === 26) break;
+      const lineMultiplier = size <= 22 ? 1.18 : 1.23;
+      heights = items.map(value => wrapText(value, textW - 6, size).length * size * lineMultiplier);
+      if (heights.reduce((sum, value) => sum + value, 0) <= available || size === 18) break;
       size--;
-    } while (size >= 26);
+    } while (size >= 18);
     const required = heights.reduce((sum, value) => sum + value, 0);
     const extra = Math.max(0, available - required) / items.length;
     const ratio = required > available ? Math.max(0, available) / required : 1;
@@ -59,7 +67,7 @@ export function buildScene(input, templateId, { aspectRatio = '16:9', index = 0,
       if (style === 'tiles') { box(x, yy, w, rowH, i % 2 ? c.paper : c.soft, 18); circle(x + 28, yy + rowH / 2, 8, c.primary); }
       else if (style === 'rail') { line(x + 4, yy + 6, x + 4, yy + rowH - 6, c.primary, 5); }
       else { write(String(i + 1).padStart(2, '0'), x, yy + padding, 52, textH, Math.min(size, 32), { color: c.primary, bold: true }); }
-      write(value, x + inset, yy + padding + Math.max(0, (textH - heights[i]) / 2), textW, textH, size, { prop: `content-${i}` });
+      write(value, x + inset, yy + padding + Math.max(0, (textH - heights[i]) / 2), textW, textH, size, { minSize: 16, prop: `content-${i}` });
       yy += rowH + gap;
     });
   };
@@ -119,12 +127,14 @@ export function buildScene(input, templateId, { aspectRatio = '16:9', index = 0,
   };
   if (s.layout === 'quiz') {
     write(s.question, margin, top - 10, bodyW, 94, 36, { bold: true, prop: 'question' });
-    const cols = s.visual ? 1 : 2, visualW = bodyW * .43, startX = s.visual ? margin + visualW + 28 : margin, ww = s.visual ? bodyW - visualW - 28 : (bodyW - 20) / cols;
+    const hasMedia = s.visual || s.image;
+    const cols = hasMedia ? 1 : 2, visualW = bodyW * .43, startX = hasMedia ? margin + visualW + 28 : margin, ww = hasMedia ? bodyW - visualW - 28 : (bodyW - 20) / cols;
     if (s.visual) visual(s.visual, margin, top + 106, visualW, 260);
+    else if (s.image) nodes.push({ kind: 'image', x: margin, y: top + 106, w: visualW, h: 260, url: s.image.url, alt: s.image.alt || s.question });
     s.quizOptions.forEach((option, i) => {
-      const xx = startX + (i % cols) * (ww + 20), yy = top + 110 + Math.floor(i / cols) * (s.visual ? 65 : 116);
-      box(xx, yy, ww, s.visual ? 55 : 98, reveal && i === answerIndex(s) ? c.soft : c.paper, 16, c.primary);
-      write(`${String.fromCharCode(65 + i)}. ${option.replace(/^[A-D][.\s:)\-]+/i, '')}`, xx + 24, yy + (s.visual ? 8 : 20), ww - 48, s.visual ? 45 : 70, 30, { prop: `quiz-option-${i}` });
+      const xx = startX + (i % cols) * (ww + 20), yy = top + 110 + Math.floor(i / cols) * (hasMedia ? 65 : 116);
+      box(xx, yy, ww, hasMedia ? 55 : 98, reveal && i === answerIndex(s) ? c.soft : c.paper, 16, c.primary);
+      write(`${String.fromCharCode(65 + i)}. ${option.replace(/^[A-D][.\s:)\-]+/i, '')}`, xx + 24, yy + (hasMedia ? 8 : 20), ww - 48, hasMedia ? 45 : 70, 30, { prop: `quiz-option-${i}` });
     });
     if (reveal) write(`Jawaban: ${String.fromCharCode(65 + answerIndex(s))}. ${s.quizExplanation}`, margin, 603, bodyW, 66, 24, { color: c.primary, bold: true });
   } else if (['comparison', 'twoColumn'].includes(s.layout)) {
@@ -146,6 +156,26 @@ export function buildScene(input, templateId, { aspectRatio = '16:9', index = 0,
   } else if (s.layout === 'flipcard') {
     const ww = (bodyW - 22) / 2;
     s.flipcards.forEach((row, i) => { const xx = margin + (i % 2) * (ww + 22), yy = top + Math.floor(i / 2) * 194; box(xx, yy, ww, 176, i % 2 ? c.paper : c.soft); write(reveal ? row.back : row.front, xx + 28, yy + 36, ww - 56, 108, 34, { bold: !reveal }); });
+  } else if (s.layout === 'gridCards') {
+    const cards = s.cards?.length ? s.cards : s.content.slice(0, 4).map(c => ({ title: c, desc: '', badge: '' }));
+    const count = Math.min(4, Math.max(2, cards.length || 2));
+    const gap = 20;
+    const ww = (bodyW - gap * (count - 1)) / count;
+    cards.slice(0, count).forEach((card, i) => {
+      const xx = margin + i * (ww + gap);
+      box(xx, top, ww, bodyH, i % 2 ? c.paper : c.soft, 20);
+      let curY = top + 24;
+      if (card.badge) {
+        box(xx + 18, curY, Math.min(ww - 36, Math.max(50, card.badge.length * 11 + 18)), 28, c.primary, 8);
+        write(card.badge, xx + 20, curY + 3, ww - 40, 22, 15, { color: '#ffffff', bold: true, align: 'center' });
+        curY += 38;
+      }
+      write(card.title, xx + 18, curY, ww - 36, 85, 28, { bold: true, prop: `card-title-${i}` });
+      curY += 88;
+      if (card.desc) {
+        write(card.desc, xx + 18, curY, ww - 36, bodyH - (curY - top) - 18, 21, { color: c.muted, prop: `card-desc-${i}` });
+      }
+    });
   } else if (s.layout === 'activity') {
     box(margin, top, bodyW, bodyH, c.soft, 24); write(s.instruction, margin + 34, top + 38, bodyW - 68, 190, 40, { bold: true, prop: 'instruction' });
     write([s.time, s.groupSize, s.materials].filter(Boolean).join('  •  '), margin + 34, top + 270, bodyW - 68, 85, 28, { color: c.primary });
@@ -166,6 +196,7 @@ export function sceneSvg(scene, label = 'Slide pembelajaran') {
     if (node.kind === 'image') return `<image href="${escapeXml(node.url)}" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" preserveAspectRatio="xMidYMid slice"><title>${escapeXml(node.alt)}</title></image>`;
     if (node.kind === 'triangle') return `<polygon points="${node.x + node.w / 2},${node.y} ${node.x + node.w},${node.y + node.h} ${node.x},${node.y + node.h}" fill="${node.fill}" transform="rotate(${node.rotation} ${node.x + node.w / 2} ${node.y + node.h / 2})"/>`;
     const xx = node.align === 'center' ? node.x + node.w / 2 : node.align === 'right' ? node.x + node.w : node.x;
-    return `<text fill="${node.color}" font-family="${escapeXml(node.font)}, ${node.font === 'Georgia' ? 'serif' : 'Arial, sans-serif'}" font-size="${node.size}" font-weight="${node.bold ? 700 : 400}" text-anchor="${node.align === 'center' ? 'middle' : node.align === 'right' ? 'end' : 'start'}"${node.prop ? ` data-edit="${node.prop}"` : ''}>${node.lines.map((value, i) => `<tspan x="${xx}" y="${node.y + node.size + i * node.size * 1.23}">${escapeXml(value)}</tspan>`).join('')}</text>`;
+    const lineSpacing = node.size <= 22 ? 1.18 : 1.23;
+    return `<text fill="${node.color}" font-family="${escapeXml(node.font)}, ${node.font === 'Georgia' ? 'serif' : 'Arial, sans-serif'}" font-size="${node.size}" font-weight="${node.bold ? 700 : 400}" text-anchor="${node.align === 'center' ? 'middle' : node.align === 'right' ? 'end' : 'start'}"${node.prop ? ` data-edit="${node.prop}"` : ''}>${node.lines.map((value, i) => `<tspan x="${xx}" y="${node.y + node.size + i * node.size * lineSpacing}">${escapeXml(value)}</tspan>`).join('')}</text>`;
   }).join('')}</svg>`;
 }

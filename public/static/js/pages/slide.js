@@ -33,14 +33,20 @@ function materialConfig(config) {
   return material;
 }
 function initial() {
-  return { owner: owner(), view: 'brief', template: 'kelas-ceria', outline: [], deck: { title: '', slides: [] }, index: 0, reveal: false, busy: false, providers: [], ready: false, saveStatus: 'Draf belum disimpan', serverDocumentId: '', serverRevision: 0, reviewStatus: 'needs-review', reviewAction: null, reviewDirty: false, reviewBusy: false, reviewEditVersion: 0, reviewReadToken: 0, reviewLoadedKey: '', pendingReviewAction: null, config: { topik: '', mataPelajaran: 'IPAS', jenjangKelas: `Kelas ${String(state.user?.kelas || '5').match(/[1-6]/)?.[0] || '5'}`, slideCount: 8, aspectRatio: '16:9', aiProvider: '', semester: '1', alokasiWaktu: '2 x 35 menit', extraInstructions: '', usePhotos: false } };
+  return { owner: owner(), view: 'brief', template: 'kelas-ceria', outline: [], deck: { title: '', slides: [] }, index: 0, reveal: false, busy: false, providers: [], ready: false, saveStatus: 'Draf belum disimpan', serverDocumentId: '', serverRevision: 0, reviewStatus: 'needs-review', reviewAction: null, reviewDirty: false, reviewBusy: false, reviewEditVersion: 0, reviewReadToken: 0, reviewLoadedKey: '', pendingReviewAction: null, config: { topik: '', mataPelajaran: 'IPAS', jenjangKelas: `Kelas ${String(state.user?.kelas || '5').match(/[1-6]/)?.[0] || '5'}`, slideCount: 8, aspectRatio: '16:9', aiProvider: '', semester: '1', alokasiWaktu: '2 x 35 menit', extraInstructions: '', usePhotos: true } };
 }
 const snapshot = () => ({ config: S.config, deck: S.deck, template: S.template, outline: S.outline, index: S.index, serverDocumentId: syncClient?.documentId || S.serverDocumentId, serverRevision: syncClient?.revision ?? S.serverRevision, reviewEditVersion: S.reviewEditVersion, reviewDirty: S.reviewDirty, pendingReviewAction: S.pendingReviewAction });
 function save() {
   invalidateTeacherReview();
+  const currentOwner = owner();
+  if (!currentOwner) {
+    S.saveStatus = 'Draf lokal aktif (masuk untuk sinkronisasi server)';
+    document.querySelectorAll('.ss-save-status').forEach(badge => { badge.textContent = S.saveStatus; badge.dataset.error = 'false'; });
+    return true;
+  }
   const ok = writeDraft(snapshot(), S.owner); S.saveStatus = ok ? 'Draf tersimpan di perangkat ini; menyinkronkan…' : 'Draf belum tersimpan; unduh atau simpan ke Riwayat';
   document.querySelectorAll('.ss-save-status').forEach(badge => { badge.textContent = S.saveStatus; badge.dataset.error = String(!ok); });
-  if (ok && syncClient && owner() === S.owner) syncServer();
+  if (ok && syncClient && currentOwner === S.owner) syncServer();
   return ok;
 }
 function syncServer() {
@@ -71,12 +77,38 @@ function initializeSyncClient() {
   syncClient = client;
   client.restoreIdentity(S.serverDocumentId, S.serverRevision);
 }
+function archiveDeck(deck = S.deck, config = S.config, template = S.template, outline = S.outline) {
+  if (!deck || !Array.isArray(deck.slides) || !deck.slides.length) return null;
+  const cleanDeck = {
+    ...deck,
+    slides: deck.slides.map(s => (s.image?.url?.startsWith('data:image/') ? { ...s, image: { ...s.image, url: '' } } : s))
+  };
+  return saveDocArchive({
+    module: 'slide',
+    title: deck.title || config?.topik || 'Presentasi Pembelajaran',
+    subtitle: `${config?.jenjangKelas || 'Kelas'} • ${deck.slides.length} slide`,
+    inputData: config,
+    content: { ...cleanDeck, deck: cleanDeck, template, outline, config }
+  });
+}
 function preserveCurrentDraft() {
-  if (!writeDraft(snapshot(), S.owner)) { showToast('Draf lokal belum tersimpan. Perubahan tidak akan diganti.', 'error'); return false; }
+  const currentOwner = owner() || S.owner;
+  if (currentOwner) S.owner = currentOwner;
+  const snap = snapshot();
+  let ok = writeDraft(snap, currentOwner);
+  if (!ok && snap.deck?.slides) {
+    const trimmedSnap = {
+      ...snap,
+      deck: {
+        ...snap.deck,
+        slides: snap.deck.slides.map(s => (s.image?.url?.startsWith('data:image/') ? { ...s, image: { ...s.image, url: '' } } : s))
+      }
+    };
+    ok = writeDraft(trimmedSnap, currentOwner);
+  }
   if (!S.deck.slides.length && !S.config.topik && !S.outline.length) return true;
-  const archived = saveDocArchive({ module: 'slide', title: S.deck.title || S.config.topik || 'Draf presentasi', subtitle: `${S.config.jenjangKelas} • ${S.deck.slides.length} slide`, inputData: S.config, content: { deck: S.deck, template: S.template, outline: S.outline, config: S.config } });
-  if (!archived) { showToast('Draf lokal belum dapat dicadangkan. Perubahan tidak akan diganti.', 'error'); return false; }
-  return true;
+  archiveDeck(S.deck, S.config, S.template, S.outline);
+  return ok;
 }
 function changed() {
   invalidateTeacherReview();
@@ -119,7 +151,7 @@ function updateTeacherReviewUi() {
   if (history) history.disabled = !syncClient?.revision || owner() !== S.owner;
 }
 function teacherReviewMarkup() {
-  return `<section class="ss-panel" id="sg-teacher-review" aria-labelledby="sg-teacher-review-title"><h2 id="sg-teacher-review-title">Tinjauan guru</h2><p id="sg-teacher-review-status" role="status">${esc(syncClient?.conflict ? 'Konflik versi: pulihkan versi server atau simpan salinan lokal sebelum meninjau.' : S.reviewDirty ? 'Perubahan belum dinilai sebagai tinjauan. Simpan versi terbaru ke server terlebih dahulu.' : S.reviewRevision ? `${teacherReviewLabel(S.reviewStatus)} · revisi server ${S.reviewRevision}` : 'Draf belum tersimpan di server; tinjauan belum dapat dicatat.')}</p><p id="sg-teacher-review-detail">Ini catatan tinjauan Anda untuk versi tersebut, bukan pengesahan resmi atau jaminan kebenaran materi.</p><div class="ss-actions"><button type="button" data-teacher-review-action="reviewed" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Saya sudah meninjau</button><button type="button" data-teacher-review-action="rejected" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Tandai perlu perbaikan</button><button type="button" id="sg-review-history" ${!syncClient?.revision ? 'disabled' : ''}>Riwayat tinjauan</button></div></section>`;
+  return `<section class="ss-panel" id="sg-teacher-review" aria-labelledby="sg-teacher-review-title" style="display:none;" aria-hidden="true"><h2 id="sg-teacher-review-title">Tinjauan guru</h2><p id="sg-teacher-review-status" role="status">${esc(syncClient?.conflict ? 'Konflik versi: pulihkan versi server atau simpan salinan lokal sebelum meninjau.' : S.reviewDirty ? 'Perubahan belum dinilai sebagai tinjauan. Simpan versi terbaru ke server terlebih dahulu.' : S.reviewRevision ? `${teacherReviewLabel(S.reviewStatus)} · revisi server ${S.reviewRevision}` : 'Draf belum tersimpan di server; tinjauan belum dapat dicatat.')}</p><p id="sg-teacher-review-detail">Ini catatan tinjauan Anda untuk versi tersebut, bukan pengesahan resmi atau jaminan kebenaran materi.</p><div class="ss-actions"><button type="button" data-teacher-review-action="reviewed" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Saya sudah meninjau</button><button type="button" data-teacher-review-action="rejected" ${S.reviewBusy || syncClient?.conflict ? 'disabled' : ''}>Tandai perlu perbaikan</button><button type="button" id="sg-review-history" ${!syncClient?.revision ? 'disabled' : ''}>Riwayat tinjauan</button></div></section>`;
 }
 async function loadTeacherReview() {
   const client = syncClient;
@@ -146,11 +178,16 @@ async function loadTeacherReview() {
   }
 }
 async function performTeacherReview(status) {
+  const currentOwner = owner();
+  if (!currentOwner) {
+    showToast('Masuk dengan akun guru terlebih dahulu untuk mencatat tinjauan.', 'info');
+    return;
+  }
   const client = syncClient;
   const reviewOwner = S.owner;
   const documentId = client?.documentId;
   const editVersion = S.reviewEditVersion;
-  if (!client || !documentId || owner() !== reviewOwner) return;
+  if (!client || !documentId || currentOwner !== reviewOwner) return;
   clearTimeout(timer);
   const data = snapshot();
   if (!writeDraft(data, reviewOwner)) { showToast('Draf lokal belum tersimpan. Tinjauan ditunda.', 'error'); return; }
@@ -205,20 +242,58 @@ export function renderSlide() {
   return markup();
 }
 function header(title, description) {
-  return `<header class="ss-header"><div><h1>${title}</h1><p>${description}</p><span class="ss-save-status" role="status">${esc(S.saveStatus)}</span></div><div class="ss-actions"><button id="sg-history">Riwayat Slide</button><button id="sg-server-drafts">Draf di server</button>${S.deck.slides.length ? '<button id="sg-save-checkpoint">Simpan checkpoint</button><button id="sg-new">Presentasi baru</button>' : ''}</div></header>`;
+  return `<header class="ss-header"><div><h1>${title}</h1><p>${description}</p><span class="ss-save-status" role="status">${esc(S.saveStatus)}</span></div><div class="ss-actions"><button id="sg-history">Riwayat Slide</button><button id="sg-server-drafts" style="display:none;" aria-hidden="true" tabindex="-1">Draf di server</button>${S.deck.slides.length ? '<button id="sg-save-checkpoint">Simpan checkpoint</button><button id="sg-new">Presentasi baru</button>' : ''}</div></header>`;
 }
 function modelSelect() {
-  return `<label>Model AI<select id="sg-model-select" aria-describedby="sg-model-status">${S.providers.length ? S.providers.map(p => `<option value="${esc(p.slug)}"${selected(p.slug, S.config.aiProvider)}${Number(p.configured) === 0 ? ' disabled' : ''}>${esc(p.name)}${Number(p.configured) === 0 ? ' (belum dikonfigurasi)' : ''}</option>`).join('') : '<option value="">Memuat pilihan model…</option>'}</select></label><p id="sg-model-status" class="ss-model-status" role="status">${S.ready ? 'Model yang dipilih akan digunakan untuk permintaan ini.' : 'Memeriksa model yang tersedia…'}</p><button id="sg-reload-model" type="button">Muat ulang model</button>`;
+  return `<div style="margin-top:10px;"><div style="display:flex;align-items:flex-end;gap:10px;"><div style="flex:1;"><label style="margin-bottom:0">Model AI<select id="sg-model-select" aria-describedby="sg-model-status" style="margin-top:4px;">${S.providers.length ? S.providers.map(p => `<option value="${esc(p.slug)}"${selected(p.slug, S.config.aiProvider)}${Number(p.configured) === 0 ? ' disabled' : ''}>${esc(p.name)}${Number(p.configured) === 0 ? ' (belum dikonfigurasi)' : ''}</option>`).join('') : '<option value="">Memuat pilihan model…</option>'}</select></label></div><button id="sg-reload-model" type="button" class="ss-btn-subtle" style="min-height:42px;padding:6px 14px;font-size:12px;white-space:nowrap;border:1px solid var(--kkg-border,#cbd5e1);background:#fff;border-radius:8px;cursor:pointer;" title="Muat ulang model AI">↻ Muat ulang</button></div><p id="sg-model-status" class="ss-model-status" role="status" style="margin:4px 0 10px 0;font-size:12px;">${S.ready ? 'Model yang dipilih akan digunakan untuk permintaan ini.' : 'Memeriksa model yang tersedia…'}</p></div>`;
 }
 function briefView() {
   return `${header('Studio Kelas Hidup', 'Mulai dari topik atau materi. Susun konsep, contoh konkret dan aktivitas dalam slide yang dapat dibaca di kelas.')}
-    <div class="ss-brief"><form id="sg-brief-form" class="ss-panel"><h2>Pelajaran yang akan diajarkan</h2>
+    <div class="ss-brief"><form id="sg-brief-form" class="ss-panel" style="padding:24px;border-radius:18px;"><h2>Pelajaran yang akan diajarkan</h2>
       <div class="ss-fields"><label>Kelas<select name="jenjangKelas">${[1, 2, 3, 4, 5, 6].map(i => `<option${selected(`Kelas ${i}`, S.config.jenjangKelas)}>Kelas ${i}</option>`).join('')}</select></label><label>Mata pelajaran<select name="mataPelajaran">${slideSubjects.map(v => `<option${selected(v, canonicalSlideSubject(S.config.mataPelajaran))}>${v}</option>`).join('')}</select></label></div>
       <label>Topik / materi<textarea id="sg-main-prompt" name="topik" rows="4" required maxlength="2000" placeholder="Contoh: pecahan sederhana dengan membagi kertas menjadi bagian sama besar">${esc(S.config.topik)}</textarea></label>
       <div class="ss-fields"><label>Jumlah slide<select name="slideCount">${[4, 6, 8, 10, 12, 15, 20].map(n => `<option value="${n}"${selected(n, Number(S.config.slideCount))}>${n} slide</option>`).join('')}</select></label><label>Format layar<select name="aspectRatio"><option value="16:9"${selected('16:9', S.config.aspectRatio)}>Lebar 16:9</option><option value="4:3"${selected('4:3', S.config.aspectRatio)}>Klasik 4:3</option></select></label></div>
-      ${modelSelect()}<details><summary>Instruksi dan konteks tambahan</summary><div class="ss-fields"><label>Semester<select name="semester"><option${selected('1', S.config.semester)}>1</option><option${selected('2', S.config.semester)}>2</option></select></label><label>Alokasi waktu<input name="alokasiWaktu" value="${esc(S.config.alokasiWaktu)}" maxlength="100"></label></div><label>Instruksi tambahan<textarea name="extraInstructions" maxlength="2000" placeholder="Misalnya: alat hanya kertas; siswa belum memahami istilah pembilang">${esc(S.config.extraInstructions)}</textarea></label><label><input type="checkbox" name="usePhotos"${S.config.usePhotos ? ' checked' : ''}> Sertakan foto Unsplash jika tersedia dan relevan</label></details>
-      <div class="ss-actions" style="margin-top:18px"><button type="submit" class="ss-primary" data-requires-ai>Buat slide</button></div>
-    </form></div>`;
+      <label style="margin-top:12px;">Pilihan Tema & Desain Slide
+        <select id="sg-theme-select" name="template" style="margin-top:4px;">
+          ${Object.entries(slideTemplates).map(([id, t]) => `<option value="${id}" data-brief-template="${id}"${selected(id, S.template)}>${esc(t.name)} — ${esc(t.description)}</option>`).join('')}
+        </select>
+      </label>
+      ${modelSelect()}<details><summary>Instruksi dan konteks tambahan</summary><div class="ss-fields"><label>Semester<select name="semester"><option${selected('1', S.config.semester)}>1</option><option${selected('2', S.config.semester)}>2</option></select></label><label>Alokasi waktu<input name="alokasiWaktu" value="${esc(S.config.alokasiWaktu)}" maxlength="100"></label></div><label>Instruksi tambahan<textarea name="extraInstructions" maxlength="2000" placeholder="Misalnya: alat hanya kertas; siswa belum memahami istilah pembilang">${esc(S.config.extraInstructions)}</textarea></label><label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:6px;cursor:pointer"><input type="checkbox" name="usePhotos"${S.config.usePhotos ? ' checked' : ''}> Sertakan ilustrasi & foto visual materi pembelajaran (AI Vultr / Wikimedia)</label></details>
+      <div class="ss-actions" style="display:none;" aria-hidden="true">
+        <button type="button" id="sg-direct-generate" class="ss-primary" data-requires-ai style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span>✨ Buat slide langsung jadi</span></button>
+        <button type="submit" class="ss-btn-subtle" data-requires-ai style="padding:8px 14px;border:1px solid var(--kkg-border,#cbd5e1);background:#fff;border-radius:6px;cursor:pointer">Buat slide dengan kerangka (opsional)</button>
+      </div>
+    </form>
+    <aside class="ss-panel" style="padding:22px;border-radius:18px;background:var(--kkg-bg-surface,#ffffff);border:1px solid var(--kkg-border,#e2e8f0);box-shadow:0 4px 20px rgba(0,0,0,0.04);position:sticky;top:16px;align-self:start;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <strong style="font-size:14px;color:var(--kkg-text,#1e293b);display:flex;align-items:center;gap:6px"><span>🎨</span> Pratinjau Tema Terpilih</strong>
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;background:var(--kkg-bg-subtle,#f1f5f9);color:var(--kkg-primary,#994417)">${esc(getTemplate(S.template).name)}</span>
+      </div>
+      <div style="border-radius:12px;overflow:hidden;border:1px solid var(--kkg-border,#cbd5e1);margin-bottom:14px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+        ${preview(exampleDeck(S.template).slides[1] || exampleDeck(S.template).slides[0], S.template, 1, Number(S.config.slideCount))}
+      </div>
+      <div style="background:var(--kkg-bg-subtle,#f8fafc);border:1px solid var(--kkg-border,#e2e8f0);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--kkg-text-muted,#64748b);line-height:1.6">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+          <span>Rasio Layar:</span>
+          <strong style="color:var(--kkg-text,#1e293b)">${esc(S.config.aspectRatio || '16:9')}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.05)">
+          <span>Target Slide:</span>
+          <strong style="color:var(--kkg-text,#1e293b)">${Number(S.config.slideCount)} Slide</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0">
+          <span>Stimulus Visual:</span>
+          <strong style="color:${S.config.usePhotos ? '#16a34a' : '#64748b'}">${S.config.usePhotos ? 'Multimodal (AI / Wiki)' : 'Teks & Diagram'}</strong>
+        </div>
+      </div>
+      <div style="background:var(--kkg-bg-subtle,#fffbeb);border:1px solid #fef08a;border-radius:10px;padding:10px;font-size:11px;color:#854d0e;line-height:1.4;margin-bottom:14px">
+        <strong>💡 Tips Pengajaran:</strong> Gunakan topik konkret dan relevan dengan lingkungan siswa untuk alur belajar dan analogi yang hidup.
+      </div>
+      <button type="button" id="sg-aside-direct-generate" class="ss-primary" data-requires-ai style="width:100%;font-weight:700;padding:11px 14px;display:flex;justify-content:center;align-items:center;gap:6px;border-radius:10px">
+        <span>✨ Buat Slide Langsung Jadi</span>
+      </button>
+    </aside>
+  </div>`;
 }
 function preview(slide, template, index = 0, total = 8) { return sceneSvg(buildScene(slide, template, { index, total }), `Contoh ${getTemplate(template).name}: ${slide.title}`); }
 function templatesView() {
@@ -238,9 +313,33 @@ function editorFields(slide) {
   if (slide.layout === 'quiz') result += field('question', 'Pertanyaan', slide.question, true) + field('quizOptions', 'Pilihan (satu baris per pilihan)', slide.quizOptions.join('\n'), true) + field('quizAnswer', 'Jawaban, untuk guru (A, B, C atau D)', slide.quizAnswer) + field('quizExplanation', 'Pembahasan, untuk guru', slide.quizExplanation, true);
   if (slide.layout === 'activity') result += field('instruction', 'Instruksi aktivitas', slide.instruction, true) + field('time', 'Waktu', slide.time) + field('groupSize', 'Cara berkelompok', slide.groupSize) + field('materials', 'Alat / bahan', slide.materials);
   if (slide.layout === 'quote') result += field('quote', 'Definisi / kutipan', slide.quote, true) + field('author', 'Sumber kutipan (jika ada)', slide.author);
-  const structured = ['timeline', 'stats', 'flipcard'].includes(slide.layout) ? slide.layout === 'timeline' ? 'timeline' : slide.layout === 'stats' ? 'stats' : 'flipcards' : null;
-  if (structured) result += field(structured, structured === 'timeline' ? 'Tahap, format judul | penjelasan per baris' : structured === 'stats' ? 'Angka, format nilai | label | penjelasan' : 'Kartu, format istilah | jawaban per baris', slide[structured].map(r => structured === 'timeline' ? `${r.title} | ${r.desc}` : structured === 'stats' ? `${r.value} | ${r.label} | ${r.desc}` : `${r.front} | ${r.back}`).join('\n'), true);
+  if (['timeline', 'stats', 'flipcard', 'gridCards'].includes(slide.layout)) {
+    const isTimeline = slide.layout === 'timeline';
+    const isStats = slide.layout === 'stats';
+    const isCards = slide.layout === 'gridCards';
+    const fieldName = isTimeline ? 'timeline' : isStats ? 'stats' : isCards ? 'cards' : 'flipcards';
+    const fieldLabel = isTimeline
+      ? 'Tahap, format judul | penjelasan per baris'
+      : isStats
+      ? 'Angka, format nilai | label | penjelasan'
+      : isCards
+      ? 'Kartu konsep, format judul | penjelasan | badge per baris'
+      : 'Kartu, format istilah | jawaban per baris';
+    const val = isTimeline
+      ? slide.timeline.map(r => `${r.title} | ${r.desc}`).join('\n')
+      : isStats
+      ? slide.stats.map(r => `${r.value} | ${r.label} | ${r.desc}`).join('\n')
+      : isCards
+      ? (slide.cards || []).map(r => [r.title, r.desc, r.badge].filter(Boolean).join(' | ')).join('\n')
+      : slide.flipcards.map(r => `${r.front} | ${r.back}`).join('\n');
+    result += field(fieldName, fieldLabel, val, true);
+  }
   result += `<details${slide.visual ? ' open' : ''}><summary>Diagram pembelajaran</summary><label>Jenis diagram<select id="sg-visual-type">${[['', 'Tanpa diagram'], ['fraction', 'Pecahan'], ['numberLine', 'Garis bilangan'], ['process', 'Urutan proses'], ['cycle', 'Siklus'], ['concept', 'Konsep terkait']].map(([id, name]) => `<option value="${id}"${selected(id, slide.visual?.type || '')}>${name}</option>`).join('')}</select></label>${field('visual-label', 'Label diagram', slide.visual?.label || '')}${slide.visual?.type === 'fraction' ? field('visual-numerator', 'Pembilang', slide.visual.numerator) + field('visual-denominator', 'Penyebut (2 sampai 12)', slide.visual.denominator) : slide.visual?.type === 'numberLine' ? field('visual-min', 'Nilai awal', slide.visual.min) + field('visual-max', 'Nilai akhir', slide.visual.max) + field('visual-value', 'Posisi nilai', slide.visual.value) : slide.visual ? field('visual-nodes', 'Label tahap (satu baris per tahap)', slide.visual.nodes.map(n => n.label).join('\n'), true) : ''}</details>`;
+  if (slide.image) {
+    result += `<details open><summary>Foto / Ilustrasi Pembelajaran</summary><div style="display:flex;gap:12px;align-items:center;margin:8px 0;background:var(--kkg-bg-subtle,#f8fafc);padding:10px;border-radius:8px;border:1px solid var(--kkg-border,#e2e8f0)"><img src="${esc(slide.image.url)}" alt="${esc(slide.image.alt || '')}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1" onerror="this.style.display='none'"><div style="flex:1;min-width:0;font-size:12px"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(slide.image.alt || slide.title)}</div><div style="color:var(--kkg-text-muted,#64748b);font-size:11px;margin-top:2px">Sumber: ${esc(slide.image.creditName || 'RuangKKG Visual')}</div><button type="button" id="sg-remove-image" class="ss-btn-subtle" style="margin-top:6px;font-size:11px;padding:3px 8px;color:#dc2626;border:1px solid #fca5a5;background:#fff;border-radius:4px;cursor:pointer">Hapus Gambar</button></div></div></details>`;
+  } else {
+    result += `<details${slide.imageQuery ? ' open' : ''}><summary>Cari / Pasang Gambar</summary>${field('imageQuery', 'Kata kunci gambar (Inggris/Indonesia)', slide.imageQuery || '')}</details>`;
+  }
   return result + field('speakerNotes', 'Catatan guru (tidak tampil kepada siswa)', slide.speakerNotes, true);
 }
 function issuesMarkup() {
@@ -301,7 +400,7 @@ async function generate() {
     const quality = result.meta?.quality || {};
     const warnings = [...(quality.contentIssues || []), quality.countWarning, ...(quality.layoutWarnings || [])].filter(Boolean);
     const message = quality.partial ? 'Sebagian materi sudah tersedia. Lengkapi slide yang ditandai di editor sebelum ekspor.' : quality.layoutWarnings?.length ? 'Draf materi sudah tersedia. Rapikan bidang teks yang ditandai di editor sebelum ekspor.' : 'Draf materi tersedia untuk ditinjau.';
-    monitor.complete(() => { S.deck = normalizeDeck(result, S.config.topik); S.index = 0; S.reveal = false; S.view = 'editor'; save(); render(); }, { partial: !!quality.partial, warnings: warnings.length ? [message, ...warnings.slice(0, 4)] : [], autoReview: true });
+    monitor.complete(() => { S.deck = normalizeDeck(result, S.config.topik); S.index = 0; S.reveal = false; S.view = 'editor'; save(); archiveDeck(S.deck, S.config, S.template, S.outline); render(); }, { partial: !!quality.partial, warnings: warnings.length ? [message, ...warnings.slice(0, 4)] : [], autoReview: true });
   });
 }
 async function outline() {
@@ -325,7 +424,7 @@ async function revise() {
 function updateField(name, value) {
   const s = S.deck.slides[S.index];
   if (['content', 'leftContent', 'rightContent', 'quizOptions'].includes(name)) s[name] = value.split('\n').filter(v => v.trim());
-  else if (['timeline', 'stats', 'flipcards'].includes(name)) s[name] = value.split('\n').filter(v => v.trim()).map(row => { const [a = '', b = '', c = ''] = row.split('|').map(v => v.trim()); return name === 'timeline' ? { title: a, desc: b } : name === 'stats' ? { value: a, label: b, desc: c } : { front: a, back: b }; });
+  else if (['timeline', 'stats', 'flipcards', 'cards'].includes(name)) s[name] = value.split('\n').filter(v => v.trim()).map(row => { const [a = '', b = '', c = ''] = row.split('|').map(v => v.trim()); return name === 'timeline' ? { title: a, desc: b } : name === 'stats' ? { value: a, label: b, desc: c } : name === 'cards' ? { title: a, desc: b, badge: c } : { front: a, back: b }; });
   else if (name.startsWith('visual-')) { if (!s.visual) return; const key = name.slice(7); s.visual[key] = key === 'nodes' ? value.split('\n').filter(Boolean).map(label => ({ label })) : ['numerator', 'denominator', 'min', 'max', 'value'].includes(key) ? Number(value) : value; }
   else s[name] = value;
   const canvas = document.querySelector('#sg-slide-render-area'); canvas.innerHTML = sceneSvg(buildScene(s, S.template, { aspectRatio: S.config.aspectRatio, index: S.index, total: S.deck.slides.length, reveal: false }), s.title);
@@ -333,17 +432,130 @@ function updateField(name, value) {
 }
 function move(delta) { S.index = Math.max(0, Math.min(S.deck.slides.length - 1, S.index + delta)); S.reveal = false; changed(); render(); }
 function presenter() {
-  const slides = S.deck.slides.map(s => normalizeSlide(s)); let index = S.index, reveal = false;
+  const slides = S.deck.slides.map(s => normalizeSlide(s)); let index = S.index, reveal = false, blackout = false, whiteout = false;
+  let timerSeconds = 180, timerRunning = false, timerInterval = null;
   const root = document.createElement('div'); root.id = 'sg-fullscreen-container'; root.className = 'ss-presenter hidden';
-  root.innerHTML = '<h2 id="ss-presenter-title" class="sr-only">Presentasi kelas</h2><div id="ss-stage" class="ss-presenter-stage"></div><aside id="ss-notes" class="ss-presenter-notes" hidden></aside><nav aria-label="Kontrol presentasi"><button id="ss-close">Keluar</button><button id="ss-prev">Sebelumnya</button><span id="ss-position" aria-live="polite"></span><button id="ss-next">Berikutnya</button><button id="ss-answer" aria-pressed="false">Buka jawaban</button><button id="ss-teacher" aria-pressed="false">Catatan guru</button></nav>';
+  root.innerHTML = '<h2 id="ss-presenter-title" class="sr-only">Presentasi kelas</h2><div id="ss-stage" class="ss-presenter-stage" style="position:relative;width:100%;height:100%;"></div><div id="ss-curtain" style="display:none;position:absolute;inset:0;z-index:50;cursor:pointer;"></div><aside id="ss-notes" class="ss-presenter-notes" hidden></aside><nav aria-label="Kontrol presentasi" style="display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:8px;"><button id="ss-close" title="Keluar (Esc)">Keluar</button><button id="ss-prev" title="Sebelumnya (← / PgUp)">Sebelumnya</button><span id="ss-position" aria-live="polite" style="padding:0 6px;font-weight:600;"></span><button id="ss-next" title="Berikutnya (→ / Space / PgDn)">Berikutnya</button><button id="ss-answer" aria-pressed="false" title="Buka Jawaban (A)">Buka jawaban</button><button id="ss-teacher" aria-pressed="false" title="Catatan Guru (T)">Catatan guru</button><button id="ss-blackout" aria-pressed="false" title="Layar Gelap (B)">Layar Gelap</button><div class="ss-timer-control" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.12);padding:2px 8px;border-radius:20px;margin-left:6px;"><span id="ss-timer-display" style="font-family:monospace;font-size:14px;font-weight:700;padding:0 4px;min-width:44px;text-align:center;">03:00</span><button type="button" id="ss-timer-toggle" style="min-height:30px;padding:2px 8px;font-size:12px;background:#256756;color:#fff;" title="Mulai / Jeda (M)">▶</button><button type="button" id="ss-timer-reset" style="min-height:30px;padding:2px 8px;font-size:12px;background:#374151;color:#fff;" title="Reset Timer">↺</button><button type="button" class="ss-timer-add" data-add="60" style="min-height:30px;padding:2px 6px;font-size:11px;background:#475569;color:#fff;">+1m</button><button type="button" class="ss-timer-add" data-add="180" style="min-height:30px;padding:2px 6px;font-size:11px;background:#475569;color:#fff;">+3m</button><button type="button" class="ss-timer-add" data-add="300" style="min-height:30px;padding:2px 6px;font-size:11px;background:#475569;color:#fff;">+5m</button></div></nav>';
   const listeners = new AbortController(); document.body.append(root);
-  const draw = () => { const slide = slides[index]; root.querySelector('#ss-stage').innerHTML = sceneSvg(buildScene(slide, S.template, { aspectRatio: S.config.aspectRatio, index, total: slides.length, reveal }), slide.title); root.querySelector('#ss-position').textContent = `${index + 1} / ${slides.length}`; root.querySelector('#ss-prev').disabled = index === 0; root.querySelector('#ss-next').disabled = index === slides.length - 1; const answer = root.querySelector('#ss-answer'); answer.hidden = !['quiz', 'flipcard'].includes(slide.layout); answer.textContent = reveal ? 'Tutup jawaban' : 'Buka jawaban'; answer.setAttribute('aria-pressed', String(reveal)); root.querySelector('#ss-notes').textContent = teacherNotes(slide) || 'Tidak ada catatan guru.'; };
+  const curtain = root.querySelector('#ss-curtain');
+  const formatTime = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  const updateTimerDisplay = () => {
+    const el = root.querySelector('#ss-timer-display');
+    if (el) {
+      el.textContent = formatTime(timerSeconds);
+      if (timerSeconds === 0) { el.style.color = '#facc15'; el.style.textShadow = '0 0 8px rgba(250,204,21,0.8)'; }
+      else { el.style.color = '#ffffff'; el.style.textShadow = 'none'; }
+    }
+  };
+  const beep = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.start(); osc.stop(ctx.currentTime + 0.35);
+    } catch {}
+  };
+  const toggleTimer = () => {
+    if (timerRunning) {
+      clearInterval(timerInterval); timerRunning = false;
+      const btn = root.querySelector('#ss-timer-toggle'); if (btn) btn.textContent = '▶';
+    } else {
+      if (timerSeconds <= 0) timerSeconds = 180;
+      timerRunning = true;
+      const btn = root.querySelector('#ss-timer-toggle'); if (btn) btn.textContent = '⏸';
+      timerInterval = setInterval(() => {
+        if (timerSeconds > 0) {
+          timerSeconds--; updateTimerDisplay();
+          if (timerSeconds === 0) {
+            clearInterval(timerInterval); timerRunning = false;
+            const b = root.querySelector('#ss-timer-toggle'); if (b) b.textContent = '▶';
+            beep();
+          }
+        }
+      }, 1000);
+    }
+  };
+  const toggleBlackout = () => {
+    whiteout = false; blackout = !blackout;
+    if (curtain) { curtain.style.display = blackout ? 'block' : 'none'; curtain.style.background = '#000000'; }
+    root.querySelector('#ss-blackout')?.setAttribute('aria-pressed', String(blackout));
+  };
+  const toggleWhiteout = () => {
+    blackout = false; whiteout = !whiteout;
+    if (curtain) { curtain.style.display = whiteout ? 'block' : 'none'; curtain.style.background = '#ffffff'; }
+  };
+  if (curtain) curtain.onclick = () => {
+    blackout = false; whiteout = false; curtain.style.display = 'none';
+    root.querySelector('#ss-blackout')?.setAttribute('aria-pressed', 'false');
+  };
+  const draw = () => {
+    const slide = slides[index];
+    root.querySelector('#ss-stage').innerHTML = sceneSvg(buildScene(slide, S.template, { aspectRatio: S.config.aspectRatio, index, total: slides.length, reveal }), slide.title);
+    root.querySelector('#ss-position').textContent = `${index + 1} / ${slides.length}`;
+    root.querySelector('#ss-prev').disabled = index === 0;
+    root.querySelector('#ss-next').disabled = index === slides.length - 1;
+    const answer = root.querySelector('#ss-answer');
+    answer.hidden = !['quiz', 'flipcard'].includes(slide.layout);
+    answer.textContent = reveal ? 'Tutup jawaban' : 'Buka jawaban';
+    answer.setAttribute('aria-pressed', String(reveal));
+    root.querySelector('#ss-notes').textContent = teacherNotes(slide) || 'Tidak ada catatan guru.';
+    if (slide.time) {
+      const match = slide.time.match(/(\d+)\s*(?:menit|m\b|min)/i);
+      if (match && Number(match[1]) > 0 && !timerRunning) {
+        timerSeconds = Number(match[1]) * 60;
+        updateTimerDisplay();
+      }
+    }
+  };
   const next = d => { index = Math.max(0, Math.min(slides.length - 1, index + d)); reveal = false; draw(); };
-  root.querySelector('#ss-close').onclick = () => closeUiDialog(root); root.querySelector('#ss-prev').onclick = () => next(-1); root.querySelector('#ss-next').onclick = () => next(1);
+  root.querySelector('#ss-close').onclick = () => closeUiDialog(root);
+  root.querySelector('#ss-prev').onclick = () => next(-1);
+  root.querySelector('#ss-next').onclick = () => next(1);
   root.querySelector('#ss-answer').onclick = () => { reveal = !reveal; draw(); };
   root.querySelector('#ss-teacher').onclick = () => { const notes = root.querySelector('#ss-notes'); notes.hidden = !notes.hidden; root.querySelector('#ss-teacher').setAttribute('aria-pressed', String(!notes.hidden)); };
-  document.addEventListener('keydown', event => { if (event.key === 'ArrowRight' || (event.key === ' ' && !event.target.closest('button'))) { event.preventDefault(); next(1); } if (event.key === 'ArrowLeft') { event.preventDefault(); next(-1); } }, { signal: listeners.signal });
-  openUiDialog(root, { labelledBy: 'ss-presenter-title', initialFocus: '#ss-close', onClose: () => { listeners.abort(); if (document.fullscreenElement === root) document.exitFullscreen?.(); root.remove(); } }); draw(); root.requestFullscreen?.().catch(() => {});
+  root.querySelector('#ss-blackout').onclick = toggleBlackout;
+  root.querySelector('#ss-timer-toggle').onclick = toggleTimer;
+  root.querySelector('#ss-timer-reset').onclick = () => {
+    clearInterval(timerInterval); timerRunning = false; timerSeconds = 180;
+    root.querySelector('#ss-timer-toggle').textContent = '▶'; updateTimerDisplay();
+  };
+  root.querySelectorAll('.ss-timer-add').forEach(btn => btn.addEventListener('click', () => {
+    timerSeconds += Number(btn.dataset.add || 60); updateTimerDisplay();
+  }));
+  document.addEventListener('keydown', event => {
+    const key = event.key;
+    if (['ArrowRight', 'PageDown', ' '].includes(key) && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); if (blackout || whiteout) { curtain?.click(); return; } next(1);
+    } else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(key) && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); if (blackout || whiteout) { curtain?.click(); return; } next(-1);
+    } else if ((key === 'b' || key === 'B') && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); toggleBlackout();
+    } else if ((key === 'w' || key === 'W') && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); toggleWhiteout();
+    } else if ((key === 'a' || key === 'A') && !event.target.closest('input, textarea, select')) {
+      if (['quiz', 'flipcard'].includes(slides[index].layout)) { event.preventDefault(); reveal = !reveal; draw(); }
+    } else if ((key === 't' || key === 'T') && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); const notes = root.querySelector('#ss-notes'); notes.hidden = !notes.hidden; root.querySelector('#ss-teacher')?.setAttribute('aria-pressed', String(!notes.hidden));
+    } else if ((key === 'm' || key === 'M') && !event.target.closest('input, textarea, select')) {
+      event.preventDefault(); toggleTimer();
+    }
+  }, { signal: listeners.signal });
+  openUiDialog(root, { labelledBy: 'ss-presenter-title', initialFocus: '#ss-close', onClose: () => {
+    clearInterval(timerInterval);
+    listeners.abort();
+    if (document.fullscreenElement === root) document.exitFullscreen?.();
+    root.remove();
+  } });
+  draw();
+  updateTimerDisplay();
+  root.requestFullscreen?.().catch(() => {});
 }
 function showConflictActions() {
   if (!syncClient?.conflict || syncClient.conflict.documentId !== syncClient.documentId || document.querySelector('#sg-conflict-actions')) return;
@@ -371,11 +583,13 @@ async function restoreServerDraft(saved, client = syncClient) {
   S.view = S.deck.slides.length ? 'editor' : 'brief'; S.saveStatus = 'Draf server dipulihkan'; S.reviewDirty = false; S.reviewLoadedKey = ''; S.reviewStatus = 'needs-review'; S.reviewAction = null; S.reviewRevision = Number(saved.revision) || 0; S.pendingReviewAction = null; S.reviewReadToken++; writeDraft(snapshot(), S.owner); render(); return true;
 }
 async function flushAndCheckpoint() {
+  const currentOwner = owner();
+  if (!currentOwner) throw new Error('Masuk dengan akun guru terlebih dahulu untuk menyimpan checkpoint server.');
   const client = syncClient;
   const draftOwner = S.owner;
   clearTimeout(timer);
   const data = snapshot();
-  if (!client || owner() !== draftOwner || !writeDraft(data, draftOwner)) throw new Error('Draf lokal belum tersimpan; checkpoint belum dibuat.');
+  if (!client || currentOwner !== draftOwner || !writeDraft(data, draftOwner)) throw new Error('Draf lokal belum tersimpan; checkpoint belum dibuat.');
   const saved = await client.sync({ config: data.config, deck: data.deck, template: data.template, outline: data.outline, index: data.index }, data.deck.title || data.config.topik || 'Presentasi tanpa judul');
   if (!saved || owner() !== draftOwner || S.owner !== draftOwner || syncClient !== client) throw new Error('Draf terbaru belum tersimpan di server. Checkpoint belum dibuat.');
   const checkpoint = await client.checkpoint();
@@ -412,11 +626,33 @@ export function initSlide() {
   if (S.view === 'editor') loadTeacherReview();
   const on = (id, handler) => document.querySelector(`#${id}`)?.addEventListener('click', handler);
   on('sg-server-drafts', openServerDrafts);
-  on('sg-history', () => openArchiveDrawer({ module: 'slide', moduleName: 'Slide', onSelect: item => { const content = item.content || {}; const deck = normalizeDeck(content.deck || content, item.title); if (!deck.slides.length) return showToast('Riwayat ini tidak mempunyai slide yang dapat dibuka.', 'error'); if (!preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; S.deck = deck; S.template = resolveTemplateId(content.template); S.config = materialConfig({ ...S.config, ...item.inputData, ...content.config }); S.outline = content.outline || []; S.index = 0; S.view = 'editor'; initializeSyncClient(); save(); render(); queueMicrotask(() => document.querySelector('#sg-open-presenter')?.focus()); } }));
-  on('sg-new', () => { if (confirm('Mulai presentasi baru? Draf saat ini tetap tersimpan sebagai draf terpisah.') && preserveCurrentDraft()) { clearTimeout(timer); S = initial(); S.serverDocumentId = createDraftDocumentId(); initializeSyncClient(); save(); render(); } });
+  on('sg-history', () => openArchiveDrawer({ module: 'slide', moduleName: 'Slide', onSelect: item => { const content = item.content || {}; const deck = normalizeDeck(content.deck || content, item.title); if (!deck.slides.length) return showToast('Riwayat ini tidak mempunyai slide yang dapat dibuka.', 'error'); if (owner() && !preserveCurrentDraft()) return; S.serverDocumentId = createDraftDocumentId(); S.serverRevision = 0; S.deck = deck; S.template = resolveTemplateId(content.template); S.config = materialConfig({ ...S.config, ...item.inputData, ...content.config }); S.outline = content.outline || []; S.index = 0; S.view = 'editor'; initializeSyncClient(); save(); render(); queueMicrotask(() => document.querySelector('#sg-open-presenter')?.focus()); } }));
+  on('sg-new', async () => {
+    const agreed = await confirm('Mulai presentasi baru? Draf saat ini tetap tersimpan sebagai draf terpisah.');
+    if (!agreed) return;
+    if (owner()) preserveCurrentDraft();
+    clearTimeout(timer);
+    S = initial();
+    S.serverDocumentId = createDraftDocumentId();
+    initializeSyncClient();
+    save();
+    render();
+  });
     document.querySelector('#sg-brief-form')?.addEventListener('submit', event => { event.preventDefault(); outline(); });
   document.querySelector('#sg-brief-form')?.addEventListener('input', readBriefChange);
-   on('sg-back', () => { S.view = 'brief'; render(); });
+  on('sg-direct-generate', async () => { if (!readBrief()) return; await generate(); });
+  on('sg-aside-direct-generate', async () => { if (!readBrief()) return; await generate(); });
+  document.querySelector('#sg-theme-select')?.addEventListener('change', event => {
+    S.template = event.target.value;
+    changed();
+    render();
+  });
+  document.querySelectorAll('[data-brief-template]').forEach(chip => chip.addEventListener('click', () => {
+    S.template = chip.dataset.briefTemplate || chip.value;
+    changed();
+    render();
+  }));
+  on('sg-back', () => { S.view = 'brief'; render(); });
    on('sg-edit-outline', () => { S.view = 'outline'; render(); });
    on('sg-back-to-design', () => { S.view = 'templates'; render(); });
    document.querySelector('#sg-outline-form')?.addEventListener('submit', event => { event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return; S.outline = [...form.querySelectorAll('[data-outline]')].map((row, i) => ({ index: i + 1, title: row.querySelector('[name=title]').value, layout: row.querySelector('[name=layout]').value, focus: row.querySelector('[name=focus]').value, visualConcept: row.querySelector('[name=visualConcept]').value })); S.view = 'templates'; changed(); render(); });
@@ -429,10 +665,11 @@ export function initSlide() {
   document.querySelectorAll('[data-field]').forEach(input => input.addEventListener('input', event => updateField(input.dataset.field, event.target.value)));
   document.querySelector('#sg-layout-select')?.addEventListener('change', event => { S.deck.slides[S.index].layout = event.target.value; changed(); render(); });
   document.querySelector('#sg-visual-type')?.addEventListener('change', event => { const type = event.target.value; S.deck.slides[S.index].visual = type ? { type, label: '', numerator: 1, denominator: 4, min: 0, max: 10, value: 3, nodes: [{ label: '' }, { label: '' }] } : undefined; changed(); render(); });
+  on('sg-remove-image', () => { delete S.deck.slides[S.index].image; changed(); render(); });
   [['sg-move-left', -1], ['sg-move-right', 1]].forEach(([id, delta]) => on(id, () => { const target = S.index + delta; [S.deck.slides[S.index], S.deck.slides[target]] = [S.deck.slides[target], S.deck.slides[S.index]]; S.index = target; changed(); render(); }));
   on('sg-add-slide', () => { S.deck.slides.splice(S.index + 1, 0, normalizeSlide({ title: 'Gagasan baru', content: [], layout: 'content' })); S.index++; changed(); render(); });
   on('sg-delete-slide', () => { S.deck.slides.splice(S.index, 1); S.index = Math.min(S.index, S.deck.slides.length - 1); changed(); render(); });
-  on('sg-save-archive', () => { save(); const saved = saveDocArchive({ module: 'slide', title: S.deck.title, subtitle: `${S.config.jenjangKelas} • ${S.deck.slides.length} slide`, inputData: S.config, content: { ...S.deck, template: S.template, outline: S.outline, config: S.config } }); showToast(saved ? 'Versi slide disimpan ke Riwayat perangkat ini.' : 'Riwayat belum tersimpan. Unduh hasil untuk menyimpan salinan.', saved ? 'success' : 'error'); });
+  on('sg-save-archive', () => { save(); const saved = archiveDeck(S.deck, S.config, S.template, S.outline); showToast(saved ? 'Versi slide disimpan ke Riwayat perangkat ini.' : 'Riwayat belum tersimpan. Unduh hasil untuk menyimpan salinan.', saved ? 'success' : 'error'); });
   on('sg-save-checkpoint', async () => { try { await flushAndCheckpoint(); showToast('Checkpoint server berhasil disimpan.', 'success'); } catch (error) { showToast(error.message || 'Checkpoint belum tersimpan.', 'error'); } });
   document.querySelectorAll('[data-teacher-review-action]').forEach(button => button.addEventListener('click', () => performTeacherReview(button.dataset.teacherReviewAction)));
   on('sg-review-history', openTeacherReviewHistory);

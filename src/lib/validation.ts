@@ -217,7 +217,7 @@ export const presentationGenerateSchema = z.object({
     tujuanPembelajaran: z.string().max(1000).optional().default(''),
     extraInstructions: z.string().max(2000).optional().default(''),
     aspectRatio: z.enum(['16:9', '4:3']).optional().default('16:9'),
-    usePhotos: z.boolean().optional().default(false),
+    usePhotos: z.boolean().optional().default(true),
     mataPelajaran: z.string().max(120).optional().default('IPAS'),
     topik: z.string().min(1, 'Topik harus diisi').max(2000),
     jenjangKelas: z.string().max(80).optional().default('Kelas 5'),
@@ -239,13 +239,13 @@ const speakerNotesSchema = z
     .nullable();
 
 export const presentationImageSchema = z.object({
-    source: z.literal('unsplash'),
-    url: z.string().url('URL gambar tidak valid'),
-    alt: z.string().max(180).optional().default('Foto edukasi'),
-    query: z.string().max(120).optional().default('pendidikan'),
-    creditName: z.string().max(100).optional().default('Unsplash'),
-    creditUrl: z.string().optional().default('https://unsplash.com'),
-    unsplashId: z.string().max(80).optional().default('image'),
+    source: z.enum(['unsplash', 'vultr-ai']).default('unsplash'),
+    url: z.string().refine(val => /^https?:\/\//i.test(val) || /^data:image\/[a-zA-Z+]+;base64,/i.test(val), 'URL gambar tidak valid'),
+    alt: z.string().max(300).optional().default('Visual materi pembelajaran'),
+    query: z.string().max(300).optional().default('materi'),
+    creditName: z.string().max(100).optional().default('RuangKKG Visual'),
+    creditUrl: z.string().optional().default(''),
+    unsplashId: z.string().max(80).optional().default('visual'),
 });
 
 const visualLabel = z.string().max(300).optional();
@@ -298,6 +298,7 @@ export const baseSlideSchema = z.object({
     quizAnswer: z.any().optional(),
     quizExplanation: z.any().optional(),
     flipcards: z.array(z.any()).optional(),
+    cards: z.array(z.any()).optional(),
     imageQuery: z.any().transform(v => v ? String(v) : undefined).optional(),
     imageAlt: z.any().transform(v => v ? String(v) : undefined).optional(),
     image: z.any().optional(),

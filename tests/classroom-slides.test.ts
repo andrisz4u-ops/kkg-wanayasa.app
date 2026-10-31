@@ -78,6 +78,27 @@ describe('Classroom presentation output contracts', () => {
     expect(slideIssues({ ...exampleDeck().slides[1], visual: { type: 'fraction', numerator: 5, denominator: 4 } })).not.toEqual([]);
     expect(slideIssues({ ...exampleDeck().slides[1], visual: { type: 'numberLine', min: 0, max: 1 } })).not.toEqual([]);
   });
+  it('normalizes and renders gridCards layout with structured concept cards and badges', () => {
+    const slide = normalizeSlide({
+      layout: 'gridCards',
+      title: 'Tiga Wujud Benda',
+      cards: [
+        { title: 'Benda Padat', desc: 'Bentuk dan volume tetap.', badge: 'Contoh: Batu' },
+        { title: 'Benda Cair', desc: 'Bentuk mengikuti wadah, volume tetap.', badge: 'Contoh: Air' },
+        { title: 'Benda Gas', desc: 'Bentuk dan volume berubah mengisi ruangan.', badge: 'Contoh: Udara' }
+      ]
+    });
+    expect(slide.layout).toBe('gridCards');
+    expect(slide.cards).toHaveLength(3);
+    expect((slide.cards as any[])[0].badge).toBe('Contoh: Batu');
+    expect(slideIssues(slide)).toEqual([]);
+
+    const scene = buildScene(slide, 'jelajah-ipas', { aspectRatio: '16:9' });
+    expect(scene.warnings).toEqual([]);
+    const titles = scene.nodes.filter((n): n is Extract<typeof scene.nodes[number], { kind: 'text' }> => n.kind === 'text' && !!n.prop?.startsWith('card-title-'));
+    expect(titles).toHaveLength(3);
+    expect(titles[0].text).toBe('Benda Padat');
+  });
   it('blocks overflowing output rather than silently clipping or cutting the source material', () => {
     const deck = normalizeDeck(exampleDeck()); deck.slides[1].content = ['kata '.repeat(150)];
     expect(() => exportScenes(deck, 'matematika-visual', { aspectRatio: '16:9' })).toThrow('Perbaiki slide');
@@ -112,6 +133,7 @@ describe('Classroom presentation output contracts', () => {
     const html = await htmlPresentation(deck, 'matematika-visual', { aspectRatio: '16:9' });
     expect(html).not.toContain('<script src='); expect(html).not.toContain('cdn.');
     expect(html).toContain('Buka jawaban'); expect(html).toContain('aria-pressed');
+    expect(html).toContain('Layar Gelap'); expect(html).toContain('id="timer-display"'); expect(html).toContain('id="curtain"');
     expect(html).toContain('&lt;/script&gt;'); expect(html.match(/<script>/g)).toHaveLength(1);
   });
   it('embeds a real raster image with cover cropping rather than stretching it in PPTX', async () => {

@@ -9,7 +9,7 @@ import { recordAIGeneration } from '../lib/telemetry';
 import { presentationOutlineSchema, presentationOutlineResponseSchema, presentationGenerateSchema, presentationPatchSlideSchema, validate } from '../lib/validation';
 import { type AppBindings, type AppVariables } from '../types/env';
 import { requireAIAdmission } from '../lib/ai-admission';
-import { normalizeGeneratedDeck, normalizeSlide, deckIssues, slideIssues, isLearningObjectivesSlide, LAYOUTS } from '../../public/static/js/slides/lesson-model.js';
+import { normalizeGeneratedDeck, normalizeSlide, normalizeVisual, deckIssues, slideIssues, isLearningObjectivesSlide, LAYOUTS } from '../../public/static/js/slides/lesson-model.js';
 import { buildScene } from '../../public/static/js/slides/scene.js';
 import { getTemplate } from '../../public/static/js/slides/templates.js';
 
@@ -20,14 +20,42 @@ export function resolveProviderSlug(provider?: string) {
     return provider ? aliases[provider] || provider : undefined;
 }
 const brief = (input: any) => JSON.stringify({ topik: input.topik, mataPelajaran: input.mataPelajaran, jenjangKelas: input.jenjangKelas, semester: input.semester, alokasiWaktu: input.alokasiWaktu, capaianPembelajaran: input.capaianPembelajaran, strategi: input.strategi, instruksiGuru: input.extraInstructions, jumlahSlide: input.slideCount });
-const rules = `Anda menyusun media ajar untuk guru SD Indonesia. Gunakan bahasa Indonesia yang sesuai kelas dan satu gagasan per slide. Judul maksimal 10 kata/85 karakter, subjudul maksimal 22 kata. Isi 2-4 poin pendek, masing-masing maksimal 18 kata/130 karakter. Jangan membuat statistik, nama narasumber, kutipan tokoh, jawaban atau fakta pengganti jika tidak diketahui. Jangan pakai emoji dekoratif atau markup HTML. Catatan guru berisi cara memandu kegiatan, pertanyaan lanjut, kemungkinan miskonsepsi dan pembahasan; bukan analisis internal model.
-Alur pembelajaran: pemantik, konsep, contoh konkret, aktivitas, cek pemahaman, rangkuman/refleksi. Variasikan setidaknya 3 layout untuk 6 slide atau lebih. Pilih layout dari ${LAYOUTS.join(', ')}.
-Langsung masuk ke topik dan materi. Jangan membuat slide khusus tujuan pembelajaran, daftar tujuan belajar atau learning objectives. Guru tidak perlu mengisi tujuan pembelajaran.
-Field semua slide: layout,title,subtitle,content:string[],speakerNotes. Untuk twoColumn/comparison: leftTitle,leftContent (max 3),rightTitle,rightContent (max 3). Timeline: timeline:[{title,desc}] sebanyak 2-4 tahap; judul tahap max 6 kata dan desc max 18. Stats: stats:[{value,label,desc}] 1-3 angka yang benar-benar berasal dari materi, bukan statistik rekaan. Activity: instruction (max 42 kata),time,groupSize,materials. Quiz: question (max 28 kata),quizOptions (2-4 pilihan berbeda, max 12 kata/pilihan),quizAnswer (huruf A-D yang cocok),quizExplanation (penjelasan singkat yang benar). Flipcard: flipcards:[{front,back}] 1-4; front max8 kata/back max18. Quote: quote dan author hanya jika sumber diketahui. Thankyou: subtitle berisi pertanyaan refleksi bermakna.
-Visual berupa objek data, jangan SVG mentah atau tautan gambar buatan. Pilihan visual: {type:"fraction",numerator:3,denominator:4,label:"Tiga perempat"} dengan penyebut2-12 dan pembilang0-penyebut; {type:"numberLine",min:0,max:10,value:3,label:"Posisi bilangan 3"}; atau {type:"process"|"cycle"|"concept",nodes:[{label:"...",detail:"..."}]} sebanyak2-4 label (max5 kata). Pakai diagram hanya jika terkait materi dan benar. ImageText harus mempunyai visual yang sesuai. Semua jawaban berada pada field jawaban/catatan guru, jangan menuliskan kunci di judul/subjudul/content siswa. Berikan JSON saja.`;
+const rules = `Anda menyusun media ajar untuk guru SD Indonesia (Kelas 1-6). Berikan materi yang mendalam, bermakna, dan tuntas sesuai tingkat kelas. Hindari menyederhanakan materi hingga dangkal atau memotong penjelasan penting. Siswa harus memahami konsep secara utuh, dengan bahasa Indonesia yang jelas, komunikatif, dan satu gagasan terpadu per slide.
+Pilih layout secara fleksibel dan adaptif dari: ${LAYOUTS.join(', ')}. Variasikan layout agar alur belajar hidup (pemantik, konsep mendalam, perbandingan/contoh konkret, aktivitas kelas, cek pemahaman, dan refleksi).
+Langsung masuk ke topik dan materi. Jangan membuat slide khusus tujuan pembelajaran atau daftar learning objectives.
+Field semua slide: layout, title, subtitle, content:string[], speakerNotes.
+- Untuk gridCards: cards:[{title, desc, badge}] 2-4 kartu konsep berdampingan (sangat cocok untuk materi multikonsep: 3 wujud benda, 3 jenis simbiosis, 4 sila/pilar, 3 hukum Newton, 4 tahapan).
+- Untuk twoColumn/comparison: leftTitle, leftContent (2-4 poin jelas), rightTitle, rightContent (2-4 poin jelas).
+- Untuk timeline: timeline:[{title, desc}] 2-5 tahap kronologis/proses yang bermakna.
+- Untuk stats: stats:[{value, label, desc}] 1-4 data angka yang valid dari materi.
+- Untuk activity: instruction (instruksi kegiatan siswa yang konkret dan aplikatif), time, groupSize, materials.
+- Untuk quiz: question (pertanyaan pemahaman bernalar), quizOptions (2-4 pilihan), quizAnswer (huruf A-D), quizExplanation (pembahasan mendidik untuk guru).
+- Untuk flipcard: flipcards:[{front, back}] 1-4 kartu tanya-jawab ringkas.
+- Untuk quote: quote dan author (hanya jika ada sumber/tokoh valid).
+- Untuk thankyou: subtitle berisi pertanyaan refleksi penutup yang bermakna.
+- Catatan guru (speakerNotes): panduan memandu kelas, pertanyaan pemantik diskusi, antisipasi miskonsepsi, dan alternatif pengayaan.
+
+Sistem Visual & Fleksibilitas Gambar:
+1. Evaluasi secara cerdas apakah slide memerlukan stimulus gambar atau murni teks/diagram.
+2. Jika MEMBUTUHKAN gambar (topik konkret: sains, biologi, tata surya, pahlawan, sejarah, geografi, kebudayaan, seni), pada 1-3 slide layout 'imageText' atau 'content', sertakan:
+   - imageQuery: 2-4 kata kunci bahasa Inggris spesifik (misal: "human digestive system", "solar system planets", "garuda pancasila", "angklung instrument", "plant photosynthesis").
+   - imagePrompt: deskripsi gambar gaya buku teks 2D edukatif bersih, latar putih.
+3. Jika TIDAK memerlukan gambar (konsep abstrak, rumus, diskusi filosofis, refleksi), biarkan tanpa imageQuery agar tata letak dan tipografi teks tampil lapang, elegan, dan terbaca jelas.
+4. Diagram Terstruktur (SVG): gunakan visual objek data bila relevan:
+   - {type:"fraction",numerator:3,denominator:4,label:"Tiga perempat"} (penyebut 2-12, pembilang <= penyebut);
+   - {type:"numberLine",min:0,max:10,value:3,label:"Posisi bilangan"};
+   - atau {type:"process"|"cycle"|"concept",nodes:[{label:"...",detail:"..."}]} sebanyak 2-5 label.
+Jangan membuat URL gambar buatan di JSON. Semua jawaban kuis berada pada field quizAnswer/speakerNotes, jangan menuliskan kunci di teks siswa. Berikan JSON saja.`;
 export function presentationPrompt(input: any) {
     const outline = input.customOutline?.filter((slide: any) => !isLearningObjectivesSlide(slide));
-    return `${rules}\nBrief guru: ${brief(input)}\nTema: ${getTemplate(input.template).name}.\n${input.usePhotos ? 'Jika foto benda/tempat membantu pembelajaran, tambahkan imageQuery berupa 2-4 kata kunci bahasa Inggris pada maksimal 3 slide content tanpa visual. Jangan membuat URL; pencarian foto dilakukan sistem. Isi tetap lengkap jika foto tidak tersedia.' : 'Utamakan diagram terstruktur; tidak perlu pencarian foto.'}\n${outline?.length ? `Ikuti kerangka yang disetujui guru: ${JSON.stringify(outline)}.` : ''}\nBuat tepat ${input.slideCount} slide. Respons {title,subtitle,slides:[...]} dengan semua slide terisi, bukan contoh/skema kosong.`;
+    const isMath = /matematika|pecahan|bilangan|sudut|bangun|luas|keliling|angka/i.test(`${input.mataPelajaran} ${input.topik}`);
+    const isCycle = /siklus|daur|metamorfosis|rantai makanan|proses air/i.test(`${input.mataPelajaran} ${input.topik}`);
+    const visualRequirement = isMath
+        ? 'PERHATIAN KHUSUS MATEMATIKA: Anda WAJIB menyertakan diagram terstruktur {visual: {type: "fraction", numerator: 1, denominator: 2, label: "Setengah bagian"}} atau {type: "numberLine", min: 0, max: 10, value: 3, label: "Garis bilangan"}} pada minimal 1 slide konsep materi!'
+        : isCycle
+        ? 'PERHATIAN KHUSUS IPA/SAINS: Anda WAJIB menyertakan diagram {visual: {type: "cycle", nodes: [{label: "Tahap 1"}, {label: "Tahap 2"}, ...]}} pada minimal 1 slide konsep materi!'
+        : '';
+    return `${rules}\nBrief guru: ${brief(input)}\nTema: ${getTemplate(input.template).name}.\nMata Pelajaran: ${input.mataPelajaran}, Jenjang: ${input.jenjangKelas}.\n${visualRequirement}\n${input.usePhotos ? 'Pemberian visual adaptif: Evaluasi secara cerdas kebutuhan visual materi. Sertakan imageQuery (2-4 kata kunci Inggris konkret) dan imagePrompt pada 1-3 slide materi penting yang membutuhkan stimulus visual konkret. Pada slide konsep murni, definisi, perbandingan, atau refleksi, utamakan kedalaman materi dan tata letak yang lapang tanpa memaksakan gambar.' : 'Utamakan penjelasan mendalam dan diagram terstruktur; tidak perlu pencarian gambar.'}\n${outline?.length ? `Ikuti kerangka yang disetujui guru: ${JSON.stringify(outline)}.` : ''}\nBuat tepat ${input.slideCount} slide. Respons {title,subtitle,slides:[...]} dengan semua slide terisi, mendalam, dan bermakna.`;
 }
 const OUTLINE_TEXT_KEYS = ['text', 'title', 'content', 'value'] as const;
 /** Extract plain text only from recognized AI wrapper shapes; leave unknown values untouched for Zod to reject. */
@@ -68,7 +96,12 @@ async function generate(ai: AIService, input: any, step: (index: number, message
     await step(2, 'Menyusun konsep, contoh dan kegiatan kelas.');
     let raw = token ? await ai.generateJSONStream(presentationPrompt(input), resolveProviderSlug(input.aiProvider), token) : await ai.generateJSON(presentationPrompt(input), resolveProviderSlug(input.aiProvider));
     let deck = normalizeGeneratedDeck(raw, input.topik);
-    deck.slides.forEach((slide: any) => { delete slide.image; });
+    deck.slides.forEach((slide: any) => {
+        if (slide.image && !slide.image.source) delete slide.image;
+        if (slide.layout === 'imageText' && !slide.visual && !slide.imageQuery) {
+            slide.imageQuery = `${slide.title} ${input.topik}`.slice(0, 80);
+        }
+    });
     await step(3, 'Memeriksa kelengkapan materi dan bidang teks.');
     let issues = deckIssues(deck, input.slideCount, { allowCountMismatch: true });
     if (issues.length) {
@@ -76,7 +109,13 @@ async function generate(ai: AIService, input: any, step: (index: number, message
         const repair = `${presentationPrompt(input)}\nLengkapi isi slide yang ditandai tanpa mengubah topik atau menghapus materi yang sudah tersedia. Masalah: ${issues.slice(0, 15).join(' ')}\nRespons: ${JSON.stringify(deck)}\nKembalikan keseluruhan deck yang sudah diperbaiki, tanpa slide tujuan pembelajaran.`;
         try {
             const repairedRaw = token ? await ai.generateJSONStream(repair, resolveProviderSlug(input.aiProvider), token) : await ai.generateJSON(repair, resolveProviderSlug(input.aiProvider));
-            const repaired = normalizeGeneratedDeck(repairedRaw, input.topik); repaired.slides.forEach((slide: any) => { delete slide.image; });
+            const repaired = normalizeGeneratedDeck(repairedRaw, input.topik);
+            repaired.slides.forEach((slide: any) => {
+                if (slide.image && !slide.image.source) delete slide.image;
+                if (slide.layout === 'imageText' && !slide.visual && !slide.imageQuery) {
+                    slide.imageQuery = `${slide.title} ${input.topik}`.slice(0, 80);
+                }
+            });
             const repairedIssues = deckIssues(repaired, input.slideCount, { allowCountMismatch: true });
             if (repairedIssues.length < issues.length && usableMaterialCount(repaired) >= usableMaterialCount(deck)) {
                 raw = repairedRaw; deck = repaired; issues = repairedIssues;
@@ -90,6 +129,16 @@ async function generate(ai: AIService, input: any, step: (index: number, message
         const error: any = new Error(`AI belum mengirim materi yang dapat ditinjau: ${issues.slice(0, 4).join(' ')} Perjelas topik atau instruksi materi sebelum mencoba lagi.`);
         error.code = 'AI_OUTPUT_INVALID'; error.details = issues;
         throw error;
+    }
+    const hasVisual = deck.slides.some((s: any) => s.visual);
+    if (!hasVisual) {
+        const isFraction = /pecahan|fraction/i.test(`${input.topik} ${input.mataPelajaran}`);
+        if (isFraction) {
+            const targetSlide = deck.slides.find((s: any) => !['title', 'thankyou', 'summary'].includes(s.layout));
+            if (targetSlide) {
+                targetSlide.visual = normalizeVisual({ type: 'fraction', numerator: 1, denominator: 2, label: 'Satu perdua (1/2)' });
+            }
+        }
     }
     deck.meta = { ...deck.meta, version: 2, slideCount: deck.slides.length, requestedSlideCount: input.slideCount, durationMs: Date.now() - started, attachedImages: 0, imagePolicy: 'diagram_terstruktur', provider: raw?._aiMeta?.provider };
     updateLayoutReview(deck, input);
@@ -148,11 +197,40 @@ presentation.post('/generate-stream', requireAIAdmission, async c => {
 });
 async function attachPhotos(c: any, deck: any, input: any) {
     if (!input.usePhotos) return;
-    const unsplash = new UnsplashService(c.env), candidates = deck.slides.filter((s: any) => s.imageQuery && !s.visual).slice(0, 3);
-    for (let i = 0; i < candidates.length; i += 2) await Promise.all(candidates.slice(i, i + 2).map(async (slide: any) => {
-        try { const image = await unsplash.searchImage(slide.imageQuery, slide.title); if (image) { slide.image = image; deck.meta.attachedImages++; } } catch { deck.meta.photoWarning = 'Sebagian foto belum tersedia; isi dan diagram tetap dapat digunakan.'; }
-    }));
-    deck.meta.imagePolicy = 'diagram_dengan_foto_opsional';
+    const unsplash = new UnsplashService(c.env);
+    let candidates = deck.slides.filter((s: any) => (s.imageQuery || s.layout === 'imageText') && !s.visual).slice(0, 3);
+    if (!candidates.length) {
+        candidates = deck.slides.filter((s: any) => !['title', 'thankyou', 'summary'].includes(s.layout) && !s.visual).slice(0, 2);
+    }
+    for (let i = 0; i < candidates.length; i += 2) {
+        await Promise.all(candidates.slice(i, i + 2).map(async (slide: any) => {
+            const query = slide.imageQuery || slide.title || input.topik;
+            const prompt = slide.imagePrompt || `${query}, educational textbook illustration for elementary school ${input.jenjangKelas || 'grade 5'}`;
+            try {
+                const image = await unsplash.searchImage(query, slide.title || query, input.mataPelajaran, prompt);
+                if (image) {
+                    slide.image = image;
+                    deck.meta.attachedImages++;
+                } else if (slide.layout === 'imageText' && !slide.visual) {
+                    const isFraction = /pecahan|fraction|setengah|sepertiga|seperempat/i.test(`${slide.title} ${slide.content?.join(' ')}`);
+                    const isCycle = /siklus|daur|metamorfosis|rantai makanan/i.test(`${slide.title} ${slide.content?.join(' ')}`);
+                    if (isFraction) {
+                        slide.visual = normalizeVisual({ type: 'fraction', numerator: 1, denominator: 2, label: 'Model visual pecahan' });
+                    } else if (isCycle && slide.content?.length >= 2) {
+                        slide.visual = normalizeVisual({ type: 'cycle', nodes: slide.content.slice(0, 4).map((label: string) => ({ label })) });
+                    } else {
+                        slide.layout = 'content';
+                    }
+                }
+            } catch {
+                deck.meta.photoWarning = 'Sebagian gambar/foto belum tersedia; materi dan diagram tetap dapat digunakan.';
+                if (slide.layout === 'imageText' && !slide.visual) {
+                    slide.layout = 'content';
+                }
+            }
+        }));
+    }
+    deck.meta.imagePolicy = deck.meta.attachedImages > 0 ? 'visual_multimodal_aktif' : 'diagram_terstruktur';
 }
 async function telemetry(c: any, deck: any, input: any) {
     const user = c.get('user');

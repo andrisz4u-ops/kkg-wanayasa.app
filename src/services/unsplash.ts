@@ -115,6 +115,29 @@ async function searchWikimediaImage(query: string, excludeUrls?: Set<string>): P
             }
         }
 
+        // 1b. Query Wikipedia Bahasa Inggris (Sangat efektif untuk diagram sains, anatomi, astronomi dengan kata kunci Inggris)
+        const enWikiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
+        const enRes = await fetch(enWikiUrl, { headers: { 'User-Agent': 'RuangKKG/2.0 (education)' } });
+        if (enRes.ok) {
+            const enData = await enRes.json() as any;
+            const enPages = enData?.query?.pages;
+            if (enPages) {
+                const pageList = Object.values(enPages) as any[];
+                pageList.sort((a, b) => (a.index || 99) - (b.index || 99));
+                for (const page of pageList) {
+                    const src = page.thumbnail?.source;
+                    if (src) {
+                        const cleanSrc = src.split('?')[0];
+                        if (excludeUrls && (excludeUrls.has(src) || excludeUrls.has(cleanSrc))) continue;
+                        return {
+                            url: src,
+                            creditName: `Wikimedia Commons (${page.title})`
+                        };
+                    }
+                }
+            }
+        }
+
         // 2. Query Wikimedia Commons langsung
         const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=5&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
         const commRes = await fetch(commonsUrl, { headers: { 'User-Agent': 'RuangKKG/2.0 (education)' } });

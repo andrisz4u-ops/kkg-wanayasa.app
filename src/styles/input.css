@@ -16,7 +16,11 @@
 @tailwind components;
 @tailwind utilities;
 
-.feature-workspace[data-feature-page="slide"] .ss-brief { grid-template-columns: minmax(0, 1fr); max-width: 920px; margin-inline: auto; }
+.feature-workspace[data-feature-page="slide"] .slide-classroom-studio > .ss-header { max-width: 1400px; margin-inline: auto; }
+.feature-workspace[data-feature-page="slide"] .ss-brief { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr); gap: 20px; align-items: start; max-width: 1400px; width: 100%; margin-inline: auto; }
+@media (max-width: 768px) {
+  .feature-workspace[data-feature-page="slide"] .ss-brief { grid-template-columns: minmax(0, 1fr); }
+}
 .feature-workspace[data-feature-page="slide"] .slide-classroom-studio #sg-main-prompt { height: 104px; min-height: 104px; padding: 12px 14px; }
 
 .workspace-shell {

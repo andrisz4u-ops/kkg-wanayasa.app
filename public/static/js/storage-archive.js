@@ -43,7 +43,13 @@ export function saveDocArchive({ module, title, subtitle, inputData, content, ex
       items = items.slice(0, MAX_ARCHIVE_ITEMS);
     }
 
-    localStorage.setItem(key, JSON.stringify(items));
+    try {
+      localStorage.setItem(key, JSON.stringify(items));
+    } catch (quotaErr) {
+      items = items.slice(0, Math.min(items.length, 10));
+      const serialized = JSON.stringify(items, (k, v) => (typeof v === 'string' && v.startsWith('data:image/') ? '' : v));
+      localStorage.setItem(key, serialized);
+    }
     return newItem;
   } catch (e) {
     console.warn('Failed to save document archive:', e);

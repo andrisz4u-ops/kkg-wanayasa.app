@@ -4,8 +4,10 @@ import {
     presentationGenerateSchema,
     presentationResponseSchema,
     baseSlideSchema,
+    presentationImageSchema,
     validate,
 } from '../src/lib/validation';
+import { normalizeSlide, slideIssues } from '../public/static/js/slides/lesson-model.js';
 
 describe('Presentation Schemas & Normalization Tests', () => {
     it('should validate presentation outline input with default fallbacks', () => {
@@ -79,5 +81,50 @@ describe('Presentation Schemas & Normalization Tests', () => {
             expect(result.data.slides[1].quizOptions).toEqual(['A. Jupiter', 'B. Saturnus', 'C. Bumi', 'D. Mars']);
             expect(result.data.slides[1].quizAnswer).toBe('A. Jupiter');
         }
+    });
+    it('should validate presentationImageSchema with vultr-ai and data:image base64 sources', () => {
+                const vultrImage = {
+            source: 'vultr-ai',
+            url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=',
+            alt: 'Ilustrasi Sel Tumbuhan',
+            query: 'plant cell',
+            creditName: 'Vultr Serverless (Z-Image Turbo)',
+            creditUrl: 'https://www.vultr.com',
+            unsplashId: 'vultr_12345',
+        };
+        const parsed = presentationImageSchema.safeParse(vultrImage);
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+            expect(parsed.data.source).toBe('vultr-ai');
+            expect(parsed.data.url).toContain('data:image/png;base64,');
+        }
+    });
+
+    it('should accept imageQuery on imageText layout without failing validation before image attachment', () => {
+        const slide = normalizeSlide({
+            layout: 'imageText',
+            title: 'Anatomi Jantung Manusia',
+            subtitle: 'Organ pemompa darah dalam tubuh',
+            content: ['Jantung memiliki empat ruang.', 'Darah kaya oksigen dialirkan ke seluruh tubuh.'],
+            imageQuery: 'human heart anatomy',
+            imagePrompt: '2D clean vector diagram of human heart',
+        });
+        expect(slide.imageQuery).toBe('human heart anatomy');
+        expect(slideIssues(slide)).toEqual([]);
+    });
+
+    it('should support deep, thorough pedagogical explanations without artificial word truncation issues', () => {
+        const deepSlide = normalizeSlide({
+            layout: 'content',
+            title: 'Proses Fotosintesis pada Tumbuhan Hijau',
+            subtitle: 'Bagaimana klorofil dan sinar matahari mengubah air serta karbon dioksida menjadi energi',
+            content: [
+                'Klorofil di daun menangkap energi foton dari sinar matahari untuk memecah molekul air menjadi hidrogen dan oksigen yang dilepaskan ke udara bebas.',
+                'Karbon dioksida diserap dari atmosfer melalui stomata dan diolah dalam siklus Calvin untuk menghasilkan glukosa sebagai sumber energi utama tumbuhan.',
+                'Hasil fotosintesis kemudian diedarkan ke seluruh jaringan floem untuk pertumbuhan daun, batang, pembentukan buah, dan cadangan makanan.',
+            ],
+            speakerNotes: 'Ajak siswa mengamati daun di luar kelas dan mendiskusikan peran penting stomata.',
+        });
+        expect(slideIssues(deepSlide)).toEqual([]);
     });
 });

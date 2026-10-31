@@ -8,5 +8,5 @@ const aliases = { 'minimalist-dark': 'jelajah-ipas', 'educational-blue': 'matema
 export const resolveTemplateId = id => slideTemplates[id] ? id : aliases[id] || 'kelas-ceria';
 export const getTemplate = id => slideTemplates[resolveTemplateId(id)];
 export const slideLayouts = [
-  ['title', 'Pembuka'], ['content', 'Konsep inti'], ['imageText', 'Visual & penjelasan'], ['twoColumn', 'Dua gagasan'], ['comparison', 'Perbandingan'], ['timeline', 'Urutan proses'], ['stats', 'Angka bermakna'], ['quiz', 'Cek pemahaman'], ['flipcard', 'Tebak konsep'], ['activity', 'Aktivitas kelas'], ['quote', 'Definisi / kutipan'], ['summary', 'Rangkuman'], ['thankyou', 'Refleksi penutup'],
+  ['title', 'Pembuka'], ['content', 'Konsep inti'], ['imageText', 'Visual & penjelasan'], ['twoColumn', 'Dua gagasan'], ['gridCards', 'Kartu konsep (2-4 kolom)'], ['comparison', 'Perbandingan'], ['timeline', 'Urutan proses'], ['stats', 'Angka bermakna'], ['quiz', 'Cek pemahaman'], ['flipcard', 'Tebak konsep'], ['activity', 'Aktivitas kelas'], ['quote', 'Definisi / kutipan'], ['summary', 'Rangkuman'], ['thankyou', 'Refleksi penutup'],
 ].map(([id, name]) => ({ id, name }));

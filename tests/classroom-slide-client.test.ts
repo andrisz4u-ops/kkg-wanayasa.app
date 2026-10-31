@@ -79,6 +79,36 @@ describe('Teacher-facing Slide workflow', () => {
     document.querySelector('#main-content')!.innerHTML = studio.renderSlide(); studio.initSlide();
     expect((document.querySelector('[name="mataPelajaran"]') as unknown as HTMLSelectElement).value).toBe('Matematika');
   });
+  it('allows selecting theme directly in brief and supports one-click direct slide generation', async () => {
+    const brief = document.querySelector<HTMLFormElement>('#sg-brief-form')!;
+    const themeChip = brief.querySelector<HTMLElement>('[data-brief-template="jelajah-ipas"]')!;
+    expect(themeChip).not.toBeNull();
+    themeChip.click();
+    expect((window as any).slideGenState.template).toBe('jelajah-ipas');
+    await vi.waitFor(() => expect((document.querySelector('#sg-model-select') as unknown as HTMLSelectElement).value).toBe('api'));
+
+    const directBtn = document.querySelector<HTMLButtonElement>('#sg-direct-generate')!;
+    expect(directBtn).not.toBeNull();
+    expect(directBtn.textContent).toContain('Buat slide langsung jadi');
+
+    const topic = document.querySelector<HTMLTextAreaElement>('[name="topik"]')!;
+    topic.value = 'Rantai makanan ekosistem sawah';
+    topic.dispatchEvent(new Event('input', { bubbles: true }));
+
+    mocks.stream.mockImplementation(async (path: string, body: any, onEvent: any) => {
+      onEvent('done', { data: { title: 'Rantai Makanan', slides: [{ layout: 'content', title: 'Komponen Ekosistem', content: ['Produsen', 'Konsumen'] }] } });
+    });
+
+    directBtn.click();
+    await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>('#monitor-review-btn')).not.toBeNull());
+    await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>('#monitor-review-btn')!.hidden).toBe(false));
+    document.querySelector<HTMLButtonElement>('#monitor-review-btn')!.click();
+    await vi.waitFor(() => expect((window as any).slideGenState.view).toBe('editor'));
+    expect(mocks.stream).toHaveBeenCalledWith('/presentation/generate-stream', expect.objectContaining({
+      topik: 'Rantai makanan ekosistem sawah',
+      template: 'jelajah-ipas',
+    }), expect.any(Function), expect.any(Object));
+  });
   it('keeps the brief and saved topic intact when outline creation fails', async () => {
     mocks.api.mockImplementation(async (path: string) => {
       if (path === '/ai-providers/active') return { success: true, data: mocks.providers };
@@ -282,5 +312,32 @@ describe('Teacher-facing Slide workflow', () => {
     expect(writes).toHaveLength(2);
     expect(writes[1].payload.deck.slides[0].title).toBe('Perubahan terakhir sebelum checkpoint');
     expect(checkpoints[0].baseRevision).toBe(writes[1].baseRevision + 1);
+  });
+  it('launches presenter mode with class activity timer, blackout toggle and keyboard controls', async () => {
+    await openExampleDeck();
+    const openBtn = document.querySelector<HTMLButtonElement>('#sg-open-presenter')!;
+    expect(openBtn).not.toBeNull();
+    openBtn.click();
+    const presenter = document.querySelector<HTMLElement>('#sg-fullscreen-container')!;
+    expect(presenter).not.toBeNull();
+    expect(presenter.querySelector('#ss-timer-display')).not.toBeNull();
+    expect(presenter.querySelector('#ss-blackout')).not.toBeNull();
+
+    const blackoutBtn = presenter.querySelector<HTMLButtonElement>('#ss-blackout')!;
+    blackoutBtn.click();
+    expect(blackoutBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(presenter.querySelector<HTMLElement>('#ss-curtain')!.style.display).toBe('block');
+
+    presenter.querySelector<HTMLElement>('#ss-curtain')!.click();
+    expect(blackoutBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(presenter.querySelector<HTMLElement>('#ss-curtain')!.style.display).toBe('none');
+
+    const timerDisplay = presenter.querySelector<HTMLElement>('#ss-timer-display')!;
+    const add1mBtn = presenter.querySelector<HTMLButtonElement>('[data-add="60"]')!;
+    add1mBtn.click();
+    expect(timerDisplay.textContent).toBe('04:00');
+
+    presenter.querySelector<HTMLButtonElement>('#ss-close')!.click();
+    expect(document.querySelector('#sg-fullscreen-container')).toBeNull();
   });
 });

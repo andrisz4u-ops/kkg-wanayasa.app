@@ -176,7 +176,7 @@ export async function renderRpp() {
             <!-- Streaming Mode Toggle Switch -->
             <div class="mt-3 flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-500/30">
               <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none" title="Aktifkan untuk memantau proses berpikir & penyusunan skenario RPP secara realtime">
-                <input type="checkbox" id="toggle-rpp-stream" class="rounded accent-indigo-600 w-4 h-4 cursor-pointer">
+                <input type="checkbox" id="toggle-rpp-stream" class="rounded accent-indigo-600 w-4 h-4 cursor-pointer" ${typeof localStorage !== 'undefined' && localStorage.getItem('kkg_ai_streaming_mode') !== 'false' ? 'checked' : ''}>
                 <span><i class="fas fa-satellite-dish text-indigo-600 dark:text-indigo-400 mr-1 animate-pulse"></i>Live AI Streaming Monitor</span>
               </label>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">Live</span>
@@ -820,6 +820,10 @@ export function initRpp() {
     
     // Ensure AI Provider select options are immediately restored
     populateAiModelSelect('select[name="aiProvider"]', prevProvider);
+    const streamToggle = document.getElementById('toggle-rpp-stream');
+    if (streamToggle) {
+      streamToggle.checked = typeof localStorage !== 'undefined' && localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
+    }
     
     // Reset Dimensi Profil tags (class name: 'active', not 'rpp-tag-active')
     selectedDimensions.clear();

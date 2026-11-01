@@ -137,8 +137,10 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
          "- Guru memulai sesi dengan menyapa murid secara antusias, mengecek kehadiran, lalu mengajak murid melakukan ice breaking 'Tebak Gaya' untuk mencairkan suasana."
          (Ini list, tapi isinya naratif panjang).
       3. KONSISTENSI: Pertemuan ke-2 sampai ke-${jumlahPertemuan} HARUS sama detailnya.
-      4. ANTI-DUPLIKASI (CRITICAL): JANGAN PERNAH mengulang aktivitas atau pertanyaan yang sama di fase berbeda. Contoh: Jika pertanyaan pemantik sudah ada di Pendahuluan, JANGAN TULIS LAGI di Mindful. Setiap fase harus unik dan progressive.
-      5. ALOKASI WAKTU (WAJIB IKUTI HITUNGAN INI): Pendahuluan=${timeDist.pen}, Mindful=${timeDist.min}, Meaningful=${timeDist.mea}, Joyful=${timeDist.joy}, Penutup=${timeDist.clo}. Total = ${totalMinutes} Menit. JANGAN UBAH ANGKA INI.
+      4. KELENGKAPAN JUMLAH PERTEMUAN (MUTLAK): Array "pertemuan" WAJIB berisi tepat ${jumlahPertemuan} objek pertemuan (nomor 1 sampai nomor ${jumlahPertemuan}). Setiap pertemuan harus memuat kelima fase kegiatan secara utuh: pendahuluan, mindful, meaningful, joyful, dan penutup. DILARANG KERAS hanya menulis pertemuan pertama!
+      5. EFISIENSI TOKEN (PENTING): Lakukan penalaran secara fokus pada inti materi dan alokasikan kapasitas token untuk menuntaskan SEMUA ${jumlahPertemuan} pertemuan dalam format JSON yang valid dan lengkap tanpa terputus.
+      6. ANTI-DUPLIKASI (CRITICAL): JANGAN PERNAH mengulang aktivitas atau pertanyaan yang sama di fase berbeda. Contoh: Jika pertanyaan pemantik sudah ada di Pendahuluan, JANGAN TULIS LAGI di Mindful. Setiap fase harus unik dan progressive.
+      7. ALOKASI WAKTU (WAJIB IKUTI HITUNGAN INI): Pendahuluan=${timeDist.pen}, Mindful=${timeDist.min}, Meaningful=${timeDist.mea}, Joyful=${timeDist.joy}, Penutup=${timeDist.clo}. Total = ${totalMinutes} Menit. JANGAN UBAH ANGKA INI.
 
       ${lampirkanLKPD === 'Ya' ? `WAJIB GENERATE LKPD LENGKAP untuk setiap pertemuan (lihat struktur JSON).` : ''}
 

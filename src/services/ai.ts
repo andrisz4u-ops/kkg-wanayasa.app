@@ -67,6 +67,7 @@ const DEFAULT_SUBREQUEST_TIMEOUT_MS = 180000;
 
 // Streaming timeout settings (Sliding Idle Timeout / berbasis aktivitas aliran data):
 export const STREAM_INITIAL_TIMEOUT_MS = 60000;    // 60 detik batas waktu tunggu token pertama (TTFT fail-fast jika server antre/mati)
+export const STREAM_REASONING_INITIAL_TIMEOUT_MS = 180000; // 180 detik batas waktu tunggu token pertama untuk model deep reasoning / high thinking
 export const STREAM_IDLE_TIMEOUT_MS = 60000;       // 60 detik jeda maksimal tanpa adanya token/chunk baru (sliding saat AI aktif menulis)
 export const STREAM_MAX_TOTAL_TIMEOUT_MS = 600000; // 10 menit batas pengaman global absolut
 
@@ -447,6 +448,7 @@ CRITICAL JSON RULES:
             provider: result.provider,
             model: result.model,
             usage: result.usage,
+            finish_reason: (result as any).finish_reason,
             used_key_index: result.used_key_index,
             total_keys_in_pool: result.total_keys_in_pool,
         };
@@ -477,6 +479,7 @@ CRITICAL JSON RULES:
             provider: result.provider,
             model: result.model,
             usage: result.usage,
+            finish_reason: (result as any).finish_reason,
             used_key_index: result.used_key_index,
             total_keys_in_pool: result.total_keys_in_pool,
         };
@@ -892,11 +895,13 @@ CRITICAL JSON RULES:
     private async callOpenAICompatStream(p: DBProvider, prompt: string, jsonMode: boolean, onToken?: (token: string) => void): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
         const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
-        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking || !!extraBody.reasoning;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
                                  p.model.toLowerCase().includes('reasoner') || 
                                  p.model.toLowerCase().includes('r1') || 
                                  p.model.toLowerCase().includes('qwq') ||
+                                 p.model.toLowerCase().includes('deepseek-v4') ||
+                                 p.model.toLowerCase().includes('reasoning') ||
                                  hasReasoningEffort;
 
         const isTestPing = p.max_tokens <= 32;
@@ -917,7 +922,10 @@ CRITICAL JSON RULES:
         };
 
         if (isReasoningModel) {
-            body.max_completion_tokens = p.max_tokens;
+            body.max_completion_tokens = Math.max(p.max_tokens || 16384, 16384);
+            if (body.include_reasoning === undefined) {
+                body.include_reasoning = true;
+            }
             // OpenAI o1/o3 melarang parameter temperature
             if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
                 // Untuk DeepSeek/Qwen reasoning, temperature < 0.6 menyebabkan looping repetitif pada pemikiran
@@ -950,15 +958,23 @@ CRITICAL JSON RULES:
         let idleTimer: any = null;
         let maxTotalTimer: any = null;
 
+        const initialTimeoutMs = (isReasoningModel || hasReasoningEffort)
+            ? Math.max(STREAM_INITIAL_TIMEOUT_MS, STREAM_REASONING_INITIAL_TIMEOUT_MS)
+            : STREAM_INITIAL_TIMEOUT_MS;
+
         // 1. Timer awal: batas menunggu token pertama dari server (TTFT fail-fast)
         initialTimer = setTimeout(() => {
-            controller.abort(new Error(`Timeout: Provider "${p.name}" (${p.slug}) tidak memberikan token pertama dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik. Server provider kemungkinan sedang antre atau tidak merespons.`));
-        }, STREAM_INITIAL_TIMEOUT_MS);
+            controller.abort(new Error(`Timeout: Provider "${p.name}" (${p.slug}) tidak memberikan token pertama dalam waktu ${initialTimeoutMs / 1000} detik. Server provider kemungkinan sedang antre atau tidak merespons.`));
+        }, initialTimeoutMs);
 
         // 2. Batas pengaman absolut (10 menit) untuk mencegah infinite loop
         maxTotalTimer = setTimeout(() => {
             controller.abort(new Error(`Timeout: Batas waktu maksimal generasi (${STREAM_MAX_TOTAL_TIMEOUT_MS / 60000} menit) terlampaui.`));
         }, STREAM_MAX_TOTAL_TIMEOUT_MS);
+
+        const idleTimeoutMs = (isReasoningModel || hasReasoningEffort)
+            ? Math.max(STREAM_IDLE_TIMEOUT_MS, 90000)
+            : STREAM_IDLE_TIMEOUT_MS;
 
         // 3. Sliding Idle Timer: di-reset HANYA saat ada token teks/reasoning baru masuk
         const resetIdleTimer = () => {
@@ -970,8 +986,8 @@ CRITICAL JSON RULES:
                 clearTimeout(idleTimer);
             }
             idleTimer = setTimeout(() => {
-                controller.abort(new Error(`Timeout: Aliran data dari provider "${p.name}" (${p.slug}) terhenti (tidak ada token baru selama ${STREAM_IDLE_TIMEOUT_MS / 1000} detik).`));
-            }, STREAM_IDLE_TIMEOUT_MS);
+                controller.abort(new Error(`Timeout: Aliran data dari provider "${p.name}" (${p.slug}) terhenti (tidak ada token baru selama ${idleTimeoutMs / 1000} detik).`));
+            }, idleTimeoutMs);
         };
 
         try {
@@ -1040,7 +1056,7 @@ CRITICAL JSON RULES:
                             try {
                                 const chunk = JSON.parse(trimmed.substring(6));
                                 const delta = chunk.choices?.[0]?.delta?.content || '';
-                                const reasoning = chunk.choices?.[0]?.delta?.reasoning_content || chunk.choices?.[0]?.delta?.reasoning || '';
+                                const reasoning = chunk.choices?.[0]?.delta?.reasoning_content || chunk.choices?.[0]?.delta?.reasoning || chunk.choices?.[0]?.delta?.thinking || '';
                                 const streamToken = (reasoning && delta) ? (reasoning + delta) : (reasoning || delta);
 
                                 if (streamToken) {
@@ -1103,7 +1119,7 @@ CRITICAL JSON RULES:
                 total_tokens: totalTokens,
             };
 
-            return { content, provider: p.slug, model: p.model, usage };
+            return { content, provider: p.slug, model: p.model, usage, finish_reason: finishReason } as any;
         } catch (err: any) {
             if (controller.signal.aborted) {
                 const reason = controller.signal.reason;
@@ -1160,10 +1176,16 @@ CRITICAL JSON RULES:
             }, STREAM_IDLE_TIMEOUT_MS);
         };
 
+        const extraBodyGemini = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
+        const isReasoningGemini = p.model.toLowerCase().includes('thinking') || Boolean((extraBodyGemini as any).thinkingConfig);
+        const geminiInitialTimeoutMs = isReasoningGemini
+            ? Math.max(STREAM_INITIAL_TIMEOUT_MS, STREAM_REASONING_INITIAL_TIMEOUT_MS)
+            : STREAM_INITIAL_TIMEOUT_MS;
+
         initialTimer = setTimeout(() => {
-            timeoutError = new Error(`Timeout: Gemini (${p.slug}) tidak merespons dalam waktu ${STREAM_INITIAL_TIMEOUT_MS / 1000} detik.`);
+            timeoutError = new Error(`Timeout: Gemini (${p.slug}) tidak merespons dalam waktu ${geminiInitialTimeoutMs / 1000} detik.`);
             requestController.abort(timeoutError);
-        }, STREAM_INITIAL_TIMEOUT_MS);
+        }, geminiInitialTimeoutMs);
 
         try {
             const streamPromise = (async () => {
@@ -1211,11 +1233,13 @@ CRITICAL JSON RULES:
     private async callOpenAICompat(p: DBProvider, prompt: string, jsonMode: boolean, timeoutMs: number = DEFAULT_SUBREQUEST_TIMEOUT_MS): Promise<AIResponse> {
         const url = `${p.base_url.replace(/\/+$/, '')}/chat/completions`;
         const extraBody = (p.extra_body && typeof p.extra_body === 'object' && !Array.isArray(p.extra_body)) ? p.extra_body : {};
-        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking;
+        const hasReasoningEffort = !!extraBody.reasoning_effort || !!extraBody.thinking || !!extraBody.reasoning;
         const isReasoningModel = p.model.startsWith('o1') || p.model.startsWith('o3') || 
                                  p.model.toLowerCase().includes('reasoner') || 
                                  p.model.toLowerCase().includes('r1') || 
                                  p.model.toLowerCase().includes('qwq') ||
+                                 p.model.toLowerCase().includes('deepseek-v4') ||
+                                 p.model.toLowerCase().includes('reasoning') ||
                                  hasReasoningEffort;
 
         const isTestPing = p.max_tokens <= 32;
@@ -1235,7 +1259,10 @@ CRITICAL JSON RULES:
         };
 
         if (isReasoningModel) {
-            body.max_completion_tokens = p.max_tokens;
+            body.max_completion_tokens = Math.max(p.max_tokens || 16384, 16384);
+            if (body.include_reasoning === undefined) {
+                body.include_reasoning = true;
+            }
             if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
                 body.temperature = Math.max(0.6, p.temperature || 0.6);
             }

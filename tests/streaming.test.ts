@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildAssessmentPrompt, calculateAdaptiveVisualQuota } from '../src/routes/kisi';
 import { buildRppPrompt, calculateTimeDistribution } from '../src/routes/rpp';
-import { AIService, STREAM_INITIAL_TIMEOUT_MS, STREAM_IDLE_TIMEOUT_MS, STREAM_MAX_TOTAL_TIMEOUT_MS } from '../src/services/ai';
+import { AIService, STREAM_INITIAL_TIMEOUT_MS, STREAM_REASONING_INITIAL_TIMEOUT_MS, STREAM_IDLE_TIMEOUT_MS, STREAM_MAX_TOTAL_TIMEOUT_MS } from '../src/services/ai';
 
 describe('AI Streaming Prompt & Pipeline Tests', () => {
     describe('calculateAdaptiveVisualQuota', () => {
@@ -218,6 +218,7 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
 
         it('should configure resilient Sliding Idle Timeout parameters', () => {
             expect(STREAM_INITIAL_TIMEOUT_MS).toBe(60000); // 60s initial response fail-fast (resilient for heavy reasoning models)
+            expect(STREAM_REASONING_INITIAL_TIMEOUT_MS).toBe(180000); // 180s for deep reasoning models (e.g. DeepSeek R1/V4.1, o1, QwQ with thinking high)
             expect(STREAM_IDLE_TIMEOUT_MS).toBe(60000);    // 60s idle sliding per token
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBe(600000); // 10 minutes max ceiling
             expect(STREAM_MAX_TOTAL_TIMEOUT_MS).toBeGreaterThan(STREAM_IDLE_TIMEOUT_MS);
@@ -321,6 +322,59 @@ describe('AI Streaming Prompt & Pipeline Tests', () => {
 
                 expect(tokensReceived).toEqual(['Memikirkan langkah 1... ', 'Selesai berpikir. ', '{"hasil": "OK"}']);
                 expect(res.content).toBe('{"hasil": "OK"}');
+            } finally {
+                globalThis.fetch = originalFetch;
+            }
+        });
+
+        it('should pass include_reasoning and expand max_completion_tokens for DeepSeek V4.1 high reasoning', async () => {
+            const ai = new AIService({} as any);
+            (ai as any).providers = [
+                {
+                    id: 1,
+                    name: 'API',
+                    slug: 'river',
+                    api_type: 'openai_compat',
+                    model: 'deepseek-ai/DeepSeek-V4.1-Flash-1017',
+                    base_url: 'https://api.river.ai/v1',
+                    api_key: 'test-key',
+                    is_active: 1,
+                    priority: 1,
+                    max_tokens: 8192,
+                    temperature: 0.7,
+                    extra_body: { reasoning_effort: 'high' }
+                }
+            ];
+
+            let sentBody: any = null;
+            const originalFetch = globalThis.fetch;
+            globalThis.fetch = async (_input: any, init: any) => {
+                sentBody = JSON.parse(init.body);
+                const mockStream = new ReadableStream({
+                    start(controller) {
+                        const encoder = new TextEncoder();
+                        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"thinking":"Menganalisis 3 pertemuan..."}}]}\n\n'));
+                        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"{\\"status\\":\\"ok\\"}"}}]}\n\n'));
+                        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                        controller.close();
+                    }
+                });
+                return new Response(mockStream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/event-stream' }
+                });
+            };
+
+            try {
+                const received: string[] = [];
+                const res = await ai.generateTextStream('Rancang RPP 3 pertemuan', 'river', true, (token) => {
+                    received.push(token);
+                });
+
+                expect(sentBody.include_reasoning).toBe(true);
+                expect(sentBody.max_completion_tokens).toBeGreaterThanOrEqual(16384);
+                expect(received).toContain('Menganalisis 3 pertemuan...');
+                expect(res.content).toBe('{"status":"ok"}');
             } finally {
                 globalThis.fetch = originalFetch;
             }

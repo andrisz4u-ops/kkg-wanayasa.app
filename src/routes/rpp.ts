@@ -53,6 +53,8 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
     profilLulusan, lampirkanLKPD, aiProvider
   } = body;
 
+  const numP = Math.max(1, parseInt(String(jumlahPertemuan), 10) || 1);
+
   const origin = curriculumSource?.origin;
   const sourceDescription = origin === 'user-input'
     ? 'masukan guru (belum ditinjau)'
@@ -133,16 +135,16 @@ export function buildRppPrompt(body: any, baseCP: string | null, timeDist: any, 
 
       ATURAN KERAS (STRICT RULES):
       1. FORMAT STEP-BY-STEP: WAJIB memecah narasi menjadi poin-poin daftar kegiatan yang diawali simbol "- ". JANGAN menulis dalam satu paragraf blok besar.
-      2. KUALITAS PER POIN: Setiap poin strip harus MENDETAIL (minimal 2-3 kalimat per poin). Jangan buat poin pendek. Contoh benar:
-         "- Guru memulai sesi dengan menyapa murid secara antusias, mengecek kehadiran, lalu mengajak murid melakukan ice breaking 'Tebak Gaya' untuk mencairkan suasana."
-         (Ini list, tapi isinya naratif panjang).
-      3. KONSISTENSI: Pertemuan ke-2 sampai ke-${jumlahPertemuan} HARUS sama detailnya.
+      2. KUALITAS PER POIN: ${numP > 1
+        ? `Karena menyusun ${numP} pertemuan sekaligus, tulis 1-2 kalimat operasional yang jelas, terarah, dan bermakna pada setiap poin. Hindari narasi bertele-tele agar seluruh pertemuan tersusun tuntas.`
+        : `Setiap poin strip harus jelas dan mendetail (minimal 2-3 kalimat operasional per poin).`}
+      3. KONSISTENSI: Pertemuan ke-2 sampai ke-${jumlahPertemuan} HARUS sama mutu dan strukturnya.
       4. KELENGKAPAN JUMLAH PERTEMUAN (MUTLAK): Array "pertemuan" WAJIB berisi tepat ${jumlahPertemuan} objek pertemuan (nomor 1 sampai nomor ${jumlahPertemuan}). Setiap pertemuan harus memuat kelima fase kegiatan secara utuh: pendahuluan, mindful, meaningful, joyful, dan penutup. DILARANG KERAS hanya menulis pertemuan pertama!
-      5. EFISIENSI TOKEN (PENTING): Lakukan penalaran secara fokus pada inti materi dan alokasikan kapasitas token untuk menuntaskan SEMUA ${jumlahPertemuan} pertemuan dalam format JSON yang valid dan lengkap tanpa terputus.
+      5. EFISIENSI TOKEN & KELENGKAPAN OUTPUT (MUTLAK): Lakukan penalaran secara fokus pada inti materi. Kelola kapasitas token agar SEMUA ${jumlahPertemuan} pertemuan dari nomor 1 sampai ${jumlahPertemuan} selesai tuntas beserta asesmen tanpa terpotong di tengah jalan!
       6. ANTI-DUPLIKASI (CRITICAL): JANGAN PERNAH mengulang aktivitas atau pertanyaan yang sama di fase berbeda. Contoh: Jika pertanyaan pemantik sudah ada di Pendahuluan, JANGAN TULIS LAGI di Mindful. Setiap fase harus unik dan progressive.
       7. ALOKASI WAKTU (WAJIB IKUTI HITUNGAN INI): Pendahuluan=${timeDist.pen}, Mindful=${timeDist.min}, Meaningful=${timeDist.mea}, Joyful=${timeDist.joy}, Penutup=${timeDist.clo}. Total = ${totalMinutes} Menit. JANGAN UBAH ANGKA INI.
 
-      ${lampirkanLKPD === 'Ya' ? `WAJIB GENERATE LKPD LENGKAP untuk setiap pertemuan (lihat struktur JSON).` : ''}
+      ${lampirkanLKPD === 'Ya' ? (numP > 1 ? `WAJIB GENERATE LKPD untuk setiap pertemuan (lihat struktur JSON). Karena ada ${numP} pertemuan, sediakan 2-3 butir aktivitas/soal inti per LKPD agar kapasitas token terjaga.` : `WAJIB GENERATE LKPD LENGKAP untuk setiap pertemuan (lihat struktur JSON).`) : ''}
 
       Struktur JSON Output (Wajib Valid JSON):
       {

@@ -812,32 +812,15 @@ export function initRpp() {
   document.getElementById('btn-rpp-back')?.addEventListener('click', () => {
     document.getElementById('rpp-form-view').classList.remove('hidden');
     document.getElementById('rpp-result-view').classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Clear the form fields while preserving active AI Provider
-    const formEl = document.getElementById('rpp-form');
-    const prevProvider = formEl?.querySelector('select[name="aiProvider"]')?.value;
-    if (formEl) formEl.reset();
-    
-    // Ensure AI Provider select options are immediately restored
-    populateAiModelSelect('select[name="aiProvider"]', prevProvider);
+    // Pastikan status toggle streaming tetap aktif dan sinkron dengan preferensi localStorage
     const streamToggle = document.getElementById('toggle-rpp-stream');
     if (streamToggle) {
       streamToggle.checked = typeof localStorage !== 'undefined' && localStorage.getItem('kkg_ai_streaming_mode') !== 'false';
     }
     
-    // Reset Dimensi Profil tags (class name: 'active', not 'rpp-tag-active')
-    selectedDimensions.clear();
-    document.querySelectorAll('.rpp-tag').forEach(tag => tag.classList.remove('active'));
-    
-    const prtCount = document.getElementById('prt-count');
-    if (prtCount) prtCount.textContent = '1P';
-    const numPrt = document.querySelector('input[name="jumlahPertemuan"]');
-    if (numPrt) numPrt.value = '1';
-    
-    const selLKPD = document.getElementById('sel-lkpd');
-    if (selLKPD) selLKPD.classList.remove('rpp-input-highlight');
-
-    // Reset lampiran state when going back
+    // Reset lampiran state saat kembali agar draf lampiran baru dapat digenerate
     currentLampiran = null;
     const lampiranCanvas = document.getElementById('lampiran-canvas');
     if (lampiranCanvas) { lampiranCanvas.classList.add('hidden'); lampiranCanvas.innerHTML = ''; }

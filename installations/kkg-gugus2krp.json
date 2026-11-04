@@ -1,0 +1,34 @@
+{
+  "slug": "kkg-gugus2krp",
+  "projectName": "kkg-gugus2krp",
+  "databaseName": "kkg-gugus2krp-db",
+  "databaseId": "0fd72cd1-ec2f-41e8-b6b8-0c4b8cc9741d",
+  "bucketName": "kkg-gugus2krp-storage",
+  "organization": {
+    "nama_kkg": "KKG Gugus 2 Kiarapedes",
+    "gugus": "2",
+    "kecamatan": "Kiarapedes",
+    "kabupaten": "Purwakarta",
+    "provinsi": "Jawa Barat",
+    "alamat_sekretariat": "Kec. Kiarapedes, Kab. Purwakarta",
+    "email_kkg": "admin@gugus2kiarapedes.com",
+    "website_kkg": "https://kkg-gugus2krp.pages.dev",
+    "app_name": "RuangKKG",
+    "app_url": "https://kkg-gugus2krp.pages.dev",
+    "region_profile": "purwakarta",
+    "tahun_ajaran": "2026/2027",
+    "nama_ketua": "Ketua KKG Gugus 2 Kiarapedes",
+    "theme_color": "amber"
+  },
+  "admin": {
+    "nama": "Admin KKG Gugus 2",
+    "email": "admin@gugus2kiarapedes.com"
+  },
+  "schools": [
+    { "nama": "SDN 1 Kiarapedes (Sekretariat)", "tipe": "negeri", "is_sekretariat": true },
+    { "nama": "SDN 2 Kiarapedes", "tipe": "negeri" },
+    { "nama": "SDN 3 Kiarapedes", "tipe": "negeri" },
+    { "nama": "SDN 4 Kiarapedes", "tipe": "negeri" }
+  ]
+}
+

@@ -923,9 +923,8 @@ CRITICAL JSON RULES:
 
         if (isReasoningModel) {
             const tokenLimit = Math.max(p.max_tokens || 16384, 16384);
-            if (p.model.startsWith('o1') || p.model.startsWith('o3')) {
-                body.max_completion_tokens = tokenLimit;
-            } else {
+            body.max_completion_tokens = tokenLimit;
+            if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
                 body.max_tokens = tokenLimit;
             }
             if (body.include_reasoning === undefined) {
@@ -1265,9 +1264,8 @@ CRITICAL JSON RULES:
 
         if (isReasoningModel) {
             const tokenLimit = Math.max(p.max_tokens || 16384, 16384);
-            if (p.model.startsWith('o1') || p.model.startsWith('o3')) {
-                body.max_completion_tokens = tokenLimit;
-            } else {
+            body.max_completion_tokens = tokenLimit;
+            if (!p.model.startsWith('o1') && !p.model.startsWith('o3')) {
                 body.max_tokens = tokenLimit;
             }
             if (body.include_reasoning === undefined) {

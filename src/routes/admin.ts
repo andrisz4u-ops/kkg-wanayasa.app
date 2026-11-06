@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getOrganizationSettings } from '../lib/organization';
+import { getOrganizationSettings, isPurwakarta } from '../lib/organization';
 import { getCurrentUser, getCookie, hashPassword } from '../lib/auth';
 import { encrypt, decrypt, isEncrypted, EncryptionError } from '../lib/crypto';
 import { successResponse, Errors } from '../lib/response';
@@ -488,6 +488,11 @@ admin.put('/settings', requireStrictAdmin, writeRateLimit, async (c) => {
       if (validatedData[key as keyof typeof validatedData] !== undefined) {
         updates.push({ key, value: String(validatedData[key as keyof typeof validatedData] || '') });
       }
+    }
+
+    if (validatedData.kabupaten !== undefined && validatedData.region_profile === undefined) {
+      const inferredRegion = isPurwakarta(validatedData.kabupaten) ? 'purwakarta' : 'custom';
+      updates.push({ key: 'region_profile', value: inferredRegion });
     }
 
     // Handle API key separately (only if not masked)

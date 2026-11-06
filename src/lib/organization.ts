@@ -13,6 +13,11 @@ export const PUBLIC_ORGANIZATION_KEYS = [
     'kutipan_ketua', 'theme_color',
 ] as const;
 
+export function isPurwakarta(kabupaten?: string | null): boolean {
+    const norm = String(kabupaten || '').toLowerCase().replace(/^(kabupaten|kab\.?|kota)\s+/i, '').trim();
+    return norm === 'purwakarta' || norm.includes('purwakarta');
+}
+
 export async function getOrganizationSettings(db: D1Database, baseTenant?: any): Promise<Record<string, string>> {
     let tenant: any = baseTenant || DEFAULT_TENANT;
     if (!baseTenant) {
@@ -29,7 +34,7 @@ export async function getOrganizationSettings(db: D1Database, baseTenant?: any):
         alamat_sekretariat: tenant.alamat_sekretariat || '', email_kkg: tenant.email || '',
         telepon_kkg: tenant.no_kontak || '', logo_url: tenant.logo_url || '/static/icons/icon-192x192.png',
         kop_surat_url: tenant.kop_surat_url || '', app_name: 'RuangKKG', app_url: '',
-        region_profile: String(tenant.kabupaten || '').toLowerCase() === 'purwakarta' ? 'purwakarta' : 'custom',
+        region_profile: isPurwakarta(tenant.kabupaten) ? 'purwakarta' : 'custom',
     };
     let results: Array<{ key: string; value: string }> = [];
     try {
@@ -42,8 +47,8 @@ export async function getOrganizationSettings(db: D1Database, baseTenant?: any):
         if (!isMissingOrganizationTable(error, 'settings')) throw error;
     }
     for (const row of results) defaults[row.key] = row.value;
-    if (!results.some(row => row.key === 'region_profile')) {
-        defaults.region_profile = defaults.kabupaten.trim().toLowerCase() === 'purwakarta' ? 'purwakarta' : 'custom';
+    if (!results.some(row => row.key === 'region_profile') || !defaults.region_profile) {
+        defaults.region_profile = isPurwakarta(defaults.kabupaten) ? 'purwakarta' : 'custom';
     }
     if (!results.some(row => row.key === 'nama_kkg') && results.some(row => row.key === 'nama_organisasi')) {
         defaults.nama_kkg = defaults.nama_organisasi;

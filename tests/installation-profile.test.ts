@@ -170,4 +170,23 @@ describe('Independent installation profiles', () => {
         const publicResponse = await app.request('/api/settings/public', {}, { DB: db as any, REGION_PROFILE: 'custom' });
         expect(publicResponse.status).toBe(200);
     });
+
+    it('infers Purwakarta region profile for prefixed kabupaten variations', async () => {
+        const { isPurwakarta, usesPurwakartaContent } = await import('../src/lib/organization');
+        expect(isPurwakarta('Purwakarta')).toBe(true);
+        expect(isPurwakarta('purwakarta')).toBe(true);
+        expect(isPurwakarta('Kab. Purwakarta')).toBe(true);
+        expect(isPurwakarta('Kabupaten Purwakarta')).toBe(true);
+        expect(isPurwakarta('Kota Purwakarta')).toBe(true);
+        expect(isPurwakarta('Subang')).toBe(false);
+        expect(isPurwakarta('')).toBe(false);
+
+        const { db } = fixture('KKG Wanayasa Prefix Test');
+        // Simulate missing region_profile setting with Kab. Purwakarta kabupaten
+        db.sqlite.prepare("DELETE FROM settings WHERE key='region_profile'").run();
+        db.sqlite.prepare("UPDATE settings SET value='Kab. Purwakarta' WHERE key='kabupaten'").run();
+        const profile = await getOrganizationSettings(db as any);
+        expect(profile.region_profile).toBe('purwakarta');
+        expect(await usesPurwakartaContent(db as any)).toBe(true);
+    });
 });

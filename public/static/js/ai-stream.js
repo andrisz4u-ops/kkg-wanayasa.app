@@ -54,7 +54,7 @@ export async function streamPost(endpoint, data, onEvent, options = {}) {
     controller.signal.throwIfAborted();
     const send = () => fetch(url, {
       method: 'POST', credentials: 'include', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf || '', 'X-AI-Job-Id': jobId },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf || '', 'X-AI-Job-Id': jobId, 'X-AI-Force-New': '1' },
       body: JSON.stringify(data),
     });
     armTimeout();

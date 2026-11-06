@@ -184,11 +184,13 @@ export function openAiLiveMonitor({ title = 'Menyusun perangkat ajar', subtitle 
       controller.abort(new DOMException('Proses dibatalkan oleh pengguna.', 'AbortError'));
       finish('cancelled', 'Permintaan pembatalan dikirim');
       find('#monitor-message').textContent = 'Hasil yang belum lengkap tidak dinyatakan selesai.';
+      fetch('/api/ai-jobs/cancel-active', { method: 'POST', credentials: 'include' }).catch(() => {});
       onCancel?.();
     },
     close() {
       if (disposed) return;
       if (monitor.state === 'running') monitor.cancel();
+      else if (monitor.state === 'failed') fetch('/api/ai-jobs/cancel-active', { method: 'POST', credentials: 'include' }).catch(() => {});
       stopTimer(); disposed = true; statusObserver.disconnect(); closeUiDialog(overlay); overlay.remove(); restore?.remove();
       if (activeMonitor === monitor) activeMonitor = null;
     },

@@ -23,6 +23,9 @@ export async function createStreamJob(c: Context<any>, operation: string, input:
     }
     return { response: c.json({ success: false, message: previous.state === 'running' ? 'Proses ini masih berjalan. Tunggu hasil atau batalkan.' : 'Proses sebelumnya sudah berakhir. Mulai ulang dengan identitas proses baru.' }, 409) };
   }
+  if (c.req.header('X-AI-Force-New') === '1') {
+    await db.prepare("UPDATE ai_generation_jobs SET state = 'cancelled' WHERE user_id = ? AND state = 'running'").bind(user.id).run();
+  }
   try {
     await db.prepare("INSERT INTO ai_generation_jobs(user_id, job_id, operation, request_hash, state, lease_until, expires_at) VALUES(?, ?, ?, ?, 'running', ?, ?)").bind(user.id, id, operation, hash, now + 90, now + 86400).run();
   } catch (error: any) {
@@ -47,7 +50,12 @@ export async function createStreamJob(c: Context<any>, operation: string, input:
     if (settled) return;
     controller.abort(new DOMException('Permintaan dibatalkan.', 'AbortError'));
     clearInterval(timer);
-    void writeState('cancelled').catch(error => console.error('[AI-JOB] Failed to record cancellation', error));
+    const cancelPromise = writeState('cancelled').catch(error => console.error('[AI-JOB] Failed to record cancellation', error));
+    try {
+      if (typeof c.executionCtx?.waitUntil === 'function') {
+        c.executionCtx.waitUntil(cancelPromise);
+      }
+    } catch {}
   };
   c.req.raw.signal.addEventListener('abort', abort, { once: true });
   if (c.req.raw.signal.aborted) abort();

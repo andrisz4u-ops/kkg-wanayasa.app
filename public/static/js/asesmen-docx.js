@@ -1,4 +1,4 @@
-﻿/**
+/**
  * asesmen-docx.js
  * Generator file .docx ASLI untuk Asesmen Soal
  * Menggunakan docx@7.x (window.docx) yang di-load via CDN
@@ -354,6 +354,8 @@ function cleanPromptDebris(text) {
 }
 
 // Helper: normalisasi teks soal agar tabel (Markdown, tabel titik dua, maupun spasi tabular) terformat rapi
+const QUESTION_LEAD_IN_REGEX = /^(?:berdasarkan|dari tabel|dari data|kesimpulan|simpulan|pernyataan|manakah|tentukan|sesuai data|analisislah|prediksi|hubungan antara)/i;
+
 function normalizeSoalMarkdown(text) {
   if (!text) return '';
   let clean = cleanPromptDebris(text);
@@ -361,6 +363,8 @@ function normalizeSoalMarkdown(text) {
   // Pisahkan kalimat pengantar soal jika menyatu dalam satu baris dengan tabel
   clean = clean.replace(/([^\n|]+?)\s*:\s*(\|.+)/g, '$1:\n$2');
   clean = clean.replace(/([^\n|]+?[!.:])\s*(\|[ \t]*[^-\s|][^|]*\|)/g, '$1\n$2');
+  // Pisahkan kalimat pertanyaan/lead-in yang menyatu di akhir baris tabel
+  clean = clean.replace(/(\|(?:\s*[^|\r\n]+\s*\|)+)\s*([A-Za-z0-9][^|\r\n]{10,}(?:berdasarkan|dari tabel|dari data|kesimpulan|simpulan|pernyataan|manakah|tentukan|sesuai data|adalah|berikut)[^|\r\n]*?)\|?\s*$/gmi, '$1\n$2');
 
   // 1. Pisahkan baris-baris tabel yang tergabung dalam satu baris (| ... | | ... |)
   clean = clean.replace(/(?<=\|)\s{1,4}(?=\|)/g, '\n');
@@ -374,6 +378,11 @@ function normalizeSoalMarkdown(text) {
     if (!line) continue;
 
     if (line.includes('|')) {
+      const singleCellMatch = line.match(/^\|\s*([^|\r\n]+?)\s*\|$/);
+      if (singleCellMatch && (QUESTION_LEAD_IN_REGEX.test(singleCellMatch[1].trim()) || (singleCellMatch[1].trim().length > 30 && /[.?!…:]$/.test(singleCellMatch[1].trim())))) {
+        normalizedLines.push(singleCellMatch[1].trim());
+        continue;
+      }
       const firstPipe = line.indexOf('|');
       const colonIdx = line.indexOf(':');
       if (colonIdx !== -1 && colonIdx < firstPipe) {
@@ -534,10 +543,27 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
         isFirstLine = false;
       }
       const header = rows[0];
-      const dataRows = rows.slice(1);
+      const rawDataRows = rows.slice(1);
+      const expectedCols = header.length;
+      const dataRows = [];
+      let trailingQuestionText = '';
+
+      for (const row of rawDataRows) {
+        if (row.length > expectedCols) {
+          const extra = row.slice(expectedCols).join(' ').trim();
+          if (extra) {
+            trailingQuestionText = trailingQuestionText ? `${trailingQuestionText} ${extra}` : extra;
+          }
+          dataRows.push(row.slice(0, expectedCols));
+        } else if (row.length === 1 && (QUESTION_LEAD_IN_REGEX.test(row[0]) || row[0].length > 25)) {
+          trailingQuestionText = trailingQuestionText ? `${trailingQuestionText} ${row[0]}` : row[0];
+        } else {
+          dataRows.push(row);
+        }
+      }
       const BORDER_BLACK = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
       const tableIndent = (left !== undefined && left !== null) ? left : CM(0.6);
-      const { widths, totalWidth } = computeColWidths(rows);
+      const { widths, totalWidth } = computeColWidths([header, ...dataRows]);
       const colCount = widths.length;
       const fontSize = colCount >= 6 ? 18 : 20;
       const cellPad = colCount >= 6 ? PT(4) : PT(6);
@@ -577,7 +603,16 @@ function buildSoalDocxChildren(noText, soalText, indentOpts = {}) {
           }))
         ]
       }));
-      items.push(makePara('', { spaceAfter: 4 }));
+      if (trailingQuestionText) {
+        items.push(makeParaRaw([...makeRuns(trailingQuestionText, { size: 22 })], {
+          align: AlignmentType.JUSTIFIED,
+          spaceBefore: 4,
+          spaceAfter: 4,
+          indent: { left }
+        }));
+      } else {
+        items.push(makePara('', { spaceAfter: 4 }));
+      }
     }
     tableLines = [];
   };

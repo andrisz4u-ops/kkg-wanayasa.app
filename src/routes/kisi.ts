@@ -397,15 +397,28 @@ export const hasMarkdownTable = (text: unknown): boolean =>
     /(?:^|\n)[ \t]*\|[^\n]*\|/.test(String(text || ''));
 
 // Helper: normalisasi Markdown table agar terpisah rapi dari teks pembuka & pertanyaan
+const QUESTION_LEAD_IN_REGEX = /^(?:berdasarkan|dari tabel|dari data|kesimpulan|simpulan|pernyataan|manakah|tentukan|sesuai data|analisislah|prediksi|hubungan antara)/i;
+
 export const normalizeSoalMarkdown = (text: string): string => {
     if (!text) return '';
-    const clean = cleanPromptDebris(text);
+    let clean = cleanPromptDebris(text);
+
+    // Pisahkan kalimat pengantar/lead-in yang menyatu di akhir baris tabel
+    clean = clean.replace(/(\|(?:\s*[^|\r\n]+\s*\|)+)\s*([A-Za-z0-9][^|\r\n]{10,}(?:berdasarkan|dari tabel|dari data|kesimpulan|simpulan|pernyataan|manakah|tentukan|sesuai data|adalah|berikut)[^|\r\n]*?)\|?\s*$/gmi, '$1\n$2');
+
     const lines = clean.split(/\r?\n/);
     const outLines: string[] = [];
 
     for (const rawLine of lines) {
-        const line = rawLine.trim();
+        let line = rawLine.trim();
         if (!line) continue;
+
+        // Jika baris berisi 1 sel yang sebenarnya adalah kalimat pertanyaan (bukan baris data)
+        const singleCellMatch = line.match(/^\|\s*([^|\r\n]+?)\s*\|$/);
+        if (singleCellMatch && (QUESTION_LEAD_IN_REGEX.test(singleCellMatch[1].trim()) || (singleCellMatch[1].trim().length > 30 && /[.?!…:]$/.test(singleCellMatch[1].trim())))) {
+            outLines.push(singleCellMatch[1].trim());
+            continue;
+        }
 
         const firstPipe = line.indexOf('|');
         const lastPipe = line.lastIndexOf('|');
@@ -419,7 +432,20 @@ export const normalizeSoalMarkdown = (text: string): string => {
 
             const splitRows = tableContent.split(/(?<=\|)\s*(?=\|)/);
             for (const row of splitRows) {
-                if (row.trim()) outLines.push(row.trim());
+                const r = row.trim();
+                if (!r) continue;
+                // Cek apakah sel terakhir dari baris ini memuat kalimat pertanyaan lead-in
+                const cells = r.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+                if (cells.length >= 2) {
+                    const lastCell = cells[cells.length - 1];
+                    if (QUESTION_LEAD_IN_REGEX.test(lastCell) || (lastCell.length > 35 && /[.?!…:]$/.test(lastCell))) {
+                        const tablePart = '| ' + cells.slice(0, cells.length - 1).join(' | ') + ' |';
+                        outLines.push(tablePart);
+                        outLines.push(lastCell);
+                        continue;
+                    }
+                }
+                outLines.push(r);
             }
 
             if (afterText) outLines.push(afterText);
@@ -1212,6 +1238,7 @@ export const buildAssessmentPrompt = (params: {
                | Penjualan (kg) | 25 | 32 | 18 | 35 | 29 |
              * DILARANG KERAS menyajikan data tabel hanya dengan spasi/tab tanpa pipa (|), dan DILARANG menulis format semi-tabel seperti "Hari : Senin | Selasa | ...". Seluruh data tabel WAJIB di dalam tabel Markdown utuh!
              * Berikan jarak baris kosong (\\n\\n) sebelum tabel dan setelah tabel.
+             * PERTANYAAN POKOK / KALIMAT TANYA (misalnya: "Berdasarkan tabel tersebut, kesimpulan yang paling tepat adalah ..."): WAJIB DITULIS SETELAH TABEL pada baris baru (\\n\\n), DILARANG KERAS dimasukkan ke dalam baris atau sel tabel!
              * Butir soal yang menyajikan TABEL Markdown TIDAK BOLEH dijadikan butir bergambar: isi "visual_stimulus": null, "gambar_keyword": "", dan "gambar_prompt_en": "". Tabel TIDAK dihitung sebagai bagian dari kuota butir bergambar.${gambarRule}
         ${isPG ? '9.' : '8.'} LARANGAN: JANGAN menulis teks label "L1", "L2", "L3" di dalam teks pertanyaan yang dibaca murid. Label disimpan pada field "level". JANGAN menambahkan field "gambar" ke soal isian maupun uraian.${isianRule}
         ${getKelasAdaptation(jenjangKelas)}
@@ -2211,7 +2238,10 @@ kisi.post('/generate-stream', async (c) => {
         const job = await createStreamJob(c, 'kisi', body);
         if ('response' in job) {
             await endAssessmentGenerationRequest(c.env.DB, generationFence, 'failed', 'STREAM_JOB_REJECTED');
-            return c.json({ success: false, message: 'Identitas proses SSE sudah digunakan atau telah berakhir.' }, 409);
+            if (job.response.status === 200) {
+                return c.json({ success: false, message: 'Identitas proses SSE sudah digunakan atau telah berakhir.' }, 409);
+            }
+            return job.response;
         }
         const jobFence: AssessmentGenerationFence = { ...generationFence, jobId: job.id };
         (c as any).set('assessmentGenerationFence', jobFence);

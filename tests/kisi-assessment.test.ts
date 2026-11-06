@@ -535,6 +535,22 @@ describe('Assessment & Kisi-Kisi Matrix Generator Tests', () => {
             expect(normalized).toBe('Perhatikan gambar berikut!\nJenis sudut pada gambar tersebut adalah ...');
         });
 
+        it('should extract question lead-in sentence attached to table row or cell', async () => {
+            const { normalizeSoalMarkdown } = await import('../src/routes/kisi');
+            const rawTableSoal = `Perhatikan tabel hasil pengamatan komponen ekosistem di dua taman berikut!
+| Komponen | Taman A | Taman B |
+| :--- | :---: | :---: |
+| Bunga | 20 | 5 |
+| Kupu-kupu | 15 | 2 |
+| Air | cukup | sedikit |
+| Cahaya matahari | cukup | cukup | Berdasarkan tabel tersebut, kesimpulan yang paling tepat adalah .... |`;
+
+            const normalized = normalizeSoalMarkdown(rawTableSoal);
+            expect(normalized).toContain('| Cahaya matahari | cukup | cukup |');
+            expect(normalized).toContain('Berdasarkan tabel tersebut, kesimpulan yang paling tepat adalah ....');
+            expect(normalized).not.toContain('| Cahaya matahari | cukup | cukup | Berdasarkan tabel tersebut');
+        });
+
         it('should strip multiline visual_stimulus with nested objects/arrays and bracketed labels', async () => {
             const { cleanPromptDebris } = await import('../src/routes/kisi');
             const multilineSoal = `Perhatikan gambar berikut!

@@ -148,9 +148,54 @@ window.saveProfilKKG = async function () {
   } catch (e) { moduleToast('Profil', e.message || 'Gagal menyimpan konfigurasi', 'error'); }
 }
 
+function compressLogoImage(file, maxDimension = 512, maxBytes = 280 * 1024) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('image/') || file.type.includes('svg')) return resolve(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob && blob.size <= maxBytes) {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' }));
+          } else {
+            canvas.toBlob((jpegBlob) => {
+              if (jpegBlob) {
+                resolve(new File([jpegBlob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+              } else {
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.88);
+          }
+        }, 'image/png');
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 window.uploadLogo = async function (input) {
   if (input.files && input.files[0]) {
-    const file = input.files[0];
+    let file = input.files[0];
+    try { file = await compressLogoImage(file); } catch {}
 
     // Validate size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {

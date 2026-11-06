@@ -529,11 +529,9 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
   const contactLink = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email_kkg || '')
     ? `<a href="mailto:${contact}">${contact}</a>`
     : '<span>Kontak pengurus belum dikonfigurasi</span>';
-  const logoUrl = profile.logo_url || '/static/icons/icon-192x192.png';
   const cleanAppUrl = (profile.app_url || profile.website_kkg || '').replace(/\/+$/, '');
-  const ogImageUrl = logoUrl.startsWith('http://') || logoUrl.startsWith('https://')
-    ? logoUrl
-    : (cleanAppUrl ? `${cleanAppUrl}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}` : logoUrl);
+  const logoUrl = cleanAppUrl ? `${cleanAppUrl}/logo.png` : (profile.logo_url || '/logo.png');
+  const ogImageUrl = cleanAppUrl ? `${cleanAppUrl}/logo.png` : '/logo.png';
   const bootProfile = JSON.stringify(profile).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
@@ -550,6 +548,10 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
   <meta property="og:site_name" content="${appName}">
   <meta property="og:type" content="website">
   <meta property="og:image" content="${htmlText(ogImageUrl)}">
+  <meta property="og:image:secure_url" content="${htmlText(ogImageUrl)}">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="400">
+  <meta property="og:image:height" content="400">
   <meta property="og:image:alt" content="Logo ${orgName}">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${appName} | ${orgName}">

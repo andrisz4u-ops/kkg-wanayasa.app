@@ -300,6 +300,10 @@ files.get('/:key{.+}', async (c) => {
                         headers.set('etag', object.httpEtag);
                     }
                     headers.set('cache-control', metadata?.visibility === 'private' ? 'private, no-store' : 'public, max-age=86400');
+                    if (metadata?.visibility !== 'private') {
+                        headers.set('cross-origin-resource-policy', 'cross-origin');
+                        headers.set('access-control-allow-origin', '*');
+                    }
                     return new Response(object.body, { headers });
                 }
             } catch (r2Err: any) {

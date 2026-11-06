@@ -863,6 +863,32 @@ Demikian permohonan ini kami sampaikan. Atas perhatian dan kesediaannya, kami uc
   }
 });
 
+// Public cluster logo endpoint for Open Graph and browser favicons
+app.get('/logo.png', async (c) => {
+  let profile: Record<string, string> = {};
+  try {
+    profile = await getOrganizationSettings(c.env.DB);
+  } catch {}
+
+  const logoUrl = profile.logo_url || '';
+  if (logoUrl.startsWith('/api/files/') && c.env.STORAGE) {
+    const key = logoUrl.slice('/api/files/'.length);
+    try {
+      const object = await (c.env.STORAGE as R2Bucket).get(key);
+      if (object) {
+        const headers = new Headers();
+        headers.set('content-type', object.httpMetadata?.contentType || 'image/png');
+        headers.set('cache-control', 'public, max-age=3600');
+        headers.set('cross-origin-resource-policy', 'cross-origin');
+        headers.set('access-control-allow-origin', '*');
+        return new Response(object.body, { headers });
+      }
+    } catch {}
+  }
+
+  return c.redirect('/static/img/logo-kkg.png');
+});
+
 // Serve SPA for all other routes
 app.get('*', async (c) => {
   let serverTheme = 'teal';

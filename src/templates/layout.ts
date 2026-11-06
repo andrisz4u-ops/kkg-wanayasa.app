@@ -531,7 +531,7 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
     : '<span>Kontak pengurus belum dikonfigurasi</span>';
   const cleanAppUrl = (profile.app_url || profile.website_kkg || '').replace(/\/+$/, '');
   const logoUrl = cleanAppUrl ? `${cleanAppUrl}/logo.png` : (profile.logo_url || '/logo.png');
-  const ogImageUrl = cleanAppUrl ? `${cleanAppUrl}/logo.png` : '/logo.png';
+  const ogImageUrl = cleanAppUrl ? `${cleanAppUrl}/logo.png?v=${APP_VERSION}` : '/logo.png';
   const bootProfile = JSON.stringify(profile).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>

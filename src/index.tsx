@@ -103,6 +103,7 @@ app.use('*', secureHeaders({
   xFrameOptions: 'DENY',
   xContentTypeOptions: 'nosniff',
   referrerPolicy: 'strict-origin-when-cross-origin',
+  crossOriginResourcePolicy: 'cross-origin',
 }));
 
 // CORS - with proper configuration

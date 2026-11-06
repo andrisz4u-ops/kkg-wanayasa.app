@@ -934,6 +934,12 @@ async function init() {
     .then((resSettings) => {
       if (resSettings.success && resSettings.data) {
         state.settings = { ...state.settings, ...resSettings.data };
+        if (state.settings.logo_url) {
+          const iconLink = document.querySelector("link[rel*='icon']");
+          if (iconLink) iconLink.href = state.settings.logo_url;
+          const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+          if (appleIcon) appleIcon.href = state.settings.logo_url;
+        }
         if (state.settings.theme_color) {
           applyThemeColor(state.settings.theme_color, true);
         }

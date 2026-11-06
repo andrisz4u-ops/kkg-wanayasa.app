@@ -182,6 +182,10 @@ window.uploadLogo = async function (input) {
       // Update state
       if (window.state && window.state.settings) {
         window.state.settings.logo_url = data.data.logo_url;
+        const iconLink = document.querySelector("link[rel*='icon']");
+        if (iconLink) iconLink.href = data.data.logo_url;
+        const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+        if (appleIcon) appleIcon.href = data.data.logo_url;
       }
 
       moduleToast('Profil', 'Logo berhasil diunggah', 'success');

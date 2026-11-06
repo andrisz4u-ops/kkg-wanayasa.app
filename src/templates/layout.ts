@@ -529,6 +529,11 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
   const contactLink = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email_kkg || '')
     ? `<a href="mailto:${contact}">${contact}</a>`
     : '<span>Kontak pengurus belum dikonfigurasi</span>';
+  const logoUrl = profile.logo_url || '/static/icons/icon-192x192.png';
+  const cleanAppUrl = (profile.app_url || profile.website_kkg || '').replace(/\/+$/, '');
+  const ogImageUrl = logoUrl.startsWith('http://') || logoUrl.startsWith('https://')
+    ? logoUrl
+    : (cleanAppUrl ? `${cleanAppUrl}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}` : logoUrl);
   const bootProfile = JSON.stringify(profile).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
@@ -543,14 +548,21 @@ export function renderHTML(initialTheme: string = 'teal', profile: Record<string
     <meta property="og:description" content="Analisis CP, draf RPP dan asesmen, slide, serta game edukasi untuk guru SD di KKG.">
   <meta property="og:url" content="${appUrl}">
   <meta property="og:site_name" content="${appName}">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="${htmlText(ogImageUrl)}">
+  <meta property="og:image:alt" content="Logo ${orgName}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${appName} | ${orgName}">
+  <meta name="twitter:description" content="Analisis CP, draf RPP dan asesmen, slide, serta game edukasi untuk guru SD di KKG.">
+  <meta name="twitter:image" content="${htmlText(ogImageUrl)}">
   <meta name="theme-color" content="${theme.primary}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="${appName}">
 
-  <link rel="icon" type="image/png" href="/static/icons/icon-192x192.png">
-  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+  <link rel="icon" href="${htmlText(logoUrl)}">
+  <link rel="apple-touch-icon" href="${htmlText(logoUrl)}">
    <link rel="manifest" href="/api/settings/manifest">
    <script>window.__KKG_ORGANIZATION__ = ${bootProfile};</script>
   

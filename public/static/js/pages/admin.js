@@ -367,6 +367,7 @@ export async function renderAdmin() {
           TIDAK ADA: Users, Sekolah, Template, Logs
     ============================================ -->
     <div id="panel-profil" data-admin-only="true" class="hidden animate-fade-in space-y-8" data-tab-content="profil">
+       <form id="form-profil-kkg" autocomplete="off" onsubmit="event.preventDefault(); return false;" data-form-type="other" class="space-y-8">
        <!-- Info Banner -->
        <div class="bg-slate-50 backdrop-blur-xl border border-slate-200/70 rounded-2xl p-5 flex gap-4 text-sm text-slate-600">
           <i class="fas fa-info-circle mt-0.5 text-slate-900"></i>
@@ -400,26 +401,26 @@ export async function renderAdmin() {
           <div class="flex-1 grid gap-6">
             <div>
               <label class="label">Nama Organisasi (KKG)</label>
-               <input type="text" id="profil-nama_kkg" class="input-field" placeholder="Contoh: KKG Gugus 1">
+               <input type="text" id="profil-nama_kkg" class="input-field" placeholder="Contoh: KKG Gugus 1" autocomplete="off" data-lpignore="true">
              </div>
              <div class="grid grid-cols-2 gap-6">
-               <div><label class="label" for="profil-app_name">Nama Aplikasi</label><input type="text" id="profil-app_name" class="input-field" placeholder="RuangKKG"></div>
-               <div><label class="label" for="profil-app_url">Alamat Website Aplikasi</label><input type="url" id="profil-app_url" class="input-field" placeholder="https://gugus-anda.pages.dev"></div>
+               <div><label class="label" for="profil-app_name">Nama Aplikasi</label><input type="text" id="profil-app_name" class="input-field" placeholder="RuangKKG" autocomplete="off" data-lpignore="true"></div>
+               <div><label class="label" for="profil-app_url">Alamat Website Aplikasi</label><input type="url" id="profil-app_url" class="input-field" placeholder="https://gugus-anda.pages.dev" autocomplete="off" data-lpignore="true"></div>
              </div>
-             <div><label class="label" for="profil-gugus">Nomor / Nama Gugus</label><input type="text" id="profil-gugus" class="input-field" placeholder="1"></div>
+             <div><label class="label" for="profil-gugus">Nomor / Nama Gugus</label><input type="text" id="profil-gugus" class="input-field" placeholder="1" autocomplete="off" data-lpignore="true"></div>
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <label class="label">Tahun Ajaran Aktif</label>
-                <input type="text" id="profil-tahun_ajaran" class="input-field" placeholder="2026/2027">
+                <input type="text" id="profil-tahun_ajaran" class="input-field" placeholder="2026/2027" autocomplete="off" data-lpignore="true">
               </div>
               <div>
                 <label class="label">NPSN Sekolah Induk</label>
-                <input type="text" id="profil-npsn_sekolah_induk" class="input-field" placeholder="20231234">
+                <input type="text" id="profil-npsn_sekolah_induk" class="input-field" placeholder="20231234" autocomplete="off" data-lpignore="true">
               </div>
             </div>
             <div>
               <label class="label">Nama Sekolah Induk</label>
-              <input type="text" id="profil-nama_sekolah_induk" class="input-field" placeholder="Contoh: SDN 1 Binaan">
+              <input type="text" id="profil-nama_sekolah_induk" class="input-field" placeholder="Contoh: SDN 1 Binaan" autocomplete="off" data-lpignore="true">
             </div>
           </div>
         </div>
@@ -474,23 +475,23 @@ export async function renderAdmin() {
         <div class="grid md:grid-cols-2 gap-6">
           <div class="md:col-span-2">
             <label class="label">Alamat Lengkap</label>
-            <input type="text" id="profil-alamat_sekretariat" class="input-field" placeholder="Contoh: Jl. Pendidikan No. 1">
+            <input type="text" id="profil-alamat_sekretariat" class="input-field" placeholder="Contoh: Jl. Pendidikan No. 1" autocomplete="off" data-lpignore="true">
           </div>
           <div>
             <label class="label">Kecamatan</label>
-            <input type="text" id="profil-kecamatan" class="input-field" placeholder="Contoh: Nama Kecamatan">
+            <input type="text" id="profil-kecamatan" class="input-field" placeholder="Contoh: Nama Kecamatan" autocomplete="off" data-lpignore="true">
           </div>
           <div>
             <label class="label">Kabupaten/Kota</label>
-            <input type="text" id="profil-kabupaten" class="input-field" placeholder="Contoh: Nama Kabupaten">
+            <input type="text" id="profil-kabupaten" class="input-field" placeholder="Contoh: Nama Kabupaten" autocomplete="off" data-lpignore="true">
           </div>
           <div>
             <label class="label">Provinsi</label>
-            <input type="text" id="profil-provinsi" class="input-field" placeholder="Jawa Barat">
+            <input type="text" id="profil-provinsi" class="input-field" placeholder="Jawa Barat" autocomplete="off" data-lpignore="true">
           </div>
           <div>
             <label class="label">Kode Pos</label>
-            <input type="text" id="profil-kode_pos" class="input-field" placeholder="41174">
+            <input type="text" id="profil-kode_pos" class="input-field" placeholder="41174" autocomplete="off" data-lpignore="true">
           </div>
         </div>
       </div>
@@ -520,16 +521,16 @@ export async function renderAdmin() {
                       </div>
                       <div>
                           <label class="label text-xs">Nama Lengkap & Gelar Pengawas</label>
-                          <input type="text" id="profil-pengawas_nama" class="input-field" placeholder="Contoh: Dra. Hj. Siti Rohmah, M.Pd.">
+                          <input type="text" id="profil-pengawas_nama" class="input-field" placeholder="Contoh: Dra. Hj. Siti Rohmah, M.Pd." autocomplete="off" data-lpignore="true">
                       </div>
                       <div class="grid grid-cols-2 gap-2.5">
                           <div>
                               <label class="label text-xs">NIP Pengawas</label>
-                              <input type="text" id="profil-pengawas_nip" class="input-field" placeholder="196805141992032004">
+                              <input type="text" id="profil-pengawas_nip" class="input-field" placeholder="196805141992032004" autocomplete="off" data-lpignore="true">
                           </div>
                           <div>
                               <label class="label text-xs">Instansi / Jabatan</label>
-                              <input type="text" id="profil-pengawas_instansi" class="input-field" placeholder="Pengawas SD Gugus 3">
+                              <input type="text" id="profil-pengawas_instansi" class="input-field" placeholder="Pengawas SD Gugus 3" autocomplete="off" data-lpignore="true">
                           </div>
                       </div>
                   </div>
@@ -542,21 +543,21 @@ export async function renderAdmin() {
                       </div>
                       <div>
                           <label class="label text-xs">Nama Lengkap & Gelar Ketua KKG</label>
-                          <input type="text" id="profil-nama_ketua" class="input-field" placeholder="Contoh: Andri, S.Pd., M.Pd.">
+                          <input type="text" id="profil-nama_ketua" class="input-field" placeholder="Contoh: Andri, S.Pd., M.Pd." autocomplete="off" data-lpignore="true">
                       </div>
                       <div>
                           <label class="label text-xs">NIP Ketua KKG</label>
-                          <input type="text" id="profil-nip_ketua" class="input-field" placeholder="198310122010011001">
+                          <input type="text" id="profil-nip_ketua" class="input-field" placeholder="198310122010011001" autocomplete="off" data-lpignore="true">
                       </div>
                   </div>
 
                   <div>
                       <label class="label">Sekretaris KKG</label>
-                      <input type="text" id="profil-nama_sekretaris" class="input-field">
+                      <input type="text" id="profil-nama_sekretaris" class="input-field" autocomplete="off" data-lpignore="true">
                   </div>
                   <div>
                       <label class="label">Bendahara KKG</label>
-                      <input type="text" id="profil-nama_bendahara" class="input-field">
+                      <input type="text" id="profil-nama_bendahara" class="input-field" autocomplete="off" data-lpignore="true">
                   </div>
               </div>
           </div>
@@ -568,15 +569,15 @@ export async function renderAdmin() {
               <div class="space-y-4">
                   <div>
                       <label class="label">Email Organisasi</label>
-                      <input type="email" id="profil-email_kkg" class="input-field">
+                      <input type="email" id="profil-email_kkg" class="input-field" autocomplete="off" data-lpignore="true">
                   </div>
                   <div>
                       <label class="label">Telepon / WhatsApp</label>
-                      <input type="tel" id="profil-telepon_kkg" class="input-field">
+                      <input type="tel" id="profil-telepon_kkg" class="input-field" autocomplete="off" data-lpignore="true">
                   </div>
                   <div>
                       <label class="label">Website Resmi</label>
-                      <input type="url" id="profil-website_kkg" class="input-field">
+                      <input type="url" id="profil-website_kkg" class="input-field" autocomplete="off" data-lpignore="true">
                   </div>
               </div>
           </div>
@@ -1096,7 +1097,7 @@ export async function renderAdmin() {
                 <button type="button" onclick="closeSekolahModal()" class="w-8 h-8 rounded-full bg-white/95 backdrop-blur-xl border border-slate-200/70 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:border-indigo-100 transition-all shadow-sm shadow-slate-200/50"><i class="fas fa-times text-xs"></i></button>
             </div>
             <div class="overflow-y-auto p-6">
-              <form id="sekolah-form" onsubmit="saveSekolah(event)" class="space-y-4">
+              <form id="sekolah-form" autocomplete="off" onsubmit="saveSekolah(event)" class="space-y-4">
                   <input type="hidden" name="id_sekolah">
                   <div>
                     <label class="label">Nama Sekolah <span class="text-red-500">*</span></label>

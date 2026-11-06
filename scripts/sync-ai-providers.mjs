@@ -39,7 +39,18 @@ const providers = res[0]?.results || [];
 console.log(`   Found ${providers.length} active AI providers in primary database.`);
 providers.forEach(p => console.log(`   -> [${p.api_type}] ${p.name} (${p.model})`));
 
-// 2. Discover target databases
+// 2. Discover target databases (requires explicit --target)
+const targetArgIndex = process.argv.indexOf('--target');
+const targetSlug = targetArgIndex !== -1 ? process.argv[targetArgIndex + 1] : null;
+
+if (!targetSlug) {
+  console.error('❌ [SAFETY GUARD] Skrip ini tidak boleh dijalankan tanpa target spesifik.');
+  console.error('   Penggunaan: node scripts/sync-ai-providers.mjs --target <slug>');
+  console.error('   Contoh: node scripts/sync-ai-providers.mjs --target kkg-gugus1wny');
+  console.error('   Catatan: Pastikan cluster target berbagi ENCRYPTION_KEY yang kompatibel sebelum sinkronisasi.');
+  process.exit(1);
+}
+
 const installationsDir = resolve(root, 'installations');
 const files = await readdir(installationsDir);
 const targets = [];
@@ -47,8 +58,15 @@ const targets = [];
 for (const file of files) {
   if (file.endsWith('.json') && !file.includes('example')) {
     const raw = JSON.parse(await readFile(resolve(installationsDir, file), 'utf8'));
-    targets.push(raw);
+    if (raw.slug === targetSlug || raw.projectName === targetSlug) {
+      targets.push(raw);
+    }
   }
+}
+
+if (targets.length === 0) {
+  console.error(`❌ Target profile dengan slug "${targetSlug}" tidak ditemukan di folder installations/`);
+  process.exit(1);
 }
 
 // 3. Build Sync SQL

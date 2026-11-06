@@ -13,7 +13,7 @@ settings.get('/manifest', async (c) => {
     c.header('Content-Type', 'application/manifest+json');
     return c.body(JSON.stringify({ name: `${profile.app_name} - ${profile.nama_kkg}`, short_name: profile.app_name,
         start_url: '/', scope: '/', id: '/', display: 'standalone', lang: 'id',
-        icons: [{ src: '/static/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }, { src: '/static/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }] }));
+        icons: [{ src: profile.logo_url || '/static/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }, { src: profile.logo_url || '/static/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }] }));
 });
 
 // Get public settings (no auth required)

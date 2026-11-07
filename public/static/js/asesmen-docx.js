@@ -987,17 +987,33 @@ export function prepareAssessmentExportImages(data) {
 // ============================================================
 export async function generateAsesmenDocx(data, formData, kopSuratUrl, options = {}) {
   if (!window.docx) throw new Error('Library docx belum dimuat. Silakan refresh halaman.');
-  const preparedImages = options.preparedImages || await prepareAssessmentExportImages(data);
-  if (!preparedImages.ready) throw new AssessmentImagePreflightError(preparedImages.failures);
-  if (!(preparedImages.images instanceof Map)) {
-    throw new AssessmentImagePreflightError([{ section: 'pg', number: 0, category: 'invalid-image' }]);
+  const allowMissingImages = Boolean(options.allowMissingImages);
+  let preparedImages = options.preparedImages;
+  if (!preparedImages) {
+    try {
+      preparedImages = await prepareAssessmentExportImages(data);
+    } catch (e) {
+      if (!allowMissingImages) throw e;
+      preparedImages = { ready: false, images: new Map(), failures: [] };
+    }
   }
-  const preparedFailures = await validatePreparedAssessmentImages(data, preparedImages);
-  if (preparedFailures.length) throw new AssessmentImagePreflightError(preparedFailures);
-  const assessmentImages = new Map([...preparedImages.images].map(([question, loaded]) => [
-    question,
-    { ...loaded, buffer: loaded.buffer.slice(0) },
-  ]));
+
+  if (!allowMissingImages) {
+    if (!preparedImages?.ready) throw new AssessmentImagePreflightError(preparedImages?.failures || []);
+    if (!(preparedImages?.images instanceof Map)) {
+      throw new AssessmentImagePreflightError([{ section: 'pg', number: 0, category: 'invalid-image' }]);
+    }
+    const preparedFailures = await validatePreparedAssessmentImages(data, preparedImages);
+    if (preparedFailures.length) throw new AssessmentImagePreflightError(preparedFailures);
+  }
+
+  const rawImages = (preparedImages?.images instanceof Map) ? [...preparedImages.images] : [];
+  const assessmentImages = new Map();
+  for (const [question, loaded] of rawImages) {
+    if (loaded && loaded.buffer instanceof ArrayBuffer && loaded.buffer.byteLength > 0 && (loaded.type === 'png' || loaded.type === 'jpeg')) {
+      assessmentImages.set(question, { ...loaded, buffer: loaded.buffer.slice(0) });
+    }
+  }
 
   const {
     Document, Paragraph, TextRun, Table, TableRow, TableCell,

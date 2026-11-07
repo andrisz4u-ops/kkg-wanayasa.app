@@ -1259,10 +1259,17 @@ async function createAssessmentDocx(data, formData, { active = data === _lastGen
   const stamp = active ? exportStamp(data, formData) : null;
   const snapshot = JSON.parse(JSON.stringify(data));
   const kopSuratUrl = state.user?.kop_surat_url || `${window.location.origin}/static/kop_surat.png`;
-  const preparedImages = await prepareAssessmentExportImages(snapshot);
-  if (!preparedImages?.ready) throw Object.assign(new Error('Required image preflight failed'), { failures: preparedImages?.failures || [] });
+  let preparedImages = null;
+  try {
+    preparedImages = await prepareAssessmentExportImages(snapshot);
+  } catch (err) {
+    console.warn('Gagal menyiapkan gambar untuk ekspor DOCX:', err);
+  }
   if (active && !exportStampUnchanged(stamp)) throw new Error('Soal atau akun berubah saat gambar diperiksa. Simpan perubahan lalu unduh ulang.');
-  const blob = await generateAsesmenDocx(snapshot, formData, kopSuratUrl, { preparedImages });
+  const blob = await generateAsesmenDocx(snapshot, formData, kopSuratUrl, {
+    preparedImages,
+    allowMissingImages: true,
+  });
   if (active && !exportStampUnchanged(stamp)) throw new Error('Soal, akun, atau halaman berubah saat file disiapkan. Berkas tidak diunduh.');
   return blob;
 }
@@ -2184,10 +2191,10 @@ export function initKisi() {
       const failures = await preflightAssessmentForPrint(printSnapshot);
       if (failures.length) {
         showPrintWarning(failures);
-        throw new Error('Cetak ditahan sampai gambar yang disebutkan tersedia.');
+      } else {
+        showPrintWarning([]);
       }
       if (!exportStampUnchanged(stamp)) throw new Error('Soal berubah saat gambar diperiksa. Simpan perubahan lalu coba cetak lagi.');
-      showPrintWarning([]);
       window.print();
     } catch (error) {
       showToast(error.message || 'Cetak belum dapat dimulai.', 'error');

@@ -9,5 +9,5 @@ export function generateAsesmenDocx(
   data: AssessmentData,
   formData: Record<string, unknown>,
   kopSuratUrl?: string,
-  options?: { preparedImages?: AssessmentImagePreflightResult },
+  options?: { preparedImages?: AssessmentImagePreflightResult; allowMissingImages?: boolean },
 ): Promise<Blob>;

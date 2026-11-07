@@ -234,7 +234,7 @@ describe('assessment client image editing lifecycle', () => {
     expect(question.imageUnavailable).toBe(true);
   });
 
-  it('keeps an image-dependent stem intact after removal and honors the export preflight failure', async () => {
+  it('keeps an image-dependent stem intact after removal and allows export even when image preflight fails', async () => {
     const stem = 'Perhatikan gambar berikut. Berapa volumenya?';
     content.pg[0].soal = stem;
     await openAssessment();
@@ -244,8 +244,8 @@ describe('assessment client image editing lifecycle', () => {
     button('#btn-download-doc').click();
     await vi.waitFor(() => expect(preflightMock).toHaveBeenCalled());
     expect(preflightMock.mock.calls[0][0].pg[0].soal).toBe(stem);
-    await vi.waitFor(() => expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('Soal pg nomor 1'), 'error'));
-    expect(docxMock).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(docxMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.objectContaining({ allowMissingImages: true })));
+    await vi.waitFor(() => expect(toastMock).toHaveBeenCalledWith('File .docx berhasil diunduh!', 'success'));
   });
 
   it('renders and saves the same explicit SVG parameters', async () => {

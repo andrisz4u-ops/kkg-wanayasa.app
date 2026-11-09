@@ -104,6 +104,190 @@ export function replacePesertaDidik<T>(data: T): T {
 import { standardCurriculumDatabase, type CurriculumChapter, type CurriculumPreset } from '../lib/curriculum-database';
 export { standardCurriculumDatabase, type CurriculumChapter, type CurriculumPreset };
 
+/**
+ * Helper untuk memvalidasi apakah judul buku kompatibel dengan mata pelajaran dan jenjang kelas yang dipilih.
+ * Mencegah data profil buku tertukar/terkontaminasi antar mapel (misal: Buku Seni Musik masuk ke TdBA / Bahasa Indonesia).
+ */
+export function isBookTitleCompatibleWithSubject(mataPelajaran: string, bukuJudul: string, jenjangKelas?: string): boolean {
+  if (!bukuJudul || !mataPelajaran) return false;
+  const s = mataPelajaran.toLowerCase().trim();
+  const t = bukuJudul.toLowerCase().trim();
+
+  // 1. Validasi Jenjang Kelas jika tertera eksplisit di judul buku
+  if (jenjangKelas) {
+    const km = jenjangKelas.match(/\d+/);
+    if (km) {
+      const targetGrade = parseInt(km[0], 10);
+      const romanToArabic: Record<string, number> = {
+        'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5, 'vi': 6,
+        '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6
+      };
+      const regex = /\b(?:kelas|sd\/mi\s*kelas|untuk\s+sd\/mi\s+kelas|untuk\s+sekolah\s+dasar\s+kelas)\s+([1-6]|vi|iv|v|iii|ii|i)\b/gi;
+      const detectedGrades: number[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(t)) !== null) {
+        const val = m[1].toLowerCase();
+        if (romanToArabic[val]) {
+          detectedGrades.push(romanToArabic[val]);
+        }
+      }
+      if (detectedGrades.length > 0 && !detectedGrades.includes(targetGrade)) {
+        return false;
+      }
+    }
+  }
+
+  // 2. Validasi Kata Kunci Inkompatibel Antar Mapel
+  // Tatanen di Bale Atikan (TdBA)
+  if (s.includes('tatanen') || s.includes('tdba') || s.includes('bale atikan')) {
+    const forbidden = [
+      'musik', 'seni musik', 'alat musik', 'ritmis', 'melodis', 
+      'seni rupa', 'seni tari', 'seni teater', 
+      'matematika', 'bahasa inggris', 'english', 'bahasa indonesia', 
+      'pjok', 'olahraga', 'jasmani', 'pancasila', 'pkn', 
+      'agama', 'islam', 'kristen', 'katolik', 'koding', 'ipas'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    return true;
+  }
+
+  // Seni Rupa
+  if (s.includes('seni rupa') || (s.includes('rupa') && s.includes('seni'))) {
+    const forbidden = [
+      'musik', 'seni musik', 'alat musik', 'ritmis', 'melodis', 
+      'seni tari', 'seni teater', 'tatanen', 'tdba', 
+      'matematika', 'bahasa inggris', 'english', 'bahasa indonesia', 
+      'pjok', 'pancasila', 'agama'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    return true;
+  }
+
+  // Seni Musik
+  if (s.includes('seni musik') || (s.includes('musik') && s.includes('seni'))) {
+    const forbidden = [
+      'seni rupa', 'seni tari', 'seni teater', 
+      'tatanen', 'tdba', 'matematika', 'bahasa inggris', 'english', 
+      'bahasa indonesia', 'pjok', 'pancasila', 'agama'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    return true;
+  }
+
+  // Bahasa Indonesia
+  if (s.includes('bahasa indonesia') || s === 'indonesia') {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'matematika', 'math', 'bahasa inggris', 'english', 
+      'pjok', 'olahraga', 'tatanen', 'tdba', 'sunda', 'koding'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // Matematika
+  if (s.includes('matematika')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa indonesia', 'bahasa inggris', 'english', 
+      'pjok', 'olahraga', 'tatanen', 'tdba', 'sunda', 'agama'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // Bahasa Inggris
+  if (s.includes('bahasa inggris') || s.includes('english')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa indonesia', 'matematika', 'pjok', 'olahraga', 'tatanen', 'tdba', 'sunda'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // IPAS
+  if (s.includes('ipas') || s.includes('ilmu pengetahuan alam') || s.includes('ilmu pengetahuan sosial')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa inggris', 'english', 'bahasa indonesia', 'matematika', 
+      'pjok', 'olahraga', 'tatanen', 'tdba', 'sunda'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // PJOK
+  if (s.includes('pjok') || s.includes('jasmani') || s.includes('olahraga')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa indonesia', 'matematika', 'bahasa inggris', 'english', 
+      'tatanen', 'tdba', 'sunda'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // Pendidikan Pancasila
+  if (s.includes('pancasila') || s.includes('pkn')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa indonesia', 'matematika', 'bahasa inggris', 'english', 
+      'pjok', 'olahraga', 'tatanen', 'tdba'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  // Bahasa Sunda
+  if (s.includes('sunda')) {
+    const forbidden = [
+      'seni musik', 'alat musik', 'seni rupa', 'seni tari', 'seni teater', 
+      'bahasa indonesia', 'matematika', 'bahasa inggris', 'english', 
+      'pjok', 'olahraga', 'tatanen', 'tdba'
+    ];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(t))) return false;
+    if (/\bmusik\b/i.test(t)) return false;
+    return true;
+  }
+
+  return true;
+}
+
+/**
+ * Helper untuk memvalidasi apakah konten daftar bab yang dikirimkan cocok dengan mata pelajaran.
+ * Jika daftar bab terbukti berasal dari mata pelajaran lain (misal bab Seni Musik pada TdBA), fungsi ini mengembalikan false.
+ */
+export function areChaptersCompatibleWithSubject(mataPelajaran: string, chapters: any[]): boolean {
+  if (!Array.isArray(chapters) || chapters.length === 0) return true;
+  const s = (mataPelajaran || '').toLowerCase().trim();
+  const allChapterText = chapters.map(c => `${c.bab || ''} ${(Array.isArray(c.materi_pokok) ? c.materi_pokok : []).join(' ')}`).join(' ').toLowerCase();
+
+  if (s.includes('tatanen') || s.includes('tdba') || s.includes('bale atikan')) {
+    const forbidden = ['musik', 'alat musik', 'ritmis', 'melodis', 'seni rupa', 'seni tari', 'seni teater', 'matematika', 'bahasa inggris', 'pjok'];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(allChapterText))) {
+      return false;
+    }
+  } else if (s.includes('seni rupa')) {
+    const forbidden = ['musik', 'alat musik', 'ritmis', 'melodis', 'seni tari', 'tatanen', 'matematika', 'bahasa inggris'];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(allChapterText))) {
+      return false;
+    }
+  } else if (s.includes('bahasa indonesia')) {
+    const forbidden = ['alat musik', 'ritmis', 'melodis', 'seni rupa', 'tatanen'];
+    if (forbidden.some(w => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`, 'i').test(allChapterText))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Helper mengambil bab standar dari D1 database dengan fallback ke standardCurriculumDatabase
 export async function getStandardCurriculumChaptersFromDb(
   db: D1Database | undefined,
@@ -1221,7 +1405,17 @@ analisisCp.post('/generate', requireSession, requireAIAdmission, async (c) => {
 
     const resolved = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
     const { officialCP, elementsCP, faseCode, fase } = resolved;
-    const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
+    
+    // Verifikasi kompatibilitas bab materi dengan mata pelajaran
+    let effectiveChapters = chapters;
+    if (!areChaptersCompatibleWithSubject(mataPelajaran, chapters)) {
+      console.warn(`[analisis-cp] Incompatible chapters detected for ${mataPelajaran}. Falling back to standard preset.`);
+      const fallbackPreset = getStandardCurriculumChapters(mataPelajaran, jenjangKelas);
+      if (fallbackPreset && Array.isArray(fallbackPreset.chapters) && fallbackPreset.chapters.length > 0) {
+        effectiveChapters = fallbackPreset.chapters;
+      }
+    }
+    const distributedChapters = distributeChaptersToSemesters(effectiveChapters, targetSemester, bookCoverage);
 
     let promptFragments: { elementsText: string; ipasGuidance?: string } = { elementsText: '' };
     const prompt = buildAnalisisCpPrompt({
@@ -1320,7 +1514,17 @@ analisisCp.post('/generate-stream', async (c) => {
 
     const resolved = await resolveOfficialCP(mataPelajaran, jenjangKelas, c.env.DB);
     const { officialCP, elementsCP, faseCode, fase } = resolved;
-    const distributedChapters = distributeChaptersToSemesters(chapters, targetSemester, bookCoverage);
+    
+    // Verifikasi kompatibilitas bab materi dengan mata pelajaran
+    let effectiveChapters = chapters;
+    if (!areChaptersCompatibleWithSubject(mataPelajaran, chapters)) {
+      console.warn(`[analisis-cp] Incompatible chapters detected for ${mataPelajaran}. Falling back to standard preset.`);
+      const fallbackPreset = getStandardCurriculumChapters(mataPelajaran, jenjangKelas);
+      if (fallbackPreset && Array.isArray(fallbackPreset.chapters) && fallbackPreset.chapters.length > 0) {
+        effectiveChapters = fallbackPreset.chapters;
+      }
+    }
+    const distributedChapters = distributeChaptersToSemesters(effectiveChapters, targetSemester, bookCoverage);
 
     let promptFragments: { elementsText: string; ipasGuidance?: string } = { elementsText: '' };
     const prompt = buildAnalisisCpPrompt({

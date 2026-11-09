@@ -1269,12 +1269,12 @@ export function groupAnalysisDataByElementsClient(data) {
       { name: "Pemanfaatan Gerak & Kebugaran", cp: "Mempraktikkan aktivitas jasmani untuk kebugaran jasmani, memahami pola hidup sehat, nutrisi bergizi, serta penanganan cedera ringan." },
       { name: "Pengembangan Karakter & Nilai Gerak", cp: "Menunjukkan perilaku bertanggung jawab, sportivitas, gotong royong, disiplin, dan percaya diri dalam berolahraga." }
     ];
-  } else if (mapel.includes('koding') || mapel.includes('kecerdasan artifisial') || mapel.includes('ka')) {
+  } else if (mapel.includes('tatanen') || mapel.includes('tdba')) {
     elementDefs = [
-      { name: "Berpikir Komputasional", cp: "Memahami permasalahan sederhana dalam kehidupan sehari-hari, menerapkan pemecahan masalah secara sistematis, serta menuliskan instruksi logis dan terstruktur menggunakan sekumpulan kosakata atau simbol." },
-      { name: "Literasi Digital", cp: "Memahami konsep dasar teknologi digital, sistem komputer pradasar, pengamanan informasi pribadi, pemanfaatan internet, dan produksi konten digital." },
-      { name: "Literasi dan Etika Kecerdasan Artifisial", cp: "Memahami konsep KA sederhana, manfaat, dampak, dan etika dasar penggunaan KA yang berorientasi pada kebaikan manusia dan empati." },
-      { name: "Pemanfaatan dan Pengembangan Kecerdasan Artifisial", cp: "Menyimulasikan cara kerja KA mengenali pola, mengklasifikasikan data konkret, dan memprediksi luaran berdasarkan masukan informasi." }
+      { name: "Niti Harti", cp: "Memahami prinsip permakultur, sistem pertanian alami berkelanjutan, siklus hara, mikroorganisme tanah, serta peran konservasi air dan tanah dalam mitigasi krisis iklim." },
+      { name: "Niti Surti", cp: "Menganalisis ketahanan pangan lokal berbasis sumber daya organik dan bahaya pestisida kimia bagi kesehatan dan alam." },
+      { name: "Niti Bukti", cp: "Merancang dan mempraktikkan siklus tatanen lengkap: persiapan media tanam organik, pembuatan pupuk organik cair (POC) & eco-enzyme, budidaya tanaman pangan lokal, serta panen mandiri." },
+      { name: "Niti Bakti & Sajati", cp: "Mengolah hasil panen kebun sekolah menjadi pangan bergizi, menggelar bazaar kewirausahaan ekologis, serta membudayakan gaya hidup selaras dengan alam (Panca Niti)." }
     ];
   } else if (mapel.includes('sunda')) {
     elementDefs = [
@@ -1283,19 +1283,19 @@ export function groupAnalysisDataByElementsClient(data) {
       { name: "Nyarita jeung Midangkeun", cp: "Mampuh nepikeun gagasan, pamadegan, jeung pangalaman sacara lisan kalawan tartib ngagunakeun tatakrama undak-usuk basa Sunda anu merenah." },
       { name: "Nulis", cp: "Mampuh nuliskeun aksara, kecap, kalimah, jeung rupa-rupa karangan basa Sunda ngagunakeun éjahan jeung tanda baca anu merenah." }
     ];
-  } else if (mapel.includes('tatanen') || mapel.includes('tdba')) {
-    elementDefs = [
-      { name: "Hidup Berkelanjutan", cp: "Memahami pentingnya menjaga keseimbangan ekosistem dan mempraktikkan pengelolaan sampah serta konservasi lingkungan sekitar." },
-      { name: "Permakultur", cp: "Mempraktikkan teknik budidaya tanaman ramah lingkungan (penyemaian, perawatan, panen) serta pemanfaatan pekarangan sekolah." },
-      { name: "Pola Hidup Sehat", cp: "Membiasakan mengonsumsi makanan bergizi hasil pertanian lokal serta menjaga kebersihan dan kesehatan diri." },
-      { name: "Kecakapan Hidup (Life Skills)", cp: "Mengembangkan kepedulian sosial, gotong royong merawat bumi, kreativitas, dan jiwa wirausaha berwawasan kearifan lokal." }
-    ];
   } else if (mapel.includes('akpk')) {
     elementDefs = [
       { name: "Ajeg Nusantara", cp: "Menumbuhkan rasa bangga dan cinta tanah air Indonesia, memperkokoh wawasan kebangsaan, dan keteladanan pahlawan." },
       { name: "Mapag Buana & Maneh", cp: "Mengembangkan wawasan global yang adaptif, literasi digital yang bertanggung jawab, serta membangun kemandirian dan integritas diri." },
       { name: "Nyanding Rasa & Nyucikeun Diri", cp: "Mengimplementasikan kepedulian sosial, toleransi dalam keberagaman, kejujuran budi pekerti, dan ketakwaan spiritual." },
       { name: "Betah di Imah & Reureuh", cp: "Memperkuat ketahanan keluarga melalui bakti kepada orang tua serta membudayakan hidup seimbang dan bahagia (Tujuh Poe Atikan)." }
+    ];
+  } else if (mapel.includes('koding') || mapel.includes('kecerdasan artifisial') || /\bka\b/i.test(mapel) || mapel.includes('koding ka')) {
+    elementDefs = [
+      { name: "Berpikir Komputasional", cp: "Memahami permasalahan sederhana dalam kehidupan sehari-hari, menerapkan pemecahan masalah secara sistematis, serta menuliskan instruksi logis dan terstruktur menggunakan sekumpulan kosakata atau simbol." },
+      { name: "Literasi Digital", cp: "Memahami konsep dasar teknologi digital, sistem komputer pradasar, pengamanan informasi pribadi, pemanfaatan internet, dan produksi konten digital." },
+      { name: "Literasi dan Etika Kecerdasan Artifisial", cp: "Memahami konsep KA sederhana, manfaat, dampak, dan etika dasar penggunaan KA yang berorientasi pada kebaikan manusia dan empati." },
+      { name: "Pemanfaatan dan Pengembangan Kecerdasan Artifisial", cp: "Menyimulasikan cara kerja KA mengenali pola, mengklasifikasikan data konkret, dan memprediksi luaran berdasarkan masukan informasi." }
     ];
   } else {
     // Fallback: ambil elemen unik dari bab-bab yang ada
@@ -1432,7 +1432,21 @@ export function groupAnalysisDataByElementsClient(data) {
     // Koding & KA
     if (cleanElem.includes('komputasional') && (combined.includes('komputasional') || combined.includes('algoritma') || combined.includes('logika') || combined.includes('pola') || combined.includes('instruksi') || combined.includes('flowchart'))) score += 25;
     if (cleanElem.includes('literasi digital') && (combined.includes('komputer') || combined.includes('internet') || combined.includes('digital') || combined.includes('perangkat') || combined.includes('keamanan data'))) score += 25;
-    if (cleanElem.includes('etika') && (combined.includes('etika') || combined.includes('ka') || combined.includes('ai') || combined.includes('kecerdasan artifisial') || combined.includes('mesin cerdas'))) score += 25;
+    if (cleanElem.includes('etika') && (combined.includes('etika') || /\b(ka|ai)\b/i.test(combined) || combined.includes('kecerdasan artifisial') || combined.includes('mesin cerdas'))) score += 25;
+
+    // Tatanen di Bale Atikan (TdBA)
+    if (cleanElem.includes('harti') && (combined.includes('harti') || combined.includes('filosofi') || combined.includes('panca niti') || combined.includes('tanah subur') || combined.includes('mikroorganisme') || combined.includes('konservasi') || combined.includes('benih') || combined.includes('ekosistem'))) score += 25;
+    if (cleanElem.includes('surti') && (combined.includes('surti') || combined.includes('sampah') || combined.includes('limbah') || combined.includes('kepekaan') || combined.includes('pestisida') || combined.includes('lingkungan') || combined.includes('karakter'))) score += 25;
+    if (cleanElem.includes('bukti') && (combined.includes('bukti') || combined.includes('kompos') || combined.includes('poc') || combined.includes('pembibitan') || combined.includes('budidaya') || combined.includes('tanaman') || combined.includes('bedengan') || combined.includes('semai') || combined.includes('vertikultur'))) score += 25;
+    if ((cleanElem.includes('bakti') || cleanElem.includes('sajati')) && (combined.includes('bakti') || combined.includes('sajati') || combined.includes('panen') || combined.includes('kuliner') || combined.includes('pangan') || combined.includes('bazaar') || combined.includes('wirausaha') || combined.includes('karya') || combined.includes('refleksi'))) score += 25;
+
+    // AKPK
+    if (cleanElem.includes('ajeg') && (combined.includes('ajeg') || combined.includes('nusantara') || combined.includes('kebangsaan') || combined.includes('bendera') || combined.includes('pahlawan'))) score += 25;
+    if (cleanElem.includes('buana') && (combined.includes('mapag buana') || combined.includes('global') || combined.includes('digital') || combined.includes('teknologi'))) score += 25;
+    if (cleanElem.includes('maneh') && (combined.includes('maneh') || combined.includes('mandiri') || combined.includes('emosi') || combined.includes('integritas'))) score += 25;
+    if (cleanElem.includes('nyanding') && (combined.includes('nyanding') || combined.includes('rasa') || combined.includes('empati') || combined.includes('sosial') || combined.includes('toleransi'))) score += 25;
+    if (cleanElem.includes('nyucikeun') && (combined.includes('nyucikeun') || combined.includes('diri') || combined.includes('spiritual') || combined.includes('ibadah') || combined.includes('akhlak'))) score += 25;
+    if (cleanElem.includes('betah') && (combined.includes('betah') || combined.includes('imah') || combined.includes('reureuh') || combined.includes('keluarga') || combined.includes('istirahat'))) score += 25;
     if (cleanElem.includes('pemanfaatan dan pengembangan') && (combined.includes('simulasi') || combined.includes('prediksi') || combined.includes('model') || combined.includes('prompt') || combined.includes('klasifikasi'))) score += 25;
 
     // B. Sunda

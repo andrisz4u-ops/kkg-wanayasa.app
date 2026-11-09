@@ -235,16 +235,25 @@ export async function generateKktpDocxBuffer(data: AnalisisCpDocxInput, targetSe
           })
         );
 
-        // 3. 4 Interval Cells (empty for teacher's assessment marks)
+        // 3. 4 Interval Cells (with checkmark matching canvas)
+        const activeScale = Number(item.kktp_scale) || 3;
         for (let i = 0; i < 4; i++) {
+          const isChecked = (i + 1) === activeScale;
           cells.push(
             new TableCell({
               width: { size: COL_WIDTH_SCALE, type: WidthType.DXA },
               verticalAlign: VerticalAlign.CENTER,
+              shading: isChecked ? { type: ShadingType.CLEAR, fill: 'F0FDF4' } : undefined,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: '', size: 19, font: 'Times New Roman' })]
+                  children: [new TextRun({
+                    text: isChecked ? '✓' : '',
+                    bold: true,
+                    size: 26,
+                    font: 'Segoe UI Symbol',
+                    color: isChecked ? '15803D' : undefined
+                  })]
                 })
               ]
             })

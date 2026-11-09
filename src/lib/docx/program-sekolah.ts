@@ -2384,7 +2384,7 @@ export async function generateProgramDocxBuffer(data: ProgramSekolahData): Promi
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: isChecked ? '✓' : '', bold: true, font: FONT_NAME, size: 14 })],
+                  children: [new TextRun({ text: isChecked ? '✓' : '', bold: true, font: 'Segoe UI Symbol', size: 18, color: '15803D' })],
                 }),
               ],
             });

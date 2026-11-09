@@ -12,6 +12,32 @@ import {
 const moduleToast = (section, message, type = 'info') => window.showToast?.(message, type);
 const getTableSpacing = () => window.getTableSpacing?.() || { td: 'px-6 py-4 text-sm', row: 'text-sm' };
 
+const currentSekolahMap = new Map();
+
+function getFormField(form, name) {
+  if (!form) return null;
+  return form.elements?.[name] || form.querySelector(`[name="${name}"]`);
+}
+
+function setFormFieldValue(form, name, value) {
+  const el = getFormField(form, name);
+  if (!el) return;
+  if (el.type === 'checkbox') {
+    el.checked = Boolean(value);
+  } else {
+    el.value = value ?? '';
+  }
+}
+
+function getFormFieldValue(form, name, fallback = '') {
+  const el = getFormField(form, name);
+  if (!el) return fallback;
+  if (el.type === 'checkbox') {
+    return Boolean(el.checked);
+  }
+  return el.value ?? fallback;
+}
+
 window.loadSekolah = async function () {
   const container = document.getElementById('sekolah-table-body');
   if (!container) return;
@@ -23,6 +49,8 @@ window.loadSekolah = async function () {
   try {
     const res = await api('/sekolah');
     const sekolahList = res.data || [];
+    currentSekolahMap.clear();
+    sekolahList.forEach(s => currentSekolahMap.set(String(s.id), s));
     sekolahSelectionState.selectedIds.clear();
     const checkAllSekolah = document.getElementById('sekolah-check-all');
     if (checkAllSekolah) checkAllSekolah.checked = false;
@@ -57,8 +85,8 @@ window.loadSekolah = async function () {
               </td>
                <td class="${spacing.td} text-center">
                 <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick='editSekolah(${JSON.stringify(s).replace(/'/g, "&#39;")})' class="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteSekolah(${s.id}, '${escapeHtml(s.nama || '')}')" class="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                    <button onclick="editSekolahById('${s.id}')" class="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteSekolahById('${s.id}')" class="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors" title="Hapus"><i class="fas fa-trash-alt"></i></button>
                 </div>
               </td >
             </tr >
@@ -98,51 +126,89 @@ window.toggleAllSekolahRows = function (checked) {
 }
 
 window.showAddSekolahModal = function () {
-  openAdminModal('sekolah-modal', 'input[name="nama"]');
   const form = document.getElementById('sekolah-form');
-  form.reset();
-  form.id_sekolah.value = '';
-  document.getElementById('sekolah-modal-title').textContent = 'Tambah Sekolah';
-}
+  if (form) {
+    form.reset();
+    setFormFieldValue(form, 'id_sekolah', '');
+    setFormFieldValue(form, 'kop_surat_url', '');
+    setFormFieldValue(form, 'tipe', 'negeri');
+    setFormFieldValue(form, 'is_sekretariat', false);
+    setFormFieldValue(form, 'is_sekolah_penggerak', false);
+  }
+  const preview = document.getElementById('kop-surat-preview');
+  if (preview) preview.classList.add('hidden');
+  const img = document.getElementById('kop-surat-img');
+  if (img) img.src = '';
+  const title = document.getElementById('sekolah-modal-title');
+  if (title) title.textContent = 'Tambah Sekolah';
+  openAdminModal('sekolah-modal', 'input[name="nama"]');
+};
+
+window.editSekolahById = function (id) {
+  const sekolah = currentSekolahMap.get(String(id));
+  if (sekolah) {
+    window.editSekolah(sekolah);
+  } else {
+    console.warn('[SEKOLAH] School not found for id:', id);
+  }
+};
 
 window.editSekolah = function (sekolah) {
-  openAdminModal('sekolah-modal', 'input[name="nama"]');
-  document.getElementById('sekolah-modal-title').textContent = 'Edit Sekolah';
+  if (typeof sekolah === 'string' || typeof sekolah === 'number') {
+    sekolah = currentSekolahMap.get(String(sekolah));
+  }
+  if (!sekolah || typeof sekolah !== 'object' || Array.isArray(sekolah)) {
+    console.warn('[SEKOLAH] Invalid sekolah object passed to editSekolah:', sekolah);
+    return;
+  }
 
   const form = document.getElementById('sekolah-form');
-  form.id_sekolah.value = sekolah.id;
-  form.nama.value = sekolah.nama || '';
-  form.alamat.value = sekolah.alamat || '';
-  form.npsn.value = sekolah.npsn || '';
-  form.tipe.value = sekolah.tipe || 'negeri';
-  form.kepala_sekolah.value = sekolah.kepala_sekolah || '';
-  form.nip_kepala_sekolah.value = sekolah.nip_kepala_sekolah || '';
-  form.kop_surat_url.value = sekolah.kop_surat_url || '';
+  if (!form) {
+    console.error('[SEKOLAH] Element #sekolah-form not found in DOM');
+    return;
+  }
+  form.reset();
+
+  setFormFieldValue(form, 'id_sekolah', sekolah.id || '');
+  setFormFieldValue(form, 'nama', sekolah.nama || '');
+  setFormFieldValue(form, 'alamat', sekolah.alamat || '');
+  setFormFieldValue(form, 'npsn', sekolah.npsn || '');
+  setFormFieldValue(form, 'tipe', sekolah.tipe || 'negeri');
+  setFormFieldValue(form, 'kepala_sekolah', sekolah.kepala_sekolah || '');
+  setFormFieldValue(form, 'nip_kepala_sekolah', sekolah.nip_kepala_sekolah || '');
+  setFormFieldValue(form, 'jumlah_guru', (sekolah.jumlah_guru !== null && sekolah.jumlah_guru !== undefined) ? sekolah.jumlah_guru : '');
+  setFormFieldValue(form, 'is_sekretariat', sekolah.is_sekretariat);
+  setFormFieldValue(form, 'is_sekolah_penggerak', sekolah.is_sekolah_penggerak);
+  setFormFieldValue(form, 'kop_surat_url', sekolah.kop_surat_url || '');
 
   // Show kop surat preview if exists
   const preview = document.getElementById('kop-surat-preview');
   const img = document.getElementById('kop-surat-img');
-  if (sekolah.kop_surat_url) {
-    img.src = sekolah.kop_surat_url;
-    preview.classList.remove('hidden');
-  } else {
-    preview.classList.add('hidden');
+  if (preview && img) {
+    if (sekolah.kop_surat_url) {
+      img.src = sekolah.kop_surat_url;
+      preview.classList.remove('hidden');
+    } else {
+      img.src = '';
+      preview.classList.add('hidden');
+    }
   }
-  form.jumlah_guru.value = sekolah.jumlah_guru || '';
-  form.is_sekretariat.checked = !!sekolah.is_sekretariat;
-  form.is_sekolah_penggerak.checked = !!sekolah.is_sekolah_penggerak;
-}
+
+  const title = document.getElementById('sekolah-modal-title');
+  if (title) title.textContent = 'Edit Sekolah';
+  openAdminModal('sekolah-modal', 'input[name="nama"]');
+};
 
 window.saveSekolah = async function (e) {
   e.preventDefault();
   const form = e.target;
-  const id = form.id_sekolah.value;
+  const id = getFormFieldValue(form, 'id_sekolah');
   const submitBtn = document.getElementById('sekolah-submit-btn');
   const restoreBtn = setBusyButton(submitBtn, true, id ? 'Memperbarui...' : 'Menyimpan...');
 
   try {
     // Handle kop surat - compress and convert to base64 data URL
-    let kopUrl = form.kop_surat_url.value || null;
+    let kopUrl = getFormFieldValue(form, 'kop_surat_url') || null;
     const fileInput = form.querySelector('input[name="kop_surat_file"]');
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       try {
@@ -178,15 +244,15 @@ window.saveSekolah = async function (e) {
 
     // Collect data
     const data = {
-      nama: form.nama.value,
-      alamat: form.alamat.value,
-      npsn: form.npsn.value,
-      tipe: form.tipe.value,
-      kepala_sekolah: form.kepala_sekolah.value,
-      nip_kepala_sekolah: form.nip_kepala_sekolah.value,
-      jumlah_guru: form.jumlah_guru.value,
-      is_sekretariat: form.is_sekretariat.checked,
-      is_sekolah_penggerak: form.is_sekolah_penggerak.checked,
+      nama: getFormFieldValue(form, 'nama'),
+      alamat: getFormFieldValue(form, 'alamat'),
+      npsn: getFormFieldValue(form, 'npsn'),
+      tipe: getFormFieldValue(form, 'tipe', 'negeri'),
+      kepala_sekolah: getFormFieldValue(form, 'kepala_sekolah'),
+      nip_kepala_sekolah: getFormFieldValue(form, 'nip_kepala_sekolah'),
+      jumlah_guru: getFormFieldValue(form, 'jumlah_guru'),
+      is_sekretariat: getFormFieldValue(form, 'is_sekretariat', false),
+      is_sekolah_penggerak: getFormFieldValue(form, 'is_sekolah_penggerak', false),
       kop_surat_url: kopUrl
     };
 
@@ -197,12 +263,13 @@ window.saveSekolah = async function (e) {
       await api('/sekolah', { method: 'POST', body: data });
       moduleToast('Sekolah', 'Data sekolah berhasil ditambahkan', 'success');
     }
-    document.getElementById('sekolah-modal').classList.add('hidden');
+    const modal = document.getElementById('sekolah-modal');
+    if (modal) modal.classList.add('hidden');
     closeAdminModal('sekolah-modal');
     loadSekolah();
   } catch (e) { moduleToast('Sekolah', e.message || 'Gagal menyimpan data sekolah', 'error'); }
   finally { restoreBtn(); }
-}
+};
 
 window.previewKopSurat = function (input) {
   if (input.files && input.files[0]) {
@@ -210,25 +277,30 @@ window.previewKopSurat = function (input) {
     reader.onload = function (e) {
       const preview = document.getElementById('kop-surat-preview');
       const img = document.getElementById('kop-surat-img');
-      img.src = e.target.result;
-      preview.classList.remove('hidden');
+      if (img) img.src = e.target.result;
+      if (preview) preview.classList.remove('hidden');
     };
     reader.readAsDataURL(input.files[0]);
   }
-}
+};
 
 window.removeKopSurat = function () {
   const form = document.getElementById('sekolah-form');
-  form.kop_surat_url.value = '';
+  if (form) setFormFieldValue(form, 'kop_surat_url', '');
   const preview = document.getElementById('kop-surat-preview');
-  preview.classList.add('hidden');
-  const fileInput = form.querySelector('input[name="kop_surat_file"]');
+  if (preview) preview.classList.add('hidden');
+  const fileInput = form ? form.querySelector('input[name="kop_surat_file"]') : null;
   if (fileInput) fileInput.value = '';
-}
+};
 
 window.closeSekolahModal = function () {
   closeAdminModal('sekolah-modal');
 }
+
+window.deleteSekolahById = function (id) {
+  const s = currentSekolahMap.get(String(id));
+  window.deleteSekolah(id, s ? s.nama : '');
+};
 
 window.deleteSekolah = async function (id, nama = '') {
   if (!confirm('Hapus sekolah ini?')) return;

@@ -1328,9 +1328,19 @@ async function loadBookProfilesForClass(kelas, mapelName, preferProfileId = null
   }
   if (!targetProfile && savedProfileId) {
     targetProfile = availableBookProfiles.find(p => String(p.id) === String(savedProfileId));
+    if (!targetProfile) {
+      try { localStorage.removeItem(storageKey); } catch (_) {}
+    }
   }
   if (!targetProfile) {
     targetProfile = availableBookProfiles.find(p => p.is_default) || availableBookProfiles[0];
+  }
+
+  // Verifikasi sanitasi: Cegah profil tertukar antar mapel dari sisa cache lama (misal TdBA vs Musik)
+  const isTdBA = normMapel.toLowerCase().includes('tatanen') || normMapel.toLowerCase().includes('tdba');
+  if (isTdBA && targetProfile && /\b(musik|ritmis|melodis)\b/i.test(targetProfile.buku_judul || '')) {
+    try { localStorage.removeItem(storageKey); } catch (_) {}
+    targetProfile = availableBookProfiles.find(p => !p.is_custom || !/\b(musik|ritmis|melodis)\b/i.test(p.buku_judul || '')) || availableBookProfiles[0];
   }
 
   selectedBookProfileId = targetProfile ? String(targetProfile.id) : null;

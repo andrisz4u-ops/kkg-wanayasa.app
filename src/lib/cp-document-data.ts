@@ -273,17 +273,17 @@ const SUBJECT_CP_METADATA: Record<string, SubjectMetaDef> = {
       "Membiasakan pola hidup sehat, menjaga kebersihan diri dan lingkungan, serta mengonsumsi pangan bergizi seimbang hasil tanam sendiri.",
       "Menumbuhkan kecakapan hidup (life skills), komunikasi, berpikir kritis, kreativitas, jiwa wirausaha, dan pengamalan nilai kearifan lokal Sunda (leuweung hejo, rakyat ngejo)."
     ],
-    karakteristik: "Pembelajaran berbasis aksi nyata di kebun sekolah dan lingkungan sekitar yang mengintegrasikan empat elemen utama: Hidup Berkelanjutan, Permakultur, Pola Hidup Sehat, dan Kecakapan Hidup (Life Skills).",
+    karakteristik: "Pembelajaran berbasis aksi nyata di kebun sekolah dan lingkungan sekitar yang mengintegrasikan filosofi Panca Niti: Niti Harti, Niti Surti, Niti Bukti, serta Niti Bakti & Sajati.",
     elemenDeskripsi: {
-      "Hidup Berkelanjutan": "Memahami jenis sampah, pengelolaan sampah bijak, efisiensi energi, dan pelestarian lingkungan.",
-      "Permakultur": "Sistem pertanian selaras dengan alam, pemanfaatan wadah/barang bekas, media tanam, pembuatan kompos, dan budidaya tanaman.",
-      "Pola Hidup Sehat": "Menjaga kebersihan diri, kesehatan fisik, dan konsumsi pangan bergizi seimbang dari hasil tanam sendiri.",
-      "Kecakapan Hidup (Life Skills)": "Keterampilan sosial, komunikasi, berpikir kritis, pemecahan masalah, kecakapan ekologi, kreativitas, dan jiwa wirausaha."
+      "Niti Harti": "Memahami prinsip permakultur, sistem pertanian alami berkelanjutan, siklus hara, mikroorganisme tanah, serta peran konservasi air dan tanah dalam mitigasi krisis iklim.",
+      "Niti Surti": "Menganalisis ketahanan pangan lokal berbasis sumber daya organik dan bahaya pestisida kimia bagi kesehatan dan alam.",
+      "Niti Bukti": "Merancang dan mempraktikkan siklus tatanen lengkap: persiapan media tanam organik, pembuatan pupuk organik cair (POC) & eco-enzyme, budidaya tanaman pangan lokal, serta panen mandiri.",
+      "Niti Bakti & Sajati": "Mengolah hasil panen kebun sekolah menjadi pangan bergizi, menggelar bazaar kewirausahaan ekologis, serta membudayakan gaya hidup selaras dengan alam (Panca Niti)."
     },
     capaianUmum: {
       "Fase A": "Pada akhir Fase A, murid mampu mengenal dan memahami jenis sampah serta pengaruhnya bagi kehidupan, terlibat dalam pengelolaan sampah sederhana dan pemanfaatan benda alam (kompos/infused water), mengenal bagian tanaman dan menanam sederhana di sekolah, serta membiasakan peduli kebersihan dan pola hidup sehat.",
       "Fase B": "Pada akhir Fase B, murid mampu menjelaskan dan mempraktikkan pengelolaan sampah terstruktur (kurangi, pilah, olah), mengidentifikasi tanaman pangan lokal, memanfaatkan energi alam untuk pascapanen sederhana, memahami teknik dasar budidaya tanaman, serta membangun kesadaran pola hidup sehat selaras alam.",
-      "Fase C": "Pada akhir Fase C, murid memahami pentingnya menjaga keseimbangan ekosistem dan menganalisis dampak aktivitas manusia, mempraktikkan budidaya tanaman mandiri (semai hingga panen), mengolah sampah organik untuk pangan sehat, membiasakan konsumsi pangan bergizi, serta mengembangkan kepedulian sosial dan kearifan lokal Sunda (leuweung hejo, rakyat ngejo)."
+      "Fase C": "Pada akhir Fase C, murid memahami filosofi Panca Niti TdBA secara terpadu: menguasai prinsip permakultur dan konservasi tanah (Niti Harti), peka terhadap ketahanan pangan lokal (Niti Surti), mandiri mengolah kompos dan budidaya tanaman kebun (Niti Bukti), serta mampu mengolah pangan sehat bergizi dan berwirausaha ekologis (Niti Bakti & Sajati)."
     }
   },
 

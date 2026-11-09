@@ -704,6 +704,7 @@ export async function renderAdmin() {
            <i class="fas fa-save mr-2.5"></i>Simpan Konfigurasi
          </button>
        </div>
+       </form>
     </div>
 
     <!-- ============================================

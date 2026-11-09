@@ -4,8 +4,7 @@ import {
   buildStructurePrompt, 
   buildAnalisisCpPrompt, 
   getStandardCurriculumChapters,
-  getAllBookProfiles,
-  validateAndRepairAnalysisResult,
+  getAllBookProfiles,  isBookTitleCompatibleWithSubject,  areChaptersCompatibleWithSubject,  validateAndRepairAnalysisResult,
   ensureAnalisisCpTables,
   replacePesertaDidik,
   repairAndEnrichIpasBabCp,
@@ -1051,12 +1050,12 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
       expect(json.data.mata_pelajaran).toBe('Tatanen di Bale Atikan');
       expect(json.data.elemen_deskripsi).toHaveLength(4);
       const elemenNames = json.data.elemen_deskripsi.map((e: any) => e.elemen);
-      expect(elemenNames).toContain('Hidup Berkelanjutan');
-      expect(elemenNames).toContain('Permakultur');
-      expect(elemenNames).toContain('Pola Hidup Sehat');
-      expect(elemenNames).toContain('Kecakapan Hidup (Life Skills)');
+      expect(elemenNames).toContain('Niti Harti');
+      expect(elemenNames).toContain('Niti Surti');
+      expect(elemenNames).toContain('Niti Bukti');
+      expect(elemenNames).toContain('Niti Bakti & Sajati');
       expect(json.data.capaian_elemen).toHaveLength(4);
-      expect(json.data.capaian_umum).toContain('keseimbangan ekosistem');
+      expect(json.data.capaian_umum).toContain('Panca Niti');
     });
   });
 
@@ -1383,4 +1382,43 @@ describe('Analisis CP - CP Kolaboratif & Self-Healing Tables', () => {
   });
 });
 
+describe('Analisis CP - Subject & Book Title Compatibility Guard', () => {
+  it('correctly validates compatible and incompatible books for Tatanen di Bale Atikan (TdBA)', () => {
+    // Should reject Seni Musik for TdBA
+    expect(isBookTitleCompatibleWithSubject('Tatanen di Bale Atikan', 'Panduan Guru Seni Musik untuk SD/MI Kelas V', 'Kelas 5')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Tatanen di Bale Atikan', 'Panduan Guru Seni Rupa Kelas 5', 'Kelas 5')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Tatanen di Bale Atikan', 'Bahasa Indonesia: Bergerak Bersama Kelas V', 'Kelas 5')).toBe(false);
 
+    // Should accept genuine TdBA book
+    expect(isBookTitleCompatibleWithSubject('Tatanen di Bale Atikan', 'Buku Pedoman Tatanen di Bale Atikan (TdBA) SD Kelas V (Disdik Purwakarta)', 'Kelas 5')).toBe(true);
+    expect(isBookTitleCompatibleWithSubject('Tatanen di Bale Atikan', 'Modul Ajar Pertanian Permakultur Sekolah Dasar', 'Kelas 5')).toBe(true);
+  });
+
+  it('correctly catches cross-subject contaminations for Bahasa Indonesia and Seni Rupa', () => {
+    expect(isBookTitleCompatibleWithSubject('Bahasa Indonesia', 'Panduan Guru Seni Musik untuk SD/MI Kelas VI', 'Kelas 6')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Bahasa Indonesia', 'English for Nusantara Kids untuk SD/MI Kelas VI', 'Kelas 6')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Seni Rupa', 'Panduan Guru Seni Musik untuk SD/MI Kelas V', 'Kelas 5')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Bahasa Indonesia', 'Bahasa Indonesia: Bergerak Bersama untuk SD/MI Kelas V', 'Kelas 5')).toBe(true);
+  });
+
+  it('correctly rejects grade level mismatches', () => {
+    // Book for Kelas 2 should not be accepted for Kelas 5
+    expect(isBookTitleCompatibleWithSubject('Matematika', 'Asyiknya Belajar Matematika SD/Mi untuk Kelas II', 'Kelas 5')).toBe(false);
+    expect(isBookTitleCompatibleWithSubject('Matematika', 'Matematika SD/MI Kelas V', 'Kelas 5')).toBe(true);
+  });
+
+  it('validates chapter content compatibility with subject', () => {
+    const musicChapters = [
+      { bab: 'Bab I Alat Musik Ritmis dan Melodis', materi_pokok: ['Pengenalan Alat Musik Ritmis'] },
+      { bab: 'Bab II Unsur-Unsur Musik', materi_pokok: ['Pola Ritme'] }
+    ];
+    const tdbaChapters = [
+      { bab: 'Bab 1: Filosofi Panca Niti TdBA', materi_pokok: ['Niti Harti, Surti, Bukti'] },
+      { bab: 'Bab 2: Ekosistem Tanah dan Keanekaragaman Hayati', materi_pokok: ['Struktur tanah subur'] }
+    ];
+
+    expect(areChaptersCompatibleWithSubject('Tatanen di Bale Atikan', musicChapters)).toBe(false);
+    expect(areChaptersCompatibleWithSubject('Tatanen di Bale Atikan', tdbaChapters)).toBe(true);
+    expect(areChaptersCompatibleWithSubject('Bahasa Indonesia', musicChapters)).toBe(false);
+  });
+});

@@ -4,7 +4,7 @@ import { generateProtaDocxBuffer } from '../src/lib/docx/prota';
 import { generatePromesDocxBuffer, extractSemesterCpItems } from '../src/lib/docx/promes';
 import { generateKktpDocxBuffer } from '../src/lib/docx/kktp';
 import { generateAnalisisCpDocxBuffer } from '../src/lib/docx/analisis-cp';
-import { generateAtpElemenDocxBuffer } from '../src/lib/docx/atp-elemen';
+import { generateAtpElemenDocxBuffer, groupAnalysisDataByElements } from '../src/lib/docx/atp-elemen';
 import { generateRpeDocxBuffer } from '../src/lib/docx/rpe';
 import type { AnalisisCpDocxInput } from '../src/lib/docx/analisis-cp';
 import analisisCp from '../src/routes/analisis-cp';
@@ -124,6 +124,15 @@ describe('4-in-1 Engine DOCX Generators (Prota, Promes, KKTP)', () => {
     const buffer = await generateKktpDocxBuffer(sampleInput, 1);
     expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(1000);
+  });
+
+  it('should render checkmarks in KKTP interval cells matching canvas selection', async () => {
+    const inputWithScale = JSON.parse(JSON.stringify(sampleInput));
+    inputWithScale.semesters[0].babs[0].items[0].kktp_scale = 4;
+    const buffer = await generateKktpDocxBuffer(inputWithScale, 1);
+    const xml = await getDocumentXml(buffer);
+    expect(xml).toContain('✓');
+    expect(xml).toContain('w:fill="F0FDF4"');
   });
 
   it('should generate PROMES with true A4 Landscape orientation (width: 16838, height: 11906)', async () => {
@@ -420,5 +429,108 @@ describe('Analisis CP Endpoints for Prota, Promes, KKTP', () => {
     expect(xml).toContain('[ELEMEN: MENULIS]');
     expect(xml).toContain('[ELEMEN: MEMBACA DAN MEMIRSA]');
     expect(xml).toContain('[ELEMEN: MENYIMAK]');
+  });
+
+  it('generateKktpDocxBuffer uses Segoe UI Symbol and prominent checkmark for checklist intervals', async () => {
+    const inputWithScale: AnalisisCpDocxInput = {
+      metadata: {
+        satuan_pendidikan: 'SDN 1 Pusakamulya',
+        mata_pelajaran: 'Tatanen di Bale Atikan',
+        kelas: '5',
+        fase: 'C',
+        tahun_pembelajaran: '2026/2027',
+        guru: 'admin',
+        kepala_sekolah: 'Kepsek'
+      },
+      semesters: [
+        {
+          semester: 1,
+          semester_label: 'SEMESTER 1 (GANJIL)',
+          babs: [
+            {
+              no: 1,
+              bab: 'Bab 1: Filosofi Panca Niti TdBA',
+              cp: '[ELEMEN: NITI HARTI] Memahami prinsip permakultur...',
+              items: [
+                {
+                  kode_tp: '5.1',
+                  materi_pokok: 'Panca Niti',
+                  tp: 'Memahami nilai Panca Niti',
+                  atp: 'Murid menyimak cerita filosofi Panca Niti',
+                  alokasi_waktu: '4 JP',
+                  kktp_scale: 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    const buffer = await generateKktpDocxBuffer(inputWithScale);
+    const xml = await getDocumentXml(buffer);
+
+    // Verify font is Segoe UI Symbol so Word does not distort the checkmark
+    expect(xml).toContain('Segoe UI Symbol');
+    expect(xml).toContain('✓');
+    // Verify shading for interval 3
+    expect(xml).toContain('F0FDF4');
+  });
+
+  it('groupAnalysisDataByElements correctly maps Tatanen di Bale Atikan to 4 Panca Niti elements and never Koding KA', () => {
+    const tdbaInput: AnalisisCpDocxInput = {
+      metadata: {
+        satuan_pendidikan: 'SDN 1 Pusakamulya',
+        mata_pelajaran: 'Tatanen di Bale Atikan',
+        kelas: '5',
+        fase: 'C',
+        tahun_pembelajaran: '2026/2027'
+      },
+      semesters: [
+        {
+          semester: 1,
+          semester_label: 'SEMESTER 1',
+          babs: [
+            {
+              no: 1,
+              bab: 'Bab 1: Filosofi Panca Niti TdBA',
+              cp: '[ELEMEN: NITI HARTI] Memahami prinsip permakultur...',
+              items: [{ kode_tp: '5.1', tp: 'Menjelaskan makna Panca Niti', materi_pokok: 'Niti Harti, Surti, Bukti, Bakti, Sajati' }]
+            },
+            {
+              no: 2,
+              bab: 'Bab 2: Ekosistem Tanah dan Keanekaragaman Hayati',
+              cp: '[ELEMEN: NITI SURTI] Menumbuhkan kepekaan nurani...',
+              items: [{ kode_tp: '5.2', tp: 'Mengidentifikasi struktur tanah subur', materi_pokok: 'Struktur tanah subur' }]
+            },
+            {
+              no: 3,
+              bab: 'Bab 3: Pengolahan Pupuk Kompos Alami',
+              cp: '[ELEMEN: NITI BUKTI] Mempraktikkan pengolahan kompos...',
+              items: [{ kode_tp: '5.3', tp: 'Mempraktikkan pembuatan POC', materi_pokok: 'Pembuatan Pupuk Organik Cair (POC)' }]
+            },
+            {
+              no: 4,
+              bab: 'Bab 4: Panen dan Kuliner Pangan Sehat',
+              cp: '[ELEMEN: NITI BAKTI & SAJATI] Mengolah pangan sehat...',
+              items: [{ kode_tp: '5.4', tp: 'Mengolah hasil panen', materi_pokok: 'Kuliner olahan pangan sehat' }]
+            }
+          ]
+        }
+      ]
+    };
+
+    const groups = groupAnalysisDataByElements(tdbaInput);
+    const elementNames = groups.map(g => g.elemen);
+
+    expect(elementNames).toContain('Niti Harti');
+    expect(elementNames).toContain('Niti Surti');
+    expect(elementNames).toContain('Niti Bukti');
+    expect(elementNames).toContain('Niti Bakti & Sajati');
+
+    // Must NOT contain Koding KA
+    expect(elementNames).not.toContain('Berpikir Komputasional');
+    expect(elementNames).not.toContain('Literasi Digital');
+    expect(elementNames).not.toContain('Literasi dan Etika Kecerdasan Artifisial');
   });
 });

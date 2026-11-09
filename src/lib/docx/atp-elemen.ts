@@ -239,6 +239,68 @@ export function groupAnalysisDataByElements(data: AnalisisCpDocxInput): AtpEleme
       if (combinedContent.includes('keterampilan proses') || combinedContent.includes('mengamati') || combinedContent.includes('menyelidiki') || combinedContent.includes('percobaan') || combinedContent.includes('eksperimen') || combinedContent.includes('laporan penyelidikan')) score += 25;
     }
 
+    // Tatanen di Bale Atikan (TdBA)
+    if (cleanElem.includes('harti')) {
+      if (combinedContent.includes('harti') || combinedContent.includes('filosofi') || combinedContent.includes('panca niti') || combinedContent.includes('tanah') || combinedContent.includes('subur') || combinedContent.includes('mikroorganisme') || combinedContent.includes('konservasi') || combinedContent.includes('benih') || combinedContent.includes('ekosistem')) score += 25;
+    }
+    if (cleanElem.includes('surti')) {
+      if (combinedContent.includes('surti') || combinedContent.includes('sampah') || combinedContent.includes('limbah') || combinedContent.includes('kepekaan') || combinedContent.includes('pestisida') || combinedContent.includes('lingkungan') || combinedContent.includes('karakter')) score += 25;
+    }
+    if (cleanElem.includes('bukti')) {
+      if (combinedContent.includes('bukti') || combinedContent.includes('kompos') || combinedContent.includes('poc') || combinedContent.includes('pembibitan') || combinedContent.includes('budidaya') || combinedContent.includes('tanaman') || combinedContent.includes('bedengan') || combinedContent.includes('semai') || combinedContent.includes('vertikultur')) score += 25;
+    }
+    if (cleanElem.includes('bakti') || cleanElem.includes('sajati')) {
+      if (combinedContent.includes('bakti') || combinedContent.includes('sajati') || combinedContent.includes('panen') || combinedContent.includes('kuliner') || combinedContent.includes('pangan') || combinedContent.includes('bazaar') || combinedContent.includes('wirausaha') || combinedContent.includes('karya') || combinedContent.includes('refleksi')) score += 25;
+    }
+
+    // B. Sunda
+    if (cleanElem.includes('ngaregepkeun')) {
+      if (combinedContent.includes('ngaregepkeun') || combinedContent.includes('ngadenge') || combinedContent.includes('dongeng') || combinedContent.includes('warta') || combinedContent.includes('pupuh') || combinedContent.includes('kawih')) score += 25;
+    }
+    if (cleanElem.includes('maca')) {
+      if (combinedContent.includes('maca') || combinedContent.includes('miarsa') || combinedContent.includes('aksara') || combinedContent.includes('bacaan')) score += 25;
+    }
+    if (cleanElem.includes('nyarita')) {
+      if (combinedContent.includes('nyarita') || combinedContent.includes('midangkeun') || combinedContent.includes('guneman') || combinedContent.includes('paguneman') || combinedContent.includes('biantara')) score += 25;
+    }
+    if (cleanElem.includes('nulis')) {
+      if (combinedContent.includes('nulis') || combinedContent.includes('ngarang') || combinedContent.includes('nuliskeun') || combinedContent.includes('ejahan')) score += 25;
+    }
+
+    // Koding & KA
+    if (cleanElem.includes('komputasional')) {
+      if (combinedContent.includes('komputasional') || combinedContent.includes('algoritma') || combinedContent.includes('logika') || combinedContent.includes('pola') || combinedContent.includes('instruksi') || combinedContent.includes('flowchart')) score += 25;
+    }
+    if (cleanElem.includes('literasi digital')) {
+      if (combinedContent.includes('komputer') || combinedContent.includes('internet') || combinedContent.includes('digital') || combinedContent.includes('perangkat') || combinedContent.includes('keamanan data')) score += 25;
+    }
+    if (cleanElem.includes('etika')) {
+      if (combinedContent.includes('etika') || /\b(ka|ai)\b/i.test(combinedContent) || combinedContent.includes('kecerdasan artifisial') || combinedContent.includes('mesin cerdas')) score += 25;
+    }
+    if (cleanElem.includes('pemanfaatan dan pengembangan')) {
+      if (combinedContent.includes('simulasi') || combinedContent.includes('prediksi') || combinedContent.includes('model') || combinedContent.includes('prompt') || combinedContent.includes('klasifikasi')) score += 25;
+    }
+
+    // AKPK
+    if (cleanElem.includes('ajeg')) {
+      if (combinedContent.includes('ajeg') || combinedContent.includes('nusantara') || combinedContent.includes('kebangsaan') || combinedContent.includes('bendera') || combinedContent.includes('pahlawan')) score += 25;
+    }
+    if (cleanElem.includes('buana')) {
+      if (combinedContent.includes('buana') || combinedContent.includes('global') || combinedContent.includes('digital') || combinedContent.includes('teknologi')) score += 25;
+    }
+    if (cleanElem.includes('maneh')) {
+      if (combinedContent.includes('maneh') || combinedContent.includes('mandiri') || combinedContent.includes('emosi') || combinedContent.includes('integritas')) score += 25;
+    }
+    if (cleanElem.includes('nyanding')) {
+      if (combinedContent.includes('nyanding') || combinedContent.includes('rasa') || combinedContent.includes('empati') || combinedContent.includes('sosial') || combinedContent.includes('toleransi')) score += 25;
+    }
+    if (cleanElem.includes('nyucikeun')) {
+      if (combinedContent.includes('nyucikeun') || combinedContent.includes('diri') || combinedContent.includes('spiritual') || combinedContent.includes('ibadah') || combinedContent.includes('akhlak')) score += 25;
+    }
+    if (cleanElem.includes('betah')) {
+      if (combinedContent.includes('betah') || combinedContent.includes('imah') || combinedContent.includes('reureuh') || combinedContent.includes('keluarga') || combinedContent.includes('istirahat')) score += 25;
+    }
+
     return score;
   };
 

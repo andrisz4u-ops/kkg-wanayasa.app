@@ -88,10 +88,10 @@ describe('Kelola CP (Capaian Pembelajaran) Admin & Resolver Tests', () => {
 
       const tdbaElements = getOfficialCPElements('Tatanen di Bale Atikan', 'Kelas 5');
       expect(tdbaElements).toBeDefined();
-      expect(tdbaElements).toHaveProperty('Hidup Berkelanjutan');
-      expect(tdbaElements).toHaveProperty('Permakultur');
-      expect(tdbaElements).toHaveProperty('Pola Hidup Sehat');
-      expect(tdbaElements).toHaveProperty('Kecakapan Hidup (Life Skills)');
+      expect(tdbaElements).toHaveProperty('Niti Harti');
+      expect(tdbaElements).toHaveProperty('Niti Surti');
+      expect(tdbaElements).toHaveProperty('Niti Bukti');
+      expect(tdbaElements).toHaveProperty('Niti Bakti & Sajati');
 
       const akpkElements = getOfficialCPElements('AKPK', 'Kelas 5');
       expect(akpkElements).toBeDefined();

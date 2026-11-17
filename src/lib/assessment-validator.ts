@@ -148,6 +148,15 @@ const FORBIDDEN_OPTION_PATTERNS = [
     /salah\s+semua/i
 ];
 
+export function isEarlyGradeAssessment(jenjangKelas?: string): boolean {
+    if (!jenjangKelas) return false;
+    const lower = jenjangKelas.toLowerCase();
+    return lower.includes('kelas 1') || 
+        lower.includes('kelas 2') || 
+        lower.includes('kelas 3') || 
+        lower.includes('fase a');
+}
+
 /**
  * Tier 1: Validasi Heuristik Deterministik per Butir Soal PG
  */
@@ -159,12 +168,7 @@ export function validateQuestionHeuristics(item: any, jenjangKelas?: string): {
     const issues: HeuristicIssue[] = [];
     const healed = { ...item };
 
-    const isEarlyGrade = jenjangKelas && (
-        jenjangKelas.includes('Kelas 1') || 
-        jenjangKelas.includes('Kelas 2') || 
-        jenjangKelas.includes('Kelas 3') || 
-        jenjangKelas.toLowerCase().includes('fase a')
-    );
+    const isEarlyGrade = isEarlyGradeAssessment(jenjangKelas);
 
     const validOptionKeys = isEarlyGrade ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
 
@@ -711,7 +715,8 @@ export async function runAssessmentQualityGate(
 
     // Hard gate: butir PG dengan opsi kosong/duplikat atau kunci hilang tidak boleh
     // masuk ke paket. Audit sebelumnya hanya memberi flag tanpa menahan butir rusak.
-    const optionKeys = ['A', 'B', 'C', 'D'];
+    const isEarlyGrade = isEarlyGradeAssessment(context.jenjangKelas);
+    const optionKeys = isEarlyGrade ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
     const completePgOptions = (item: any): { ok: boolean; reason?: string } => {
         const opsi = item?.opsi;
         if (!opsi || typeof opsi !== 'object') return { ok: false, reason: 'missing_options' };

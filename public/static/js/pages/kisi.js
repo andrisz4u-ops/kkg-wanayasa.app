@@ -1893,7 +1893,9 @@ export function initKisi() {
     }
 
     const pendingAttempt = readPendingGeneration(state.user?.id);
-    if (pendingAttempt && !confirm('Masih ada proses asesmen sebelumnya yang hasilnya belum dipastikan. Mulai proses baru dengan biaya AI terpisah?')) return;
+    if (pendingAttempt) {
+      clearPendingGeneration(pendingAttempt);
+    }
 
     if (assessmentPackageSync.snapshot && assessmentPackageSync.savedVersion < assessmentPackageSync.version) {
       try {
@@ -1946,6 +1948,7 @@ export function initKisi() {
             completion = payload;
             finalResultData = payload?.data || payload;
           } else if (event === 'error') {
+            clearPendingGeneration(attempt);
             const msg = (typeof payload === 'object' && payload !== null)
               ? (payload.message || payload.error || JSON.stringify(payload))
               : String(payload);
@@ -1982,6 +1985,7 @@ export function initKisi() {
           monitor.fail(new Error('Hasil Asesmen belum diterima. Silakan mulai ulang.'));
         }
       } catch (err) {
+        clearPendingGeneration(attempt);
         if (!monitor.signal.aborted) monitor.fail(err);
       }
     } else {
@@ -2017,9 +2021,11 @@ export function initKisi() {
 
           showToast(archived ? 'Draf Asesmen tersedia dan tersimpan di perangkat ini.' : 'Draf Asesmen tersedia, tetapi arsip lokal penuh atau tidak dapat disimpan. Unduh hasil agar tidak hilang.', archived ? 'success' : 'info');
         } else {
+          clearPendingGeneration(attempt);
           showToast(result.error?.message || 'Gagal generate', 'error');
         }
       } catch (err) {
+        clearPendingGeneration(attempt);
         console.error(err);
         showToast('Error: ' + err.message, 'error');
       } finally {
@@ -2490,7 +2496,7 @@ function renderResult(data, formData, packageOptions = {}) {
     htmlSoal += `
       <div class="section-title">
         <h4>I. PILIHAN GANDA</h4>
-        <p>Berilah tanda silang (X) pada huruf A, B, C, atau D pada jawaban yang paling benar!</p>
+        <p>Berilah tanda silang (X) pada huruf ${data.pg.some(q => q.opsi && q.opsi.D) ? 'A, B, C, atau D' : 'A, B, atau C'} pada jawaban yang paling benar!</p>
       </div>
     `;
 
@@ -2503,15 +2509,16 @@ function renderResult(data, formData, packageOptions = {}) {
       const anyLong = Object.values(opts).some(v => (v || '').length > 55);
       const colClass = allShort ? 'cols-4' : anyLong ? 'cols-1' : 'cols-2';
 
+      const hasD = Boolean(opts.D && String(opts.D).trim() !== '' && opts.D !== '-');
       let optionsHTML = '';
       if (allShort) {
         optionsHTML = `
           <table class="layout-table soal-options-table">
             <tr>
-              <td style="width:25%; padding: 2px 8px 3px 0;">A. ${opts.A || '-'}</td>
-              <td style="width:25%; padding: 2px 8px 3px 0;">B. ${opts.B || '-'}</td>
-              <td style="width:25%; padding: 2px 8px 3px 0;">C. ${opts.C || '-'}</td>
-              <td style="width:25%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>
+              <td style="width:${hasD ? '25%' : '33.3%'}; padding: 2px 8px 3px 0;">A. ${opts.A || '-'}</td>
+              <td style="width:${hasD ? '25%' : '33.3%'}; padding: 2px 8px 3px 0;">B. ${opts.B || '-'}</td>
+              <td style="width:${hasD ? '25%' : '33.3%'}; padding: 2px ${hasD ? '8px' : '0'} 3px 0;">C. ${opts.C || '-'}</td>
+              ${hasD ? `<td style="width:25%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>` : ''}
             </tr>
           </table>`;
       } else if (colClass === 'cols-2') {
@@ -2519,11 +2526,11 @@ function renderResult(data, formData, packageOptions = {}) {
           <table class="layout-table soal-options-table">
             <tr>
               <td style="width:50%; padding: 2px 14px 4px 0;">A. ${opts.A || '-'}</td>
-              <td style="width:50%; padding: 2px 0 4px 0;">C. ${opts.C || '-'}</td>
+              <td style="width:50%; padding: 2px 0 4px 0;">${hasD ? `C. ${opts.C || '-'}` : `B. ${opts.B || '-'}`}</td>
             </tr>
             <tr>
-              <td style="width:50%; padding: 2px 14px 3px 0;">B. ${opts.B || '-'}</td>
-              <td style="width:50%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>
+              <td style="width:50%; padding: 2px 14px 3px 0;">${hasD ? `B. ${opts.B || '-'}` : `C. ${opts.C || '-'}`}</td>
+              ${hasD ? `<td style="width:50%; padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td>` : ''}
             </tr>
           </table>`;
       } else {
@@ -2532,7 +2539,7 @@ function renderResult(data, formData, packageOptions = {}) {
             <tr><td style="padding: 2px 0 3px 0;">A. ${opts.A || '-'}</td></tr>
             <tr><td style="padding: 2px 0 3px 0;">B. ${opts.B || '-'}</td></tr>
             <tr><td style="padding: 2px 0 3px 0;">C. ${opts.C || '-'}</td></tr>
-            <tr><td style="padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td></tr>
+            ${hasD ? `<tr><td style="padding: 2px 0 3px 0;">D. ${opts.D || '-'}</td></tr>` : ''}
           </table>`;
       }
 

@@ -11,7 +11,7 @@ import { getOfficialCP, cpElementsData, getDynamicCP, getDynamicCPElements, getD
 import { generateVisualStimulus, detectStimulusFromSoalText, reconcileStimulusWithSoalText, getVisualCatalog } from '../lib/visual-engine';
 import { ensureBankSoalTables } from './banksoal';
 import { validate, createAssessmentSchema } from '../lib/validation';
-import { runAssessmentQualityGate, validateQuestionHeuristics } from '../lib/assessment-validator';
+import { runAssessmentQualityGate, validateQuestionHeuristics, isEarlyGradeAssessment } from '../lib/assessment-validator';
 import { type AppBindings } from '../types/env';
 import { attachCurriculumProvenance, recordCurriculumSnapshot } from '../lib/curriculum-provenance';
 import { createOwnedAssessmentPackage, normalizeAssetUrls, AssessmentPackageWriteError, AssessmentPackageSettlementUnknownError } from '../lib/assessment-packages';
@@ -1068,6 +1068,11 @@ export const buildAssessmentPrompt = (params: {
         isianType, isGambarEnabled = true
     } = params;
     const isPG = type === 'pg';
+    const isEarlyGrade = isEarlyGradeAssessment(jenjangKelas);
+    const pgOptionKeys = isEarlyGrade ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    const pgOpsiJson = isEarlyGrade
+        ? '{ "A": "...", "B": "...", "C": "..." }'
+        : '{ "A": "...", "B": "...", "C": "...", "D": "..." }';
 
     let jsonStructure = '';
     if (isPG) {
@@ -1079,8 +1084,8 @@ export const buildAssessmentPrompt = (params: {
             "level": "L1/L2/L3 (Pilih salah satu sesuai standar Puspendik)",
             "bentuk": "Pilihan Ganda",
             "soal": "Pertanyaan Pilihan Ganda (sajikan naskah soal bersih tanpa teks kurung siku [] dan JANGAN mencantumkan tag visual_stimulus di sini)",
-            "opsi": { "A": "...", "B": "...", "C": "...", "D": "..." },
-            "kunci": "A/B/C/D",
+            "opsi": ${pgOpsiJson},
+            "kunci": "${pgOptionKeys.join('/')}",
             "visual_stimulus": { "type": "nama_tipe_diagram", "params": { "pointer": "bagian_yang_ditunjuk", "label": "X" } },
             "gambar_keyword": "kata kunci ringkas 1-3 kata jika mencari foto otentik (kosongkan jika pakai visual_stimulus)",
             "gambar_prompt_en": "detailed English visual description jika mencari foto, 15-25 kata (kosongkan jika pakai visual_stimulus)"
@@ -1221,9 +1226,10 @@ export const buildAssessmentPrompt = (params: {
         5. ATURAN INDIKATOR SOAL: Setiap butir soal WAJIB memiliki indikator soal baku:
            "Disajikan [stimulus/konteks], murid dapat [kata kerja operasional] [materi]".
            DILARANG MENGGUNAKAN KATA 'Peserta Didik' / 'peserta didik'. Selalu gunakan kata 'Murid' / 'murid'.
-        6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (A/B/C/D) secara ACAK dan MERATA.
+        6. DISTRIBUSI KUNCI PG: Distribusikan kunci jawaban (${pgOptionKeys.join('/')}) secara ACAK dan MERATA.${isEarlyGrade ? ' CATATAN BAKU PUSPENDIK: Untuk Kelas 1, 2, dan 3 (Fase A), setiap butir PG HANYA memiliki 3 opsi jawaban (A, B, C).' : ''}
         7. ATURAN SOAL L3 / PENALARAN (WAJIB): Setiap soal yang diberi label "L3" WAJIB memiliki STIMULUS â€” berupa mini-wacana, penggalan cerita, data/angka sederhana, pernyataan kasus nyata â€” yang ditulis SEBELUM pertanyaan. Pertanyaan L3 tidak boleh bisa dijawab tanpa menelaah stimulusnya.${uraianRule}
-        8. ATURAN KONSISTENSI FORMAT TABEL (SANGAT PENTING):
+        8. LARANGAN MERUJUK GAMBAR PADA ISIAN & URAIAN: Butir soal Isian dan Uraian disajikan dalam bentuk narasi atau teks mandiri. DILARANG KERAS menggunakan kata pembuka seperti "Perhatikan gambar", "Amatilah gambar", "Lihat gambar", atau "Look at the picture" jika tidak ada gambar yang disediakan! Sajikan konteks secara deskriptif/verbal.
+        9. ATURAN KONSISTENSI FORMAT TABEL (SANGAT PENTING):
            - Jika butir soal (baik PG, Isian, maupun Uraian) menyajikan stimulus atau data dalam bentuk TABEL, WAJIB menggunakan format Tabel Markdown Standar yang LENGKAP:
              * Setiap baris tabel WAJIB diawali dan diakhiri dengan karakter pipa (|).
              * WAJIB menyertakan baris pemisah kolom/header dengan strip (| :--- | :---: | :---: |).
@@ -1962,6 +1968,12 @@ export function processIsianAndUraian(
             finalData.isian.data.forEach((q: any) => {
                 delete q.gambar_keyword;
                 q.soal = normalizeSoalMarkdown(q.soal);
+                if (!q.gambar && !q.visual_stimulus) {
+                    q.soal = q.soal
+                        .replace(/(?:Look\s+at\s+the\s+picture!?\s*|Lihat\s+gambar!?\s*|Perhatikan\s+gambar\s*(?:berikut|di\s+bawah)!?\s*|Amatilah\s+gambar\s*(?:berikut|di\s+bawah)!?\s*)/gi, '')
+                        .replace(/^\s*\(\s*(?:Lihat\s+gambar|Look\s+at\s+the\s+picture)[^)]*\)\s*/gi, '')
+                        .trim();
+                }
             });
         }
 

@@ -13,7 +13,26 @@ Proyek ini dibangun di atas prinsip **Satu Basis Kode untuk Seluruh Gugus/Kecama
 
 ---
 
-## 2. Peta Topologi Cluster & Hubungan Antar Web KKG
+## 2. Aturan Wajib Alur Kerja Pengembangan (SOP: Local-First Workflow)
+
+> [!IMPORTANT]
+> **ATURAN MUTLAK BAGI AI & PENGEMBANG (WAJIB DIPATUHI):**
+> 1. **Kerjakan & Uji di Lokal Terlebih Dahulu (Local-First):**
+>    - Dilarang keras melakukan perbaikan atau eksperimen langsung pada situs *live production*.
+>    - Semua perbaikan bug, penambahan fitur, perubahan styling CSS, maupun perbaikan API **wajib dikerjakan dan diverifikasi di server lokal (`http://localhost:5173`)**.
+> 2. **Wajib Menjalankan Automated Test (`npm test`):**
+>    - Sebelum menyatakan pekerjaan selesai, jalankan `npm test`.
+>    - Seluruh 1.300+ pengujian unit dan integrasi wajib **100% PASS** tanpa ada regresi.
+> 3. **Verifikasi Visual / Interaksi Lokal:**
+>    - Pastikan fungsi yang diperbaiki sudah terbukti berjalan normal di browser lokal sebelum dilaporkan ke pengguna.
+> 4. **Konfirmasi & Push / Deploy Armada:**
+>    - Setelah hasil di lokal dipastikan sesuai dan disetujui, barulah kode di-*commit* dan di-*push* ke Git repository (`main`).
+>    - Jalankan skrip `node scripts/fleet-deploy.mjs` untuk menyebarkan perbaikan ke seluruh klaster KKG secara serentak.
+>    - Ingat: **1 kali push/deploy akan langsung memperbarui seluruh website KKG gugus lainnya secara serentak**. Oleh karena itu, kode lokal harus benar-benar bersih dan bebas bug sebelum disebar ke publik.
+
+---
+
+## 3. Peta Topologi Cluster & Hubungan Antar Web KKG
 
 Setiap gugus/kecamatan didaftarkan dalam file konfigurasi JSON di folder `installations/<slug>.json`:
 
@@ -35,7 +54,7 @@ Setiap cluster memiliki tabel `settings` yang memuat identitas dinamis:
 
 ---
 
-## 3. Arsitektur Database (Cloudflare D1 & SQLite)
+## 4. Arsitektur Database (Cloudflare D1 & SQLite)
 
 Sistem menggunakan **Cloudflare D1** (berbasis SQLite terdistribusi di edge) di production, dan **Miniflare SQLite** di pengembangan lokal.
 
@@ -63,7 +82,7 @@ Sistem menggunakan **Cloudflare D1** (berbasis SQLite terdistribusi di edge) di 
 
 ---
 
-## 4. Manajemen Pengguna & Autentikasi
+## 5. Manajemen Pengguna & Autentikasi
 
 ### A. Role & Hak Akses
 - **`admin`**: Memiliki akses penuh ke panel kontrol (`/admin`), manajemen user, persetujuan guru baru, pengaturan AI provider, kurikulum master, dan penghapusan data.
@@ -79,7 +98,7 @@ Sistem menggunakan **Cloudflare D1** (berbasis SQLite terdistribusi di edge) di 
 
 ---
 
-## 5. Master Data Sekolah & Sistem Kop Surat
+## 6. Master Data Sekolah & Sistem Kop Surat
 
 ### A. Data Sekolah
 Setiap sekolah di gugus memiliki atribut lengkap:
@@ -107,7 +126,7 @@ Setiap sekolah di gugus memiliki atribut lengkap:
 
 ---
 
-## 6. Provider AI & Mesin Failover Otomatis
+## 7. Provider AI & Mesin Failover Otomatis
 
 Aplikasi mendukung berbagai penyedia kecerdasan buatan (*AI Providers*) yang dapat dikonfigurasi melalui Admin -> Provider AI:
 1. **Google Gemini:** Gemini 2.0 Flash, Gemini 1.5 Flash/Pro.
@@ -126,7 +145,7 @@ Aplikasi mendukung berbagai penyedia kecerdasan buatan (*AI Providers*) yang dap
 
 ---
 
-## 7. Peringkat Penggunaan AI per Sekolah (AI Leaderboard & Telemetry)
+## 8. Peringkat Penggunaan AI per Sekolah (AI Leaderboard & Telemetry)
 
 Setiap kali modul kecerdasan buatan digunakan oleh guru (RPP, Asesmen, Pembuat Slide, Analisis CP, Soal TTS/Crossword), sebuah rekaman audit dicatat di tabel `ai_generation_logs`:
 - Kolom: `user_id`, `user_nama`, `sekolah`, `feature_type`, `mata_pelajaran`, `topik`, `duration_ms`, `created_at`.
@@ -141,7 +160,7 @@ Menghasilkan leaderboard dan statistik agregasi:
 
 ---
 
-## 8. Arsitektur Admin Mode (Modular SPA)
+## 9. Arsitektur Admin Mode (Modular SPA)
 
 Panel admin (`/admin`) dibangun dengan arsitektur Single Page Application modular yang bersih di `public/static/js/pages/admin-modules/`:
 - `dashboard.js`: Menampilkan metrik utama, grafik adopsi, dan leaderboard sekolah.
@@ -155,7 +174,7 @@ Panel admin (`/admin`) dibangun dengan arsitektur Single Page Application modula
 
 ---
 
-## 9. Mesin Kurikulum & Generator Dokumen Word (.docx)
+## 10. Mesin Kurikulum & Generator Dokumen Word (.docx)
 
 ### A. Capaian Pembelajaran & Mulok Khusus Purwakarta (TdBA)
 - **BSKAP No. 046 Tahun 2025:** Menjadi acuan standar seluruh mapel nasional Fase A hingga Fase C (SD).
@@ -184,7 +203,7 @@ Menghasilkan 7 ragam dokumen kurikulum siap cetak:
 
 ---
 
-## 10. Peta Struktur Direktori Proyek
+## 11. Peta Struktur Direktori Proyek
 
 ```text
 ├── .installations/        # Konfigurasi wrangler hasil build fleet (CI/CD)
@@ -214,7 +233,7 @@ Menghasilkan 7 ragam dokumen kurikulum siap cetak:
 
 ---
 
-## 11. Panduan Cepat Menjalankan & Memelihara Proyek
+## 12. Panduan Cepat Menjalankan & Memelihara Proyek
 
 ### 1. Menjalankan Server Lokal (Development)
 ```bash

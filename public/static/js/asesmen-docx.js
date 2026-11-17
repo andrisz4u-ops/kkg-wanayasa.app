@@ -201,53 +201,82 @@ function makeOpsiParagraphs(opsi, colLayout, indentTwip = 0, availableWidth = PA
     position: indentLeft + columnWidth * (index + 1),
   }));
 
+  const hasD = Boolean(o.D && String(o.D).trim() !== '' && o.D !== '-');
   if (colLayout === 4) {
-    // Semua opsi 1 baris: A. xxx   B. xxx   C. xxx   D. xxx
-    return [makeParaRaw([
+    // Semua opsi 1 baris: A. xxx   B. xxx   C. xxx   [D. xxx]
+    const children = [
       new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o.A || '-', { size: s }),
       new window.docx.TextRun({ text: `\tB. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o.B || '-', { size: s }),
       new window.docx.TextRun({ text: `\tC. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o.C || '-', { size: s }),
-      new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
-      ...makeRuns(o.D || '-', { size: s }),
-    ], {
+    ];
+    if (hasD) {
+      children.push(
+        new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
+        ...makeRuns(o.D || '-', { size: s })
+      );
+    }
+    return [makeParaRaw(children, {
       spaceAfter: spaceAfterLast,
       indent: { left: indentLeft },
-      tabStops: tabs(3),
+      tabStops: tabs(hasD ? 3 : 2),
     })];
   } else if (colLayout === 2) {
-    // 2 baris: A + C, lalu B + D
-    return [
-      makeParaRaw([
-        new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
-        ...makeRuns(o.A || '-', { size: s }),
-        new window.docx.TextRun({ text: `\tC. `, size: s, font: FONT_LATIN }),
-        ...makeRuns(o.C || '-', { size: s }),
-      ], {
-        spaceAfter: 0,
-        indent: { left: indentLeft },
-        tabStops: tabs(1),
-      }),
-      makeParaRaw([
-        new window.docx.TextRun({ text: `B. `, size: s, font: FONT_LATIN }),
-        ...makeRuns(o.B || '-', { size: s }),
-        new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
-        ...makeRuns(o.D || '-', { size: s }),
-      ], {
-        spaceAfter: spaceAfterLast,
-        indent: { left: indentLeft },
-        tabStops: tabs(1),
-      }),
-    ];
+    // 2 baris
+    if (hasD) {
+      return [
+        makeParaRaw([
+          new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.A || '-', { size: s }),
+          new window.docx.TextRun({ text: `\tC. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.C || '-', { size: s }),
+        ], {
+          spaceAfter: 0,
+          indent: { left: indentLeft },
+          tabStops: tabs(1),
+        }),
+        makeParaRaw([
+          new window.docx.TextRun({ text: `B. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.B || '-', { size: s }),
+          new window.docx.TextRun({ text: `\tD. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.D || '-', { size: s }),
+        ], {
+          spaceAfter: spaceAfterLast,
+          indent: { left: indentLeft },
+          tabStops: tabs(1),
+        }),
+      ];
+    } else {
+      return [
+        makeParaRaw([
+          new window.docx.TextRun({ text: `A. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.A || '-', { size: s }),
+          new window.docx.TextRun({ text: `\tB. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.B || '-', { size: s }),
+        ], {
+          spaceAfter: 0,
+          indent: { left: indentLeft },
+          tabStops: tabs(1),
+        }),
+        makeParaRaw([
+          new window.docx.TextRun({ text: `C. `, size: s, font: FONT_LATIN }),
+          ...makeRuns(o.C || '-', { size: s }),
+        ], {
+          spaceAfter: spaceAfterLast,
+          indent: { left: indentLeft },
+        }),
+      ];
+    }
   } else {
     // 1 kolom: setiap opsi baris sendiri
-    return ['A','B','C','D'].map((k, i) => makeParaRaw([
+    const keys = hasD ? ['A', 'B', 'C', 'D'] : ['A', 'B', 'C'];
+    return keys.map((k, i) => makeParaRaw([
       new window.docx.TextRun({ text: `${k}. `, size: s, font: FONT_LATIN }),
       ...makeRuns(o[k] || '-', { size: s }),
     ], {
-      spaceAfter: i === 3 ? spaceAfterLast : 0,
+      spaceAfter: i === (keys.length - 1) ? spaceAfterLast : 0,
       indent: { left: indentLeft + CM(0.4) },
     }));
   }

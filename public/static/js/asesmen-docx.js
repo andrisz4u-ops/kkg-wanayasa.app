@@ -1632,7 +1632,9 @@ export async function generateAsesmenDocx(data, formData, kopSuratUrl, options =
     }],
   });
 
-  const finalImageFailures = await validatePreparedAssessmentImages(data, preparedImages, { decodeImage: false });
-  if (finalImageFailures.length) throw new AssessmentImagePreflightError(finalImageFailures);
+  if (!allowMissingImages) {
+    const finalImageFailures = await validatePreparedAssessmentImages(data, preparedImages, { decodeImage: false });
+    if (finalImageFailures.length) throw new AssessmentImagePreflightError(finalImageFailures);
+  }
   return Packer.toBlob(doc);
 }

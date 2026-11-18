@@ -77,6 +77,19 @@ describe('asesmen DOCX strict image preflight', () => {
     expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/api/files/private/7', { credentials: 'same-origin', signal: expect.any(AbortSignal) });
   });
 
+  it('allows packing when allowMissingImages is true even if an image fails or is missing', async () => {
+    const fetchMock = vi.fn(async () => new Response('unavailable', { status: 404 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { generateAsesmenDocx } = await import('../public/static/js/asesmen-docx.js');
+    const data: AssessmentData = {
+      pg: [{ no: 2, soal: 'Soal dengan gambar gagal', opsi: { A: '1', B: '2', C: '3', D: '4' }, gambar: { url: '/api/files/missing.png' } }],
+      isian: { type: 'Standard', data: [{ no: 11, soal: 'Isian dengan gambar gagal', kunci: 'football', gambar: { url: '/api/files/missing-isian.png' } }] },
+    };
+    const blob = await generateAsesmenDocx(data, {}, undefined, { allowMissingImages: true });
+    expect(blob).toBeDefined();
+    expect(toBlob).toHaveBeenCalled();
+  });
+
   it('rejects prepared maps missing a required question instead of trusting ready=true', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

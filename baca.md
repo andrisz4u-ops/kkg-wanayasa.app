@@ -259,3 +259,30 @@ node scripts/fleet-deploy.mjs
 ```
 Skrip ini akan otomatis melakukan build produksi, menerapkan migrasi D1 ke semua database gugus (jika ditambah flag `--migrate`), dan mem-push rilis baru ke seluruh proyek Cloudflare Pages armada KKG.
 
+---
+
+## 13. Modul Asesmen / Kisi-Kisi & Catatan Solusi Masalah Kritis
+
+Modul pembuatan soal asesmen (`/kisi`) merupakan salah satu modul dengan integrasi AI, validasi standar Puspendik, sinkronisasi state live-edit, dan generator Word (`.docx`) yang paling kompleks. Berikut adalah jejak teknis dan arsitektur penting yang telah diselesaikan agar AI/developer berikutnya memahami alurnya:
+
+### A. Dukungan Opsi Fleksibel Kelas Bawah (Fase A - Kelas 1, 2, 3)
+- **Problem:** Pembuatan soal untuk kelas bawah (Kelas 1, 2, 3) yang meminta PG dan Isian menyebabkan seluruh butir PG hilang dari kanvas (hanya isian yang muncul).
+- **Akar Masalah:** Di [src/lib/assessment-validator.ts](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/src/lib/assessment-validator.ts), validator Puspendik sebelumnya mengunci bahwa setiap butir soal PG wajib memiliki 4 opsi (`A, B, C, D`). Padahal secara regulasi pedagogis nasional, soal Fase A (Kelas 1–3) hanya memiliki 3 opsi (`A, B, C`). Akibatnya seluruh PG kelas rendah didiskualifikasi oleh validator server.
+- **Solusi Arsitektur:** Diperbarui agar mendeteksi jenjang kelas (`Fase A` / `Kelas 1`, `Kelas 2`, `Kelas 3`) secara dinamis. Jika kelas rendah, validator menerima 3 opsi (`A, B, C`). Untuk Kelas 4–6, tetap mewajibkan 4 opsi (`A, B, C, D`). Dilindungi oleh unit test di [tests/assessment-validator-earlygrade.test.ts](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/tests/assessment-validator-earlygrade.test.ts).
+
+### B. Pembersihan Halusinasi Teks Stimulus Gambar (*Phantom Image Prefix*)
+- **Problem:** Butir soal isian atau uraian yang tidak memiliki gambar sering diawali teks halusinasi model AI seperti *"Look at the picture! ..."* atau *"Perhatikan gambar di bawah! ..."*.
+- **Akar Masalah:** Model bahasa sering menambahkan frasa klise konteks visual ke dalam teks stem soal meskipun stimulus gambar tidak disertakan atau gagal dibuat.
+- **Solusi Arsitektur:** Di [src/routes/kisi.ts](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/src/routes/kisi.ts), ditambahkan sanitasi pembersihan frasa halusinasi gambar pada teks soal teks murni (`stripPhantomImagePrefixes`), sehingga soal tetap terbaca logis dan rapi bagi siswa.
+
+### C. Eliminasi Dialog Konfirmasi Tertunda yang Mengganggu (*Pending Modal*)
+- **Problem:** Pengguna sering mendapati dialog modal peringatan merah bertuliskan: *"Konfirmasi: Masih ada proses asesmen sebelumnya yang hasilnya belum dipastikan. Mulai proses baru dengan biaya AI terpisah? (Batal / Ya, Lanjutkan)"*. Hal ini membuat guru bingung karena proses sebelumnya sebenarnya sudah gagal/selesai.
+- **Akar Masalah:** Penyimpanan jejak percobaan (`pendingAttempt`) di `localStorage` tidak terhapus saat terjadi kegagalan jaringan atau pembatalan, sehingga memblokir pembuatan soal berikutnya.
+- **Solusi Arsitektur:** Di [public/static/js/pages/kisi.js](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/public/static/js/pages/kisi.js), modal konfirmasi yang menghambat tersebut dihilangkan. Sistem sekarang secara otomatis membersihkan draf usang yang gagal di latar belakang (`clearPendingGeneration`) dan langsung memproses pembuatan soal baru tanpa menghalangi alur kerja guru.
+
+### D. Ekspor & Unduh Berkas DOCX Tangguh (*Graceful Image Failure*)
+- **Problem:** Jika satu saja gambar soal gagal dibuat atau tidak dapat dimuat (misal tautan usang atau timeout), tombol **Unduh .docx** macet dan menampilkan pesan kesalahan merah: *"File belum dibuat karena gambar pada Soal ... nomor ... tidak tersedia..."*.
+- **Akar Masalah:** Fungsi `generateAsesmenDocx` di [public/static/js/asesmen-docx.js](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/public/static/js/asesmen-docx.js) menerima opsi `allowMissingImages: true` dari `kisi.js`. Namun pada baris akhir tepat sebelum pengemasan berkas (`Packer.toBlob(doc)`), fungsi `validatePreparedAssessmentImages` dipanggil tanpa memeriksa `allowMissingImages`, sehingga `AssessmentImagePreflightError` dilempar secara prematur.
+- **Solusi Arsitektur:** Baris validasi akhir dibungkus dengan `if (!allowMissingImages) { ... }`. Ketika `allowMissingImages: true`, berkas `.docx` akan langsung dihasilkan tanpa melempar error. Butir soal yang gambarnya gagal tetap memiliki nomor, teks soal, dan opsi yang utuh di Word, sementara gambar yang berhasil tetap disematkan dengan sempurna. Dilindungi oleh unit test di [tests/assessment-docx-image-preflight.test.ts](file:///c:/Users/Andris%20PC/Music/MyGPT/MY%20KKG/tests/assessment-docx-image-preflight.test.ts).
+
+
